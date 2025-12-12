@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36e24b81bfaa705478a0035f2137710d, type: 3}
+  m_Name: EarthConfig
+  m_EditorClassIdentifier: 
+  Type: 0
+  CostOutCombat: 70
+  Range: 4
+  FireRate: 0.16
+  Damage: 8
+  Prefab: {fileID: 2689969169489601563, guid: 3a998238efe9e1b43ac21a6a79cc71d4, type: 3}
