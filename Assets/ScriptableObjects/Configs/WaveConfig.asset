@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   EnemiesToSpawn:
   - EnemyType: {fileID: 11400000, guid: 4794f4703af3b5a44b9fc56c29d839ea, type: 2}
-    Count: 250
+    Count: 20
     SpawnInterval: 0.1
   StartDelay: 0
   EndBonusMana: 0

@@ -15,6 +15,11 @@ namespace ElementalBuddies
 
         public event Action OnManaChanged;
 
+        // Backup variables for Reset
+        private float _startManaCap;
+        private float _startRegenOut;
+        private float _startRegenIn;
+
         void Awake()
         {
             if (Instance != null && Instance != this)
@@ -24,11 +29,27 @@ namespace ElementalBuddies
             }
             Instance = this;
             
-            // If this is on a root object that isn't DontDestroyOnLoad yet, we might want to do it.
-            // But usually GameManager handles the root. We'll assume a "Managers" GameObject.
-            
             // Fallback load if not assigned in Inspector
             if (settings == null) settings = Resources.Load<GlobalSettingsSO>("GlobalSettings");
+
+            // Backup original values
+            if (settings != null)
+            {
+                _startManaCap = settings.ManaCap;
+                _startRegenOut = settings.RegenOutCombat;
+                _startRegenIn = settings.RegenInCombat;
+            }
+        }
+
+        void OnDestroy()
+        {
+            // Restore original values to keep Editor clean
+            if (settings != null)
+            {
+                settings.ManaCap = _startManaCap;
+                settings.RegenOutCombat = _startRegenOut;
+                settings.RegenInCombat = _startRegenIn;
+            }
         }
 
         void Start()

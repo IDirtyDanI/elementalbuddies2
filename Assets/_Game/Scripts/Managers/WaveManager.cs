@@ -163,6 +163,12 @@ namespace ElementalBuddies
             CurrentWaveIndex++;
             OnWaveEnd?.Invoke();
             
+            // Trigger Upgrade Phase
+            if (UpgradeManager.Instance != null)
+            {
+                UpgradeManager.Instance.PresentUpgrades();
+            }
+            
             // No Victory - Infinite War!
         }
     }

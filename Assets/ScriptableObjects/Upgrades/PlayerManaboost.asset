@@ -9,12 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 375bae859fbecbb489c7c4cfdbf59fac, type: 3}
-  m_Name: GlobalSettings
+  m_Script: {fileID: 11500000, guid: 232969f20748fec4d8d4d79953e45d44, type: 3}
+  m_Name: PlayerManaboost
   m_EditorClassIdentifier: 
-  StartMana: 9999
-  ManaCap: 10700
-  RegenOutCombat: 10
-  RegenInCombat: 5
-  CombatSurcharge: 1.25
-  RefundRatio: 2
+  Title: mana
+  Description: mana
+  Icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+  Type: 2
+  Target: 0
+  StatToBuff: 7
+  Value: 100
+  IsPercentage: 0
