@@ -9,20 +9,25 @@ namespace ElementalBuddies
         protected float lastActionTime;
         public float CurrentHP { get; protected set; }
 
+        private static readonly int CastTrigger = Animator.StringToHash("Cast");
+        private Animator _visualAnimator;
+
         protected virtual void Start()
         {
             CurrentHP = 50f; // Default HP
+            _visualAnimator = GetComponentInChildren<Animator>();
         }
 
         protected virtual void Update()
         {
             if (Config == null) return;
-            
+
             if (Config.FireRate > 0 && Time.time >= lastActionTime + (1f / Config.FireRate))
             {
                 if (TryPerformAction())
                 {
                     lastActionTime = Time.time;
+                    if (_visualAnimator != null) _visualAnimator.SetTrigger(CastTrigger);
                 }
             }
         }
