@@ -18,6 +18,20 @@ namespace ElementalBuddies
         public event System.Action OnWaveStart;
         public event System.Action OnWaveEnd;
 
+        // Feuert für jedes Portal, das sich vor einem Wellenstart neu öffnet (nicht für die beim Spielstart offenen)
+        public static event System.Action<SpawnPortal> OnPortalOpened;
+
+        // 1-basierte Nummer der laufenden Welle bzw. (zwischen den Wellen) der nächsten Welle
+        public int UpcomingWaveNumber => CurrentWaveIndex + 1;
+
+        // HP-Bonus für Gegner der aktuellen Welle (+8 HP pro Welle)
+        public float CurrentHpBonus => CurrentWaveIndex * 8f;
+
+        private int _portalCursor;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => OnPortalOpened = null;
+
         void Awake()
         {
             Instance = this;
@@ -27,6 +41,9 @@ namespace ElementalBuddies
         {
             EnemyBrain.OnEnemyDeath += HandleEnemyDeath;
             if (GameManager.Instance != null) GameManager.Instance.OnGameOver += HandleGameOver;
+
+            // Portale für die erste Welle schon beim Spielstart sichtbar öffnen (ohne Meldung)
+            UpdatePortals(false);
         }
 
         void OnDestroy()
@@ -36,6 +53,23 @@ namespace ElementalBuddies
         }
 
         private bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
+
+        // ---------------- Dev-Modus ----------------
+
+        // Springt (nur zwischen den Wellen) direkt zu einer Welle; Portale werden entsprechend geöffnet
+        public void DevSetStartWave(int waveNumber)
+        {
+            if (IsWaveActive || waveNumber < 1) return;
+            CurrentWaveIndex = waveNumber - 1;
+            UpdatePortals(false);
+        }
+
+        // Tötet alle lebenden Gegner (zählt normal als Kill → Welle endet regulär)
+        public void DevKillAllEnemies()
+        {
+            foreach (var e in FindObjectsByType<EnemyBrain>(FindObjectsSortMode.None))
+                if (e != null) e.TakeDamage(999999f);
+        }
 
         private void HandleGameOver(string reason)
         {
@@ -69,7 +103,80 @@ namespace ElementalBuddies
                 }
             }
 
+            UpdatePortals(true);
             StartCoroutine(SpawnWaveRoutine(waveToSpawn));
+        }
+
+        // ---------------- Portale ----------------
+
+        // Öffnet alle Portale mit OpenFromWave <= UpcomingWaveNumber
+        private void UpdatePortals(bool fireEvents)
+        {
+            var portals = SpawnPortal.All;
+            // Kopie, falls ein Event-Handler die Registry verändert
+            var toOpen = new List<SpawnPortal>();
+            for (int i = 0; i < portals.Count; i++)
+            {
+                var p = portals[i];
+                if (p != null && !p.IsOpen && p.OpenFromWave <= UpcomingWaveNumber) toOpen.Add(p);
+            }
+            foreach (var p in toOpen)
+            {
+                p.SetOpen(true);
+                Debug.Log($"WaveManager: Portal '{p.DisplayName}' opened (wave {UpcomingWaveNumber}).");
+                if (fireEvents) OnPortalOpened?.Invoke(p);
+            }
+        }
+
+        public bool HasPortals => SpawnPortal.All.Count > 0;
+
+        // Nächstes offenes Portal (Round-Robin); null, wenn keins offen ist
+        private SpawnPortal NextOpenPortal()
+        {
+            var portals = SpawnPortal.All;
+            int n = portals.Count;
+            for (int k = 0; k < n; k++)
+            {
+                var p = portals[(_portalCursor + k) % n];
+                if (p != null && p.IsOpen)
+                {
+                    _portalCursor = (_portalCursor + k + 1) % n;
+                    return p;
+                }
+            }
+            return null;
+        }
+
+        // Spawn-Position + Rotation für den nächsten Wellengegner. false, wenn es keinen Spawnpunkt gibt.
+        private bool TryGetSpawnPose(out Vector3 pos, out Quaternion rot)
+        {
+            if (HasPortals)
+            {
+                var portal = NextOpenPortal();
+                if (portal == null)
+                {
+                    // Sicherheitsnetz: Portale existieren, aber keins ist offen (OpenFromWave falsch gesetzt) → erstes öffnen
+                    Debug.LogWarning("WaveManager: No open SpawnPortal – opening the first one.");
+                    portal = SpawnPortal.All[0];
+                    portal.SetOpen(true);
+                    OnPortalOpened?.Invoke(portal);
+                }
+                pos = portal.GetSpawnPosition();
+                rot = portal.SpawnTransform.rotation;
+                return true;
+            }
+
+            if (SpawnPoints != null && SpawnPoints.Count > 0)
+            {
+                Transform sp = SpawnPoints[Random.Range(0, SpawnPoints.Count)];
+                pos = sp.position;
+                rot = sp.rotation;
+                return true;
+            }
+
+            pos = Vector3.zero;
+            rot = Quaternion.identity;
+            return false;
         }
 
         // Helper to create a harder version of a wave on the fly
@@ -96,16 +203,18 @@ namespace ElementalBuddies
         private IEnumerator SpawnWaveRoutine(WaveConfigSO wave)
         {
             IsWaveActive = true;
+
+            // Calculate total enemies BEFORE OnWaveStart, so extra enemies spawned by listeners
+            // (e.g. shrine attackers via SpawnEnemyAt) are added on top and not overwritten.
+            EnemiesRemaining = 0;
+            foreach (var group in wave.EnemiesToSpawn) EnemiesRemaining += group.Count;
+            Debug.Log($"WaveManager: Expecting {EnemiesRemaining} enemies.");
+
             OnWaveStart?.Invoke();
             if (GameManager.Instance != null) GameManager.Instance.StartCombat();
             Debug.Log($"WaveManager: Wave {CurrentWaveIndex + 1} Started!");
 
             yield return new WaitForSeconds(wave.StartDelay);
-
-            // Calculate total enemies
-            EnemiesRemaining = 0;
-            foreach (var group in wave.EnemiesToSpawn) EnemiesRemaining += group.Count;
-            Debug.Log($"WaveManager: Expecting {EnemiesRemaining} enemies.");
 
             foreach (var group in wave.EnemiesToSpawn)
             {
@@ -122,18 +231,16 @@ namespace ElementalBuddies
 
         private void SpawnEnemy(EnemyConfigSO config)
         {
-            if (SpawnPoints.Count == 0) return;
-            Transform sp = SpawnPoints[Random.Range(0, SpawnPoints.Count)];
+            if (!TryGetSpawnPose(out Vector3 pos, out Quaternion rot))
+            {
+                Debug.LogError("WaveManager: No SpawnPortal and no SpawnPoints – cannot spawn!");
+                EnemiesRemaining--; // keep the count consistent (same as the missing-prefab case)
+                return;
+            }
 
             if (config != null && config.Prefab != null)
             {
-                GameObject go = Instantiate(config.Prefab, sp.position, sp.rotation);
-                var brain = go.GetComponent<EnemyBrain>();
-                if (brain != null)
-                {
-                    brain.Config = config;
-                    brain.Initialize(CurrentWaveIndex * 8f); // +8 HP per wave logic
-                }
+                InstantiateEnemy(config, pos, rot, CurrentHpBonus); // +8 HP per wave logic
             }
             else
             {
@@ -141,6 +248,54 @@ namespace ElementalBuddies
                 // If spawn fails, we MUST reduce count, otherwise wave never ends!
                 EnemiesRemaining--; 
             }
+        }
+
+        private EnemyBrain InstantiateEnemy(EnemyConfigSO config, Vector3 pos, Quaternion rot, float hpBonus)
+        {
+            GameObject go = Instantiate(config.Prefab, pos, rot);
+            var brain = go.GetComponent<EnemyBrain>();
+            if (brain != null)
+            {
+                brain.Config = config;
+                brain.Initialize(hpBonus);
+            }
+            return brain;
+        }
+
+        // Zusatz-Gegner außerhalb der Wellenliste (z. B. Schrein-Angreifer). Gleicher Spawn-Pfad wie Wellengegner
+        // (Config + Initialize(hpBonus)). countTowardWave: während einer aktiven Welle wird EnemiesRemaining erhöht,
+        // d. h. die Welle endet erst, wenn auch diese Gegner tot sind. hpBonus < 0 → Bonus der aktuellen Welle.
+        public EnemyBrain SpawnEnemyAt(EnemyConfigSO config, Vector3 position, float hpBonus = -1f, bool countTowardWave = true)
+        {
+            if (IsGameOver) return null;
+            if (config == null || config.Prefab == null)
+            {
+                Debug.LogError("WaveManager.SpawnEnemyAt: Config or Prefab missing!");
+                return null;
+            }
+
+            Quaternion rot = Quaternion.identity;
+            if (Nexus.Instance != null)
+            {
+                Vector3 dir = Nexus.Instance.transform.position - position;
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.01f) rot = Quaternion.LookRotation(dir);
+            }
+
+            var brain = InstantiateEnemy(config, position, rot, hpBonus < 0f ? CurrentHpBonus : hpBonus);
+            if (countTowardWave && IsWaveActive) EnemiesRemaining++;
+            return brain;
+        }
+
+        // Fallback-Gegnertyp für Zusatz-Spawns: erster Typ der aktuellen (bzw. letzten) Welle
+        public EnemyConfigSO GetDefaultEnemyType()
+        {
+            if (Waves == null || Waves.Count == 0) return null;
+            var wave = Waves[Mathf.Clamp(CurrentWaveIndex, 0, Waves.Count - 1)];
+            if (wave == null || wave.EnemiesToSpawn == null) return null;
+            foreach (var g in wave.EnemiesToSpawn)
+                if (g != null && g.EnemyType != null && g.EnemyType.Prefab != null) return g.EnemyType;
+            return null;
         }
 
         private void HandleEnemyDeath()

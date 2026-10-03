@@ -11,6 +11,7 @@ namespace ElementalBuddies
 
         [Header("Stats")]
         public float MaxHP = 500f;
+        [HideInInspector] public bool Invulnerable; // Dev-Modus
         public float CurrentHP { get; private set; }
 
         [Header("UI (optional)")]
@@ -41,7 +42,7 @@ namespace ElementalBuddies
 
         public void TakeDamage(float amount)
         {
-            if (_isDestroyed) return;
+            if (_isDestroyed || Invulnerable) return;
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver) return;
 
             CurrentHP -= amount;
@@ -57,6 +58,18 @@ namespace ElementalBuddies
                 OnDestroyed?.Invoke();
                 if (GameManager.Instance != null) GameManager.Instance.TriggerGameOver("Der Nexus wurde zerstört");
             }
+        }
+
+        // Reparatur (Segen des Licht-Buddys); gibt die tatsächlich geheilte Menge zurück
+        public float Heal(float amount)
+        {
+            if (_isDestroyed || amount <= 0f || CurrentHP >= MaxHP) return 0f;
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver) return 0f;
+            float before = CurrentHP;
+            CurrentHP = Mathf.Min(MaxHP, CurrentHP + amount);
+            OnHealthChanged?.Invoke();
+            UpdateSlider();
+            return CurrentHP - before;
         }
 
         // Closest point on the Nexus surface (collider) to a given position. Falls back to the pivot.

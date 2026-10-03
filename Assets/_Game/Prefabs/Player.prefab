@@ -204,6 +204,56 @@ MonoBehaviour:
   ObstacleLayer:
     serializedVersion: 2
     m_Bits: 1
+  FireWave:
+    ManaCost: 35
+    Cooldown: 6
+    CastEffectPrefab: {fileID: 1356342072438297140, guid: 423d320dc682b40869f3426fb5709dfa, type: 3}
+    EffectLifetime: 3
+    ScaleEffectBySize: 0
+    Range: 7
+    ConeAngle: 60
+    Damage: 40
+    BurnDps: 8
+    BurnDuration: 3
+  FrostNova:
+    ManaCost: 40
+    Cooldown: 10
+    CastEffectPrefab: {fileID: 3771474662947884753, guid: c02a290f0d01640608733aabe636d97b, type: 3}
+    EffectLifetime: 3
+    ScaleEffectBySize: 0
+    Radius: 6
+    Damage: 20
+    FreezeSlow: 1
+    FreezeDuration: 2.5
+  StoneWall:
+    ManaCost: 30
+    Cooldown: 12
+    CastEffectPrefab: {fileID: 0}
+    EffectLifetime: 3
+    ScaleEffectBySize: 0
+    WallPrefab: {fileID: 3783064027663644335, guid: 17db8f5d19f584c018be6fdd6251bf58, type: 3}
+    WallPrefabIsUnitSize: 0
+    Length: 6
+    Height: 2.5
+    Thickness: 1
+    Distance: 4
+    Lifetime: 7
+    RiseTime: 0.25
+    SinkTime: 0.35
+  HolyCircle:
+    ManaCost: 45
+    Cooldown: 15
+    CastEffectPrefab: {fileID: 5303329118524933150, guid: 7862d9904f5224fd0bfc5b85d9c4d895, type: 3}
+    EffectLifetime: 3
+    ScaleEffectBySize: 0
+    Radius: 6
+    PlayerHeal: 25
+    BuddyHeal: 25
+    NexusHeal: 15
+    BlindSlow: 0.6
+    BlindDuration: 3
+  DamageMultiplier: 1
+  UnlockAllOnStart: 0
 --- !u!114 &6514329390957018408
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -216,6 +266,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de885c90d5c82438c86871ffc6a6ebde, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.PlayerVisualAnimator
+  speedDampTime: 0.1
+  groundedGrace: 0.15
+  airLockDuration: 0.2
+  castOnBlink: 0
 --- !u!1 &749010569281914967
 GameObject:
   m_ObjectHideFlags: 0

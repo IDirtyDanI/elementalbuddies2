@@ -71,6 +71,8 @@ Transform:
   - {fileID: 2291070720138750791}
   - {fileID: 2872519914642663352}
   - {fileID: 8615152719013531759}
+  - {fileID: 4427015976244297017}
+  - {fileID: 2429554846689758904}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &3408752481700470008
@@ -110,6 +112,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Config: {fileID: 11400000, guid: fbdf55d7fe5e4814faa0d1ae34d5071a, type: 2}
   PaidCost: 0
+  MaxHP: 50
+  FirePoint: {fileID: 4427015976244297017}
+  BeamColor: {r: 1, g: 0.9, b: 0.45, a: 1}
+  BeamWidth: 0.14
+  BeamDuration: 0.18
+  HitEffectPrefab: {fileID: 9068599663477695695, guid: 074c9686e8eb14b61abdf79b6cab2b6f, type: 3}
+  BlessInterval: 4
+  BlessHeal: 10
+  NexusHealCapPercent: 0.01
+  BlessPulsePrefab: {fileID: 3025522461272898449, guid: fe205bbeebd884dd7a92e23be199d034, type: 3}
+  HealSparklePrefab: {fileID: 2949883046641709390, guid: 83a67b63eff6f4c39bca6cee71d64b64, type: 3}
 --- !u!114 &5969715700004968234
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -137,9 +150,9 @@ MonoBehaviour:
   LevelUpSound: {fileID: 0}
   LevelUpVolume: 0.8
   StageFirePoints:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 4427015976244297017}
+  - {fileID: 2429554846689758904}
+  - {fileID: 2429554846689758904}
   PopDuration: 0.35
   PopStartScale: 0.6
   PopPeakScale: 1.1
@@ -554,6 +567,68 @@ Transform:
   - {fileID: 3852630052540357531}
   - {fileID: 3915063591470389814}
   m_Father: {fileID: 3759867298285289261}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &4834613031924421754
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4427015976244297017}
+  m_Layer: 0
+  m_Name: FirePoint_S1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4427015976244297017
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4834613031924421754}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.0500001, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5998073528118329438}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5447567021183524826
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2429554846689758904}
+  m_Layer: 0
+  m_Name: FirePoint_S2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2429554846689758904
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5447567021183524826}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1, z: -0.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5998073528118329438}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5524115725127711403
 GameObject:

@@ -16,6 +16,7 @@ namespace ElementalBuddies
 
         protected float lastActionTime;
         public float CurrentHP { get; protected set; }
+        public float MaxHP = 50f;
 
         private static readonly int CastTrigger = Animator.StringToHash("Cast");
         private Animator _visualAnimator;
@@ -65,7 +66,7 @@ namespace ElementalBuddies
 
         protected virtual void Start()
         {
-            CurrentHP = 50f; // Default HP
+            CurrentHP = MaxHP;
             RefreshVisual();
         }
 
@@ -101,6 +102,15 @@ namespace ElementalBuddies
             {
                 Die();
             }
+        }
+
+        // Heilung (z. B. durch den Segen des Licht-Buddys); gibt die tatsächlich geheilte Menge zurück
+        public float Heal(float amount)
+        {
+            if (amount <= 0f || CurrentHP >= MaxHP) return 0f;
+            float before = CurrentHP;
+            CurrentHP = Mathf.Min(MaxHP, CurrentHP + amount);
+            return CurrentHP - before;
         }
 
         protected virtual void Die()
@@ -145,7 +155,9 @@ namespace ElementalBuddies
         }
 
         // Basiswerte (Config, inkl. globaler Roguelike-Upgrades) × Stufen-Multiplikator; Subklassen können umdeuten
-        public virtual float GetDamageAtLevel(int level) => Config != null ? Config.Damage * LevelMultiplier(DamageBonusPerLevel, level) : 0f;
+        // Schaden inkl. passivem Schrein-Bonus des eigenen Elements (ShrineBonuses); Subklassen überschreiben GetBaseDamageAtLevel
+        public float GetDamageAtLevel(int level) => GetBaseDamageAtLevel(level) * ShrineBonuses.GetDamageMultiplier(ElementIndex);
+        protected virtual float GetBaseDamageAtLevel(int level) => Config != null ? Config.Damage * LevelMultiplier(DamageBonusPerLevel, level) : 0f;
         public virtual float GetFireRateAtLevel(int level) => Config != null ? Config.FireRate * LevelMultiplier(FireRateBonusPerLevel, level) : 0f;
         public virtual float GetRangeAtLevel(int level) => Config != null ? Config.Range * LevelMultiplier(RangeBonusPerLevel, level) : 0f;
 

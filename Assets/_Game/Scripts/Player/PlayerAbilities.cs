@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using System.Collections;
 using UnityEngine.InputSystem;
 
@@ -8,11 +9,15 @@ namespace ElementalBuddies
     [RequireComponent(typeof(PlayerStats))]
     public class PlayerAbilities : MonoBehaviour
     {
-        [Header("Arcane Ball (Q)")]
+        public static PlayerAbilities Instance { get; private set; }
+
+        public const int ElementCount = 4; // 0 Fire, 1 Ice, 2 Earth, 3 Light
+
+        [Header("Arcane Ball (Q / 6)")]
         public GameObject ArcaneBallPrefab;
         public float ArcaneBallManaCost = 15f;
         public float ArcaneBallCooldown = 1f;
-        public Transform SpawnPoint; 
+        public Transform SpawnPoint;
 
         [Header("Blink (E)")]
         public float BlinkManaCost = 30f;
@@ -21,11 +26,32 @@ namespace ElementalBuddies
         public float InvulnerabilityDuration = 0.4f;
         public LayerMask ObstacleLayer; // Assign "Default" or specific wall layer
 
-        // Raised on a successful Arcane Ball cast (e.g. for animation)
-        public event System.Action ArcaneBallCast;
+        [Header("Element Spells (unlockable)")]
+        public FireWaveSpell FireWave = new FireWaveSpell();     // R
+        public FrostNovaSpell FrostNova = new FrostNovaSpell();  // F
+        public StoneWallSpell StoneWall = new StoneWallSpell();  // C
+        public HolyCircleSpell HolyCircle = new HolyCircleSpell(); // V
 
-        private float _lastArcaneBallTime;
-        private float _lastBlinkTime;
+        [Header("Damage Scaling")]
+        [Tooltip("Multiplies Arcane Ball and element spell damage. Raised by Player-target Damage upgrades (UpgradeManager).")]
+        public float DamageMultiplier = 1f;
+
+        [Header("Debug")]
+        [Tooltip("Unlock all four element spells at start (testing).")]
+        public bool UnlockAllOnStart = false;
+
+        // Raised on a successful Arcane Ball cast (e.g. for animation)
+        public event Action ArcaneBallCast;
+        // Raised on every successful ability cast (incl. Arcane Ball and Blink)
+        public event Action<AbilityId> OnAbilityCast;
+        // Raised when an element spell gets unlocked (element index 0..3)
+        public event Action<int> OnAbilityUnlocked;
+        // Raised when the key of a still locked spell is pressed (e.g. for a toast)
+        public event Action<AbilityId> OnLockedAbilityPressed;
+
+        private static readonly int AbilityCount = Enum.GetValues(typeof(AbilityId)).Length;
+        private readonly float[] _readyAt = new float[AbilityCount];
+        private readonly bool[] _elementUnlocked = new bool[ElementCount];
 
         private PlayerController _controller;
         private CharacterController _characterController;
@@ -33,9 +59,21 @@ namespace ElementalBuddies
 
         void Awake()
         {
+            if (Instance != null && Instance != this)
+                Debug.LogWarning("PlayerAbilities: more than one instance in the scene.");
+            Instance = this;
+
             _controller = GetComponent<PlayerController>();
             _characterController = GetComponent<CharacterController>();
             _stats = GetComponent<PlayerStats>();
+
+            if (UnlockAllOnStart)
+                for (int i = 0; i < ElementCount; i++) _elementUnlocked[i] = true;
+        }
+
+        void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         void Update()
@@ -45,46 +83,195 @@ namespace ElementalBuddies
 
         private void HandleSkills()
         {
-            // Skill 6 - Arcane Ball
-            if (_controller.Skill6Action != null && _controller.Skill6Action.WasPressedThisFrame())
-            {
-                TryCastArcaneBall();
-            }
+            if (!CanCastNow()) return;
 
-            // E - Blink
-            if (_controller.SkillEAction != null && _controller.SkillEAction.WasPressedThisFrame())
+            if (Pressed(_controller.Skill6Action)) TryCast(AbilityId.ArcaneBall); // Q / 6
+            if (Pressed(_controller.SkillEAction)) TryCast(AbilityId.Blink);      // E
+            if (Pressed(_controller.SpellFireAction)) TryCast(AbilityId.FireWave);   // R
+            if (Pressed(_controller.SpellIceAction)) TryCast(AbilityId.FrostNova);   // F
+            if (Pressed(_controller.SpellEarthAction)) TryCast(AbilityId.StoneWall); // C
+            if (Pressed(_controller.SpellLightAction)) TryCast(AbilityId.HolyCircle); // V
+        }
+
+        private static bool Pressed(InputAction action) => action != null && action.WasPressedThisFrame();
+
+        private static bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
+
+        private static bool CanCastNow() => Time.timeScale > 0f && !IsGameOver;
+
+        // ---------------- Unlocking ----------------
+
+        // 0 Fire, 1 Ice, 2 Earth, 3 Light. Returns false if invalid or already unlocked.
+        public bool UnlockElementAbility(int elementIndex)
+        {
+            if (elementIndex < 0 || elementIndex >= ElementCount) return false;
+            if (_elementUnlocked[elementIndex]) return false;
+            _elementUnlocked[elementIndex] = true;
+            OnAbilityUnlocked?.Invoke(elementIndex);
+            return true;
+        }
+
+        public bool IsUnlocked(int elementIndex)
+        {
+            return elementIndex >= 0 && elementIndex < ElementCount && _elementUnlocked[elementIndex];
+        }
+
+        // Arcane Ball and Blink are always unlocked
+        public bool IsUnlocked(AbilityId id)
+        {
+            int element = ElementIndexOf(id);
+            return element < 0 || _elementUnlocked[element];
+        }
+
+        // Element index of an ability (-1 for Arcane Ball / Blink)
+        public static int ElementIndexOf(AbilityId id)
+        {
+            switch (id)
             {
-                TryCastBlink();
+                case AbilityId.FireWave: return 0;
+                case AbilityId.FrostNova: return 1;
+                case AbilityId.StoneWall: return 2;
+                case AbilityId.HolyCircle: return 3;
+                default: return -1;
             }
         }
 
-        private void TryCastArcaneBall()
+        public static AbilityId AbilityOfElement(int elementIndex)
         {
-            if (Time.time < _lastArcaneBallTime + ArcaneBallCooldown) return;
-            if (EconomyManager.Instance == null || !EconomyManager.Instance.TrySpendMana(ArcaneBallManaCost)) return;
+            switch (elementIndex)
+            {
+                case 0: return AbilityId.FireWave;
+                case 1: return AbilityId.FrostNova;
+                case 2: return AbilityId.StoneWall;
+                default: return AbilityId.HolyCircle;
+            }
+        }
 
-            _lastArcaneBallTime = Time.time;
+        // ---------------- Cooldown / cost API (UI) ----------------
 
-            Vector3 spawnPos = SpawnPoint != null ? SpawnPoint.position : transform.position + transform.forward + Vector3.up; 
-            Instantiate(ArcaneBallPrefab, spawnPos, transform.rotation);
+        public float GetCooldownRemaining(AbilityId id)
+        {
+            return Mathf.Max(0f, _readyAt[(int)id] - Time.time);
+        }
+
+        public float GetCooldownDuration(AbilityId id)
+        {
+            switch (id)
+            {
+                case AbilityId.ArcaneBall: return ArcaneBallCooldown;
+                case AbilityId.Blink: return BlinkCooldown;
+                default: return GetSpell(id).Cooldown;
+            }
+        }
+
+        public float GetManaCost(AbilityId id)
+        {
+            switch (id)
+            {
+                case AbilityId.ArcaneBall: return ArcaneBallManaCost;
+                case AbilityId.Blink: return BlinkManaCost;
+                default: return GetSpell(id).ManaCost;
+            }
+        }
+
+        // Unlocked, off cooldown, enough mana, not game over
+        public bool IsAvailable(AbilityId id)
+        {
+            if (IsGameOver || !IsUnlocked(id)) return false;
+            if (GetCooldownRemaining(id) > 0f) return false;
+            float mana = EconomyManager.Instance != null ? EconomyManager.Instance.CurrentMana : 0f;
+            return mana >= GetManaCost(id);
+        }
+
+        public ElementSpell GetSpell(AbilityId id)
+        {
+            switch (id)
+            {
+                case AbilityId.FireWave: return FireWave;
+                case AbilityId.FrostNova: return FrostNova;
+                case AbilityId.StoneWall: return StoneWall;
+                case AbilityId.HolyCircle: return HolyCircle;
+                default: return null;
+            }
+        }
+
+        // ---------------- Casting ----------------
+
+        // Public so UI buttons could trigger casts as well
+        public bool TryCast(AbilityId id)
+        {
+            if (!CanCastNow()) return false;
+
+            if (!IsUnlocked(id))
+            {
+                OnLockedAbilityPressed?.Invoke(id);
+                return false;
+            }
+
+            if (GetCooldownRemaining(id) > 0f) return false;
+            if (id == AbilityId.ArcaneBall && ArcaneBallPrefab == null) return false;
+            if (EconomyManager.Instance == null || !EconomyManager.Instance.TrySpendMana(GetManaCost(id))) return false;
+
+            _readyAt[(int)id] = Time.time + GetCooldownDuration(id);
+
+            switch (id)
+            {
+                case AbilityId.ArcaneBall:
+                    CastArcaneBall();
+                    break;
+                case AbilityId.Blink:
+                    StartCoroutine(PerformBlink());
+                    break;
+                default:
+                    GetSpell(id).Cast(BuildContext());
+                    break;
+            }
+
+            OnAbilityCast?.Invoke(id);
+            return true;
+        }
+
+        private SpellCastContext BuildContext()
+        {
+            Vector3 origin = transform.position;
+            origin.y = GetGroundHeight(origin, origin.y);
+            return new SpellCastContext
+            {
+                Caster = this,
+                Origin = origin,
+                AimDirection = _controller.AimDirection,
+                DamageMultiplier = DamageMultiplier
+            };
+        }
+
+        // Height of the floor below/around a point (PlayerController.FloorLayer); fallback if nothing is hit
+        public float GetGroundHeight(Vector3 point, float fallback)
+        {
+            if (_controller == null || _controller.FloorLayer.value == 0) return fallback;
+            Vector3 from = new Vector3(point.x, point.y + 5f, point.z);
+            if (Physics.Raycast(from, Vector3.down, out RaycastHit hit, 20f, _controller.FloorLayer, QueryTriggerInteraction.Ignore))
+                return hit.point.y;
+            return fallback;
+        }
+
+        private void CastArcaneBall()
+        {
+            Vector3 spawnPos = SpawnPoint != null ? SpawnPoint.position : transform.position + transform.forward + Vector3.up;
+            GameObject ball = Instantiate(ArcaneBallPrefab, spawnPos, transform.rotation);
+            if (!Mathf.Approximately(DamageMultiplier, 1f))
+            {
+                var arcane = ball.GetComponent<ArcaneBall>();
+                if (arcane != null) arcane.Damage *= DamageMultiplier;
+            }
             ArcaneBallCast?.Invoke();
-        }
-
-        private void TryCastBlink()
-        {
-            if (Time.time < _lastBlinkTime + BlinkCooldown) return;
-            if (EconomyManager.Instance == null || !EconomyManager.Instance.TrySpendMana(BlinkManaCost)) return;
-
-            _lastBlinkTime = Time.time;
-            StartCoroutine(PerformBlink());
         }
 
         private IEnumerator PerformBlink()
         {
             _stats.IsInvulnerable = true;
-            
+
             Vector3 blinkDir = transform.forward; // Default to facing direction
-            
+
             // Try get input direction
             if (_controller.MoveAction != null)
             {
@@ -94,7 +281,7 @@ namespace ElementalBuddies
                     blinkDir = new Vector3(input.x, 0, input.y).normalized;
                 }
             }
-            
+
             // Wall Check
             Vector3 targetPos = transform.position + blinkDir * BlinkRange;
             if (Physics.Raycast(transform.position + Vector3.up, blinkDir, out RaycastHit hit, BlinkRange, ObstacleLayer))

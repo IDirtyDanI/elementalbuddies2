@@ -13,6 +13,7 @@ namespace ElementalBuddies
         [SerializeField] private float speedDampTime = 0.1f;
         [SerializeField] private float groundedGrace = 0.15f; // Tolerate brief isGrounded flicker
         [SerializeField] private float airLockDuration = 0.2f; // Force "airborne" right after a jump
+        [SerializeField] private bool castOnBlink = false; // Blink is a movement skill, no cast animation by default
 
         private CharacterController _controller;
         private PlayerController _playerController;
@@ -36,13 +37,13 @@ namespace ElementalBuddies
         void OnEnable()
         {
             if (_playerController != null) _playerController.Jumped += OnJumped;
-            if (_abilities != null) _abilities.ArcaneBallCast += OnArcaneBallCast;
+            if (_abilities != null) _abilities.OnAbilityCast += OnAbilityCast;
         }
 
         void OnDisable()
         {
             if (_playerController != null) _playerController.Jumped -= OnJumped;
-            if (_abilities != null) _abilities.ArcaneBallCast -= OnArcaneBallCast;
+            if (_abilities != null) _abilities.OnAbilityCast -= OnAbilityCast;
         }
 
         void Update()
@@ -68,8 +69,10 @@ namespace ElementalBuddies
             if (_animator != null) _animator.SetTrigger(JumpParam);
         }
 
-        private void OnArcaneBallCast()
+        // Every spell cast plays the "Cast" trigger (Blink only if castOnBlink)
+        private void OnAbilityCast(AbilityId id)
         {
+            if (id == AbilityId.Blink && !castOnBlink) return;
             if (_animator != null) _animator.SetTrigger(CastParam);
         }
     }

@@ -27,6 +27,26 @@ namespace ElementalBuddies
         public InputAction Skill6Action { get; private set; } // Renamed from SkillQAction
         public InputAction SkillEAction { get; private set; }
         public InputAction JumpAction { get; private set; } // New Jump Action
+        public InputAction SpellFireAction { get; private set; }  // R - Flammenwelle
+        public InputAction SpellIceAction { get; private set; }   // F - Frostnova
+        public InputAction SpellEarthAction { get; private set; } // C - Steinwall
+        public InputAction SpellLightAction { get; private set; } // V - Heiliger Kreis
+
+        // Last mouse point on the floor (world space). Falls back to a point in front of the player.
+        public Vector3 AimPoint => _hasAimPoint ? _aimPoint : transform.position + transform.forward * 5f;
+        public bool HasAimPoint => _hasAimPoint;
+        // Horizontal aim direction (normalized); the player rotates toward the mouse, so this matches the facing
+        public Vector3 AimDirection
+        {
+            get
+            {
+                Vector3 d = transform.forward;
+                d.y = 0f;
+                return d.sqrMagnitude > 0.0001f ? d.normalized : Vector3.forward;
+            }
+        }
+        private Vector3 _aimPoint;
+        private bool _hasAimPoint;
 
         private Camera _mainCamera;
         private Vector3 _playerVelocity; // To store velocity for jumping/gravity
@@ -59,6 +79,10 @@ namespace ElementalBuddies
                     Skill6Action = map.FindAction("Skill6"); // Assign new Skill6 Action
                     SkillEAction = map.FindAction("SkillE");
                     JumpAction = map.FindAction("Jump");
+                    SpellFireAction = map.FindAction("SpellFire");
+                    SpellIceAction = map.FindAction("SpellIce");
+                    SpellEarthAction = map.FindAction("SpellEarth");
+                    SpellLightAction = map.FindAction("SpellLight");
                 }
             }
         }
@@ -128,6 +152,9 @@ namespace ElementalBuddies
 
             if (Physics.Raycast(ray, out RaycastHit hit, 1000f, FloorLayer))
             {
+                _aimPoint = hit.point;
+                _hasAimPoint = true;
+
                 Vector3 targetPoint = hit.point;
                 targetPoint.y = transform.position.y; // Keep looking horizontally
 

@@ -584,7 +584,7 @@ Transform:
   m_GameObject: {fileID: 3466091606453905637}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.95, z: 0.3}
+  m_LocalPosition: {x: 0, y: 0.95, z: -0.3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -810,7 +810,7 @@ Transform:
   m_GameObject: {fileID: 5268305807614990162}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.075, z: 0.2}
+  m_LocalPosition: {x: 0, y: 1.075, z: -0.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1151,6 +1151,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Config: {fileID: 11400000, guid: 6557c62142188084b81b62593c2bbd36, type: 2}
   PaidCost: 0
+  MaxHP: 50
   ProjectilePrefab: {fileID: 8282255884464883281, guid: 91e5c213fbabbdb40a3ef2ab5bb456fa, type: 3}
   FirePoint: {fileID: 1980540893964816702}
 --- !u!114 &3103286317907650601

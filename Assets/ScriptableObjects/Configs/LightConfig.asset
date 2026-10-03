@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Type: 3
   CostOutCombat: 65
-  Range: 5
-  FireRate: 2.5
-  Damage: 8
+  Range: 6
+  FireRate: 1.5
+  Damage: 7
   Prefab: {fileID: 546453917968724474, guid: c4f21c9106773bf4dbc2bbb296bf6954, type: 3}

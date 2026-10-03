@@ -19,7 +19,7 @@ namespace ElementalBuddies
         }
 
         // Tank: "Damage" = Aura-DPS, "Range" = Taunt-/Aura-Radius, "FireRate" = Taunt-Rate (Config, z. B. 0.16 = alle ~6 s)
-        public override float GetDamageAtLevel(int level) => AuraDps * LevelMultiplier(DamageBonusPerLevel, level);
+        protected override float GetBaseDamageAtLevel(int level) => AuraDps * LevelMultiplier(DamageBonusPerLevel, level);
         public override float GetRangeAtLevel(int level) => TauntRadius * LevelMultiplier(RangeBonusPerLevel, level);
 
         public override void TakeDamage(float amount)

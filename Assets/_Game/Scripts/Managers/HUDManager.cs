@@ -130,6 +130,8 @@ namespace ElementalBuddies
             if (HPText != null) HPText.text = $"{Mathf.CeilToInt(Mathf.Max(0f, _playerStats.CurrentHP))}/{Mathf.FloorToInt(_playerStats.MaxHP)}";
         }
 
+        public void RefreshWave() => UpdateWaveInfo();
+
         private void UpdateWaveInfo()
         {
             if (WaveManager.Instance == null) return;

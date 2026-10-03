@@ -146,7 +146,15 @@ namespace ElementalBuddies
                 else if (upgrade.StatToBuff == StatType.Health && PlayerStatsRef != null)
                 {
                     PlayerStatsRef.MaxHP = ModifyValue(PlayerStatsRef.MaxHP, upgrade);
-                    PlayerStatsRef.Heal(0); 
+                    PlayerStatsRef.Heal(0);
+                }
+                else if (upgrade.StatToBuff == StatType.Damage && PlayerAbilities.Instance != null)
+                {
+                    // Player damage scales Arcane Ball + element spells (multiplier; flat values count as whole percents)
+                    var pa = PlayerAbilities.Instance;
+                    pa.DamageMultiplier = upgrade.IsPercentage
+                        ? ModifyValue(pa.DamageMultiplier, upgrade)
+                        : pa.DamageMultiplier + upgrade.Value / 100f;
                 }
             }
             else

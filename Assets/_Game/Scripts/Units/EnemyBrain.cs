@@ -17,6 +17,14 @@ namespace ElementalBuddies
         [Tooltip("Attack range against the Nexus, measured to the closest point of its collider.")]
         public float NexusAttackRange = 2.5f;
 
+        [Header("Forced Target (z. B. Schrein-Angreifer)")]
+        [Tooltip("Optional: statt zum Nexus läuft der Gegner hierhin und bleibt dort. Taunt und Player-Aggro haben weiter Vorrang.")]
+        public Transform ForcedTarget;
+        [Tooltip("Player-Aggro-Radius, solange ein ForcedTarget gesetzt ist (Schrein-Angreifer reagieren früher auf den Player).")]
+        public float ForcedTargetPlayerAggroRadius = 10f;
+        [Tooltip("Ab dieser Distanz zum ForcedTarget gilt der Gegner als angekommen (kein Anti-Cheese-Stuck).")]
+        public float ForcedTargetArriveDistance = 2.5f;
+
         private NavMeshAgent _agent;
         private Transform _player;
         private Transform _tauntTarget;
@@ -67,16 +75,19 @@ namespace ElementalBuddies
             HandleAttack();
         }
 
-        // Priority: Taunt > Player (within aggro radius) > Nexus > Player (fallback if no Nexus)
+        // Priority: Taunt > Player (within aggro radius) > ForcedTarget > Nexus > Player (fallback if no Nexus)
         private Transform GetCurrentTarget()
         {
             if (_tauntTarget != null) return _tauntTarget;
 
             if (_player != null)
             {
+                float aggro = ForcedTarget != null ? Mathf.Max(PlayerAggroRadius, ForcedTargetPlayerAggroRadius) : PlayerAggroRadius;
                 float playerDist = Vector3.Distance(transform.position, _player.position);
-                if (playerDist <= PlayerAggroRadius) return _player;
+                if (playerDist <= aggro) return _player;
             }
+
+            if (ForcedTarget != null) return ForcedTarget;
 
             if (Nexus.Instance != null) return Nexus.Instance.transform;
 
@@ -95,6 +106,13 @@ namespace ElementalBuddies
             if (IsNexus(target))
                 return Nexus.Instance.GetDistanceFrom(transform.position) <= NexusAttackRange;
 
+            if (target == ForcedTarget)
+            {
+                Vector3 d = target.position - transform.position;
+                d.y = 0f;
+                return d.magnitude <= ForcedTargetArriveDistance;
+            }
+
             return Vector3.Distance(transform.position, target.position) < AttackRange;
         }
 
@@ -102,6 +120,13 @@ namespace ElementalBuddies
         {
             Transform target = GetCurrentTarget();
             if (target == null) return;
+
+            if (target == ForcedTarget && IsInAttackRange(target))
+            {
+                // Angekommen: am Ziel stehen bleiben (z. B. im Schrein-Kreis → blockiert den Fortschritt)
+                if (_agent.isOnNavMesh && _agent.hasPath) _agent.ResetPath();
+                return;
+            }
 
             if (IsNexus(target))
             {

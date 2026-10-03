@@ -167,10 +167,17 @@ namespace ElementalBuddies
                      + Line("Radius", _buddy.GetRangeAtLevel(level), _buddy.GetRangeAtLevel(next), canUpgrade, " m", "0.#");
             }
 
-            bool healer = _buddy is HealerBuddy;
-            return Line(healer ? "Heilung" : "Schaden", _buddy.GetDamageAtLevel(level), _buddy.GetDamageAtLevel(next), canUpgrade, "", "0.#") + "\n"
-                 + Line(healer ? "Heilrate" : "Feuerrate", _buddy.GetFireRateAtLevel(level), _buddy.GetFireRateAtLevel(next), canUpgrade, "/s", "0.##") + "\n"
+            var healer = _buddy as HealerBuddy;
+            string stats = Line(healer != null ? "Strahl" : "Schaden", _buddy.GetDamageAtLevel(level), _buddy.GetDamageAtLevel(next), canUpgrade, "", "0.#") + "\n"
+                 + Line(healer != null ? "Angriffsrate" : "Feuerrate", _buddy.GetFireRateAtLevel(level), _buddy.GetFireRateAtLevel(next), canUpgrade, "/s", "0.##") + "\n"
                  + Line("Reichweite", _buddy.GetRangeAtLevel(level), _buddy.GetRangeAtLevel(next), canUpgrade, " m", "0.#");
+            if (healer != null)
+            {
+                // Segen skaliert wie der Schaden mit der Stufe
+                float ratio = _buddy.GetDamageAtLevel(level) > 0f ? _buddy.GetDamageAtLevel(next) / _buddy.GetDamageAtLevel(level) : 1f;
+                stats += "\n" + Line("Segen", healer.EffectiveBlessHeal, healer.EffectiveBlessHeal * ratio, canUpgrade, $" HP / {healer.BlessInterval:0.#} s", "0.#");
+            }
+            return stats;
         }
 
         private static Sprite PickSprite(Sprite[] sprites, int idx)

@@ -102,10 +102,11 @@ namespace ElementalBuddies
                 for (int i = 0; i < StageEffects.Length; i++)
                     if (StageEffects[i] != null) StageEffects[i].SetActive(i == stage - 1);
 
-            if (_buddy is ShooterBuddy shooter && StageFirePoints != null && stage - 1 < StageFirePoints.Length)
+            if (StageFirePoints != null && stage - 1 < StageFirePoints.Length && StageFirePoints[stage - 1] != null)
             {
                 Transform fp = StageFirePoints[stage - 1];
-                if (fp != null) shooter.FirePoint = fp;
+                if (_buddy is ShooterBuddy shooter) shooter.FirePoint = fp;
+                else if (_buddy is HealerBuddy healer) healer.FirePoint = fp;
             }
 
             _stage = stage;
