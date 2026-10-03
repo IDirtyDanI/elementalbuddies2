@@ -56,7 +56,26 @@ namespace ElementalBuddies
                 var cb = _onImpact;
                 _onImpact = null;
                 cb?.Invoke(_to);
+                DetachTrails();
                 Destroy(gameObject);
+            }
+        }
+
+        // Schweif, Rauch und Tropfen beim Einschlag ablösen, damit sie ausklingen statt schlagartig zu verschwinden
+        private void DetachTrails()
+        {
+            foreach (var ps in GetComponentsInChildren<ParticleSystem>())
+            {
+                if (ps.transform == transform) continue;
+                ps.transform.SetParent(null, true);
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                Destroy(ps.gameObject, ps.main.startLifetime.constantMax + 0.5f);
+            }
+            foreach (var tr in GetComponentsInChildren<TrailRenderer>())
+            {
+                tr.transform.SetParent(null, true);
+                tr.emitting = false;
+                tr.autodestruct = true;
             }
         }
     }
