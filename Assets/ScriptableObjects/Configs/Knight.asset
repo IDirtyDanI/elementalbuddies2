@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e8abe452fb0a3b47845a6d44bc7b082, type: 3}
+  m_Name: Knight
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.EnemyConfigSO
+  Type: 4
+  CostOutCombat: 0
+  Range: 0
+  FireRate: 0
+  Damage: 0
+  Prefab: {fileID: 405400792992039941, guid: bcccd2baf4c8549db9b0db60bc4f57ea, type: 3}
+  BaseHP: 170
+  Speed: 2.5
+  AttackDamage: 22
+  Armor: 0.5
+  BountyMultiplier: 3
+  VisualScale: 1.2

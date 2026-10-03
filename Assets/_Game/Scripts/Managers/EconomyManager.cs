@@ -55,18 +55,19 @@ namespace ElementalBuddies
 
         void OnEnable()
         {
-            EnemyBrain.OnEnemyDeath += HandleEnemyDeath;
+            EnemyBrain.OnEnemyKilled += HandleEnemyKilled;
         }
 
         void OnDisable()
         {
-            EnemyBrain.OnEnemyDeath -= HandleEnemyDeath;
+            EnemyBrain.OnEnemyKilled -= HandleEnemyKilled;
         }
 
-        // Splitter-Kopfgeld pro Kill (Mana gibt es nur noch über passive Regen)
-        private void HandleEnemyDeath()
+        // Splitter-Kopfgeld pro Kill × Gegnertyp-Faktor (Mana gibt es nur noch über passive Regen)
+        private void HandleEnemyKilled(EnemyBrain enemy)
         {
             float bounty = settings != null ? settings.ShardsPerKill : 6f;
+            if (enemy != null && enemy.Config != null) bounty *= enemy.Config.BountyMultiplier;
             if (bounty > 0f) AddShards(bounty);
         }
 

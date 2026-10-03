@@ -2,13 +2,15 @@ using UnityEngine;
 
 namespace ElementalBuddies
 {
-    // Gemeinsame Färbung für Status-Effekte (Brand, Frost) per MaterialPropertyBlock.
-    // Vorrang: Frost > Brand > Blendung; ohne aktiven Effekt wird der Block entfernt.
+    // Gemeinsame Färbung für Status-Effekte (Brand, Frost, Fluch, Nässe, Blendung) per MaterialPropertyBlock.
+    // Vorrang: Frost > Brand > Fluch > Nass > Blendung; ohne aktiven Effekt wird der Block entfernt.
     public static class StatusTint
     {
         public static readonly Color BurnTint = new Color(1f, 0.45f, 0.25f);
         public static readonly Color FrozenTint = new Color(0.45f, 0.75f, 1.35f);
         public static readonly Color BlindTint = new Color(1.35f, 1.25f, 0.8f);
+        public static readonly Color WetTint = new Color(0.6f, 0.8f, 1.15f);
+        public static readonly Color CurseTint = new Color(0.75f, 0.45f, 1.1f);
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly MaterialPropertyBlock Block = new MaterialPropertyBlock();
 
@@ -21,12 +23,16 @@ namespace ElementalBuddies
             bool burning = burn != null && burn.IsActive;
             var blind = root.GetComponent<BlindEffect>();
             bool blinded = blind != null && blind.IsActive;
+            var curse = root.GetComponent<CurseEffect>();
+            bool cursed = curse != null && curse.IsActive;
+            var wet = root.GetComponent<WetEffect>();
+            bool wetted = wet != null && wet.IsActive;
 
             foreach (var r in root.GetComponentsInChildren<Renderer>())
             {
                 if (r is ParticleSystemRenderer || r.sharedMaterial == null || !r.sharedMaterial.HasProperty(BaseColorId)) continue;
-                if (!frozen && !burning && !blinded) { r.SetPropertyBlock(null); continue; }
-                Color tint = frozen ? FrozenTint : (burning ? BurnTint : BlindTint);
+                if (!frozen && !burning && !cursed && !wetted && !blinded) { r.SetPropertyBlock(null); continue; }
+                Color tint = frozen ? FrozenTint : burning ? BurnTint : cursed ? CurseTint : wetted ? WetTint : BlindTint;
                 r.GetPropertyBlock(Block);
                 Block.SetColor(BaseColorId, r.sharedMaterial.GetColor(BaseColorId) * tint);
                 r.SetPropertyBlock(Block);

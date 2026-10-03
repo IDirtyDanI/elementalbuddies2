@@ -14,7 +14,8 @@ namespace ElementalBuddies
         HolyCircle,
         EnemyDeath,
         PlayerHurt,
-        ShrineCaptured
+        ShrineCaptured,
+        Fusion
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.

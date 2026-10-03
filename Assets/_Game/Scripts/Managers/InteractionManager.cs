@@ -228,8 +228,13 @@ namespace ElementalBuddies
         private void RefreshSelectedRange()
         {
             if (_selectedRange == null || SelectedBuddy == null) return;
-            _selectedRange.Show(SelectedBuddy.transform, SelectedBuddy.EffectiveRange,
-                RangeIndicator.ElementColor(SelectedBuddy.ElementIndex, RangeIndicatorAlpha));
+            Color color = RangeIndicator.ElementColor(SelectedBuddy.ElementIndex, RangeIndicatorAlpha);
+            if (SelectedBuddy is FusionBuddy fusion)
+            {
+                color = FusionInfo.GetColor(fusion.Element);
+                color.a = RangeIndicatorAlpha;
+            }
+            _selectedRange.Show(SelectedBuddy.transform, SelectedBuddy.EffectiveRange, color);
         }
 
         // Verkaufen nur in der Bauphase (und nicht während Pause/Upgrade-Screen)

@@ -21,3 +21,6 @@ MonoBehaviour:
   BaseHP: 60
   Speed: 3.5
   AttackDamage: 10
+  Armor: 0
+  BountyMultiplier: 1
+  VisualScale: 1

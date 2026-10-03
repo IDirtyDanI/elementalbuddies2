@@ -22,6 +22,14 @@ namespace ElementalBuddies
         {
             if (target == null || dps <= 0f || duration <= 0f) return null;
 
+            // Nass löscht das Feuer: Nässe verdampft, der Gegner fängt nicht an zu brennen
+            var wet = target.GetComponent<WetEffect>();
+            if (wet != null && wet.IsActive)
+            {
+                wet.Stop();
+                return null;
+            }
+
             var burn = target.GetComponent<BurnEffect>();
             if (burn == null) burn = target.AddComponent<BurnEffect>();
             burn._target = target.GetComponent<IDamageable>();
@@ -30,6 +38,14 @@ namespace ElementalBuddies
             burn.enabled = true;
             burn.StartVfx(vfxPrefab);
             return burn;
+        }
+
+        // Sofort beenden (z. B. durch Nässe gelöscht)
+        public void Stop()
+        {
+            _remaining = 0f;
+            _tickTimer = 0f;
+            enabled = false;
         }
 
         void Update()

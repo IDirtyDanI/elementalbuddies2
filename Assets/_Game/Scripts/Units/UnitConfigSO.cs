@@ -8,7 +8,12 @@ namespace ElementalBuddies
         Ice,
         Earth,
         Light,
-        EnemyRunner // For EnemyConfigSO which will inherit from this
+        EnemyRunner, // For EnemyConfigSO which will inherit from this
+        // Fusions-Buddies (angehängt, damit serialisierte Werte nicht verrutschen)
+        Lightning,
+        Water,
+        Air,
+        Shadow
     }
 
     [CreateAssetMenu(fileName = "UnitConfig", menuName = "ElementalBuddies/Unit Config", order = 1)]

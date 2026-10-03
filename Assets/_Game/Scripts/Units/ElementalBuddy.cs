@@ -126,7 +126,7 @@ namespace ElementalBuddies
         protected static float FireRateBonusPerLevel => Settings != null ? Settings.FireRateBonusPerLevel : 0.2f;
         protected static float RangeBonusPerLevel => Settings != null ? Settings.RangeBonusPerLevel : 0.1f;
 
-        public int MaxLevel => Settings != null ? Mathf.Max(1, Settings.BuddyMaxLevel) : 3;
+        public virtual int MaxLevel => Settings != null ? Mathf.Max(1, Settings.BuddyMaxLevel) : 3;
         public bool CanUpgrade => Config != null && _level < MaxLevel;
 
         // Aufwerten nur in der Bauphase (nicht im Kampf, nicht bei Game Over / Pause / Upgrade-Screen)
@@ -156,13 +156,16 @@ namespace ElementalBuddies
 
         // Basiswerte (Config, inkl. globaler Roguelike-Upgrades) × Stufen-Multiplikator; Subklassen können umdeuten
         // Schaden inkl. passivem Schrein-Bonus des eigenen Elements (ShrineBonuses); Subklassen überschreiben GetBaseDamageAtLevel
-        public float GetDamageAtLevel(int level) => GetBaseDamageAtLevel(level) * ShrineBonuses.GetDamageMultiplier(ElementIndex);
+        public float GetDamageAtLevel(int level) => GetBaseDamageAtLevel(level) * ShrineDamageMultiplier;
+        // Fusionen: Produkt der Schrein-Boni beider Eltern-Elemente
+        protected virtual float ShrineDamageMultiplier => ShrineBonuses.GetDamageMultiplier(ElementIndex);
         protected virtual float GetBaseDamageAtLevel(int level) => Config != null ? Config.Damage * LevelMultiplier(DamageBonusPerLevel, level) : 0f;
         public virtual float GetFireRateAtLevel(int level) => Config != null ? Config.FireRate * LevelMultiplier(FireRateBonusPerLevel, level) : 0f;
         public virtual float GetRangeAtLevel(int level) => Config != null ? Config.Range * LevelMultiplier(RangeBonusPerLevel, level) : 0f;
 
         public float EffectiveDamage => GetDamageAtLevel(_level);
-        public float EffectiveFireRate => GetFireRateAtLevel(_level);
+        // inkl. Feuerrate-Aura eines Luft-Buddys in der Nähe
+        public float EffectiveFireRate => GetFireRateAtLevel(_level) * AirBuddy.GetFireRateMultiplier(this);
         public float EffectiveRange => GetRangeAtLevel(_level);
 
         public bool TryUpgrade()
@@ -186,7 +189,8 @@ namespace ElementalBuddies
         // ---------------- Anzeige ----------------
 
         // 0 = Feuer, 1 = Eis, 2 = Erde, 3 = Licht. Über Config-/Prefab-Namen, da UnitType in den Configs nicht verlässlich gesetzt ist.
-        public int ElementIndex
+        // Fusionen: erstes Eltern-Element (hält element-indizierte UI-Arrays sicher)
+        public virtual int ElementIndex
         {
             get
             {
@@ -195,11 +199,12 @@ namespace ElementalBuddies
             }
         }
 
-        public string DisplayName => ElementNames[ElementIndex];
+        public virtual string DisplayName => ElementNames[ElementIndex];
+        public virtual bool IsFusion => false;
 
         // Entwicklungsstufe 1–3 (Stufen über 3 zeigen die letzte Entwicklung)
         public int Stage => Mathf.Clamp(_level, 1, StageNames.Length);
-        public string StageName => StageNames[Stage - 1][ElementIndex];
+        public virtual string StageName => StageNames[Stage - 1][ElementIndex];
 
         private int ResolveElementIndex()
         {
@@ -213,6 +218,7 @@ namespace ElementalBuddies
         {
             if (string.IsNullOrEmpty(n)) return -1;
             n = n.ToLowerInvariant();
+            if (n.Contains("fusion")) return -1; // Fusions-Configs ("Fusion_Blitz" …) nie als Basis-Element deuten
             if (n.Contains("fire")) return 0;
             if (n.Contains("ice")) return 1;
             if (n.Contains("earth")) return 2;

@@ -32,12 +32,46 @@ namespace ElementalBuddies
         public float CurrentHP => _currentHP;
         public float MaxHP => _maxHP;
 
+        // Status-Effekte (für Synergien, z. B. Blitz-Bonus auf nasse Gegner)
+        // Komponenten können auch direkt per XyzEffect.Apply angehängt werden → bei Bedarf nachschlagen
+        public bool IsWet
+        {
+            get
+            {
+                if (_wet == null) _wet = GetComponent<WetEffect>();
+                return _wet != null && _wet.IsActive;
+            }
+        }
+        public bool IsCursed
+        {
+            get
+            {
+                if (_curse == null) _curse = GetComponent<CurseEffect>();
+                return _curse != null && _curse.IsActive;
+            }
+        }
+        public bool IsBurning
+        {
+            get
+            {
+                if (_burn == null) _burn = GetComponent<BurnEffect>();
+                return _burn != null && _burn.IsActive;
+            }
+        }
+        // Schadensreduktion 0..0.9 aus der Config (Fluch ignoriert sie)
+        public float Armor => Config != null ? Mathf.Clamp(Config.Armor, 0f, 0.9f) : 0f;
+
         private NavMeshAgent _agent;
         private float _maxHP;
         private float _slowPercent;
         private float _slowUntil;
         private FreezeEffect _freeze;
         private bool _wasFrozen;
+        private WetEffect _wet;
+        private CurseEffect _curse;
+        private BurnEffect _burn;
+        private Coroutine _knockbackRoutine;
+        private bool _knockedBack;
         private Transform _player;
         private Transform _tauntTarget;
         private float _currentHP;
@@ -47,7 +81,16 @@ namespace ElementalBuddies
         private float _stuckTimer;
         
         public static event System.Action OnEnemyDeath;
+        // Wie OnEnemyDeath, aber mit dem getöteten Gegner (z. B. Kopfgeld je Gegnertyp)
+        public static event System.Action<EnemyBrain> OnEnemyKilled;
         private bool _isDead;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            OnEnemyDeath = null;
+            OnEnemyKilled = null;
+        }
 
         void Start()
         {
@@ -67,6 +110,10 @@ namespace ElementalBuddies
                 _baseSpeed = 3.5f;
             }
             if (_maxHP <= 0f) _maxHP = _currentHP;
+
+            // Gegnertyp-Größe (vor der HP-Bar, die ihre Höhe beim Binden misst)
+            if (Config != null && Config.VisualScale > 0f && !Mathf.Approximately(Config.VisualScale, 1f))
+                transform.localScale *= Config.VisualScale;
 
             if (HealthBarPrefab != null)
                 Instantiate(HealthBarPrefab).Bind(this);
@@ -97,7 +144,15 @@ namespace ElementalBuddies
             {
                 _wasFrozen = false;
                 _stuckTimer = 0f;
-                if (_agent.isOnNavMesh) _agent.isStopped = false;
+                if (_agent.isOnNavMesh && !_knockedBack) _agent.isStopped = false;
+            }
+
+            // Rückstoß: Bewegung und Angriff kurz unterbrochen
+            if (_knockedBack)
+            {
+                if (_agent.isOnNavMesh) _agent.isStopped = true;
+                _stuckTimer = 0f;
+                return;
             }
 
             UpdateSpeed();
@@ -217,7 +272,17 @@ namespace ElementalBuddies
              }
         }
 
+        // Schadens-Pipeline: verflucht → Bonus-Schaden, Rüstung ignoriert; sonst Rüstung reduziert
         public void TakeDamage(float amount)
+        {
+            if (_isDead || amount <= 0f) return;
+            if (IsCursed) amount *= 1f + _curse.DamageTakenBonus;
+            else amount *= 1f - Armor;
+            TakeTrueDamage(amount);
+        }
+
+        // Schaden ohne Rüstung/Fluch-Modifikatoren
+        public void TakeTrueDamage(float amount)
         {
             if (_isDead) return;
             _currentHP -= amount;
@@ -226,6 +291,7 @@ namespace ElementalBuddies
                 // Guard: several hits in one frame must not report the death twice (bounty / wave count)
                 _isDead = true;
                 OnEnemyDeath?.Invoke();
+                OnEnemyKilled?.Invoke(this);
                 GameAudio.Play(SfxId.EnemyDeath, transform.position);
                 Destroy(gameObject);
             }
@@ -252,6 +318,7 @@ namespace ElementalBuddies
         public void Freeze(float duration, GameObject vfxPrefab = null)
         {
             if (_isDead || duration <= 0f) return;
+            if (IsWet) duration *= 2f; // Nass + Frost: friert doppelt so lange ein
             _freeze = FreezeEffect.Apply(gameObject, duration, vfxPrefab);
             if (_agent != null && _agent.isOnNavMesh)
             {
@@ -261,6 +328,84 @@ namespace ElementalBuddies
         }
 
         public bool IsFrozen => _freeze != null && _freeze.IsActive;
+
+        // Nass machen (löscht einen laufenden Brand, siehe WetEffect.Apply)
+        public void ApplyWet(float duration, GameObject vfxPrefab = null)
+        {
+            if (_isDead || duration <= 0f) return;
+            var wet = WetEffect.Apply(gameObject, duration, vfxPrefab);
+            if (wet != null) _wet = wet;
+        }
+
+        // Verfluchen: DoT + mehr erlittener Schaden, Rüstung ignoriert
+        public void ApplyCurse(float dps, float duration, float damageTakenBonus, GameObject vfxPrefab = null)
+        {
+            if (_isDead || duration <= 0f) return;
+            var curse = CurseEffect.Apply(gameObject, dps, duration, damageTakenBonus, vfxPrefab);
+            if (curse != null) _curse = curse;
+        }
+
+        // Rückstoß entlang des NavMesh (agent.Move, verlässt das NavMesh nicht); unterbricht kurz die Bewegung
+        public void Knockback(Vector3 direction, float distance, float duration = 0.25f)
+        {
+            if (_isDead || distance <= 0f) return;
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.0001f) return;
+            if (_agent == null) _agent = GetComponent<NavMeshAgent>();
+            if (_knockbackRoutine != null) StopCoroutine(_knockbackRoutine);
+            _knockbackRoutine = StartCoroutine(KnockbackRoutine(direction.normalized, distance, Mathf.Max(0.01f, duration)));
+        }
+
+        private IEnumerator KnockbackRoutine(Vector3 dir, float distance, float duration)
+        {
+            _knockedBack = true;
+            if (_agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
+
+            float t = 0f;
+            float done = 0f;
+            while (t < duration)
+            {
+                t = Mathf.Min(duration, t + Time.deltaTime);
+                float k = t / duration;
+                float eased = 1f - (1f - k) * (1f - k); // ease-out: schneller Stoß, weiches Abbremsen
+                float step = (eased - done) * distance;
+                done = eased;
+                if (_agent.isOnNavMesh) _agent.Move(dir * step);
+                yield return null;
+            }
+
+            _knockedBack = false;
+            _knockbackRoutine = null;
+            _stuckTimer = 0f;
+            if (_agent.isOnNavMesh && !IsFrozen) _agent.isStopped = false;
+        }
+
+        // Horizontale Richtung entgegen der aktuellen Laufrichtung (z. B. für Rückstoß „den Weg zurück“)
+        public Vector3 PathBackDirection
+        {
+            get
+            {
+                Vector3 v = Vector3.zero;
+                if (_agent != null)
+                {
+                    v = _agent.velocity;
+                    v.y = 0f;
+                    if (v.sqrMagnitude < 0.01f && _agent.isOnNavMesh && _agent.hasPath)
+                    {
+                        v = _agent.steeringTarget - transform.position;
+                        v.y = 0f;
+                    }
+                }
+                if (v.sqrMagnitude < 0.01f && Nexus.Instance != null)
+                {
+                    v = Nexus.Instance.GetClosestPoint(transform.position) - transform.position;
+                    v.y = 0f;
+                }
+                if (v.sqrMagnitude < 0.0001f) v = transform.forward;
+                v.y = 0f;
+                return v.sqrMagnitude > 0.0001f ? -v.normalized : Vector3.back;
+            }
+        }
 
         private void UpdateSpeed()
         {
