@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27000db4696a845a28abc83358450ebf, type: 3}
+  m_Name: Archer_LightArrow_Duration
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.MerchantCardSO
+  Class: 2
+  Ability: 17
+  Stat: 4
+  Value: 25
+  Title: 'Lichtpfeil: Dauer'
+  Description: Blenddauer +25 %
+  Icon: {fileID: 21300000, guid: 8fc34e22259bd4fe0aa9d687e3822a36, type: 3}
+  Badge: {fileID: 21300000, guid: 5c111260ccffe400e898d0942dc6df77, type: 3}

@@ -13,6 +13,8 @@ namespace ElementalBuddies
         public float HitRadius = 0.3f;
         [Tooltip("Durchschlägt Gegner (trifft jeden höchstens einmal).")]
         public bool Pierce = false;
+        [Tooltip("Ohne Pierce: so viele Gegner durchschlägt der Pfeil zusätzlich, bevor er stecken bleibt (Händlerkarte).")]
+        public int ExtraPierce = 0;
         [Tooltip("Funken beim Treffer (optional).")]
         public GameObject HitFxPrefab;
         [Tooltip("Wird beim Aufprall vom Pfeil gelöst und darf ausklingen (z. B. Trail, Partikel-Schweif).")]
@@ -57,7 +59,7 @@ namespace ElementalBuddies
                     if (!_hit.Add(enemy)) continue;
                     Vector3 point = h.point == Vector3.zero ? enemy.transform.position + Vector3.up : h.point;
                     HitEnemy(enemy, point);
-                    if (!Pierce)
+                    if (!Pierce && HitCount > ExtraPierce)
                     {
                         transform.position = from + dir * h.distance;
                         End();

@@ -283,6 +283,10 @@ namespace ElementalBuddies
         private void UpdateCharges(Slot s, AbilityId id)
         {
             int max = _bound.GetMaxCharges(id);
+            // Aufladungen können sich zur Laufzeit ändern (Händlerkarte „+1 Aufladung")
+            int shown = 0;
+            for (int i = 0; i < s.Pips.Count; i++) if (s.Pips[i] != null && s.Pips[i].gameObject.activeSelf) shown++;
+            if (max > 1 && shown != max) BuildCharges(s, max);
             if (max <= 1 || s.ChargesRoot == null)
             {
                 if (s.ChargeCount != null && s.ChargeCount.gameObject.activeSelf && max <= 1) s.ChargeCount.gameObject.SetActive(false);

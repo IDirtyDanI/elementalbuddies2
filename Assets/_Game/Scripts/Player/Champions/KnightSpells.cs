@@ -20,6 +20,23 @@ namespace ElementalBuddies
         public GameObject ArcFxPrefab;
         [ColorUsage(true, true)] public Color ArcColor = new Color(1.6f, 0.65f, 0.15f, 1f);
 
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            Radius = m.Apply(id, AbilityStat.Area, Radius);
+            BurnDuration = m.Apply(id, AbilityStat.Duration, BurnDuration);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Damage: return Stat(Damage * dm, "", "Schaden", out value, out unit, out label);
+                case AbilityStat.Area: return Stat(Radius, " m", "Radius", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(BurnDuration, " s", "Brenndauer", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
+
         public FlameWhirlSpell()
         {
             ManaCost = 35f;
@@ -58,6 +75,25 @@ namespace ElementalBuddies
         [Tooltip("Eiskristalle am eingefrorenen Gegner (wie Frostnova).")]
         public GameObject FrozenVfxPrefab;
 
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            Range = m.Apply(id, AbilityStat.Range, Range);
+            ConeAngle = Mathf.Min(360f, m.Apply(id, AbilityStat.Area, ConeAngle));
+            FreezeDuration = m.Apply(id, AbilityStat.Duration, FreezeDuration);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Damage: return Stat(Damage * dm, "", "Schaden", out value, out unit, out label);
+                case AbilityStat.Range: return Stat(Range, " m", "Reichweite", out value, out unit, out label);
+                case AbilityStat.Area: return Stat(ConeAngle, "°", "Kegel", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(FreezeDuration, " s", "Einfrierdauer", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
+
         public FrostStrikeSpell()
         {
             ManaCost = 40f;
@@ -92,6 +128,25 @@ namespace ElementalBuddies
         public float Knockback = 2.5f;
         [Tooltip("Sterne über dem Kopf betäubter Gegner (VFX_Blinded).")]
         public GameObject StunVfxPrefab;
+
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            Radius = m.Apply(id, AbilityStat.Area, Radius);
+            StunDuration = m.Apply(id, AbilityStat.Duration, StunDuration);
+            LeapDistance = m.Apply(id, AbilityStat.Range, LeapDistance);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Damage: return Stat(Damage * dm, "", "Schaden", out value, out unit, out label);
+                case AbilityStat.Area: return Stat(Radius, " m", "Radius", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(StunDuration, " s", "Betäubung", out value, out unit, out label);
+                case AbilityStat.Range: return Stat(LeapDistance, " m", "Sprungweite", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
 
         public EarthquakeSpell()
         {
@@ -145,6 +200,25 @@ namespace ElementalBuddies
         [Range(0f, 0.9f)] public float DamageReduction = 0.3f;
         [Tooltip("Leuchten am Spieler für die Dauer des Schwurs (optional).")]
         public GameObject AuraPrefab;
+
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            Radius = m.Apply(id, AbilityStat.Area, Radius);
+            TauntDuration = m.Apply(id, AbilityStat.Duration, TauntDuration);
+            PlayerHeal = m.Apply(id, AbilityStat.Heal, PlayerHeal);
+            BuddyHeal = m.Apply(id, AbilityStat.Heal, BuddyHeal);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Area: return Stat(Radius, " m", "Radius", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(TauntDuration, " s", "Spottdauer", out value, out unit, out label);
+                case AbilityStat.Heal: return Stat(PlayerHeal, " LP", "Heilung", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
 
         public LightOathSpell()
         {

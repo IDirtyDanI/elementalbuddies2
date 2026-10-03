@@ -4,7 +4,8 @@ using TMPro;
 
 namespace ElementalBuddies
 {
-    // Pfeil am Bildschirmrand zum erwachten Schrein (Priorität) bzw. kurz zu einem neu geöffneten Portal,
+    // Pfeil am Bildschirmrand zum erwachten Schrein (Priorität) bzw. kurz zu einem neu geöffneten Portal und
+    // ein zweiter Pfeil (Kopie, Händlerfarbe) zum geöffneten Händler,
     // solange das Ziel außerhalb des Bildschirms liegt. Funktioniert mit Screen Space Overlay + CanvasScaler
     // (und Screen Space Camera): Bildschirm → Canvas-Koordinaten per RectTransformUtility.
     public class OffscreenIndicatorUI : MonoBehaviour
@@ -67,37 +68,76 @@ namespace ElementalBuddies
             _portalUntil = Time.unscaledTime + PortalHighlightDuration;
         }
 
+        // Ein Satz Pfeil + Distanz + Icon. Kanal 0 = Schrein/Portal (Szenen-Objekte), Kanal 1 = Händler (Kopie).
+        private class Channel
+        {
+            public RectTransform Arrow;
+            public Image ArrowImage;
+            public TextMeshProUGUI DistanceText;
+            public Image TargetIcon;
+            public bool Visible = true;
+        }
+
+        private Channel _main;
+        private Channel _merchant;
+
+        private void EnsureChannels()
+        {
+            if (_main != null) return;
+            _main = new Channel { Arrow = Arrow, ArrowImage = ArrowImage, DistanceText = DistanceText, TargetIcon = TargetIcon };
+            _merchant = new Channel();
+            if (Arrow != null)
+            {
+                _merchant.Arrow = Instantiate(Arrow.gameObject, Arrow.parent).GetComponent<RectTransform>();
+                _merchant.Arrow.name = Arrow.name + "_Merchant";
+                _merchant.ArrowImage = _merchant.Arrow.GetComponent<Image>();
+            }
+            if (DistanceText != null)
+            {
+                _merchant.DistanceText = Instantiate(DistanceText.gameObject, DistanceText.transform.parent).GetComponent<TextMeshProUGUI>();
+                _merchant.DistanceText.name = DistanceText.name + "_Merchant";
+            }
+            if (TargetIcon != null)
+            {
+                _merchant.TargetIcon = Instantiate(TargetIcon.gameObject, TargetIcon.transform.parent).GetComponent<Image>();
+                _merchant.TargetIcon.name = TargetIcon.name + "_Merchant";
+            }
+            SetVisible(_merchant, false);
+        }
+
         void LateUpdate()
         {
             if (_cam == null) _cam = Camera.main;
+            EnsureChannels();
             if (Arrow == null || _cam == null || _area == null)
             {
                 SetVisible(false);
+                SetVisible(_merchant, false);
                 return;
             }
 
-            // Ziel wählen: erwachter Schrein > frisch geöffnetes Portal
-            Vector3 targetPos;
-            Color color;
-            Sprite icon;
+            // Kanal 0: erwachter Schrein > frisch geöffnetes Portal
             Shrine shrine = FindAwakenedShrine();
             if (shrine != null)
             {
-                targetPos = shrine.CenterPosition;
-                color = TintWithElement ? ElementInfo.GetColor(shrine.ElementIndex) : Color.white;
-                icon = ElementIcons != null && shrine.ElementIndex < ElementIcons.Length ? ElementIcons[shrine.ElementIndex] : null;
+                Sprite icon = ElementIcons != null && shrine.ElementIndex < ElementIcons.Length ? ElementIcons[shrine.ElementIndex] : null;
+                Draw(_main, shrine.CenterPosition, TintWithElement ? ElementInfo.GetColor(shrine.ElementIndex) : Color.white, icon);
             }
             else if (_portal != null && Time.unscaledTime < _portalUntil)
-            {
-                targetPos = _portal.SpawnTransform.position;
-                color = PortalColor;
-                icon = PortalIcon;
-            }
+                Draw(_main, _portal.SpawnTransform.position, PortalColor, PortalIcon);
             else
-            {
                 SetVisible(false);
-                return;
-            }
+
+            // Kanal 1: geöffneter Händler
+            var mgr = MerchantManager.Instance;
+            Merchant m = mgr != null && mgr.ActiveMerchant != null && mgr.ActiveMerchant.IsActive ? mgr.ActiveMerchant : null;
+            if (m != null) Draw(_merchant, m.CenterPosition, TintWithElement ? m.Color : Color.white, mgr.GetEmblem(m.Kind));
+            else SetVisible(_merchant, false);
+        }
+
+        private void Draw(Channel ch, Vector3 targetPos, Color color, Sprite icon)
+        {
+            if (ch == null || ch.Arrow == null) return;
 
             Vector3 vp = _cam.WorldToViewportPoint(targetPos);
             bool behind = vp.z < 0f;
@@ -106,7 +146,7 @@ namespace ElementalBuddies
                 && vp.y >= OnScreenMargin && vp.y <= 1f - OnScreenMargin;
             if (onScreen)
             {
-                SetVisible(false);
+                SetVisible(ch, false);
                 return;
             }
 
@@ -133,30 +173,30 @@ namespace ElementalBuddies
             float ty = Mathf.Abs(localDir.y) > 1e-5f ? halfH / Mathf.Abs(localDir.y) : float.PositiveInfinity;
             Vector2 pos = areaCenter + localDir * Mathf.Min(tx, ty);
 
-            SetVisible(true);
-            Arrow.anchoredPosition = ToAnchored(Arrow, pos);
+            SetVisible(ch, true);
+            ch.Arrow.anchoredPosition = ToAnchored(ch.Arrow, pos);
             float angle = Mathf.Atan2(localDir.y, localDir.x) * Mathf.Rad2Deg;
-            Arrow.localRotation = Quaternion.Euler(0f, 0f, angle + SpriteAngleOffset);
-            if (ArrowImage != null) ArrowImage.color = color;
+            ch.Arrow.localRotation = Quaternion.Euler(0f, 0f, angle + SpriteAngleOffset);
+            if (ch.ArrowImage != null) ch.ArrowImage.color = color;
 
             Vector2 labelPos = pos - localDir * LabelOffset;
-            if (DistanceText != null)
+            if (ch.DistanceText != null)
             {
                 if (_player == null) _player = GameObject.FindGameObjectWithTag("Player")?.transform;
                 if (_player != null)
                 {
                     Vector3 d = targetPos - _player.position;
                     d.y = 0f;
-                    DistanceText.text = $"{Mathf.RoundToInt(d.magnitude)} m";
+                    ch.DistanceText.text = $"{Mathf.RoundToInt(d.magnitude)} m";
                 }
-                else DistanceText.text = "";
-                DistanceText.rectTransform.anchoredPosition = ToAnchored(DistanceText.rectTransform, labelPos);
+                else ch.DistanceText.text = "";
+                ch.DistanceText.rectTransform.anchoredPosition = ToAnchored(ch.DistanceText.rectTransform, labelPos);
             }
-            if (TargetIcon != null)
+            if (ch.TargetIcon != null)
             {
-                TargetIcon.sprite = icon;
-                TargetIcon.enabled = icon != null;
-                TargetIcon.rectTransform.anchoredPosition = ToAnchored(TargetIcon.rectTransform, labelPos + Vector2.up * 30f);
+                ch.TargetIcon.sprite = icon;
+                ch.TargetIcon.enabled = icon != null;
+                ch.TargetIcon.rectTransform.anchoredPosition = ToAnchored(ch.TargetIcon.rectTransform, labelPos + Vector2.up * 30f);
             }
         }
 
@@ -191,14 +231,19 @@ namespace ElementalBuddies
             return null;
         }
 
-        private bool _visible = true;
         private void SetVisible(bool v)
         {
-            if (_visible == v) return;
-            _visible = v;
-            if (Arrow != null) Arrow.gameObject.SetActive(v);
-            if (DistanceText != null) DistanceText.gameObject.SetActive(v);
-            if (TargetIcon != null) TargetIcon.gameObject.SetActive(v);
+            EnsureChannels();
+            SetVisible(_main, v);
+        }
+
+        private static void SetVisible(Channel ch, bool v)
+        {
+            if (ch == null || ch.Visible == v) return;
+            ch.Visible = v;
+            if (ch.Arrow != null) ch.Arrow.gameObject.SetActive(v);
+            if (ch.DistanceText != null) ch.DistanceText.gameObject.SetActive(v);
+            if (ch.TargetIcon != null) ch.TargetIcon.gameObject.SetActive(v);
         }
     }
 }

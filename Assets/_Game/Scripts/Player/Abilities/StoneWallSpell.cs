@@ -29,6 +29,24 @@ namespace ElementalBuddies
             Cooldown = 12f;
         }
 
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            Length = m.Apply(id, AbilityStat.Length, Length);
+            Lifetime = m.Apply(id, AbilityStat.Duration, Lifetime);
+            Distance = m.Apply(id, AbilityStat.Range, Distance);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Length: return Stat(Length, " m", "Mauerlänge", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(Lifetime, " s", "Standzeit", out value, out unit, out label);
+                case AbilityStat.Range: return Stat(Distance, " m", "Abstand", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
+
         public override void Cast(SpellCastContext ctx)
         {
             Vector3 pos = ctx.Origin + ctx.AimDirection * Distance;

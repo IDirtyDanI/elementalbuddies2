@@ -31,6 +31,38 @@ namespace ElementalBuddies
 
         public abstract void Cast(SpellCastContext ctx);
 
+        // ---------------- Händlerkarten (AbilityMods) ----------------
+
+        // Kopie mit angewendeten Fähigkeits-Modifikatoren (ohne Modifikatoren: diese Instanz). Die Kits wirken und
+        // beschreiben immer die Kopie, Laufzeit-Objekte (Pfeilregen, Falle, Mauer) bekommen sie als Konfiguration.
+        // Abklingzeit und Schaden laufen zentral über PlayerAbilities (GetCooldownDuration, ctx.DamageMultiplier).
+        public ElementSpell WithMods(AbilityMods mods, AbilityId id)
+        {
+            if (mods == null || !mods.HasAny(id)) return this;
+            var copy = (ElementSpell)MemberwiseClone();
+            copy.ApplyMods(mods, id);
+            return copy;
+        }
+
+        protected virtual void ApplyMods(AbilityMods m, AbilityId id) { }
+
+        // Aktueller Wert eines Karten-Stats für die Kartenanzeige ("2.6 → 3.1 m"). dm = Schadens-Multiplikator.
+        public virtual bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            value = 0f;
+            unit = "";
+            label = "";
+            return false;
+        }
+
+        protected static bool Stat(float v, string u, string l, out float value, out string unit, out string label)
+        {
+            value = v;
+            unit = u;
+            label = l;
+            return true;
+        }
+
         protected void SpawnEffect(Vector3 position, Quaternion rotation, float size)
         {
             if (CastEffectPrefab == null) return;

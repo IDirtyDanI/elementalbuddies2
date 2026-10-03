@@ -80,6 +80,18 @@ namespace ElementalBuddies
 
         public override ChampionClass Class => ChampionClass.Knight;
 
+        // ---------------- Effektive Werte (inkl. Händlerkarten) ----------------
+
+        public float SlashRangeEff => Mod(AbilityId.SwordSlash, AbilityStat.Range, SlashRange);
+        public float SlashArcEff => Mathf.Min(360f, Mod(AbilityId.SwordSlash, AbilityStat.Angle, SlashArc));
+        // Kombo-Tempo: Abstände zwischen den Schlägen und Erholung nach dem 3. Schlag werden kürzer
+        public float SlashIntervalEff => SlashInterval / ModFactor(AbilityId.SwordSlash, AbilityStat.Speed);
+        public float FinisherRecoveryEff => FinisherRecovery / ModFactor(AbilityId.SwordSlash, AbilityStat.Speed);
+        public float BlockAngleEff => Mathf.Min(360f, Mod(AbilityId.ShieldBlock, AbilityStat.Angle, BlockAngle));
+        public float ManaPerBlockedDamageEff => Mod(AbilityId.ShieldBlock, AbilityStat.ManaCost, ManaPerBlockedDamage);
+        public float BlockMoveMultiplierEff => Mathf.Min(1f, BlockMoveMultiplier * ModFactor(AbilityId.ShieldBlock, AbilityStat.Speed));
+        public float BlockBreakCooldownEff => BlockBreakCooldown * ModFactor(AbilityId.ShieldBlock, AbilityStat.Cooldown);
+
         public override AbilityId GetAbility(AbilitySlot slot)
         {
             switch (slot)
@@ -93,7 +105,7 @@ namespace ElementalBuddies
             }
         }
 
-        public ElementSpell GetSpell(AbilityId id)
+        public override ElementSpell GetSpell(AbilityId id)
         {
             switch (id)
             {
@@ -109,7 +121,7 @@ namespace ElementalBuddies
         {
             switch (id)
             {
-                case AbilityId.SwordSlash: return SlashInterval;
+                case AbilityId.SwordSlash: return SlashIntervalEff;
                 case AbilityId.ShieldBlock: return 0f;
                 default: { var s = GetSpell(id); return s != null ? s.Cooldown : 0f; }
             }
@@ -131,7 +143,7 @@ namespace ElementalBuddies
         public override bool AutoRepeatPrimary => true;
         public override bool IsHoldAbility(AbilityId id) => id == AbilityId.ShieldBlock;
         public override bool IsActive(AbilityId id) => (id == AbilityId.ShieldBlock && IsBlocking) || (id == AbilityId.LightOath && OathActive);
-        public override float MoveSpeedMultiplier => IsBlocking ? BlockMoveMultiplier : 1f;
+        public override float MoveSpeedMultiplier => IsBlocking ? BlockMoveMultiplierEff : 1f;
 
         public override bool CanCast(AbilityId id)
         {
@@ -143,14 +155,14 @@ namespace ElementalBuddies
 
         public override string GetManaLabel(AbilityId id)
         {
-            if (id == AbilityId.ShieldBlock) return Fmt(ManaPerBlockedDamage) + "/LP";
+            if (id == AbilityId.ShieldBlock) return Fmt(ManaPerBlockedDamageEff) + "/LP";
             return base.GetManaLabel(id);
         }
 
         public override string GetCostLine(AbilityId id)
         {
-            if (id == AbilityId.ShieldBlock) return $"{ManaColor}{Fmt(ManaPerBlockedDamage)} Mana pro geblocktem LP</color>   •   halten";
-            if (id == AbilityId.SwordSlash) return $"{ManaColor}kein Mana</color>   •   {Fmt(SlashInterval)} s zwischen Schlägen";
+            if (id == AbilityId.ShieldBlock) return $"{ManaColor}{Fmt(ManaPerBlockedDamageEff)} Mana pro geblocktem LP</color>   •   halten";
+            if (id == AbilityId.SwordSlash) return $"{ManaColor}kein Mana</color>   •   {Fmt(Owner != null ? Owner.GetCooldownDuration(id) : SlashIntervalEff)} s zwischen Schlägen";
             return base.GetCostLine(id);
         }
 
@@ -167,7 +179,7 @@ namespace ElementalBuddies
                     SetBlocking(true);
                     break;
                 default:
-                    var spell = GetSpell(id);
+                    var spell = GetModdedSpell(id);
                     if (spell != null) spell.Cast(ctx);
                     break;
             }
@@ -180,16 +192,18 @@ namespace ElementalBuddies
             ComboStep = step;
             bool finisher = step == 3;
             _comboExpires = Time.time + ComboWindow;
-            if (finisher) Owner.StartCooldown(AbilityId.SwordSlash, FinisherRecovery * Mathf.Max(0.1f, Owner.CooldownMultiplier));
+            if (finisher) Owner.StartCooldown(AbilityId.SwordSlash, FinisherRecoveryEff * Owner.GetCooldownFactor(AbilityId.SwordSlash));
+            float range = SlashRangeEff;
+            float arcDeg = SlashArcEff;
 
             float damage = (finisher ? FinisherDamage : SlashDamage) * ctx.DamageMultiplier;
             Vector3 origin = transform.position;
             Vector3 dir = ctx.AimDirection;
 
-            foreach (var enemy in CombatUtil.FindEnemiesInCone(origin, dir, SlashRange + 0.4f, SlashArc))
+            foreach (var enemy in CombatUtil.FindEnemiesInCone(origin, dir, range + 0.4f, arcDeg))
             {
                 if (enemy == null) continue;
-                if (CombatUtil.HorizontalDistance(origin, enemy.transform.position) > SlashRange + CombatUtil.EnemyRadius(enemy)) continue;
+                if (CombatUtil.HorizontalDistance(origin, enemy.transform.position) > range + CombatUtil.EnemyRadius(enemy)) continue;
                 if (HitFxPrefab != null)
                     CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up * HitHeight, Quaternion.LookRotation(dir), 1.5f);
                 if (finisher && FinisherKnockback > 0f)
@@ -199,7 +213,7 @@ namespace ElementalBuddies
 
             // Bogen: Schlag 1 von rechts, 2 von links, 3 breiter + golden
             Vector3 fxPos = Ground(origin) + Vector3.up * HitHeight;
-            var arc = SlashArcFx.Spawn(SlashFxPrefab, fxPos, dir, SlashRange, finisher ? SlashArc + 30f : SlashArc,
+            var arc = SlashArcFx.Spawn(SlashFxPrefab, fxPos, dir, range, finisher ? Mathf.Min(360f, arcDeg + 30f) : arcDeg,
                 finisher ? FinisherColor : SlashColor, step != 2, step == 1 ? -12f : (step == 2 ? 12f : 0f));
             if (arc != null && finisher) arc.Width = 1.2f;
 
@@ -236,7 +250,7 @@ namespace ElementalBuddies
         private void BreakBlock()
         {
             SetBlocking(false);
-            Owner.StartCooldown(AbilityId.ShieldBlock, BlockBreakCooldown);
+            Owner.StartCooldown(AbilityId.ShieldBlock, BlockBreakCooldownEff);
             BlockBreakSfx.Play(transform.position);
             if (BlockSparkPrefab != null)
                 CombatUtil.SpawnFx(BlockSparkPrefab, transform.TransformPoint(ShieldOffset), transform.rotation, 1.5f, 1.6f);
@@ -250,7 +264,7 @@ namespace ElementalBuddies
             if (to.sqrMagnitude < 0.0001f) return true;
             Vector3 fwd = transform.forward;
             fwd.y = 0f;
-            return Vector3.Angle(fwd, to) <= BlockAngle * 0.5f;
+            return Vector3.Angle(fwd, to) <= BlockAngleEff * 0.5f;
         }
 
         public override float ModifyIncomingDamage(float amount, Vector3 sourcePosition, bool hasSource)
@@ -258,7 +272,7 @@ namespace ElementalBuddies
             if (IsBlocking && hasSource && IsInBlockArc(sourcePosition))
             {
                 float blocked = amount * BlockReduction;
-                float cost = blocked * ManaPerBlockedDamage;
+                float cost = blocked * ManaPerBlockedDamageEff;
                 var eco = EconomyManager.Instance;
                 float mana = eco != null ? eco.CurrentMana : 0f;
                 if (cost > 0f && mana < cost)
@@ -402,32 +416,60 @@ namespace ElementalBuddies
             }
         }
 
+        public override bool TryGetStatValue(AbilityId id, AbilityStat stat, out float value, out string unit, out string label)
+        {
+            value = 0f;
+            unit = "";
+            label = "";
+            if (id == AbilityId.SwordSlash)
+            {
+                switch (stat)
+                {
+                    case AbilityStat.Damage: value = SlashDamage * DamageMult(id); label = "Schaden"; return true;
+                    case AbilityStat.Range: value = SlashRangeEff; unit = " m"; label = "Reichweite"; return true;
+                    case AbilityStat.Angle: value = SlashArcEff; unit = "°"; label = "Schlagbogen"; return true;
+                    case AbilityStat.Speed: value = Owner != null ? Owner.GetCooldownDuration(id) : SlashIntervalEff; unit = " s"; label = "Zeit zwischen Schlägen"; return true;
+                }
+            }
+            else if (id == AbilityId.ShieldBlock)
+            {
+                switch (stat)
+                {
+                    case AbilityStat.ManaCost: value = ManaPerBlockedDamageEff; unit = " Mana/LP"; label = "Blockkosten"; return true;
+                    case AbilityStat.Angle: value = BlockAngleEff; unit = "°"; label = "Blockwinkel"; return true;
+                    case AbilityStat.Speed: value = BlockMoveMultiplierEff * 100f; unit = " %"; label = "Lauftempo beim Blocken"; return true;
+                    case AbilityStat.Cooldown: value = BlockBreakCooldownEff; unit = " s"; label = "Sperre nach Schildbruch"; return true;
+                }
+            }
+            return base.TryGetStatValue(id, stat, out value, out unit, out label);
+        }
+
         public override string Describe(AbilityId id, float dm)
         {
             switch (id)
             {
                 case AbilityId.SwordSlash:
-                    return $"Schwungvoller Hieb im {Hi(SlashArc)}°-Bogen vor dir ({Hi(SlashRange)} m), trifft alle Gegner darin. 3er-Kombo: zwei Hiebe mit {Hi(SlashDamage * dm)} Schaden, der dritte mit {Hi(FinisherDamage * dm)} Schaden und {Hi(FinisherKnockback)} m Rückstoß. Gedrückt halten schlägt weiter.";
+                    return $"Schwungvoller Hieb im {Hi(SlashArcEff)}°-Bogen vor dir ({Hi(SlashRangeEff)} m), trifft alle Gegner darin. 3er-Kombo: zwei Hiebe mit {Hi(SlashDamage * dm)} Schaden, der dritte mit {Hi(FinisherDamage * dm)} Schaden und {Hi(FinisherKnockback)} m Rückstoß. Gedrückt halten schlägt weiter.";
                 case AbilityId.ShieldBlock:
-                    return $"Halten: Du hebst den Schild und blockst {Hi(BlockReduction * 100f)} % des Schadens von vorne ({Hi(BlockAngle)}°). Jeder geblockte Lebenspunkt kostet {Hi(ManaPerBlockedDamage)} Mana – ist das Mana leer, bricht der Block ({Hi(BlockBreakCooldown)} s Sperre). Beim Blocken läufst du mit {Hi(BlockMoveMultiplier * 100f)} % Tempo und kannst nicht zuschlagen.";
+                    return $"Halten: Du hebst den Schild und blockst {Hi(BlockReduction * 100f)} % des Schadens von vorne ({Hi(BlockAngleEff)}°). Jeder geblockte Lebenspunkt kostet {Hi(ManaPerBlockedDamageEff)} Mana – ist das Mana leer, bricht der Block ({Hi(BlockBreakCooldownEff)} s Sperre). Beim Blocken läufst du mit {Hi(BlockMoveMultiplierEff * 100f)} % Tempo und kannst nicht zuschlagen.";
                 case AbilityId.FlameWhirl:
                 {
-                    var s = FlameWhirl;
+                    var s = Modded(FlameWhirl, id);
                     return $"Feuriger Drehschlag um dich herum ({Hi(s.Radius)} m). Er verursacht {Hi(s.Damage * dm)} Schaden, stößt Gegner leicht zurück und setzt sie in Brand: {Hi(s.BurnDps * dm)} Schaden pro Sekunde für {Hi(s.BurnDuration)} s.";
                 }
                 case AbilityId.FrostStrike:
                 {
-                    var s = FrostStrike;
+                    var s = Modded(FrostStrike, id);
                     return $"Ein Schwerthieb in den Boden schickt eine eisige Schockwelle nach vorne ({Hi(s.ConeAngle)}°, {Hi(s.Range)} m). Sie verursacht {Hi(s.Damage * dm)} Schaden und friert Gegner {Hi(s.FreezeDuration)} s komplett ein.";
                 }
                 case AbilityId.Earthquake:
                 {
-                    var s = Earthquake;
+                    var s = Modded(Earthquake, id);
                     return $"Sprung bis zu {Hi(s.LeapDistance)} m Richtung Mauszeiger, beim Aufprall bebt die Erde ({Hi(s.Radius)} m): {Hi(s.Damage * dm)} Schaden, {Hi(s.Knockback)} m Rückstoß und {Hi(s.StunDuration)} s Betäubung.";
                 }
                 case AbilityId.LightOath:
                 {
-                    var s = LightOath;
+                    var s = Modded(LightOath, id);
                     return $"Dein Schild erstrahlt: Alle Gegner im Umkreis von {Hi(s.Radius)} m greifen {Hi(s.TauntDuration)} s lang nur dich an, während du {Hi(s.DamageReduction * 100f)} % weniger Schaden nimmst. Heilt dich um {Hi(s.PlayerHeal)} und Buddies in der Nähe um {Hi(s.BuddyHeal)} LP.";
                 }
                 default:

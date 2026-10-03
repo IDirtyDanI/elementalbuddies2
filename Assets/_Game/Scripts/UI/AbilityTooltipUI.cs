@@ -128,7 +128,7 @@ namespace ElementalBuddies
         public static string Describe(AbilityId id, PlayerAbilities a)
         {
             if (a == null || a.ActiveKit == null) return "";
-            return a.ActiveKit.Describe(id, a.DamageMultiplier);
+            return a.ActiveKit.Describe(id, a.GetDamageMultiplier(id));
         }
     }
 }

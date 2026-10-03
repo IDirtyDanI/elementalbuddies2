@@ -34,7 +34,13 @@ namespace ElementalBuddies
 
         public override ChampionClass Class => ChampionClass.Mage;
 
-        public float EffectiveBlinkRange => BlinkRange * (Owner != null ? Owner.MobilityMultiplier : 1f);
+        public float EffectiveBlinkRange => Mod(AbilityId.Blink, AbilityStat.Range, BlinkRange) * (Owner != null ? Owner.MobilityMultiplier : 1f);
+        public float EffectiveInvulnerability => Mod(AbilityId.Blink, AbilityStat.Duration, InvulnerabilityDuration);
+        // Arkanball: Größe (Skalierung von Modell + Trigger) und Flugtempo mit Händlerkarten
+        public float ArcaneBallSizeFactor => ModFactor(AbilityId.ArcaneBall, AbilityStat.Area);
+        public float ArcaneBallSpeed => Mod(AbilityId.ArcaneBall, AbilityStat.Speed, BaseArcaneBall != null ? BaseArcaneBall.Speed : 20f);
+        public float ArcaneBallBaseDamage => BaseArcaneBall != null ? BaseArcaneBall.Damage : 35f;
+        private ArcaneBall BaseArcaneBall => ArcaneBallPrefab != null ? ArcaneBallPrefab.GetComponent<ArcaneBall>() : null;
 
         public override AbilityId GetAbility(AbilitySlot slot)
         {
@@ -49,7 +55,7 @@ namespace ElementalBuddies
             }
         }
 
-        public ElementSpell GetSpell(AbilityId id)
+        public override ElementSpell GetSpell(AbilityId id)
         {
             switch (id)
             {
@@ -98,7 +104,7 @@ namespace ElementalBuddies
                     StartCoroutine(PerformBlink());
                     break;
                 default:
-                    var spell = GetSpell(id);
+                    var spell = GetModdedSpell(id);
                     if (spell != null) spell.Cast(ctx);
                     break;
             }
@@ -114,11 +120,14 @@ namespace ElementalBuddies
         {
             Vector3 spawnPos = SpawnPoint != null ? SpawnPoint.position : transform.position + transform.forward + Vector3.up;
             GameObject ball = Instantiate(ArcaneBallPrefab, spawnPos, transform.rotation);
-            if (!Mathf.Approximately(damageMultiplier, 1f))
+            var arcane = ball.GetComponent<ArcaneBall>();
+            if (arcane != null)
             {
-                var arcane = ball.GetComponent<ArcaneBall>();
-                if (arcane != null) arcane.Damage *= damageMultiplier;
+                arcane.Damage *= damageMultiplier; // global × Händlerkarten (SpellCastContext)
+                arcane.Speed = ArcaneBallSpeed;
             }
+            float size = ArcaneBallSizeFactor;
+            if (!Mathf.Approximately(size, 1f)) ball.transform.localScale *= size; // Trigger wächst mit
             ArcaneBallCast?.Invoke();
         }
 
@@ -153,7 +162,7 @@ namespace ElementalBuddies
             transform.position = targetPos;
             Character.enabled = true;
 
-            yield return new WaitForSeconds(InvulnerabilityDuration);
+            yield return new WaitForSeconds(EffectiveInvulnerability);
             Stats.IsInvulnerable = false;
         }
 
@@ -171,36 +180,62 @@ namespace ElementalBuddies
             {
                 case AbilityId.ArcaneBall:
                 {
-                    float dmg = 35f;
-                    var ball = ArcaneBallPrefab != null ? ArcaneBallPrefab.GetComponent<ArcaneBall>() : null;
-                    if (ball != null) dmg = ball.Damage;
-                    return $"Schleudert eine arkane Kugel in Blickrichtung. Sie verursacht {Hi(dmg * dm)} Schaden am ersten getroffenen Gegner.";
+                    string extra = "";
+                    float size = ArcaneBallSizeFactor;
+                    if (!Mathf.Approximately(size, 1f)) extra += $" Kugelgröße {Hi(size * 100f)} %.";
+                    if (BaseArcaneBall != null && !Mathf.Approximately(ArcaneBallSpeed, BaseArcaneBall.Speed)) extra += $" Flugtempo {Hi(ArcaneBallSpeed)} m/s.";
+                    return $"Schleudert eine arkane Kugel in Blickrichtung. Sie verursacht {Hi(ArcaneBallBaseDamage * dm)} Schaden am ersten getroffenen Gegner.{extra}";
                 }
                 case AbilityId.Blink:
-                    return $"Teleportiert dich bis zu {Hi(EffectiveBlinkRange)} m in Richtung Mauszeiger. Kurz nach dem Sprung bist du {Hi(InvulnerabilityDuration)} s unverwundbar. Wände halten den Sprung auf.";
+                    return $"Teleportiert dich bis zu {Hi(EffectiveBlinkRange)} m in Richtung Mauszeiger. Kurz nach dem Sprung bist du {Hi(EffectiveInvulnerability)} s unverwundbar. Wände halten den Sprung auf.";
                 case AbilityId.FireWave:
                 {
-                    var s = FireWave;
+                    var s = Modded(FireWave, id);
                     return $"Eine Flammenwelle im Kegel vor dir ({Hi(s.ConeAngle)}°, {Hi(s.Range)} m). Sie verursacht {Hi(s.Damage * dm)} Schaden und setzt Gegner in Brand: {Hi(s.BurnDps * dm)} Schaden pro Sekunde für {Hi(s.BurnDuration)} s.";
                 }
                 case AbilityId.FrostNova:
                 {
-                    var s = FrostNova;
+                    var s = Modded(FrostNova, id);
                     return $"Eisige Druckwelle um dich herum ({Hi(s.Radius)} m). Sie verursacht {Hi(s.Damage * dm)} Schaden und friert Gegner {Hi(s.FreezeDuration)} s komplett ein: Sie können sich weder bewegen noch angreifen.";
                 }
                 case AbilityId.StoneWall:
                 {
-                    var s = StoneWall;
+                    var s = Modded(StoneWall, id);
                     return $"Lässt {Hi(s.Distance)} m vor dir eine {Hi(s.Length)} m breite Steinmauer quer zur Blickrichtung aufsteigen. Gegner müssen {Hi(s.Lifetime)} s lang außen herum laufen – ideal, um Engstellen zu sperren.";
                 }
                 case AbilityId.HolyCircle:
                 {
-                    var s = HolyCircle;
+                    var s = Modded(HolyCircle, id);
                     return $"Heiliges Licht im Umkreis von {Hi(s.Radius)} m. Es heilt dich um {Hi(s.PlayerHeal)}, Buddies um {Hi(s.BuddyHeal)} und den Nexus um {Hi(s.NexusHeal)} LP. Gegner werden geblendet (Sterne über dem Kopf) und sind {Hi(s.BlindDuration)} s lang um {Hi(s.BlindSlow * 100f)} % verlangsamt.";
                 }
                 default:
                     return "";
             }
+        }
+
+        public override bool TryGetStatValue(AbilityId id, AbilityStat stat, out float value, out string unit, out string label)
+        {
+            unit = "";
+            label = "";
+            value = 0f;
+            if (id == AbilityId.ArcaneBall)
+            {
+                switch (stat)
+                {
+                    case AbilityStat.Damage: value = ArcaneBallBaseDamage * DamageMult(id); label = "Schaden"; return true;
+                    case AbilityStat.Area: value = ArcaneBallSizeFactor * 100f; unit = " %"; label = "Kugelgröße"; return true;
+                    case AbilityStat.Speed: value = ArcaneBallSpeed; unit = " m/s"; label = "Flugtempo"; return true;
+                }
+            }
+            else if (id == AbilityId.Blink)
+            {
+                switch (stat)
+                {
+                    case AbilityStat.Range: value = EffectiveBlinkRange; unit = " m"; label = "Reichweite"; return true;
+                    case AbilityStat.Duration: value = EffectiveInvulnerability; unit = " s"; label = "Unverwundbarkeit"; return true;
+                }
+            }
+            return base.TryGetStatValue(id, stat, out value, out unit, out label);
         }
 
         public override string GetName(AbilityId id)

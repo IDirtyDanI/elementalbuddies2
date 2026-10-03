@@ -43,6 +43,56 @@ namespace ElementalBuddies
         // Fähigkeit ausführen. Kosten und Abklingzeit hat PlayerAbilities schon verbucht.
         public abstract void Cast(AbilityId id, SpellCastContext ctx);
 
+        // Element-Fähigkeit (R/F/C/V) als Konfigurations-Objekt (null für LMB/RMB)
+        public virtual ElementSpell GetSpell(AbilityId id) => null;
+
+        // ---------------- Händlerkarten (Fähigkeits-Modifikatoren) ----------------
+
+        // Element-Fähigkeit mit allen Händlerkarten (Kopie). Kits wirken und beschreiben immer diese Variante.
+        public ElementSpell GetModdedSpell(AbilityId id)
+        {
+            var s = GetSpell(id);
+            return s != null && Owner != null ? s.WithMods(Owner.Mods, id) : s;
+        }
+
+        protected T Modded<T>(T spell, AbilityId id) where T : ElementSpell
+        {
+            return spell != null && Owner != null ? (T)spell.WithMods(Owner.Mods, id) : spell;
+        }
+
+        // Basiswert mit Händlerkarten (ohne Owner unverändert)
+        protected float Mod(AbilityId id, AbilityStat stat, float baseValue)
+        {
+            return Owner != null ? Owner.Mods.Apply(id, stat, baseValue) : baseValue;
+        }
+
+        protected float ModFactor(AbilityId id, AbilityStat stat)
+        {
+            return Owner != null ? Owner.Mods.Factor(id, stat) : 1f;
+        }
+
+        // Schadens-Multiplikator einer Fähigkeit (global × Händlerkarten)
+        protected float DamageMult(AbilityId id) => Owner != null ? Owner.GetDamageMultiplier(id) : 1f;
+
+        // Aktueller (live) Wert eines Karten-Stats für die Kartenanzeige, z. B. Schwerthieb-Reichweite 2.6 m.
+        // label = Name des Werts ("Reichweite"), unit = Einheit mit Leerzeichen (" m"). false = nicht anzeigbar.
+        public virtual bool TryGetStatValue(AbilityId id, AbilityStat stat, out float value, out string unit, out string label)
+        {
+            value = 0f;
+            unit = "";
+            label = "";
+            if (stat == AbilityStat.Cooldown && GetCooldown(id) > 0f)
+            {
+                value = Owner != null ? Owner.GetCooldownDuration(id) : GetCooldown(id);
+                unit = " s";
+                label = "Abklingzeit";
+                return true;
+            }
+            var spell = GetModdedSpell(id);
+            if (spell != null) return spell.TryGetStat(stat, DamageMult(id), out value, out unit, out label);
+            return false;
+        }
+
         // ---------------- Optionale Erweiterungen ----------------
 
         // > 1: Fähigkeit mit Aufladungen (z. B. Rolle). Abklingzeit = Wiederaufladezeit pro Ladung.

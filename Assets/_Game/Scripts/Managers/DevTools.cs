@@ -20,6 +20,9 @@ namespace ElementalBuddies
         [Tooltip("Champion beim Start erzwingen (statt Hauptmenü-Wahl). F6 wechselt im Spiel durch.")]
         public bool ForceChampion = false;
         public ChampionClass Champion = ChampionClass.Knight;
+        [Tooltip("F7 öffnet immer diesen Händler (statt Beutel); wirkt auch auf die geplanten Händler-Wellen.")]
+        public bool ForceMerchant = false;
+        public MerchantKind ForcedMerchant = MerchantKind.Waffen;
         [Tooltip("Pro übersprungene 3 Wellen einen Buddy-Slot geben (wie im normalen Spiel).")]
         public bool GrantSkippedSlots = true;
         public bool ShowHelp = true;
@@ -50,6 +53,12 @@ namespace ElementalBuddies
 
             if (ForceChampion && PlayerAbilities.Instance != null) PlayerAbilities.Instance.SetChampion(Champion);
 
+            if (ForceMerchant && MerchantManager.Instance != null)
+            {
+                MerchantManager.Instance.ForceKind = true;
+                MerchantManager.Instance.ForcedKind = ForcedMerchant;
+            }
+
             if (UnlockAllSpells && PlayerAbilities.Instance != null)
                 for (int i = 0; i < 4; i++) PlayerAbilities.Instance.UnlockElementAbility(i);
 
@@ -77,6 +86,35 @@ namespace ElementalBuddies
                 pa.SetChampion(next);
                 ToastUI.Show("Champion: " + PauseMenuUI.ChampionName(next));
             }
+            if (kb.f7Key.wasPressedThisFrame) DevActivateMerchant(kb.shiftKey.isPressed);
+            if (kb.f8Key.wasPressedThisFrame) DevCaptureMerchant();
+        }
+
+        // F7: nächsten Händler sofort öffnen (Beutel bzw. ForceMerchant); Shift+F7: nächsten Händlertyp erzwingen
+        public void DevActivateMerchant(bool cycleKind)
+        {
+            var mm = MerchantManager.Instance;
+            if (mm == null) return;
+            if (cycleKind)
+            {
+                ForcedMerchant = (MerchantKind)(((int)ForcedMerchant + 1) % MerchantInfo.Count);
+                ForceMerchant = true;
+            }
+            Merchant m = null;
+            if (ForceMerchant)
+            {
+                m = mm.GetMerchant(ForcedMerchant);
+                if (m != null && !mm.Activate(m)) m = null;
+            }
+            else m = mm.ActivateNext();
+            if (m == null) ToastUI.Show("DEV: kein Händler verfügbar");
+        }
+
+        // F8: aktiven Händler sofort einnehmen (Kartenauswahl öffnet sich)
+        public void DevCaptureMerchant()
+        {
+            var mm = MerchantManager.Instance;
+            if (mm != null && mm.ActiveMerchant != null && mm.ActiveMerchant.IsActive) mm.ActiveMerchant.Complete();
         }
 
         private void ApplyCheats()
@@ -119,9 +157,11 @@ namespace ElementalBuddies
                 "F3  alle Zauber freischalten\n" +
                 "F4  nächsten Schrein erwecken\n" +
                 "F5  +1 Buddy-Slot\n" +
-                "F6  Champion wechseln";
-            GUI.Box(new Rect(12, y, 520, 170), GUIContent.none, _box);
-            GUI.Label(new Rect(22, y + 6, 510, 165), text, _label);
+                "F6  Champion wechseln\n" +
+                "F7  nächsten Händler öffnen (Shift: Händlertyp durchschalten)\n" +
+                "F8  aktiven Händler sofort einnehmen";
+            GUI.Box(new Rect(12, y, 520, 214), GUIContent.none, _box);
+            GUI.Label(new Rect(22, y + 6, 510, 209), text, _label);
         }
     }
 }

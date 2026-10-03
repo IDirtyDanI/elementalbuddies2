@@ -51,7 +51,15 @@ namespace ElementalBuddies
         public override ChampionClass Class => ChampionClass.Archer;
 
         public Vector3 MuzzlePosition => ProjectileSpawn != null ? ProjectileSpawn.position : transform.TransformPoint(MuzzleOffset);
-        public float EffectiveRollDistance => RollDistance * (Owner != null ? Owner.MobilityMultiplier : 1f);
+        public float EffectiveRollDistance => Mod(AbilityId.Roll, AbilityStat.Range, RollDistance) * (Owner != null ? Owner.MobilityMultiplier : 1f);
+
+        // ---------------- Effektive Werte (inkl. Händlerkarten) ----------------
+
+        public float ArrowRangeEff => Mod(AbilityId.ArrowShot, AbilityStat.Range, ArrowRange);
+        // Feuerrate: kürzere Abklingzeit zwischen zwei Schüssen
+        public float ArrowCooldownEff => ArrowCooldown / ModFactor(AbilityId.ArrowShot, AbilityStat.Speed);
+        public int ArrowPierceEff => Owner != null ? Mathf.Max(0, Mathf.RoundToInt(Owner.Mods.Sum(AbilityId.ArrowShot, AbilityStat.Pierce))) : 0;
+        public int RollChargesEff => Mathf.Max(1, Owner != null ? Owner.Mods.ApplyInt(AbilityId.Roll, AbilityStat.Charges, RollCharges) : RollCharges);
 
         public override AbilityId GetAbility(AbilitySlot slot)
         {
@@ -66,7 +74,7 @@ namespace ElementalBuddies
             }
         }
 
-        public ElementSpell GetSpell(AbilityId id)
+        public override ElementSpell GetSpell(AbilityId id)
         {
             switch (id)
             {
@@ -82,7 +90,7 @@ namespace ElementalBuddies
         {
             switch (id)
             {
-                case AbilityId.ArrowShot: return ArrowCooldown;
+                case AbilityId.ArrowShot: return ArrowCooldownEff;
                 case AbilityId.Roll: return RollRecharge;
                 default: { var s = GetSpell(id); return s != null ? s.Cooldown : 0f; }
             }
@@ -99,7 +107,7 @@ namespace ElementalBuddies
             }
         }
 
-        public override int GetMaxCharges(AbilityId id) => id == AbilityId.Roll ? Mathf.Max(1, RollCharges) : 1;
+        public override int GetMaxCharges(AbilityId id) => id == AbilityId.Roll ? RollChargesEff : 1;
         public override float GetChargeLockout(AbilityId id) => id == AbilityId.Roll ? RollLockout : 0.3f;
         public override bool AutoRepeatPrimary => true;
         public override bool IsActive(AbilityId id) => id == AbilityId.Roll && IsRolling;
@@ -109,7 +117,7 @@ namespace ElementalBuddies
 
         public override string GetCostLine(AbilityId id)
         {
-            if (id == AbilityId.Roll) return $"{ManaColor}kein Mana</color>   •   {RollCharges} Aufladungen, je {Fmt(Owner != null ? Owner.GetCooldownDuration(id) : RollRecharge)} s";
+            if (id == AbilityId.Roll) return $"{ManaColor}kein Mana</color>   •   {RollChargesEff} Aufladungen, je {Fmt(Owner != null ? Owner.GetCooldownDuration(id) : RollRecharge)} s";
             return base.GetCostLine(id);
         }
 
@@ -122,9 +130,10 @@ namespace ElementalBuddies
                 case AbilityId.ArrowShot:
                 {
                     Vector3 pos = MuzzlePosition;
-                    var arrow = LaunchArrow(ArrowPrefab, pos, ctx.AimDirection, ArrowSpeed, ArrowDamage * ctx.DamageMultiplier, ArrowRange, false);
+                    var arrow = LaunchArrow(ArrowPrefab, pos, ctx.AimDirection, ArrowSpeed, ArrowDamage * ctx.DamageMultiplier, ArrowRangeEff, false);
                     if (arrow != null)
                     {
+                        arrow.ExtraPierce = ArrowPierceEff;
                         if (arrow.HitFxPrefab == null) arrow.HitFxPrefab = ArrowHitFxPrefab;
                         arrow.HitSfx = ArrowHitSfx;
                     }
@@ -136,7 +145,7 @@ namespace ElementalBuddies
                     break;
                 default:
                 {
-                    var spell = GetSpell(id);
+                    var spell = GetModdedSpell(id);
                     if (spell != null)
                     {
                         spell.Cast(ctx);
@@ -281,32 +290,63 @@ namespace ElementalBuddies
             }
         }
 
+        public override bool TryGetStatValue(AbilityId id, AbilityStat stat, out float value, out string unit, out string label)
+        {
+            value = 0f;
+            unit = "";
+            label = "";
+            if (id == AbilityId.ArrowShot)
+            {
+                switch (stat)
+                {
+                    case AbilityStat.Damage: value = ArrowDamage * DamageMult(id); label = "Schaden"; return true;
+                    case AbilityStat.Range: value = ArrowRangeEff; unit = " m"; label = "Reichweite"; return true;
+                    case AbilityStat.Pierce: value = ArrowPierceEff; label = "Durchschlag"; unit = " Gegner"; return true;
+                    case AbilityStat.Speed: value = Owner != null ? Owner.GetCooldownDuration(id) : ArrowCooldownEff; unit = " s"; label = "Zeit zwischen Schüssen"; return true;
+                }
+            }
+            else if (id == AbilityId.Roll)
+            {
+                switch (stat)
+                {
+                    case AbilityStat.Charges: value = RollChargesEff; label = "Aufladungen"; return true;
+                    case AbilityStat.Range: value = EffectiveRollDistance; unit = " m"; label = "Rollweite"; return true;
+                    case AbilityStat.Cooldown: value = Owner != null ? Owner.GetCooldownDuration(id) : RollRecharge; unit = " s"; label = "Aufladezeit"; return true;
+                }
+            }
+            return base.TryGetStatValue(id, stat, out value, out unit, out label);
+        }
+
         public override string Describe(AbilityId id, float dm)
         {
             switch (id)
             {
                 case AbilityId.ArrowShot:
-                    return $"Schneller Pfeil in Blickrichtung (bis {Hi(ArrowRange)} m). Er verursacht {Hi(ArrowDamage * dm)} Schaden am ersten getroffenen Gegner. Gedrückt halten schießt weiter.";
+                {
+                    int pierce = ArrowPierceEff;
+                    string hit = pierce > 0 ? $"am ersten getroffenen Gegner und durchschlägt bis zu {Hi(pierce)} weitere" : "am ersten getroffenen Gegner";
+                    return $"Schneller Pfeil in Blickrichtung (bis {Hi(ArrowRangeEff)} m). Er verursacht {Hi(ArrowDamage * dm)} Schaden {hit}. Gedrückt halten schießt weiter.";
+                }
                 case AbilityId.Roll:
-                    return $"Hechtrolle über {Hi(EffectiveRollDistance)} m in Laufrichtung (ohne Eingabe Richtung Mauszeiger). {Hi(RollInvulnerability)} s unverwundbar. {Hi(RollCharges)} Aufladungen, die sich nacheinander in je {Hi(RollRecharge)} s wieder füllen.";
+                    return $"Hechtrolle über {Hi(EffectiveRollDistance)} m in Laufrichtung (ohne Eingabe Richtung Mauszeiger). {Hi(RollInvulnerability)} s unverwundbar. {Hi(RollChargesEff)} Aufladungen, die sich nacheinander in je {Hi(Owner != null ? Owner.GetCooldownDuration(id) : RollRecharge)} s wieder füllen.";
                 case AbilityId.FireArrowRain:
                 {
-                    var s = FireArrowRain;
+                    var s = Modded(FireArrowRain, id);
                     return $"Brennende Pfeile regnen {Hi(s.RainDuration)} s lang auf das Gebiet am Mauszeiger ({Hi(s.Radius)} m Radius, bis {Hi(s.MaxCastRange)} m entfernt): {Hi(s.Waves)} × {Hi(s.DamagePerWave * dm)} Schaden und Brand mit {Hi(s.BurnDps * dm)} Schaden pro Sekunde für {Hi(s.BurnDuration)} s.";
                 }
                 case AbilityId.FrostArrow:
                 {
-                    var s = FrostArrow;
+                    var s = Modded(FrostArrow, id);
                     return $"Eisiger Pfeil, der alle Gegner in seiner Bahn durchschlägt ({Hi(s.Range)} m). Jeder Getroffene erleidet {Hi(s.Damage * dm)} Schaden und wird {Hi(s.FreezeDuration)} s eingefroren.";
                 }
                 case AbilityId.ThornTrap:
                 {
-                    var s = ThornTrap;
+                    var s = Modded(ThornTrap, id);
                     return $"Legt am Mauszeiger (bis {Hi(s.MaxCastRange)} m) eine Dornenfalle ({Hi(s.TriggerRadius)} m). Läuft ein Gegner hinein, schnappt sie zu: bis zu {Hi(s.MaxTargets)} Gegner werden {Hi(s.RootDuration)} s festgehalten und erleiden {Hi(s.Damage * dm)} Schaden. Hält {Hi(s.Lifetime)} s.";
                 }
                 case AbilityId.LightArrow:
                 {
-                    var s = LightArrow;
+                    var s = Modded(LightArrow, id);
                     return $"Ein Lichtstrahl schießt sofort {Hi(s.Length)} m weit durch alle Gegner in Blickrichtung: {Hi(s.Damage * dm)} Schaden, dazu {Hi(s.BlindDuration)} s geblendet und um {Hi(s.BlindSlow * 100f)} % verlangsamt.";
                 }
                 default:

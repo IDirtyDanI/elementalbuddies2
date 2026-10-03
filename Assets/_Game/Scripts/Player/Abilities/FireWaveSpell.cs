@@ -22,6 +22,25 @@ namespace ElementalBuddies
             Cooldown = 6f;
         }
 
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            Range = m.Apply(id, AbilityStat.Range, Range);
+            ConeAngle = Mathf.Min(360f, m.Apply(id, AbilityStat.Area, ConeAngle));
+            BurnDuration = m.Apply(id, AbilityStat.Duration, BurnDuration);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Damage: return Stat(Damage * dm, "", "Schaden", out value, out unit, out label);
+                case AbilityStat.Range: return Stat(Range, " m", "Reichweite", out value, out unit, out label);
+                case AbilityStat.Area: return Stat(ConeAngle, "°", "Kegel", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(BurnDuration, " s", "Brenndauer", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
+
         public override void Cast(SpellCastContext ctx)
         {
             Quaternion rot = Quaternion.LookRotation(ctx.AimDirection);

@@ -207,9 +207,12 @@ namespace ElementalBuddies
                 }
             }
 
+            var mm = MerchantManager.Instance;
+            var merchantCards = mm != null ? mm.GetPickedSummary() : new List<KeyValuePair<MerchantCardSO, int>>();
+
             if (CardsEmptyText != null)
             {
-                CardsEmptyText.gameObject.SetActive(order.Count == 0);
+                CardsEmptyText.gameObject.SetActive(order.Count == 0 && merchantCards.Count == 0);
                 CardsEmptyText.text = "Noch keine Karten gewählt – nach jeder Welle darfst du eine aussuchen.";
             }
             if (CardRowTemplate == null || CardsContainer == null) return;
@@ -249,6 +252,48 @@ namespace ElementalBuddies
                     desc.text = text;
                 }
             }
+
+            // Händlerkarten (Fähigkeits-Verbesserungen) mit Gesamtwirkung und aktuellem Wert
+            foreach (var kv in merchantCards)
+            {
+                var card = kv.Key;
+                int n = kv.Value;
+                var row = Instantiate(CardRowTemplate, CardsContainer);
+                row.name = "MerchantRow_" + card.name;
+                row.SetActive(true);
+                _rows.Add(row);
+
+                var icon = FindChild<Image>(row.transform, "Icon");
+                if (icon != null)
+                {
+                    icon.gameObject.SetActive(card.Icon != null);
+                    if (card.Icon != null) icon.sprite = card.Icon;
+                }
+                var title = FindChild<TextMeshProUGUI>(row.transform, "Title");
+                if (title != null) title.text = card.Title;
+                var count = FindChild<TextMeshProUGUI>(row.transform, "Count");
+                if (count != null)
+                {
+                    count.gameObject.SetActive(n > 1);
+                    count.text = "×" + n;
+                }
+                var desc = FindChild<TextMeshProUGUI>(row.transform, "Desc");
+                if (desc != null) desc.text = $"{MerchantInfo.Name(card.Merchant)}: {card.Description}\n<color={Green}>{MerchantEffectLine(card, n)}</color>";
+            }
+        }
+
+        // "Gesamt: +40 % · Schwerthieb – Reichweite: 2,6 m → 3,6 m"
+        private static string MerchantEffectLine(MerchantCardSO card, int n)
+        {
+            string total = "Gesamt: " + AbilityMods.FormatValue(card.Stat, card.Value * n);
+            // Vorschau rückwärts: Wert ohne diese Karten → jetziger Wert
+            if (MerchantManager.TryPreview(card, -card.Value * n, out string label, out float now, out float without, out string unit))
+            {
+                var pa = PlayerAbilities.Instance;
+                string ability = pa != null && pa.ActiveKit != null ? pa.ActiveKit.GetName(card.Ability) : card.Ability.ToString();
+                total += $" · {ability} – {label}: {MerchantManager.FormatNumber(without)}{unit} → {MerchantManager.FormatNumber(now)}{unit}";
+            }
+            return total;
         }
 
         // Gesamtwirkung aller Exemplare einer Karte
@@ -447,7 +492,7 @@ namespace ElementalBuddies
                   .Append(kit.GetCostLine(id)).Append("</size>");
                 if (!unlocked) sb.Append(" <size=85%><color=#8a2a12>– gesperrt (").Append(ElementInfo.ShrineName(AbilitySlots.ElementOf(slot))).Append(")</color></size>");
                 sb.Append('\n');
-                sb.Append("<size=85%>").Append(kit.Describe(id, abilities.DamageMultiplier)).Append("</size>").Append('\n');
+                sb.Append("<size=85%>").Append(kit.Describe(id, abilities.GetDamageMultiplier(id))).Append("</size>").Append('\n');
             }
         }
 

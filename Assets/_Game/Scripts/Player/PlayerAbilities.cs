@@ -29,6 +29,9 @@ namespace ElementalBuddies
         [Tooltip("Multipliziert die Reichweite der Mobilitäts-Fähigkeit (Blink-Reichweite, Rollen-Distanz).")]
         public float MobilityMultiplier = 1f;
 
+        // Fähigkeits-Modifikatoren pro Fähigkeit (Händlerkarten, MerchantManager). Wirken zusätzlich zu den globalen Faktoren.
+        public readonly AbilityMods Mods = new AbilityMods();
+
         [Header("Debug")]
         [Tooltip("Unlock all four element spells at start (testing).")]
         public bool UnlockAllOnStart = false;
@@ -319,12 +322,18 @@ namespace ElementalBuddies
             return lockout;
         }
 
-        // Basis-Abklingzeit × CooldownMultiplier (bei Aufladungen: Zeit pro Ladung)
+        // Basis-Abklingzeit × CooldownMultiplier × Händlerkarten (bei Aufladungen: Zeit pro Ladung)
         public float GetCooldownDuration(AbilityId id)
         {
             if (ActiveKit == null) return 0f;
-            return ActiveKit.GetCooldown(id) * Mathf.Max(0.1f, CooldownMultiplier);
+            return ActiveKit.GetCooldown(id) * GetCooldownFactor(id);
         }
+
+        // Gesamtfaktor für Abklingzeiten einer Fähigkeit (global × Händlerkarten), auch für Kit-eigene Sperren
+        public float GetCooldownFactor(AbilityId id) => Mathf.Max(0.1f, CooldownMultiplier) * Mods.Factor(id, AbilityStat.Cooldown);
+
+        // Gesamtschaden einer Fähigkeit: globaler DamageMultiplier × Händlerkarten dieser Fähigkeit
+        public float GetDamageMultiplier(AbilityId id) => DamageMultiplier * Mods.Factor(id, AbilityStat.Damage);
 
         // Wofür der Radial-Balken gerade läuft (bei Aufladungen: Sperre oder Wiederaufladung)
         public float GetCooldownDisplayDuration(AbilityId id)
@@ -405,10 +414,18 @@ namespace ElementalBuddies
                 StartCooldown(id, GetCooldownDuration(id));
             }
 
-            ActiveKit.Cast(id, BuildContext());
+            ActiveKit.Cast(id, BuildContext(id));
 
             OnAbilityCast?.Invoke(id);
             return true;
+        }
+
+        // Kontext für eine bestimmte Fähigkeit: Schaden inkl. Händlerkarten dieser Fähigkeit
+        public SpellCastContext BuildContext(AbilityId id)
+        {
+            var ctx = BuildContext();
+            ctx.DamageMultiplier = GetDamageMultiplier(id);
+            return ctx;
         }
 
         public SpellCastContext BuildContext()

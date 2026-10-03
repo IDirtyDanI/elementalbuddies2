@@ -69,6 +69,10 @@ namespace ElementalBuddies
                 Shrine.OnAnyShrineAwakened += HandleShrineAwakened;
                 Shrine.OnAnyShrineCompleted += HandleShrineCompleted;
                 Shrine.OnAnyShrineFailed += HandleShrineFailed;
+                Merchant.OnAnyMerchantActivated += HandleMerchantActivated;
+                Merchant.OnAnyMerchantCaptured += HandleMerchantCaptured;
+                Merchant.OnAnyMerchantFailed += HandleMerchantFailed;
+                if (MerchantManager.Instance != null) MerchantManager.Instance.OnCardPicked += HandleMerchantCardPicked;
             }
             Pump();
         }
@@ -79,6 +83,10 @@ namespace ElementalBuddies
             Shrine.OnAnyShrineAwakened -= HandleShrineAwakened;
             Shrine.OnAnyShrineCompleted -= HandleShrineCompleted;
             Shrine.OnAnyShrineFailed -= HandleShrineFailed;
+            Merchant.OnAnyMerchantActivated -= HandleMerchantActivated;
+            Merchant.OnAnyMerchantCaptured -= HandleMerchantCaptured;
+            Merchant.OnAnyMerchantFailed -= HandleMerchantFailed;
+            if (MerchantManager.Instance != null) MerchantManager.Instance.OnCardPicked -= HandleMerchantCardPicked;
             if (Instance == this) Instance = null;
         }
 
@@ -167,6 +175,29 @@ namespace ElementalBuddies
         private void HandleShrineFailed(Shrine s)
         {
             Show($"Der {s.DisplayName} ist wieder verfallen...", ElementIcon(s.ElementIndex));
+        }
+
+        private static Sprite MerchantIcon(Merchant m) =>
+            MerchantManager.Instance != null && m != null ? MerchantManager.Instance.GetEmblem(m.Kind) : null;
+
+        private void HandleMerchantActivated(Merchant m)
+        {
+            Show($"Der {m.DisplayName} ist da! Nimm seinen Stand ein.", MerchantIcon(m));
+        }
+
+        private void HandleMerchantCaptured(Merchant m)
+        {
+            Show($"{m.DisplayName} eingenommen!", MerchantIcon(m));
+        }
+
+        private void HandleMerchantFailed(Merchant m)
+        {
+            Show($"Der {m.DisplayName} hat seinen Stand wieder geschlossen...", MerchantIcon(m));
+        }
+
+        private void HandleMerchantCardPicked(MerchantCardSO card)
+        {
+            Show($"Gekauft: {card.Title} ({card.ValueText})", card.Icon);
         }
     }
 }

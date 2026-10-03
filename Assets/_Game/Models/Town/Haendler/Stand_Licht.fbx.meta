@@ -1,0 +1,766 @@
+fileFormatVersion: 2
+guid: 538d9b5b9995b4080adf2c985fbd45e0
+ModelImporter:
+  serializedVersion: 24300
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Air_Body
+    second: {fileID: 2100000, guid: 7b757788e65b645dfb30dec3431df68d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Air_Cloud
+    second: {fileID: 2100000, guid: 1754365763b2b4b43b6d7b866957c3ff, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Air_CloudShade
+    second: {fileID: 2100000, guid: 281933361893b4704816b6cf892d0f22, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Air_Eye
+    second: {fileID: 2100000, guid: 36285049a5b8a407aa557cbb3a63a337, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Air_Wind
+    second: {fileID: 2100000, guid: 27cf18d84223343d3bada5beabdef635, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Brass
+    second: {fileID: 2100000, guid: a4bab8cefb481466ab4b0262dd6c2567, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Feather
+    second: {fileID: 2100000, guid: e04583ee173df4424ae3e24cbb8d71c5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Hair
+    second: {fileID: 2100000, guid: a437210f75f134fceaf21080cfa29e46, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Hood
+    second: {fileID: 2100000, guid: 2482a5a9c3e104f2380c755c10251a0b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Leather
+    second: {fileID: 2100000, guid: db3b81caa85104c598fbd7294c73462a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_LeatherDark
+    second: {fileID: 2100000, guid: b26a0b79b158d49768ee940cba56e1d4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Pants
+    second: {fileID: 2100000, guid: 61552179c88b5481192f2338d0c1e7b1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Tunic
+    second: {fileID: 2100000, guid: 89d8aaf749189410bb0a3857deaf8c67, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Crystal_Body
+    second: {fileID: 2100000, guid: 043eb21dfd9734ffc8b9c81a1a56929f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Crystal_Eye
+    second: {fileID: 2100000, guid: d9219a47703e44bbbb490503012766c9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Crystal_Shard
+    second: {fileID: 2100000, guid: ae5e02d92930d4601b673442c2603e48, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Crystal_ShardViolet
+    second: {fileID: 2100000, guid: e8bf3b752124b4f1dbd5773613ad3ac7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Hero_Eye
+    second: {fileID: 2100000, guid: b160d148c56734616af75c863612ae3e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Hero_Skin
+    second: {fileID: 2100000, guid: cf65cfff664234d22b9b4bd320e9fcf9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Cape
+    second: {fileID: 2100000, guid: df8ee20c4c4164e0f99eba8bf914eb5a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_EyeGlow
+    second: {fileID: 2100000, guid: 3d74cc243b3844638823fc63642533fc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Gold
+    second: {fileID: 2100000, guid: e7978e5888f074bbf8cb710fb69f5997, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Leather
+    second: {fileID: 2100000, guid: 78b108a06110a4e18babf9b8b536f84c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Mail
+    second: {fileID: 2100000, guid: 9d7f85d195fa04567ba463d80fb274fe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Plume
+    second: {fileID: 2100000, guid: 768afa363db2d498d956ae0de4f688ee, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Steel
+    second: {fileID: 2100000, guid: 047328f93a8a84640b140cf19291b6d8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_SteelDark
+    second: {fileID: 2100000, guid: 69ee7046abc584297857bec70c05d3f0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Tabard
+    second: {fileID: 2100000, guid: a1c79783f758f4cc9bbcd1ffb9b2d39e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Visor
+    second: {fileID: 2100000, guid: a118090cdcb584dbe8f062c4c602ca3f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Bolt
+    second: {fileID: 2100000, guid: 5575c861a794b4a86961d0770a9f2081, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Copper
+    second: {fileID: 2100000, guid: 204c99a2a622146e68e97cbe3d817c9b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_CopperDark
+    second: {fileID: 2100000, guid: 983e0905969f74fef836a6dc37eaf50a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Energy
+    second: {fileID: 2100000, guid: a74910522cb5d43478c3c947ade65ff4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Eye
+    second: {fileID: 2100000, guid: f971f0ba41c154a619012e9a725221f0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Slate
+    second: {fileID: 2100000, guid: 2afa010ae7c3344e3a6c83ebe79e523d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_SlateBlue
+    second: {fileID: 2100000, guid: 69dc91e56c06c4500b63106e149b3a50, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MEarth_Antler
+    second: {fileID: 2100000, guid: fff0c573a0535428abfd6659f4064ce5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MEarth_Leaf
+    second: {fileID: 2100000, guid: 8bc1b01362c0d4931aca011dcf599186, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MEarth_LeafDark
+    second: {fileID: 2100000, guid: dc1a274ea2f8d42b28ea1ff9a63def8f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MEarth_Robe
+    second: {fileID: 2100000, guid: ebf974d55e66c4f50aa8881030dfa049, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MFire_Ember
+    second: {fileID: 2100000, guid: 22bbe738cf6084ae28e846b53f717bea, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MFire_Hair
+    second: {fileID: 2100000, guid: b076e2331455f4bc1969ba0d5c6376d8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MFire_Robe
+    second: {fileID: 2100000, guid: c370d96d4d64645569289252a4c1a5e8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MFire_Trim
+    second: {fileID: 2100000, guid: 1b4b6dc2a40f347c7bc55165f75fe5aa, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MIce_Coat
+    second: {fileID: 2100000, guid: 396ad7d3448414b80be11bde7d4487a3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MIce_Fur
+    second: {fileID: 2100000, guid: df7df5fe1cd8d4c72a7a0aa5ed0d8682, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MLight_Halo
+    second: {fileID: 2100000, guid: 5ac938e5b8ab743de8fe3986327d6460, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MLight_Robe
+    second: {fileID: 2100000, guid: 82b5c93beca814c40974282bdb6e5858, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MSmith_Apron
+    second: {fileID: 2100000, guid: ce685aee83405434e995889b97ea64f9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MSmith_Beard
+    second: {fileID: 2100000, guid: 5273bcf6c106d4a6a8179fd7745e8b2e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MSmith_Pants
+    second: {fileID: 2100000, guid: 31d046d7231034845a357b7ecce330a9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MSmith_Shirt
+    second: {fileID: 2100000, guid: 2bf6939084c5d4ac7b27b0beb507220a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Beard
+    second: {fileID: 2100000, guid: ecd7a0069237d48c6953cf07c9a12a0d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Gold
+    second: {fileID: 2100000, guid: 877b9bd83baa34a5391c03406a3068c7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Leather
+    second: {fileID: 2100000, guid: efb498f8619a74ffe8c0c16b524ad7fe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Robe
+    second: {fileID: 2100000, guid: 7b9aafe9476e141b6bd688278436696f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_RobeDark
+    second: {fileID: 2100000, guid: 4e6763d31c0344f669944489a64b4223, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Star
+    second: {fileID: 2100000, guid: b4590cc90c5434074affa363f8ae21fd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Magma_Eye
+    second: {fileID: 2100000, guid: c5fffd377c8234ad8b0ec98d8c1d0697, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Magma_Lava
+    second: {fileID: 2100000, guid: 5b1fdcea5058a4407ad9b9ed3ee36a54, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Magma_Rock
+    second: {fileID: 2100000, guid: 034f966ec7e4c4a0682a219cd22b040d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Magma_RockWarm
+    second: {fileID: 2100000, guid: dcd8265287b3d41d0a8d9ec621a086c6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Core
+    second: {fileID: 2100000, guid: 44bace13437524de5ab111a3d0973e13, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Dusk
+    second: {fileID: 2100000, guid: f424b4cfa13b6491c87093f83f709ecb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Eye
+    second: {fileID: 2100000, guid: f8f79194f37ad49ae84bac378380926f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Obsidian
+    second: {fileID: 2100000, guid: 8e6e590a300f6431da293137092864c5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Rune
+    second: {fileID: 2100000, guid: e450ce1fdda0d48148d72efbddf08883, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Wisp
+    second: {fileID: 2100000, guid: c956ca2153668453b88f17642f3984e1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_BannerCloth
+    second: {fileID: 2100000, guid: 23c66c04800424a0fb274a096e6af31f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Candle
+    second: {fileID: 2100000, guid: ca3c58456fffe48faa1ec8b00a46b986, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_CandleFlame
+    second: {fileID: 2100000, guid: 5c300e52fa84c432b92882f3dd25c967, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Canvas
+    second: {fileID: 2100000, guid: ed04ec71e7c39476189256bd3944bb85, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Charred
+    second: {fileID: 2100000, guid: 1e425dc95d73e430cb6912cff1a7082d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_CharredInterior
+    second: {fileID: 2100000, guid: 76505d3a89a474c9ba86eaddd8f544aa, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_CharredWood
+    second: {fileID: 2100000, guid: 00a30ed5ef0ce4f05895df27bb733cad, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_ClothBlue
+    second: {fileID: 2100000, guid: 74fde51c9edf14ab1ab5ecca085f4f75, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_ClothCream
+    second: {fileID: 2100000, guid: aaf46448c428e420c8cf7508b3fde607, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_ClothGreen
+    second: {fileID: 2100000, guid: 2ff225a650c8648fca07177763baa3c6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_ClothIce
+    second: {fileID: 2100000, guid: 867c33c9eee9a4937a505e58f0714657, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_ClothOrange
+    second: {fileID: 2100000, guid: c1c191eda0a9c44578ff9ca7efdfa9c8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_ClothRed
+    second: {fileID: 2100000, guid: 49d90ee5ca5ab4a078aff355e56c8dbb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_ClothWhite
+    second: {fileID: 2100000, guid: 617fb2361777c48808ec55bd10d07404, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_ClothYellow
+    second: {fileID: 2100000, guid: dfe1455cd9a2d4cf49aa6d27433bacd8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Ember
+    second: {fileID: 2100000, guid: 50956080d47b64eb58191805665632cd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_FlowerRed
+    second: {fileID: 2100000, guid: 3d9730d1fa9af4e8fa58a8add4939f96, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_FlowerYellow
+    second: {fileID: 2100000, guid: d8f4bb1d1619e48cab3fe54d377698e1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_ForgeGlow
+    second: {fileID: 2100000, guid: 3bf66dc9a93b54f438e9973e104f6e0f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_FruitGreen
+    second: {fileID: 2100000, guid: ca05eeae02f4d48ecb801cea784d5d8f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_FruitOrange
+    second: {fileID: 2100000, guid: aa9959e01c3f741689106a5286643677, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_FruitRed
+    second: {fileID: 2100000, guid: 530f701ca0736402b96e0d0d52dd218e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Fur
+    second: {fileID: 2100000, guid: 914d841c0ba544005b3a8775e752a4af, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Gold
+    second: {fileID: 2100000, guid: ed1751d61755f47ce8f406996d925be2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Hay
+    second: {fileID: 2100000, guid: 323ad986ec167419e888a375646d3246, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_IceCrystal
+    second: {fileID: 2100000, guid: 7b3737b084fed43ada38972d4d59f300, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Leaves
+    second: {fileID: 2100000, guid: 0b846be18dc264094a29f1ce8bb7bfc0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_LightGem
+    second: {fileID: 2100000, guid: 86b0d7d322af74efd83390f7c4d93143, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Metal
+    second: {fileID: 2100000, guid: 3af9e801e5e2c4c4b9fea7aed69b39d8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Mushroom
+    second: {fileID: 2100000, guid: bfbff5686ec1b423eb436cfec3acd8b1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Plaster
+    second: {fileID: 2100000, guid: 203b98fc822d74d26af4d67a37ed690f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_PlasterWarm
+    second: {fileID: 2100000, guid: e8ca82e86c3b84d74b9d30b3c6ea204d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_PotionBlue
+    second: {fileID: 2100000, guid: 17a3b6ccc5b944b7a9714b8888813d52, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_PotionGreen
+    second: {fileID: 2100000, guid: cc2af994f854e4c5099deb505a85bd68, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_PotionRed
+    second: {fileID: 2100000, guid: 9ba9f14cff17a45268f101f705e52b95, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_RoofDark
+    second: {fileID: 2100000, guid: 624ba487e42ce455c9343159a8a86861, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_RoofRed
+    second: {fileID: 2100000, guid: bbff8296e83ab43298ae225164bbbcc9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_RoofSlate
+    second: {fileID: 2100000, guid: a81c071ec92534c2eae98ab83fbcbfdd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Rope
+    second: {fileID: 2100000, guid: 58fe0961bc282461db4207ec23664044, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_RuneViolet
+    second: {fileID: 2100000, guid: bbbb1ef9b6db240808c0a6afd56f406d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Soil
+    second: {fileID: 2100000, guid: ef393ad6ca03d4b03b476ad3ce0e50ed, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Soot
+    second: {fileID: 2100000, guid: 68e936ea91bf54c08a52f72eb5f0a267, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Steel
+    second: {fileID: 2100000, guid: 480ea79d81847477993424aa73fef1b2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Stone
+    second: {fileID: 2100000, guid: 3d5f98b696b9844acaff379fe53e54af, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_StoneDark
+    second: {fileID: 2100000, guid: d2204a8c5693247d0abc8a2d028fd56a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Timber
+    second: {fileID: 2100000, guid: 2084a85d4172a49f9846607f1676308b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Water
+    second: {fileID: 2100000, guid: 1eecc702a4cbf451f9c7eb0953206585, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_WindowBroken
+    second: {fileID: 2100000, guid: e840589120a354d6e89392763eb8b6c1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_WindowGlow
+    second: {fileID: 2100000, guid: 25a178b0ef419419782f341a012c8bcd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_Wood
+    second: {fileID: 2100000, guid: 183cbf252bbad48b48264e9c145e97a9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Town_WoodLight
+    second: {fileID: 2100000, guid: e5fcad981d92943bca331910ba063ac9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_StaffCrystal
+    second: {fileID: 2100000, guid: e24fa21e394a64cb6b7380c322d559c9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_String
+    second: {fileID: 2100000, guid: 64f7ee4bf87ad4b60b107f6f54e96c3c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_Thorn
+    second: {fileID: 2100000, guid: bdbdf3a4e6a2344d49267695debb73df, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_ThornLeaf
+    second: {fileID: 2100000, guid: afc19dc3418a14b86a06d63b9be8a88c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_Wood
+    second: {fileID: 2100000, guid: fa1694d1afda74d83b2e7827b2463c8e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_WoodDark
+    second: {fileID: 2100000, guid: d420588b3082d4f95a8762d86e9f6b15, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Body
+    second: {fileID: 2100000, guid: 0c1d77e1bf1b14a62b460db93f24ea94, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Bubble
+    second: {fileID: 2100000, guid: f0105786b83a84b7b92cb8eb6b38fb2f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Deep
+    second: {fileID: 2100000, guid: 02a7f9c9e2b9f4f0eb93d2166805edd6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Eye
+    second: {fileID: 2100000, guid: d4e31d62d36644c4f928c409460ae14e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Foam
+    second: {fileID: 2100000, guid: 29425e5e5b06d4e9f9816cee1326e784, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Wave
+    second: {fileID: 2100000, guid: 1f821b944364547388757a21595c4dc8, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 0
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 0
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

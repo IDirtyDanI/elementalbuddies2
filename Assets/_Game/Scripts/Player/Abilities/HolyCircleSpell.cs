@@ -23,6 +23,26 @@ namespace ElementalBuddies
             Cooldown = 15f;
         }
 
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            Radius = m.Apply(id, AbilityStat.Area, Radius);
+            BlindDuration = m.Apply(id, AbilityStat.Duration, BlindDuration);
+            PlayerHeal = m.Apply(id, AbilityStat.Heal, PlayerHeal);
+            BuddyHeal = m.Apply(id, AbilityStat.Heal, BuddyHeal);
+            NexusHeal = m.Apply(id, AbilityStat.Heal, NexusHeal);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Area: return Stat(Radius, " m", "Radius", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(BlindDuration, " s", "Blenddauer", out value, out unit, out label);
+                case AbilityStat.Heal: return Stat(PlayerHeal, " LP", "Heilung", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
+
         public override void Cast(SpellCastContext ctx)
         {
             SpawnEffect(ctx.Origin, Quaternion.identity, Radius);

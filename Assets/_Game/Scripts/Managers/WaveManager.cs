@@ -288,14 +288,29 @@ namespace ElementalBuddies
         // Arbeitet auf einer Kopie, die WaveConfig-Assets bleiben unverändert.
         private WaveConfigSO ExtendForShrine(WaveConfigSO wave)
         {
+            // Längste Einnahme-Dauer dieser Welle: erwachter Schrein und/oder geöffneter Händler
+            float required = 0f;
+            string label = null;
             var sm = ShrineManager.Instance;
             Shrine shrine = sm != null ? sm.ActiveShrine : null;
-            if (shrine == null || !shrine.IsAwakened || wave.EnemiesToSpawn == null || wave.EnemiesToSpawn.Count == 0) return wave;
+            if (shrine != null && shrine.IsAwakened)
+            {
+                required = shrine.RequiredTime;
+                label = shrine.DisplayName;
+            }
+            var mm = MerchantManager.Instance;
+            Merchant merchant = mm != null ? mm.ActiveMerchant : null;
+            if (merchant != null && merchant.IsActive && merchant.RequiredTime > required)
+            {
+                required = merchant.RequiredTime;
+                label = merchant.DisplayName;
+            }
+            if (label == null || wave.EnemiesToSpawn == null || wave.EnemiesToSpawn.Count == 0) return wave;
 
             float groupsDuration = GetSpawnDuration(wave);
             float spawnTime = wave.StartDelay + groupsDuration;
 
-            float target = shrine.RequiredTime + ShrineWaveExtraTime;
+            float target = required + ShrineWaveExtraTime;
             EnemySpawnInfo first = wave.EnemiesToSpawn[0];
             float interval = Mathf.Max(0.2f, first.SpawnInterval);
             int extra = Mathf.CeilToInt((target - spawnTime) / interval);
@@ -306,7 +321,7 @@ namespace ElementalBuddies
             _shrineExtensionDelay = groupsDuration;
             copy.EnemiesToSpawn.Add(_shrineExtension);
             EnemiesRemaining += extra;
-            Debug.Log($"WaveManager: Schrein-Welle ({shrine.DisplayName}) – +{extra} Gegner, Spawn-Phase {spawnTime:0}s → {target:0}s.");
+            Debug.Log($"WaveManager: Einnahme-Welle ({label}) – +{extra} Gegner, Spawn-Phase {spawnTime:0}s → {target:0}s.");
             return copy;
         }
 

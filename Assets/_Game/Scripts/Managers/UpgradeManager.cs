@@ -25,6 +25,11 @@ namespace ElementalBuddies
         private readonly List<UpgradeDefinitionSO> _picked = new List<UpgradeDefinitionSO>();
         public IReadOnlyList<UpgradeDefinitionSO> PickedUpgrades => _picked;
 
+        // Upgrade-Auswahl gerade offen (Spiel pausiert)
+        public bool IsChoosing { get; private set; }
+        // Wellenende fiel in eine offene Händler-Kartenauswahl → danach zeigen
+        private bool _pendingPresent;
+
         // Spieler-Startwerte vor allen Karten (für die Pause-Übersicht)
         public float BasePlayerSpeed { get; private set; }
         public float BasePlayerMaxHP { get; private set; }
@@ -99,12 +104,30 @@ namespace ElementalBuddies
 
         public void PresentUpgrades()
         {
+            // Händler-Kartenauswahl ist offen → warten, bis dort gewählt wurde (MerchantManager ruft PresentPendingUpgrades)
+            if (MerchantManager.Instance != null && MerchantManager.Instance.IsChoosing)
+            {
+                _pendingPresent = true;
+                return;
+            }
+
             List<UpgradeDefinitionSO> selection = GetRandomUpgrades(3);
             
             // Pause Game
             Time.timeScale = 0f;
+            IsChoosing = true;
             
             OnUpgradesAvailable?.Invoke(selection);
+        }
+
+        // Aufgeschobenen Upgrade-Bildschirm zeigen. true, wenn einer wartete.
+        public bool PresentPendingUpgrades()
+        {
+            if (!_pendingPresent) return false;
+            _pendingPresent = false;
+            if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return false;
+            PresentUpgrades();
+            return true;
         }
 
         private List<UpgradeDefinitionSO> GetRandomUpgrades(int count)
@@ -132,6 +155,7 @@ namespace ElementalBuddies
             
             // Resume Game
             Time.timeScale = 1f;
+            IsChoosing = false;
 
             _picked.Add(upgrade);
             OnUpgradePicked?.Invoke(upgrade);

@@ -24,6 +24,30 @@ namespace ElementalBuddies
         public GameObject ImpactFxPrefab;
         public int ArrowsPerWave = 5;
 
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            Radius = m.Apply(id, AbilityStat.Area, Radius);
+            BurnDuration = m.Apply(id, AbilityStat.Duration, BurnDuration);
+            MaxCastRange = m.Apply(id, AbilityStat.Range, MaxCastRange);
+            // Zusätzliche Wellen verlängern den Regen im gleichen Takt
+            int waves = Mathf.Max(1, m.ApplyInt(id, AbilityStat.Count, Waves));
+            if (Waves > 0 && waves != Waves) RainDuration *= (float)waves / Waves;
+            Waves = waves;
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Damage: return Stat(DamagePerWave * dm, "", "Schaden pro Welle", out value, out unit, out label);
+                case AbilityStat.Area: return Stat(Radius, " m", "Radius", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(BurnDuration, " s", "Brenndauer", out value, out unit, out label);
+                case AbilityStat.Count: return Stat(Waves, "", "Pfeil-Wellen", out value, out unit, out label);
+                case AbilityStat.Range: return Stat(MaxCastRange, " m", "Wurfweite", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
+
         public FireArrowRainSpell()
         {
             ManaCost = 40f;
@@ -62,6 +86,25 @@ namespace ElementalBuddies
         public float Range = 24f;
         public GameObject ArrowPrefab;
         public GameObject FrozenVfxPrefab;
+
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            FreezeDuration = m.Apply(id, AbilityStat.Duration, FreezeDuration);
+            Range = m.Apply(id, AbilityStat.Range, Range);
+            Speed = m.Apply(id, AbilityStat.Speed, Speed);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Damage: return Stat(Damage * dm, "", "Schaden", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(FreezeDuration, " s", "Einfrierdauer", out value, out unit, out label);
+                case AbilityStat.Range: return Stat(Range, " m", "Reichweite", out value, out unit, out label);
+                case AbilityStat.Speed: return Stat(Speed, " m/s", "Pfeiltempo", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
 
         public FrostArrowSpell()
         {
@@ -104,6 +147,26 @@ namespace ElementalBuddies
         public GameObject RootVfxPrefab;
         [Tooltip("Ausbruch beim Zuschnappen.")]
         public GameObject SnapFxPrefab;
+
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            TriggerRadius = m.Apply(id, AbilityStat.Area, TriggerRadius);
+            RootDuration = m.Apply(id, AbilityStat.Duration, RootDuration);
+            MaxTargets = Mathf.Max(1, m.ApplyInt(id, AbilityStat.Count, MaxTargets));
+            MaxCastRange = m.Apply(id, AbilityStat.Range, MaxCastRange);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Damage: return Stat(Damage * dm, "", "Schaden", out value, out unit, out label);
+                case AbilityStat.Area: return Stat(TriggerRadius, " m", "Radius", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(RootDuration, " s", "Festhalten", out value, out unit, out label);
+                case AbilityStat.Count: return Stat(MaxTargets, "", "Gefangene Gegner", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
 
         public ThornTrapSpell()
         {
@@ -151,6 +214,25 @@ namespace ElementalBuddies
         public GameObject BeamPrefab;
         public GameObject HitFxPrefab;
         public LayerMask ObstacleLayer = 1;
+
+        protected override void ApplyMods(AbilityMods m, AbilityId id)
+        {
+            Length = m.Apply(id, AbilityStat.Range, Length);
+            Width = m.Apply(id, AbilityStat.Area, Width);
+            BlindDuration = m.Apply(id, AbilityStat.Duration, BlindDuration);
+        }
+
+        public override bool TryGetStat(AbilityStat stat, float dm, out float value, out string unit, out string label)
+        {
+            switch (stat)
+            {
+                case AbilityStat.Damage: return Stat(Damage * dm, "", "Schaden", out value, out unit, out label);
+                case AbilityStat.Range: return Stat(Length, " m", "Strahllänge", out value, out unit, out label);
+                case AbilityStat.Area: return Stat(Width, " m", "Strahlbreite", out value, out unit, out label);
+                case AbilityStat.Duration: return Stat(BlindDuration, " s", "Blenddauer", out value, out unit, out label);
+            }
+            return base.TryGetStat(stat, dm, out value, out unit, out label);
+        }
 
         public LightArrowSpell()
         {

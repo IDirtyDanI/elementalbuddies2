@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27000db4696a845a28abc83358450ebf, type: 3}
+  m_Name: Knight_Earthquake_Duration
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.MerchantCardSO
+  Class: 1
+  Ability: 10
+  Stat: 4
+  Value: 25
+  Title: 'Erdbeben: Dauer'
+  Description: "Bet\xE4ubung +25 %"
+  Icon: {fileID: 21300000, guid: e657c8702c1d14fa2970a44d5e4d7ff1, type: 3}
+  Badge: {fileID: 21300000, guid: 5c111260ccffe400e898d0942dc6df77, type: 3}
