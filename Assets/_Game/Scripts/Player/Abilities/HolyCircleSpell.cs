@@ -14,6 +14,8 @@ namespace ElementalBuddies
         [Tooltip("EnemyBrain.ApplySlow semantics: speed = base * (1 - value).")]
         [Range(0f, 1f)] public float BlindSlow = 0.6f;
         public float BlindDuration = 3f;
+        [Tooltip("Kreisende Sterne über dem Kopf geblendeter Gegner.")]
+        public GameObject BlindVfxPrefab;
 
         public HolyCircleSpell()
         {
@@ -53,7 +55,9 @@ namespace ElementalBuddies
             {
                 foreach (var enemy in FindEnemies(ctx.Origin, Radius))
                 {
-                    if (enemy != null) enemy.ApplySlow(BlindSlow, BlindDuration);
+                    if (enemy == null) continue;
+                    enemy.ApplySlow(BlindSlow, BlindDuration);
+                    BlindEffect.Apply(enemy.gameObject, BlindDuration, BlindVfxPrefab);
                 }
             }
         }

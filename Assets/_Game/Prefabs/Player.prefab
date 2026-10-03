@@ -253,6 +253,7 @@ MonoBehaviour:
     NexusHeal: 15
     BlindSlow: 0.6
     BlindDuration: 3
+    BlindVfxPrefab: {fileID: 7651933627681563699, guid: e8dcdc109ff9c4c4f978531732e0bfd3, type: 3}
   DamageMultiplier: 1
   UnlockAllOnStart: 0
 --- !u!114 &6514329390957018408
