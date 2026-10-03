@@ -23745,6 +23745,7 @@ MonoBehaviour:
   UnlimitedResources: 1
   InvulnerableNexus: 1
   GodMode: 1
+  UnlimitedBuddies: 1
   UnlockAllSpells: 0
   GrantSkippedSlots: 1
   ShowHelp: 1

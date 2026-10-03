@@ -15,6 +15,7 @@ namespace ElementalBuddies
         public bool UnlimitedResources = true;
         public bool InvulnerableNexus = true;
         public bool GodMode = true;
+        public bool UnlimitedBuddies = true;
         public bool UnlockAllSpells = false;
         [Tooltip("Pro übersprungene 3 Wellen einen Buddy-Slot geben (wie im normalen Spiel).")]
         public bool GrantSkippedSlots = true;
@@ -74,6 +75,7 @@ namespace ElementalBuddies
             }
 
             if (Nexus.Instance != null) Nexus.Instance.Invulnerable = InvulnerableNexus;
+            if (BuddySlotManager.Instance != null) BuddySlotManager.Instance.SetUnlimited(UnlimitedBuddies);
 
             var player = PlayerAbilities.Instance != null ? PlayerAbilities.Instance.GetComponent<PlayerStats>() : null;
             if (player != null) player.GodMode = GodMode;
@@ -97,7 +99,7 @@ namespace ElementalBuddies
 
             string text =
                 "<b><color=#ffcc33>DEV-MODUS</color></b>\n" +
-                $"Ressourcen: {(UnlimitedResources ? "unbegrenzt" : "normal")}   Nexus: {(InvulnerableNexus ? "unverwundbar" : "normal")}   Spieler: {(GodMode ? "unverwundbar" : "normal")}\n" +
+                $"Ressourcen: {(UnlimitedResources ? "unbegrenzt" : "normal")}   Buddies: {(UnlimitedBuddies ? "unbegrenzt" : "Limit")}   Nexus: {(InvulnerableNexus ? "unverwundbar" : "normal")}   Spieler: {(GodMode ? "unverwundbar" : "normal")}\n" +
                 "F1  Hilfe ein/aus\n" +
                 "F2  alle Gegner töten\n" +
                 "F3  alle Zauber freischalten\n" +

@@ -96,7 +96,9 @@ namespace ElementalBuddies
                 BuddySlotText.text = "";
                 return;
             }
-            BuddySlotText.text = $"{BuddySlotManager.Instance.UsedSlots}/{BuddySlotManager.Instance.MaxSlots}";
+            BuddySlotText.text = BuddySlotManager.Instance.Unlimited
+                ? $"{BuddySlotManager.Instance.UsedSlots}/∞"
+                : $"{BuddySlotManager.Instance.UsedSlots}/{BuddySlotManager.Instance.MaxSlots}";
         }
 
         private void UpdateMana()

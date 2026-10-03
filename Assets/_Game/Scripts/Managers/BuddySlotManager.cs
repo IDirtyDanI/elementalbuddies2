@@ -13,7 +13,15 @@ namespace ElementalBuddies
 
         public int MaxSlots { get; private set; } = 4;
         public int UsedSlots => ElementalBuddy.ActiveCount;
-        public bool HasFreeSlot => UsedSlots < MaxSlots;
+        public bool HasFreeSlot => Unlimited || UsedSlots < MaxSlots;
+        public bool Unlimited { get; private set; } // Dev-Modus: kein Buddy-Limit
+
+        public void SetUnlimited(bool value)
+        {
+            if (Unlimited == value) return;
+            Unlimited = value;
+            OnSlotsChanged?.Invoke();
+        }
 
         public event Action OnSlotsChanged;
 
