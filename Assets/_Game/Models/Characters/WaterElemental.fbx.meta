@@ -1,0 +1,578 @@
+fileFormatVersion: 2
+guid: c823be996c46d46a5a33f1ed11621271
+ModelImporter:
+  serializedVersion: 24300
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Body
+    second: {fileID: 2100000, guid: 0c1d77e1bf1b14a62b460db93f24ea94, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Bubble
+    second: {fileID: 2100000, guid: f0105786b83a84b7b92cb8eb6b38fb2f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Deep
+    second: {fileID: 2100000, guid: 02a7f9c9e2b9f4f0eb93d2166805edd6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Eye
+    second: {fileID: 2100000, guid: d4e31d62d36644c4f928c409460ae14e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Foam
+    second: {fileID: 2100000, guid: 29425e5e5b06d4e9f9816cee1326e784, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Wave
+    second: {fileID: 2100000, guid: 1f821b944364547388757a21595c4dc8, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: "\nClip 'Water_rig|Air_rig_Cast' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Water_rig|Crystal_rig_Cast'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Water_rig|Crystal_rig_Idle' has import animation warnings that might lower
+      retargeting quality:\nNote: Activate translation DOF on avatar to improve retargeting
+      quality.\n\t'Chest' is inbetween humanoid transforms and has rotation animation
+      that will be discarded.\n\nClip 'Water_rig|Lightning_rig_Cast' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Water_rig|Lightning_rig_Idle'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Water_rig|Magma_rig_Cast' has import animation warnings that might lower retargeting
+      quality:\nNote: Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Water_rig|Magma_rig_Idle' has import animation warnings that might lower retargeting
+      quality:\nNote: Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Water_rig|Shadow_rig_Cast' has import animation warnings that might lower
+      retargeting quality:\nNote: Activate translation DOF on avatar to improve retargeting
+      quality.\n\t'Chest' is inbetween humanoid transforms and has rotation animation
+      that will be discarded.\n\nClip 'Water_rig|Shadow_rig_Idle' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Water_rig|Water_rig_Cast'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Water_rig|Water_rig_Idle' has import animation warnings that might lower retargeting
+      quality:\nNote: Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n"
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Water_Cast
+      takeName: Water_rig|Water_rig_Cast
+      internalID: -2989361244661235297
+      firstFrame: 0
+      lastFrame: 35.000004
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Water_Idle
+      takeName: Water_rig|Water_rig_Idle
+      internalID: -2439285838889597641
+      firstFrame: 0
+      lastFrame: 79
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human:
+    - boneName: Hips
+      humanName: Hips
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperLeg
+      humanName: LeftUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperLeg
+      humanName: RightUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerLeg
+      humanName: LeftLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerLeg
+      humanName: RightLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftFoot
+      humanName: LeftFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightFoot
+      humanName: RightFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Spine
+      humanName: Spine
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Neck
+      humanName: Neck
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Head
+      humanName: Head
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftShoulder
+      humanName: LeftShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightShoulder
+      humanName: RightShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperArm
+      humanName: LeftUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperArm
+      humanName: RightUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerArm
+      humanName: LeftLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerArm
+      humanName: RightLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHand
+      humanName: LeftHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHand
+      humanName: RightHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    skeleton:
+    - name: WaterElemental(Clone)
+      parentName: 
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Water_body
+      parentName: WaterElemental(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Water_rig
+      parentName: WaterElemental(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Hips
+      parentName: Water_rig
+      position: {x: 0, y: 0.000000059604645, z: 0.7318998}
+      rotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
+      scale: {x: 1, y: 0.9999999, z: 0.9999999}
+    - name: Water_Hips_parts
+      parentName: Hips
+      position: {x: -0.58, y: 0.13, z: 0.1}
+      rotation: {x: -1.2509052e-14, y: 0.7071068, z: 0.7071067, w: -0.00000010677015}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Spine
+      parentName: Hips
+      position: {x: -0, y: 0.15999997, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 0.9999999, z: 0.9999999}
+    - name: Water_Spine_parts
+      parentName: Spine
+      position: {x: -0, y: 0.06999993, z: -0.26999998}
+      rotation: {x: -0.69961166, y: 0.6996119, z: 0.102681234, w: 0.10268122}
+      scale: {x: 1.0000001, y: 1.0000001, z: 1.0000001}
+    - name: Chest
+      parentName: Spine
+      position: {x: -0, y: 0.22000003, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Water_Chest_parts
+      parentName: Chest
+      position: {x: -0.15999998, y: 0.09999995, z: -0.28}
+      rotation: {x: 0.086505905, y: 0.91269904, z: 0.30162856, w: -0.26175857}
+      scale: {x: 1.0000001, y: 1, z: 0.99999994}
+    - name: Neck
+      parentName: Chest
+      position: {x: -0, y: 0.26, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Head
+      parentName: Neck
+      position: {x: -0, y: 0.13999999, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 0.99999994, z: 0.99999994}
+    - name: Water_Head_parts
+      parentName: Head
+      position: {x: 0.12999997, y: 0.19000006, z: 0.33499995}
+      rotation: {x: -0.7032332, y: -0.0739128, z: 0.07391278, w: 0.7032332}
+      scale: {x: 0.9999999, y: 0.99999994, z: 0.9999998}
+    - name: LeftShoulder
+      parentName: Chest
+      position: {x: -0.12, y: 0.19999993, z: 0}
+      rotation: {x: 0.5393515, y: -0.49844882, z: -0.4984493, w: -0.4606485}
+      scale: {x: 1.0000001, y: 0.9999999, z: 1.0000001}
+    - name: Water_LeftShoulder_parts
+      parentName: LeftShoulder
+      position: {x: 0.2002367, y: 0.055517197, z: 0.15397877}
+      rotation: {x: -0.04501132, y: 0.49819586, z: 0.23922639, w: 0.83219326}
+      scale: {x: 1, y: 1.0000001, z: 1.0000001}
+    - name: LeftUpperArm
+      parentName: LeftShoulder
+      position: {x: -0.0000000020582227, y: 0.38118234, z: -0.0000000072270634}
+      rotation: {x: 0.0045521255, y: -0.004564717, z: 0.00033855435, w: 0.99997914}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000001}
+    - name: Water_LeftUpperArm_parts
+      parentName: LeftUpperArm
+      position: {x: -0.13924612, y: 0.43150926, z: 0.27168053}
+      rotation: {x: 0.0000000041559716, y: -0.049213365, z: 0.7071069, w: 0.705392}
+      scale: {x: 1.0000001, y: 1, z: 1}
+    - name: LeftLowerArm
+      parentName: LeftUpperArm
+      position: {x: 0.0000000037252903, y: 0.4310453, z: -0.00000005804759}
+      rotation: {x: -0.0021367366, y: 0.0021421937, z: -0.00015366034, w: 0.9999954}
+      scale: {x: 1.0000001, y: 1.0000004, z: 1.0000001}
+    - name: Water_LeftLowerArm_parts
+      parentName: LeftLowerArm
+      position: {x: -0.00019103289, y: 0.17027432, z: 0.0025783777}
+      rotation: {x: -0.027083594, y: 0.68002325, z: 0.7322583, w: 0.025151504}
+      scale: {x: 1.0000002, y: 1.0000001, z: 1.0000002}
+    - name: LeftHand
+      parentName: LeftLowerArm
+      position: {x: 0.000000007450581, y: 0.27073982, z: -0.00000008614734}
+      rotation: {x: -0.1533407, y: 0.0029107637, z: -0.011812912, w: 0.9880985}
+      scale: {x: 1.0000002, y: 1.0000005, z: 1.0000002}
+    - name: Water_LeftHand_parts
+      parentName: LeftHand
+      position: {x: -0.0076311976, y: 0.19298315, z: 0.095389545}
+      rotation: {x: -0.08615182, y: 0.27363604, z: 0.95051605, w: -0.11924975}
+      scale: {x: 1.0000001, y: 1.0000002, z: 1.0000001}
+    - name: RightShoulder
+      parentName: Chest
+      position: {x: 0.12, y: 0.19999993, z: 0}
+      rotation: {x: 0.5393515, y: 0.49844882, z: 0.4984493, w: -0.4606485}
+      scale: {x: 1.0000001, y: 0.9999999, z: 1.0000001}
+    - name: Water_RightShoulder_parts
+      parentName: RightShoulder
+      position: {x: 0.29932135, y: 0.16908792, z: -0.16108674}
+      rotation: {x: -0.6509046, y: 0.46957695, z: -0.31071877, w: 0.50919014}
+      scale: {x: 1.0000004, y: 1, z: 1.0000001}
+    - name: RightUpperArm
+      parentName: RightShoulder
+      position: {x: 0.0000000020582227, y: 0.38118234, z: -0.0000000072270634}
+      rotation: {x: 0.0045521255, y: 0.004564717, z: -0.00033855435, w: 0.99997914}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000001}
+    - name: Water_RightUpperArm_parts
+      parentName: RightUpperArm
+      position: {x: 0.13924614, y: 0.4315094, z: 0.2716804}
+      rotation: {x: -0.00000001283299, y: 0.04921337, z: -0.7071067, w: 0.7053922}
+      scale: {x: 0.99999994, y: 1, z: 1}
+    - name: RightLowerArm
+      parentName: RightUpperArm
+      position: {x: -0.0000000037252903, y: 0.4310453, z: -0.00000005804759}
+      rotation: {x: -0.0021367366, y: -0.0021421937, z: 0.00015366034, w: 0.9999954}
+      scale: {x: 1.0000001, y: 1.0000004, z: 1.0000001}
+    - name: Water_RightLowerArm_parts
+      parentName: RightLowerArm
+      position: {x: 0.00019089878, y: 0.17027447, z: 0.0025781393}
+      rotation: {x: 0.7322583, y: 0.025151543, z: -0.027083559, w: 0.68002325}
+      scale: {x: 1, y: 0.99999994, z: 1.0000001}
+    - name: RightHand
+      parentName: RightLowerArm
+      position: {x: -0.000000007450581, y: 0.27073982, z: -0.00000008614734}
+      rotation: {x: -0.1533407, y: -0.0029107637, z: 0.011812912, w: 0.9880985}
+      scale: {x: 1.0000002, y: 1.0000005, z: 1.0000002}
+    - name: Water_RightHand_parts
+      parentName: RightHand
+      position: {x: 0.0076311827, y: 0.19298324, z: 0.095389545}
+      rotation: {x: 0.08615188, y: 0.27363598, z: 0.95051605, w: 0.11924986}
+      scale: {x: 1.0000001, y: 1.0000001, z: 1.0000002}
+    - name: LeftUpperLeg
+      parentName: Hips
+      position: {x: -0.22, y: -0.01999998, z: 0}
+      rotation: {x: 1, y: 3.5527137e-15, z: -0.00000007549791, w: 0}
+      scale: {x: 1, y: 0.9999998, z: 0.9999998}
+    - name: Water_LeftUpperLeg_parts
+      parentName: LeftUpperLeg
+      position: {x: -0.07641968, y: 0.083143234, z: -0.15895295}
+      rotation: {x: 0.83578116, y: -0.47129866, z: -0.24723123, w: 0.13499738}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftLowerLeg
+      parentName: LeftUpperLeg
+      position: {x: 0.000000001327455, y: 0.33000004, z: 0.0000000034167513}
+      rotation: {x: 0.00027758008, y: -0.016657354, z: 0.01665743, w: 0.99972254}
+      scale: {x: 1, y: 0.9999999, z: 0.99999994}
+    - name: Water_LeftLowerLeg_parts
+      parentName: LeftLowerLeg
+      position: {x: -0.0073251724, y: 0.23037207, z: 0.00024417462}
+      rotation: {x: -0.000000013700042, y: -0.70671433, z: 0.7071068, w: 0.023557076}
+      scale: {x: 1, y: 0.9999999, z: 0.9999999}
+    - name: LeftFoot
+      parentName: LeftLowerLeg
+      position: {x: -0.000000001193257, y: 0.30016664, z: 0.000000002561137}
+      rotation: {x: -0.53018695, y: 0.08079064, z: 0.14699835, w: 0.8311235}
+      scale: {x: 1, y: 1.0000001, z: 1.0000001}
+    - name: Water_LeftFoot_parts
+      parentName: LeftFoot
+      position: {x: 0.124461606, y: 0.19623151, z: -0.0118564665}
+      rotation: {x: 0.97554123, y: -7.483541e-11, z: -0.09755402, w: 0.19698356}
+      scale: {x: 1.4999998, y: 1.4999999, z: 1.4999996}
+    - name: RightUpperLeg
+      parentName: Hips
+      position: {x: 0.22, y: -0.01999998, z: 0}
+      rotation: {x: 1, y: 3.5527137e-15, z: -0.00000007549791, w: 0}
+      scale: {x: 1, y: 0.9999998, z: 0.9999998}
+    - name: Water_RightUpperLeg_parts
+      parentName: RightUpperLeg
+      position: {x: -0.06826191, y: 0.15370828, z: -0.19026586}
+      rotation: {x: 0.59003294, y: 0.7813178, z: 0.13701849, w: -0.15043148}
+      scale: {x: 1, y: 1, z: 1}
+    - name: RightLowerLeg
+      parentName: RightUpperLeg
+      position: {x: 0.000000001327455, y: 0.33000004, z: -0.0000000034167513}
+      rotation: {x: 0.00027757758, y: 0.016657513, z: -0.016657433, w: 0.99972254}
+      scale: {x: 1, y: 1, z: 1.0000002}
+    - name: Water_RightLowerLeg_parts
+      parentName: RightLowerLeg
+      position: {x: 0.0073251724, y: 0.23037207, z: 0.0002441737}
+      rotation: {x: -0.000000091725546, y: -0.70671433, z: 0.7071068, w: -0.023557182}
+      scale: {x: 1, y: 0.9999999, z: 0.9999999}
+    - name: RightFoot
+      parentName: RightLowerLeg
+      position: {x: 0.000000015163096, y: 0.30016664, z: 0.0000000011641532}
+      rotation: {x: -0.5506007, y: 0.045961816, z: -0.06434073, w: 0.8310154}
+      scale: {x: 1, y: 1.0000001, z: 1.0000004}
+    - name: Water_RightFoot_parts
+      parentName: RightFoot
+      position: {x: 0.0021036863, y: 0.1107658, z: -0.046400316}
+      rotation: {x: 0.97554123, y: 0.0000000018919226, z: 0.09755402, w: 0.19698356}
+      scale: {x: 1.4999998, y: 1.4999999, z: 1.4999996}
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 3
+  humanoidOversampling: 1
+  avatarSetup: 1
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

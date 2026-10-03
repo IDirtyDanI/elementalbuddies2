@@ -29,6 +29,8 @@ namespace ElementalBuddies
         public float BasePlayerSpeed { get; private set; }
         public float BasePlayerMaxHP { get; private set; }
         public float BaseDamageMultiplier { get; private set; } = 1f;
+        public float BaseCooldownMultiplier { get; private set; } = 1f;
+        public float BaseMobilityMultiplier { get; private set; } = 1f;
 
         // Backup for UnitConfigs
         private struct UnitBackup
@@ -47,15 +49,20 @@ namespace ElementalBuddies
         
         void Start()
         {
-             if (PlayerStatsRef == null) PlayerStatsRef = FindObjectOfType<PlayerStats>();
-             if (PlayerControllerRef == null) PlayerControllerRef = FindObjectOfType<PlayerController>();
-             if (InteractionRef == null) InteractionRef = FindObjectOfType<InteractionManager>();
+             if (PlayerStatsRef == null) PlayerStatsRef = FindFirstObjectByType<PlayerStats>();
+             if (PlayerControllerRef == null) PlayerControllerRef = FindFirstObjectByType<PlayerController>();
+             if (InteractionRef == null) InteractionRef = FindFirstObjectByType<InteractionManager>();
              if (GlobalSettings == null) Debug.LogWarning("UpgradeManager: Please assign GlobalSettings in Inspector!");
 
              // Spieler-Basiswerte merken
              if (PlayerControllerRef != null) BasePlayerSpeed = PlayerControllerRef.MoveSpeed;
              if (PlayerStatsRef != null) BasePlayerMaxHP = PlayerStatsRef.MaxHP;
-             if (PlayerAbilities.Instance != null) BaseDamageMultiplier = PlayerAbilities.Instance.DamageMultiplier;
+             if (PlayerAbilities.Instance != null)
+             {
+                 BaseDamageMultiplier = PlayerAbilities.Instance.DamageMultiplier;
+                 BaseCooldownMultiplier = PlayerAbilities.Instance.CooldownMultiplier;
+                 BaseMobilityMultiplier = PlayerAbilities.Instance.MobilityMultiplier;
+             }
 
              // Create Backups
              if (InteractionRef != null)
@@ -187,11 +194,26 @@ namespace ElementalBuddies
                 }
                 else if (upgrade.StatToBuff == StatType.Damage && PlayerAbilities.Instance != null)
                 {
-                    // Player damage scales Arcane Ball + element spells (multiplier; flat values count as whole percents)
+                    // Spieler-Schaden skaliert alle Fähigkeiten des aktiven Champions (Multiplikator; flache Werte zählen als ganze Prozent)
                     var pa = PlayerAbilities.Instance;
                     pa.DamageMultiplier = upgrade.IsPercentage
                         ? ModifyValue(pa.DamageMultiplier, upgrade)
                         : pa.DamageMultiplier + upgrade.Value / 100f;
+                }
+                else if (upgrade.StatToBuff == StatType.Cooldown && PlayerAbilities.Instance != null)
+                {
+                    // Abklingzeit-Karte: Wert = Prozent schneller (20 = −20 % Abklingzeit), wirkt auf alle Fähigkeiten
+                    var pa = PlayerAbilities.Instance;
+                    float pct = Mathf.Clamp(upgrade.Value, 0f, 90f) / 100f;
+                    pa.CooldownMultiplier = Mathf.Max(0.2f, pa.CooldownMultiplier * (1f - pct));
+                }
+                else if (upgrade.StatToBuff == StatType.Mobility && PlayerAbilities.Instance != null)
+                {
+                    // Mobilitäts-Karte: Blink-Reichweite bzw. Rollen-Distanz (Prozent oder flach in Prozentpunkten)
+                    var pa = PlayerAbilities.Instance;
+                    pa.MobilityMultiplier = upgrade.IsPercentage
+                        ? ModifyValue(pa.MobilityMultiplier, upgrade)
+                        : pa.MobilityMultiplier + upgrade.Value / 100f;
                 }
             }
             else

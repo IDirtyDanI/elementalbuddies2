@@ -14,6 +14,12 @@ namespace ElementalBuddies
         public float MoveSpeed = 6.0f;
         public LayerMask FloorLayer;
 
+        // Vom aktiven ChampionKit gesetzt (z. B. Schildblock = 0.5). MoveSpeed selbst bleibt der Wert der Upgrade-Karten.
+        public float SpeedMultiplier { get; set; } = 1f;
+        // Rolle / Sprung-Stampfer: Eingabe-Bewegung, Springen und Drehen aussetzen (Schwerkraft läuft weiter)
+        public bool MovementLocked { get; set; }
+        public bool RotationLocked { get; set; }
+
         private CharacterController _characterController;
         public InputAction MoveAction { get; private set; } // Changed to public property
         private InputAction _aimAction;
@@ -103,14 +109,15 @@ namespace ElementalBuddies
             if (PauseManager.IsPaused) return;
 
             HandleMovement();
-            HandleRotation();
+            if (!RotationLocked) HandleRotation();
+            else UpdateAimPoint();
         }
 
         private void HandleMovement()
         {
             if (MoveAction == null) return;
 
-            Vector2 input = MoveAction.ReadValue<Vector2>();
+            Vector2 input = MovementLocked ? Vector2.zero : MoveAction.ReadValue<Vector2>();
             Vector3 moveInput = new Vector3(input.x, 0, input.y);
 
             // Ground check for jumping
@@ -118,7 +125,7 @@ namespace ElementalBuddies
             {
                 _playerVelocity.y = 0f; // Reset vertical velocity when grounded
 
-                if (JumpAction != null && JumpAction.WasPressedThisFrame())
+                if (!MovementLocked && JumpAction != null && JumpAction.WasPressedThisFrame())
                 {
                     _playerVelocity.y = JumpForce;
                     Jumped?.Invoke();
@@ -129,8 +136,21 @@ namespace ElementalBuddies
             _playerVelocity.y += Gravity * Time.deltaTime;
 
             // Apply movement input (Absolute / World Space)
-            Vector3 movement = moveInput * MoveSpeed; 
+            Vector3 movement = moveInput * (MoveSpeed * SpeedMultiplier);
             _characterController.Move((movement + _playerVelocity) * Time.deltaTime);
+        }
+
+        // Nur den Mauspunkt aktualisieren (ohne Drehung), z. B. während einer Rolle
+        private void UpdateAimPoint()
+        {
+            if (_mainCamera == null) _mainCamera = Camera.main;
+            if (_mainCamera == null || _aimAction == null) return;
+            Ray ray = _mainCamera.ScreenPointToRay(_aimAction.ReadValue<Vector2>());
+            if (Physics.Raycast(ray, out RaycastHit hit, 1000f, FloorLayer))
+            {
+                _aimPoint = hit.point;
+                _hasAimPoint = true;
+            }
         }
 
         private void HandleRotation()

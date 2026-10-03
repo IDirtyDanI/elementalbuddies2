@@ -38,6 +38,7 @@ namespace ElementalBuddies
     {
         public static readonly string[] Names = { "Feuer", "Eis", "Erde", "Licht" };
         public static readonly string[] ShrineNames = { "Feuer-Schrein", "Eis-Schrein", "Erd-Schrein", "Licht-Schrein" };
+        // Magier-Namen als Fallback; klassenabhängig über PlayerAbilities.GetElementAbilityName
         public static readonly string[] AbilityNames = { "Flammenwelle", "Frostnova", "Steinwall", "Heiliger Kreis" };
         public static readonly string[] AbilityKeys = { "R", "F", "C", "V" };
         public static readonly Color[] Colors =

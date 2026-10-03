@@ -5,7 +5,7 @@ using TMPro;
 namespace ElementalBuddies
 {
     // Hover-Tooltip (Pergament) für die Slots der AbilityBar: Name, Taste, Mana, Abklingzeit und Beschreibung.
-    // Werte kommen live aus PlayerAbilities (inkl. Schadens-Upgrades). Hover-Erkennung per Rect-Test,
+    // Werte kommen live vom aktiven ChampionKit (inkl. Schadens-Upgrades). Hover-Erkennung per Rect-Test,
     // daher brauchen die Slots keine Raycast-Targets. Script auf ein immer aktives Objekt legen.
     public class AbilityTooltipUI : MonoBehaviour
     {
@@ -103,12 +103,13 @@ namespace ElementalBuddies
         private void Fill(AbilityId id)
         {
             var a = PlayerAbilities.Instance;
-            if (a == null) return;
+            if (a == null || a.ActiveKit == null) return;
+            var kit = a.ActiveKit;
 
-            string key = KeyName(id);
-            if (TitleText != null) TitleText.text = Title(id);
+            AbilitySlot slot = kit.SlotOf(id);
+            if (TitleText != null) TitleText.text = kit.GetName(id);
             if (MetaText != null)
-                MetaText.text = $"{key}   •   <color=#2f5f9e>{Mathf.CeilToInt(a.GetManaCost(id))} Mana</color>   •   {Fmt(a.GetCooldownDuration(id))} s Abklingzeit";
+                MetaText.text = $"{AbilitySlots.KeyName(slot)}   •   {kit.GetCostLine(id)}";
             if (BodyText != null) BodyText.text = Describe(id, a);
 
             if (LockedText != null)
@@ -118,78 +119,16 @@ namespace ElementalBuddies
                 if (locked)
                 {
                     int element = PlayerAbilities.ElementIndexOf(id);
-                    LockedText.text = $"Gesperrt – nimm den {ElementInfo.ShrineName(element)} ein, um diesen Zauber freizuschalten.";
+                    LockedText.text = $"Gesperrt – nimm den {ElementInfo.ShrineName(element)} ein, um diese Fähigkeit freizuschalten.";
                 }
             }
         }
 
-        private static string KeyName(AbilityId id)
-        {
-            switch (id)
-            {
-                case AbilityId.ArcaneBall: return "Linke Maustaste";
-                case AbilityId.Blink: return "Rechte Maustaste";
-                default: return "Taste " + AbilityBarUI.DefaultKey(id);
-            }
-        }
-
-        private static string Title(AbilityId id)
-        {
-            switch (id)
-            {
-                case AbilityId.ArcaneBall: return "Arkanball";
-                case AbilityId.Blink: return "Blinzeln";
-                default: return ElementInfo.AbilityName(PlayerAbilities.ElementIndexOf(id));
-            }
-        }
-
-        private const string Hi = "<color=#8a2a12><b>";
-        private const string HiEnd = "</b></color>";
-
-        private static string V(float value) => Hi + Fmt(value) + HiEnd;
-
-        private static string Fmt(float v)
-        {
-            return Mathf.Approximately(v, Mathf.Round(v)) ? Mathf.RoundToInt(v).ToString() : v.ToString("0.#");
-        }
-
+        // Beschreibung mit Live-Werten (inkl. Schadens-Upgrades) – kommt vom aktiven Champion-Kit
         public static string Describe(AbilityId id, PlayerAbilities a)
         {
-            float dm = a.DamageMultiplier;
-            switch (id)
-            {
-                case AbilityId.ArcaneBall:
-                {
-                    float dmg = 35f;
-                    var ball = a.ArcaneBallPrefab != null ? a.ArcaneBallPrefab.GetComponent<ArcaneBall>() : null;
-                    if (ball != null) dmg = ball.Damage;
-                    return $"Schleudert eine arkane Kugel in Blickrichtung. Sie verursacht {V(dmg * dm)} Schaden am ersten getroffenen Gegner.";
-                }
-                case AbilityId.Blink:
-                    return $"Teleportiert dich bis zu {V(a.BlinkRange)} m in Richtung Mauszeiger. Kurz nach dem Sprung bist du {V(a.InvulnerabilityDuration)} s unverwundbar. Wände halten den Sprung auf.";
-                case AbilityId.FireWave:
-                {
-                    var s = a.FireWave;
-                    return $"Eine Flammenwelle im Kegel vor dir ({V(s.ConeAngle)}°, {V(s.Range)} m). Sie verursacht {V(s.Damage * dm)} Schaden und setzt Gegner in Brand: {V(s.BurnDps * dm)} Schaden pro Sekunde für {V(s.BurnDuration)} s.";
-                }
-                case AbilityId.FrostNova:
-                {
-                    var s = a.FrostNova;
-                    return $"Eisige Druckwelle um dich herum ({V(s.Radius)} m). Sie verursacht {V(s.Damage * dm)} Schaden und friert Gegner {V(s.FreezeDuration)} s komplett ein: Sie können sich weder bewegen noch angreifen.";
-                }
-                case AbilityId.StoneWall:
-                {
-                    var s = a.StoneWall;
-                    return $"Lässt {V(s.Distance)} m vor dir eine {V(s.Length)} m breite Steinmauer quer zur Blickrichtung aufsteigen. Gegner müssen {V(s.Lifetime)} s lang außen herum laufen – ideal, um Engstellen zu sperren.";
-                }
-                case AbilityId.HolyCircle:
-                {
-                    var s = a.HolyCircle;
-                    return $"Heiliges Licht im Umkreis von {V(s.Radius)} m. Es heilt dich um {V(s.PlayerHeal)}, Buddies um {V(s.BuddyHeal)} und den Nexus um {V(s.NexusHeal)} LP. Gegner werden geblendet (Sterne über dem Kopf) und sind {V(s.BlindDuration)} s lang um {V(s.BlindSlow * 100f)} % verlangsamt.";
-                }
-                default:
-                    return "";
-            }
+            if (a == null || a.ActiveKit == null) return "";
+            return a.ActiveKit.Describe(id, a.DamageMultiplier);
         }
     }
 }

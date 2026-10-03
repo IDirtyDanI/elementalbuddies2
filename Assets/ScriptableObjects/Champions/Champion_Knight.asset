@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38f39af1130d840989f14c0c0a5b0604, type: 3}
+  m_Name: Champion_Knight
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ChampionDefinitionSO
+  Class: 1
+  DisplayName: "Schwertk\xE4mpfer"
+  Tagline: "Unersch\xFCtterlicher Schild der Stadt"
+  Description: "Ein gepanzerter Ritter, der sich mitten ins Get\xFCmmel wirft. Mit
+    Schwert und Schild h\xE4lt er die Gegnerwellen auf, zieht ihren Zorn auf sich
+    und sch\xFCtzt so Nexus und Buddies."
+  Portrait: {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
+  PreviewPrefab: {fileID: 7358540100662749788, guid: 451f42a9a6dbc4b1fa9567504e51d3d3, type: 3}
+  AccentColor: {r: 0.36, g: 0.55, b: 0.78, a: 1}
+  Abilities:
+  - Key: LMB
+    Name: Schwerthieb
+    Description: "Weiter Hieb vor dir, 3er-Kombo \u2013 der dritte Schlag trifft
+      h\xE4rter und st\xF6\xDFt zur\xFCck."
+    Icon: {fileID: 21300000, guid: 5b486d60e9a934c36a32627d1a96c0b3, type: 3}
+    Element: -1
+  - Key: RMB
+    Name: Schildblock
+    Description: 'Halten: blockt frontalen Schaden gegen Mana. Langsamer, kein Angriff.'
+    Icon: {fileID: 21300000, guid: 80a56acbe2f684628b59b80bb701cc36, type: 3}
+    Element: -1
+  - Key: R
+    Name: Flammenwirbel
+    Description: "Drehschlag um dich herum, setzt alle Gegner in der N\xE4he in Brand."
+    Icon: {fileID: 21300000, guid: ec03bd221a0a14498b3f3b103f0afb7b, type: 3}
+    Element: 0
+  - Key: F
+    Name: Frostschlag
+    Description: Schockwelle nach vorne, die getroffene Gegner einfriert.
+    Icon: {fileID: 21300000, guid: 6304f86d0ba374f6cb9c348eec15e564, type: 3}
+    Element: 1
+  - Key: C
+    Name: Erdbeben
+    Description: "Sprung mit Stampfer: bet\xE4ubt Gegner und wirft sie zur\xFCck."
+    Icon: {fileID: 21300000, guid: e657c8702c1d14fa2970a44d5e4d7ff1, type: 3}
+    Element: 2
+  - Key: V
+    Name: Lichtschwur
+    Description: "Dein Schild leuchtet: verspottet Gegner, heilt dich und Buddies
+      in der N\xE4he."
+    Icon: {fileID: 21300000, guid: 6e5c8fda4cfa74155a3af1c06a338522, type: 3}
+    Element: 3

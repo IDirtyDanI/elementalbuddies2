@@ -1,10 +1,13 @@
 using UnityEngine;
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.InputSystem;
 
 namespace ElementalBuddies
 {
+    // Klassen-unabhängiger Kern der Spieler-Fähigkeiten: Eingabe (Slots LMB/RMB/R/F/C/V), Abklingzeiten,
+    // Aufladungen, Mana, Element-Freischaltung (Schreine) und Events. Was eine Taste tut, liefert das
+    // aktive ChampionKit (MageKit, KnightKit, ArcherKit – je eine Komponente auf dem Player).
     [RequireComponent(typeof(PlayerController))]
     [RequireComponent(typeof(PlayerStats))]
     public class PlayerAbilities : MonoBehaviour
@@ -13,49 +16,47 @@ namespace ElementalBuddies
 
         public const int ElementCount = 4; // 0 Fire, 1 Ice, 2 Earth, 3 Light
 
-        [Header("Arcane Ball (Q / 6)")]
-        public GameObject ArcaneBallPrefab;
-        public float ArcaneBallManaCost = 15f;
-        public float ArcaneBallCooldown = 1f;
-        public Transform SpawnPoint;
+        [Header("Champion")]
+        [Tooltip("Zum Testen: Klasse erzwingen statt GameSession.SelectedChampion (Hauptmenü-Wahl).")]
+        public bool ForceChampion = false;
+        public ChampionClass ForcedChampion = ChampionClass.Mage;
 
-        [Header("Blink (Rechte Maustaste)")]
-        public float BlinkManaCost = 30f;
-        public float BlinkCooldown = 8f;
-        public float BlinkRange = 8f;
-        public float InvulnerabilityDuration = 0.4f;
-        public LayerMask ObstacleLayer; // Assign "Default" or specific wall layer
-
-        [Header("Element Spells (unlockable)")]
-        public FireWaveSpell FireWave = new FireWaveSpell();     // R
-        public FrostNovaSpell FrostNova = new FrostNovaSpell();  // F
-        public StoneWallSpell StoneWall = new StoneWallSpell();  // C
-        public HolyCircleSpell HolyCircle = new HolyCircleSpell(); // V
-
-        [Header("Damage Scaling")]
-        [Tooltip("Multiplies Arcane Ball and element spell damage. Raised by Player-target Damage upgrades (UpgradeManager).")]
+        [Header("Scaling (Upgrade-Karten, klassenunabhängig)")]
+        [Tooltip("Multipliziert den Schaden aller Fähigkeiten. Wird von Spieler-Schadenskarten erhöht (UpgradeManager).")]
         public float DamageMultiplier = 1f;
+        [Tooltip("Multipliziert alle Abklingzeiten (< 1 = schneller).")]
+        public float CooldownMultiplier = 1f;
+        [Tooltip("Multipliziert die Reichweite der Mobilitäts-Fähigkeit (Blink-Reichweite, Rollen-Distanz).")]
+        public float MobilityMultiplier = 1f;
 
         [Header("Debug")]
         [Tooltip("Unlock all four element spells at start (testing).")]
         public bool UnlockAllOnStart = false;
 
-        // Raised on a successful Arcane Ball cast (e.g. for animation)
-        public event Action ArcaneBallCast;
-        // Raised on every successful ability cast (incl. Arcane Ball and Blink)
+        // Raised on every successful ability cast
         public event Action<AbilityId> OnAbilityCast;
         // Raised when an element spell gets unlocked (element index 0..3)
         public event Action<int> OnAbilityUnlocked;
         // Raised when the key of a still locked spell is pressed (e.g. for a toast)
         public event Action<AbilityId> OnLockedAbilityPressed;
+        // Raised after the active champion changed (UI rebinds icons/texts)
+        public event Action<ChampionClass> OnChampionChanged;
+
+        public ChampionKit ActiveKit { get; private set; }
+        public ChampionClass ActiveClass => ActiveKit != null ? ActiveKit.Class : ChampionClass.Mage;
+        public ChampionVisual ActiveVisual { get; private set; }
 
         private static readonly int AbilityCount = Enum.GetValues(typeof(AbilityId)).Length;
         private readonly float[] _readyAt = new float[AbilityCount];
+        private readonly int[] _charges = new int[AbilityCount];
+        private readonly float[] _rechargeAt = new float[AbilityCount];
         private readonly bool[] _elementUnlocked = new bool[ElementCount];
+        private readonly bool[] _holding = new bool[AbilitySlots.Count];
 
         private PlayerController _controller;
-        private CharacterController _characterController;
         private PlayerStats _stats;
+        private readonly List<ChampionKit> _kits = new List<ChampionKit>();
+        private bool _initialized;
 
         void Awake()
         {
@@ -64,34 +65,164 @@ namespace ElementalBuddies
             Instance = this;
 
             _controller = GetComponent<PlayerController>();
-            _characterController = GetComponent<CharacterController>();
             _stats = GetComponent<PlayerStats>();
 
             if (UnlockAllOnStart)
                 for (int i = 0; i < ElementCount; i++) _elementUnlocked[i] = true;
+
+            EnsureInitialized();
         }
 
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
+            if (_stats != null && _stats.DamageModifier == (Func<float, Vector3, bool, float>)ModifyIncomingDamage) _stats.DamageModifier = null;
         }
+
+        private void EnsureInitialized()
+        {
+            if (_initialized) return;
+            _initialized = true;
+            if (_controller == null) _controller = GetComponent<PlayerController>();
+            if (_stats == null) _stats = GetComponent<PlayerStats>();
+            _kits.Clear();
+            GetComponents(_kits);
+            if (_stats != null) _stats.DamageModifier = ModifyIncomingDamage;
+            ApplyChampion(ForceChampion ? ForcedChampion : GameSession.SelectedChampion, false);
+        }
+
+        // ---------------- Champion ----------------
+
+        public ChampionKit GetKit(ChampionClass cls)
+        {
+            foreach (var k in _kits) if (k != null && k.Class == cls) return k;
+            return null;
+        }
+
+        // Klasse wechseln (Szenenstart, DevTools, Inspector-Override). Setzt Abklingzeiten zurück, Freischaltungen bleiben.
+        public void SetChampion(ChampionClass cls)
+        {
+            EnsureInitialized();
+            ApplyChampion(cls, true);
+        }
+
+        private void ApplyChampion(ChampionClass cls, bool notify)
+        {
+            ChampionKit kit = GetKit(cls);
+            if (kit == null)
+            {
+                if (_kits.Count == 0)
+                {
+                    Debug.LogError("PlayerAbilities: kein ChampionKit auf dem Player.");
+                    return;
+                }
+                Debug.LogWarning($"PlayerAbilities: kein Kit für {cls} – nehme {_kits[0].Class}.");
+                kit = _kits[0];
+            }
+
+            ReleaseAllHolds();
+            if (ActiveKit != null && ActiveKit != kit) ActiveKit.OnDeactivated();
+
+            foreach (var k in _kits) if (k != null) k.enabled = k == kit;
+            ActiveKit = kit;
+            kit.Initialize(this);
+
+            for (int i = 0; i < AbilityCount; i++)
+            {
+                _readyAt[i] = 0f;
+                _rechargeAt[i] = 0f;
+                _lastLockout[i] = 0f;
+                _charges[i] = kit.GetMaxCharges((AbilityId)i);
+            }
+
+            // Passendes Modell einschalten
+            ActiveVisual = null;
+            foreach (var v in GetComponentsInChildren<ChampionVisual>(true))
+            {
+                bool on = v.Class == kit.Class;
+                if (v.gameObject.activeSelf != on) v.gameObject.SetActive(on);
+                if (on && ActiveVisual == null) ActiveVisual = v;
+            }
+
+            kit.OnActivated();
+            if (notify) OnChampionChanged?.Invoke(kit.Class);
+        }
+
+        // ---------------- Update / Eingabe ----------------
 
         void Update()
         {
+            UpdateCharges();
+            if (_controller != null && ActiveKit != null) _controller.SpeedMultiplier = ActiveKit.MoveSpeedMultiplier;
             HandleSkills();
         }
 
         private void HandleSkills()
         {
-            if (!CanCastNow()) return;
+            if (ActiveKit == null) return;
+            if (!CanCastNow())
+            {
+                ReleaseAllHolds();
+                return;
+            }
 
             var im = InteractionManager.Instance;
-            if (Pressed(_controller.Skill6Action) && (im == null || !im.WouldConsumeLeftClick())) TryCast(AbilityId.ArcaneBall); // Linke Maustaste
-            if (Pressed(_controller.SkillEAction) && (im == null || !im.WouldConsumeRightClick())) TryCast(AbilityId.Blink);      // Rechte Maustaste
-            if (Pressed(_controller.SpellFireAction)) TryCast(AbilityId.FireWave);   // R
-            if (Pressed(_controller.SpellIceAction)) TryCast(AbilityId.FrostNova);   // F
-            if (Pressed(_controller.SpellEarthAction)) TryCast(AbilityId.StoneWall); // C
-            if (Pressed(_controller.SpellLightAction)) TryCast(AbilityId.HolyCircle); // V
+            HandleSlot(AbilitySlot.Primary, _controller.Skill6Action, im != null && Pressed(_controller.Skill6Action) && im.WouldConsumeLeftClick()); // Linke Maustaste
+            HandleSlot(AbilitySlot.Secondary, _controller.SkillEAction, im != null && Pressed(_controller.SkillEAction) && im.WouldConsumeRightClick()); // Rechte Maustaste
+            HandleSlot(AbilitySlot.Fire, _controller.SpellFireAction, false);   // R
+            HandleSlot(AbilitySlot.Ice, _controller.SpellIceAction, false);     // F
+            HandleSlot(AbilitySlot.Earth, _controller.SpellEarthAction, false); // C
+            HandleSlot(AbilitySlot.Light, _controller.SpellLightAction, false); // V
+        }
+
+        private void HandleSlot(AbilitySlot slot, InputAction action, bool consumed)
+        {
+            if (action == null) return;
+            AbilityId id = ActiveKit.GetAbility(slot);
+            int s = (int)slot;
+
+            if (ActiveKit.IsHoldAbility(id))
+            {
+                if (_holding[s] && !action.IsPressed())
+                {
+                    _holding[s] = false;
+                    ActiveKit.SetHeld(id, false);
+                }
+                else if (!_holding[s] && action.WasPressedThisFrame() && !consumed)
+                {
+                    if (TryCast(id)) _holding[s] = true;
+                }
+                // Block durch Manamangel gebrochen → Halten beenden (neuer Klick nötig)
+                if (_holding[s] && !ActiveKit.IsActive(id)) _holding[s] = false;
+                return;
+            }
+
+            if (action.WasPressedThisFrame())
+            {
+                if (!consumed) TryCast(id);
+            }
+            else if (slot == AbilitySlot.Primary && ActiveKit.AutoRepeatPrimary && action.IsPressed() && !IsPointerBusy())
+            {
+                // Gehaltener Grundangriff: erneut auslösen, sobald bereit (still, kein Locked-Toast)
+                if (IsAvailable(id)) TryCast(id);
+            }
+        }
+
+        private static bool IsPointerBusy()
+        {
+            var im = InteractionManager.Instance;
+            return im != null && im.WouldConsumeLeftClick();
+        }
+
+        private void ReleaseAllHolds()
+        {
+            if (ActiveKit == null) return;
+            for (int i = 0; i < _holding.Length; i++)
+            {
+                if (!_holding[i]) continue;
+                _holding[i] = false;
+                ActiveKit.SetHeld(ActiveKit.GetAbility((AbilitySlot)i), false);
+            }
         }
 
         private static bool Pressed(InputAction action) => action != null && action.WasPressedThisFrame();
@@ -99,6 +230,23 @@ namespace ElementalBuddies
         private static bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
 
         private static bool CanCastNow() => Time.timeScale > 0f && !IsGameOver;
+
+        // ---------------- Slots ----------------
+
+        public AbilityId GetAbility(AbilitySlot slot)
+        {
+            EnsureInitialized();
+            return ActiveKit != null ? ActiveKit.GetAbility(slot) : (AbilityId)(int)slot;
+        }
+
+        public AbilityId AbilityOfElement(int elementIndex) => GetAbility(AbilitySlots.OfElement(elementIndex));
+
+        public string GetAbilityName(AbilityId id) => ActiveKit != null ? ActiveKit.GetName(id) : id.ToString();
+
+        public Sprite GetAbilityIcon(AbilityId id) => ActiveKit != null ? ActiveKit.GetIcon(id) : null;
+
+        // Name der Element-Fähigkeit des aktiven Champions (Toasts, Schrein-Texte)
+        public string GetElementAbilityName(int elementIndex) => GetAbilityName(AbilityOfElement(elementIndex));
 
         // ---------------- Unlocking ----------------
 
@@ -117,91 +265,117 @@ namespace ElementalBuddies
             return elementIndex >= 0 && elementIndex < ElementCount && _elementUnlocked[elementIndex];
         }
 
-        // Arcane Ball and Blink are always unlocked
+        // Grundangriff und Mobilität sind immer frei
         public bool IsUnlocked(AbilityId id)
         {
             int element = ElementIndexOf(id);
             return element < 0 || _elementUnlocked[element];
         }
 
-        // Element index of an ability (-1 for Arcane Ball / Blink)
+        // Element index of an ability (-1 for primary / secondary abilities)
         public static int ElementIndexOf(AbilityId id)
         {
             switch (id)
             {
-                case AbilityId.FireWave: return 0;
-                case AbilityId.FrostNova: return 1;
-                case AbilityId.StoneWall: return 2;
-                case AbilityId.HolyCircle: return 3;
-                default: return -1;
+                case AbilityId.FireWave:
+                case AbilityId.FlameWhirl:
+                case AbilityId.FireArrowRain:
+                    return 0;
+                case AbilityId.FrostNova:
+                case AbilityId.FrostStrike:
+                case AbilityId.FrostArrow:
+                    return 1;
+                case AbilityId.StoneWall:
+                case AbilityId.Earthquake:
+                case AbilityId.ThornTrap:
+                    return 2;
+                case AbilityId.HolyCircle:
+                case AbilityId.LightOath:
+                case AbilityId.LightArrow:
+                    return 3;
+                default:
+                    return -1;
             }
         }
 
-        public static AbilityId AbilityOfElement(int elementIndex)
+        // ---------------- Cooldown / Ladungen / Kosten (UI) ----------------
+
+        public int GetMaxCharges(AbilityId id) => ActiveKit != null ? Mathf.Max(1, ActiveKit.GetMaxCharges(id)) : 1;
+        public int GetCharges(AbilityId id) => GetMaxCharges(id) > 1 ? _charges[(int)id] : (GetCooldownRemaining(id) > 0f ? 0 : 1);
+
+        // Restzeit bis zur nächsten Ladung (0 = alle voll)
+        public float GetRechargeRemaining(AbilityId id)
         {
-            switch (elementIndex)
-            {
-                case 0: return AbilityId.FireWave;
-                case 1: return AbilityId.FrostNova;
-                case 2: return AbilityId.StoneWall;
-                default: return AbilityId.HolyCircle;
-            }
+            if (GetMaxCharges(id) <= 1) return GetCooldownRemaining(id);
+            if (_charges[(int)id] >= GetMaxCharges(id)) return 0f;
+            return Mathf.Max(0f, _rechargeAt[(int)id] - Time.time);
         }
-
-        // ---------------- Cooldown / cost API (UI) ----------------
 
         public float GetCooldownRemaining(AbilityId id)
         {
-            return Mathf.Max(0f, _readyAt[(int)id] - Time.time);
+            float lockout = Mathf.Max(0f, _readyAt[(int)id] - Time.time);
+            if (GetMaxCharges(id) > 1 && _charges[(int)id] <= 0)
+                return Mathf.Max(lockout, Mathf.Max(0f, _rechargeAt[(int)id] - Time.time));
+            return lockout;
         }
 
+        // Basis-Abklingzeit × CooldownMultiplier (bei Aufladungen: Zeit pro Ladung)
         public float GetCooldownDuration(AbilityId id)
         {
-            switch (id)
-            {
-                case AbilityId.ArcaneBall: return ArcaneBallCooldown;
-                case AbilityId.Blink: return BlinkCooldown;
-                default: return GetSpell(id).Cooldown;
-            }
+            if (ActiveKit == null) return 0f;
+            return ActiveKit.GetCooldown(id) * Mathf.Max(0.1f, CooldownMultiplier);
         }
 
-        public float GetManaCost(AbilityId id)
+        // Wofür der Radial-Balken gerade läuft (bei Aufladungen: Sperre oder Wiederaufladung)
+        public float GetCooldownDisplayDuration(AbilityId id)
         {
-            switch (id)
-            {
-                case AbilityId.ArcaneBall: return ArcaneBallManaCost;
-                case AbilityId.Blink: return BlinkManaCost;
-                default: return GetSpell(id).ManaCost;
-            }
+            if (GetMaxCharges(id) > 1 && _charges[(int)id] <= 0) return GetCooldownDuration(id);
+            return _lastLockout[(int)id] > 0f ? _lastLockout[(int)id] : GetCooldownDuration(id);
         }
+
+        public float GetManaCost(AbilityId id) => ActiveKit != null ? ActiveKit.GetManaCost(id) : 0f;
 
         // Unlocked, off cooldown, enough mana, not game over
         public bool IsAvailable(AbilityId id)
         {
-            if (IsGameOver || !IsUnlocked(id)) return false;
+            if (IsGameOver || !IsUnlocked(id) || ActiveKit == null) return false;
             if (GetCooldownRemaining(id) > 0f) return false;
+            if (!ActiveKit.CanCast(id)) return false;
             float mana = EconomyManager.Instance != null ? EconomyManager.Instance.CurrentMana : 0f;
-            return mana >= GetManaCost(id);
+            return mana >= ActiveKit.GetRequiredMana(id);
         }
 
-        public ElementSpell GetSpell(AbilityId id)
+        public bool IsAbilityActive(AbilityId id) => ActiveKit != null && ActiveKit.IsActive(id);
+
+        // Kits setzen eigene Abklingzeiten (z. B. gebrochener Block, Kombo-Ende)
+        private readonly float[] _lastLockout = new float[AbilityCount];
+        public void StartCooldown(AbilityId id, float seconds)
         {
-            switch (id)
+            _readyAt[(int)id] = Time.time + seconds;
+            _lastLockout[(int)id] = seconds;
+        }
+
+        private void UpdateCharges()
+        {
+            if (ActiveKit == null) return;
+            for (int i = 0; i < AbilityCount; i++)
             {
-                case AbilityId.FireWave: return FireWave;
-                case AbilityId.FrostNova: return FrostNova;
-                case AbilityId.StoneWall: return StoneWall;
-                case AbilityId.HolyCircle: return HolyCircle;
-                default: return null;
+                int max = ActiveKit.GetMaxCharges((AbilityId)i);
+                if (max <= 1 || _charges[i] >= max) continue;
+                if (Time.time >= _rechargeAt[i])
+                {
+                    _charges[i]++;
+                    if (_charges[i] < max) _rechargeAt[i] += GetCooldownDuration((AbilityId)i);
+                }
             }
         }
 
         // ---------------- Casting ----------------
 
-        // Public so UI buttons could trigger casts as well
+        // Public so UI buttons / tests could trigger casts as well
         public bool TryCast(AbilityId id)
         {
-            if (!CanCastNow()) return false;
+            if (!CanCastNow() || ActiveKit == null) return false;
 
             if (!IsUnlocked(id))
             {
@@ -210,29 +384,34 @@ namespace ElementalBuddies
             }
 
             if (GetCooldownRemaining(id) > 0f) return false;
-            if (id == AbilityId.ArcaneBall && ArcaneBallPrefab == null) return false;
-            if (EconomyManager.Instance == null || !EconomyManager.Instance.TrySpendMana(GetManaCost(id))) return false;
+            if (!ActiveKit.CanCast(id)) return false;
 
-            _readyAt[(int)id] = Time.time + GetCooldownDuration(id);
+            var eco = EconomyManager.Instance;
+            if (eco == null) return false;
+            float cost = ActiveKit.GetManaCost(id);
+            if (eco.CurrentMana < ActiveKit.GetRequiredMana(id)) return false;
+            if (cost > 0f && !eco.TrySpendMana(cost)) return false;
 
-            switch (id)
+            int idx = (int)id;
+            int max = GetMaxCharges(id);
+            if (max > 1)
             {
-                case AbilityId.ArcaneBall:
-                    CastArcaneBall();
-                    break;
-                case AbilityId.Blink:
-                    StartCoroutine(PerformBlink());
-                    break;
-                default:
-                    GetSpell(id).Cast(BuildContext());
-                    break;
+                if (_charges[idx] >= max) _rechargeAt[idx] = Time.time + GetCooldownDuration(id);
+                _charges[idx]--;
+                StartCooldown(id, ActiveKit.GetChargeLockout(id));
             }
+            else
+            {
+                StartCooldown(id, GetCooldownDuration(id));
+            }
+
+            ActiveKit.Cast(id, BuildContext());
 
             OnAbilityCast?.Invoke(id);
             return true;
         }
 
-        private SpellCastContext BuildContext()
+        public SpellCastContext BuildContext()
         {
             Vector3 origin = transform.position;
             origin.y = GetGroundHeight(origin, origin.y);
@@ -241,7 +420,9 @@ namespace ElementalBuddies
                 Caster = this,
                 Origin = origin,
                 AimDirection = _controller.AimDirection,
-                DamageMultiplier = DamageMultiplier
+                DamageMultiplier = DamageMultiplier,
+                AimPoint = _controller.AimPoint,
+                HasAimPoint = _controller.HasAimPoint
             };
         }
 
@@ -255,50 +436,11 @@ namespace ElementalBuddies
             return fallback;
         }
 
-        private void CastArcaneBall()
+        // ---------------- Schaden (Block etc.) ----------------
+
+        private float ModifyIncomingDamage(float amount, Vector3 sourcePosition, bool hasSource)
         {
-            Vector3 spawnPos = SpawnPoint != null ? SpawnPoint.position : transform.position + transform.forward + Vector3.up;
-            GameObject ball = Instantiate(ArcaneBallPrefab, spawnPos, transform.rotation);
-            if (!Mathf.Approximately(DamageMultiplier, 1f))
-            {
-                var arcane = ball.GetComponent<ArcaneBall>();
-                if (arcane != null) arcane.Damage *= DamageMultiplier;
-            }
-            ArcaneBallCast?.Invoke();
-        }
-
-        private IEnumerator PerformBlink()
-        {
-            _stats.IsInvulnerable = true;
-
-            // Richtung Mauszeiger (Rechtsklick); liegt der Zeiger näher als die Reichweite, landet man genau dort
-            Vector3 blinkDir = transform.forward;
-            float distance = BlinkRange;
-            if (_controller.HasAimPoint)
-            {
-                Vector3 to = _controller.AimPoint - transform.position;
-                to.y = 0f;
-                if (to.sqrMagnitude > 0.04f)
-                {
-                    blinkDir = to.normalized;
-                    distance = Mathf.Min(BlinkRange, to.magnitude);
-                }
-            }
-
-            // Wall Check
-            Vector3 targetPos = transform.position + blinkDir * distance;
-            if (Physics.Raycast(transform.position + Vector3.up, blinkDir, out RaycastHit hit, distance, ObstacleLayer))
-            {
-                targetPos = hit.point - blinkDir * 0.5f; // Stop slightly before wall
-                targetPos.y = transform.position.y;
-            }
-
-            _characterController.enabled = false;
-            transform.position = targetPos;
-            _characterController.enabled = true;
-
-            yield return new WaitForSeconds(InvulnerabilityDuration);
-            _stats.IsInvulnerable = false;
+            return ActiveKit != null && ActiveKit.isActiveAndEnabled ? ActiveKit.ModifyIncomingDamage(amount, sourcePosition, hasSource) : amount;
         }
     }
 }

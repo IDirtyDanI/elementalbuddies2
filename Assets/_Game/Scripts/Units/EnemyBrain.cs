@@ -134,7 +134,7 @@ namespace ElementalBuddies
                 return;
             }
 
-            if (IsFrozen)
+            if (IsFrozen || IsStunned)
             {
                 _wasFrozen = true;
                 if (_agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
@@ -264,10 +264,18 @@ namespace ElementalBuddies
              Transform target = GetCurrentTarget();
              if (target != null && IsInAttackRange(target))
              {
+                 float amount = (Config != null ? Config.AttackDamage : 10f) * Time.deltaTime;
+                 // Spieler bekommt die Angriffsrichtung mit (Schildblock blockt nur frontal)
+                 var directional = target.GetComponent<IDirectionalDamageable>();
+                 if (directional != null)
+                 {
+                     directional.TakeDamage(amount, transform.position);
+                     return;
+                 }
                  var dmg = target.GetComponent<IDamageable>();
                  if (dmg != null)
                  {
-                     dmg.TakeDamage((Config != null ? Config.AttackDamage : 10f) * Time.deltaTime);
+                     dmg.TakeDamage(amount);
                  }
              }
         }
@@ -329,6 +337,23 @@ namespace ElementalBuddies
 
         public bool IsFrozen => _freeze != null && _freeze.IsActive;
 
+        // Betäubt (Erdbeben): steht still und greift nicht an, Animation läuft weiter. Optik: kreisende Sterne (BlindEffect).
+        public void Stun(float duration, GameObject vfxPrefab = null)
+        {
+            if (_isDead || duration <= 0f) return;
+            _stunUntil = Mathf.Max(_stunUntil, Time.time + duration);
+            if (vfxPrefab != null) BlindEffect.Apply(gameObject, duration, vfxPrefab);
+            if (_agent == null) _agent = GetComponent<NavMeshAgent>();
+            if (_agent != null && _agent.isOnNavMesh)
+            {
+                _agent.isStopped = true;
+                _agent.velocity = Vector3.zero;
+            }
+        }
+
+        public bool IsStunned => Time.time < _stunUntil;
+        private float _stunUntil;
+
         // Nass machen (löscht einen laufenden Brand, siehe WetEffect.Apply)
         public void ApplyWet(float duration, GameObject vfxPrefab = null)
         {
@@ -377,7 +402,7 @@ namespace ElementalBuddies
             _knockedBack = false;
             _knockbackRoutine = null;
             _stuckTimer = 0f;
-            if (_agent.isOnNavMesh && !IsFrozen) _agent.isStopped = false;
+            if (_agent.isOnNavMesh && !IsFrozen && !IsStunned) _agent.isStopped = false;
         }
 
         // Horizontale Richtung entgegen der aktuellen Laufrichtung (z. B. für Rückstoß „den Weg zurück“)

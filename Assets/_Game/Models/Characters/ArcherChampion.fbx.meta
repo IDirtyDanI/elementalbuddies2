@@ -1,0 +1,710 @@
+fileFormatVersion: 2
+guid: dc2090cdc348e4ce6b29548608ef61e7
+ModelImporter:
+  serializedVersion: 24300
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Brass
+    second: {fileID: 2100000, guid: a4bab8cefb481466ab4b0262dd6c2567, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Feather
+    second: {fileID: 2100000, guid: e04583ee173df4424ae3e24cbb8d71c5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Hair
+    second: {fileID: 2100000, guid: a437210f75f134fceaf21080cfa29e46, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Hood
+    second: {fileID: 2100000, guid: 2482a5a9c3e104f2380c755c10251a0b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Leather
+    second: {fileID: 2100000, guid: db3b81caa85104c598fbd7294c73462a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_LeatherDark
+    second: {fileID: 2100000, guid: b26a0b79b158d49768ee940cba56e1d4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Pants
+    second: {fileID: 2100000, guid: 61552179c88b5481192f2338d0c1e7b1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Archer_Tunic
+    second: {fileID: 2100000, guid: 89d8aaf749189410bb0a3857deaf8c67, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Hero_Eye
+    second: {fileID: 2100000, guid: b160d148c56734616af75c863612ae3e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Hero_Skin
+    second: {fileID: 2100000, guid: cf65cfff664234d22b9b4bd320e9fcf9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Cape
+    second: {fileID: 2100000, guid: df8ee20c4c4164e0f99eba8bf914eb5a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_EyeGlow
+    second: {fileID: 2100000, guid: 3d74cc243b3844638823fc63642533fc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Gold
+    second: {fileID: 2100000, guid: e7978e5888f074bbf8cb710fb69f5997, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Leather
+    second: {fileID: 2100000, guid: 78b108a06110a4e18babf9b8b536f84c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Mail
+    second: {fileID: 2100000, guid: 9d7f85d195fa04567ba463d80fb274fe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Plume
+    second: {fileID: 2100000, guid: 768afa363db2d498d956ae0de4f688ee, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Steel
+    second: {fileID: 2100000, guid: 047328f93a8a84640b140cf19291b6d8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_SteelDark
+    second: {fileID: 2100000, guid: 69ee7046abc584297857bec70c05d3f0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Tabard
+    second: {fileID: 2100000, guid: a1c79783f758f4cc9bbcd1ffb9b2d39e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Visor
+    second: {fileID: 2100000, guid: a118090cdcb584dbe8f062c4c602ca3f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Beard
+    second: {fileID: 2100000, guid: ecd7a0069237d48c6953cf07c9a12a0d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Gold
+    second: {fileID: 2100000, guid: 877b9bd83baa34a5391c03406a3068c7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Leather
+    second: {fileID: 2100000, guid: efb498f8619a74ffe8c0c16b524ad7fe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Robe
+    second: {fileID: 2100000, guid: 7b9aafe9476e141b6bd688278436696f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_RobeDark
+    second: {fileID: 2100000, guid: 4e6763d31c0344f669944489a64b4223, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Star
+    second: {fileID: 2100000, guid: b4590cc90c5434074affa363f8ae21fd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_StaffCrystal
+    second: {fileID: 2100000, guid: e24fa21e394a64cb6b7380c322d559c9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_String
+    second: {fileID: 2100000, guid: 64f7ee4bf87ad4b60b107f6f54e96c3c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_Thorn
+    second: {fileID: 2100000, guid: bdbdf3a4e6a2344d49267695debb73df, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_ThornLeaf
+    second: {fileID: 2100000, guid: afc19dc3418a14b86a06d63b9be8a88c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_Wood
+    second: {fileID: 2100000, guid: fa1694d1afda74d83b2e7827b2463c8e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: W_WoodDark
+    second: {fileID: 2100000, guid: d420588b3082d4f95a8762d86e9f6b15, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Archer_ArrowRain
+      takeName: Archer_rig|Archer_rig_ArrowRain
+      internalID: 6474112705364222964
+      firstFrame: 0
+      lastFrame: 27.000002
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Archer_PlaceTrap
+      takeName: Archer_rig|Archer_rig_PlaceTrap
+      internalID: -1071220415065763119
+      firstFrame: 0
+      lastFrame: 29
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Archer_Roll
+      takeName: Archer_rig|Archer_rig_Roll
+      internalID: 8881911032652746186
+      firstFrame: 0
+      lastFrame: 15
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human:
+    - boneName: Hips
+      humanName: Hips
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperLeg
+      humanName: LeftUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperLeg
+      humanName: RightUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerLeg
+      humanName: LeftLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerLeg
+      humanName: RightLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftFoot
+      humanName: LeftFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightFoot
+      humanName: RightFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Spine
+      humanName: Spine
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Chest
+      humanName: Chest
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Neck
+      humanName: Neck
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Head
+      humanName: Head
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftShoulder
+      humanName: LeftShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightShoulder
+      humanName: RightShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperArm
+      humanName: LeftUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperArm
+      humanName: RightUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerArm
+      humanName: LeftLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerArm
+      humanName: RightLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHand
+      humanName: LeftHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHand
+      humanName: RightHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    skeleton:
+    - name: ArcherChampion(Clone)
+      parentName: 
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Archer_body
+      parentName: ArcherChampion(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Archer_cape
+      parentName: ArcherChampion(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Archer_collar
+      parentName: ArcherChampion(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Archer_pants
+      parentName: ArcherChampion(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Archer_rig
+      parentName: ArcherChampion(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Hips
+      parentName: Archer_rig
+      position: {x: -0, y: 0, z: 0.9}
+      rotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
+      scale: {x: 1, y: 0.99999994, z: 0.99999994}
+    - name: Archer_Hips_parts
+      parentName: Hips
+      position: {x: -0, y: 0.060000002, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Spine
+      parentName: Hips
+      position: {x: -0, y: 0.13999999, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 0.9999995, z: 0.9999995}
+    - name: Chest
+      parentName: Spine
+      position: {x: -0, y: 0.15999997, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1.0000002, z: 1.0000002}
+    - name: Archer_Chest_parts
+      parentName: Chest
+      position: {x: -0, y: 0.060000062, z: 0.15}
+      rotation: {x: -0.6685827, y: -0.23021147, z: 0.23021147, w: 0.6685826}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Neck
+      parentName: Chest
+      position: {x: -0, y: 0.26, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Head
+      parentName: Neck
+      position: {x: -0, y: 0.120000005, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1.0000001, z: 1.0000001}
+    - name: Archer_Head_parts
+      parentName: Head
+      position: {x: -0, y: -1.52, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftShoulder
+      parentName: Chest
+      position: {x: -0.08, y: 0.24000001, z: 0}
+      rotation: {x: 0.5227035, y: -0.49948457, z: -0.4994841, w: -0.47729647}
+      scale: {x: 1.0000007, y: 1.0000007, z: 1.0000002}
+    - name: LeftUpperArm
+      parentName: LeftShoulder
+      position: {x: -5.7741995e-10, y: 0.22022717, z: 0.000000017732383}
+      rotation: {x: 0.0070866635, y: -0.007091402, z: 0.00027167794, w: 0.9999497}
+      scale: {x: 1.000001, y: 0.99999976, z: 1.0000011}
+    - name: Archer_LeftUpperArm_parts
+      parentName: LeftUpperArm
+      position: {x: -0.0019414627, y: 0.06809169, z: 0.0621267}
+      rotation: {x: 0.022086289, y: -0.0000000050938254, z: -0.70676184, w: 0.7071067}
+      scale: {x: 1.0000001, y: 0.99999994, z: 0.99999994}
+    - name: LeftLowerArm
+      parentName: LeftUpperArm
+      position: {x: -2.3283064e-10, y: 0.32015622, z: -0.000000054191332}
+      rotation: {x: 0.015616672, y: -0.015617437, z: 0.00024406114, w: 0.9997561}
+      scale: {x: 1.0000018, y: 1.0000027, z: 1.0000019}
+    - name: Archer_LeftLowerArm_parts
+      parentName: LeftLowerArm
+      position: {x: -8.5768115e-10, y: 0.119999945, z: -0.0000000013783575}
+      rotation: {x: 0.5, y: 0.49999997, z: 0.5, w: -0.5}
+      scale: {x: 0.99999994, y: 0.99999994, z: 1.0000001}
+    - name: LeftHand
+      parentName: LeftLowerArm
+      position: {x: 0.000000007450581, y: 0.26000002, z: -0.00000014202669}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1.0000006, y: 1.0000006, z: 1.0000019}
+    - name: Archer_LeftHand_parts
+      parentName: LeftHand
+      position: {x: -8.5768115e-10, y: 0.05000002, z: 0}
+      rotation: {x: 1.1121719e-16, y: 0.0000000032927243, z: -0.7071068, w: 0.7071067}
+      scale: {x: 1.0000001, y: 0.99999994, z: 0.99999994}
+    - name: RightShoulder
+      parentName: Chest
+      position: {x: 0.08, y: 0.24000001, z: 0}
+      rotation: {x: 0.5227035, y: 0.49948457, z: 0.4994841, w: -0.47729647}
+      scale: {x: 1.0000007, y: 1.0000007, z: 1.0000002}
+    - name: RightUpperArm
+      parentName: RightShoulder
+      position: {x: 5.7741995e-10, y: 0.22022717, z: 0.000000017732383}
+      rotation: {x: 0.0070866635, y: 0.007091402, z: -0.00027167794, w: 0.9999497}
+      scale: {x: 1.000001, y: 0.99999976, z: 1.0000011}
+    - name: RightLowerArm
+      parentName: RightUpperArm
+      position: {x: 2.3283064e-10, y: 0.32015622, z: -0.000000054191332}
+      rotation: {x: 0.015616672, y: 0.015617437, z: -0.00024406114, w: 0.9997561}
+      scale: {x: 1.0000018, y: 1.0000027, z: 1.0000019}
+    - name: Archer_RightLowerArm_parts
+      parentName: RightLowerArm
+      position: {x: 8.5768115e-10, y: 0.119999945, z: -0.0000000013783575}
+      rotation: {x: 0.5, y: -0.49999997, z: 0.5, w: 0.5}
+      scale: {x: 0.99999994, y: 0.99999994, z: 1.0000001}
+    - name: RightHand
+      parentName: RightLowerArm
+      position: {x: -0.000000007450581, y: 0.26000002, z: -0.00000014202669}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1.0000006, y: 1.0000006, z: 1.0000019}
+    - name: Archer_RightHand_parts
+      parentName: RightHand
+      position: {x: 8.5768115e-10, y: 0.05000002, z: 0}
+      rotation: {x: 1.1121719e-16, y: -0.0000000032927243, z: 0.7071068, w: 0.7071067}
+      scale: {x: 1.0000001, y: 0.99999994, z: 0.99999994}
+    - name: LeftUpperLeg
+      parentName: Hips
+      position: {x: -0.15, y: -0.03999996, z: 0}
+      rotation: {x: 1, y: 3.5527137e-15, z: -0.00000007549791, w: 0}
+      scale: {x: 1, y: 0.99999946, z: 0.99999946}
+    - name: LeftLowerLeg
+      parentName: LeftUpperLeg
+      position: {x: 0.0000000013274541, y: 0.36, z: 2.976268e-10}
+      rotation: {x: 0.015619278, y: 0.000000075488686, z: -0.0000000011792191, w: 0.99987805}
+      scale: {x: 1, y: 1.0000014, z: 1.0000015}
+    - name: Archer_LeftLowerLeg_parts
+      parentName: LeftLowerLeg
+      position: {x: -0, y: 0.13993166, z: -0.004372864}
+      rotation: {x: 0.695976, y: 1.0044953e-14, z: -1.0204321e-14, w: 0.718065}
+      scale: {x: 0.99999994, y: 0.99999994, z: 1}
+    - name: LeftFoot
+      parentName: LeftLowerLeg
+      position: {x: -0.000000022111635, y: 0.32015622, z: 0.000000003259629}
+      rotation: {x: -0.52912444, y: 1.4210853e-14, z: 7.549516e-15, w: 0.84854424}
+      scale: {x: 1, y: 1.0000008, z: 1.0000005}
+    - name: Archer_LeftFoot_parts
+      parentName: LeftFoot
+      position: {x: -0, y: 0.085259564, z: 0.011437271}
+      rotation: {x: 0.9705122, y: -5.3498846e-17, z: -1.01050336e-16, w: 0.24105197}
+      scale: {x: 1, y: 1, z: 1.0000001}
+    - name: RightUpperLeg
+      parentName: Hips
+      position: {x: 0.15, y: -0.03999996, z: 0}
+      rotation: {x: 1, y: 3.5527137e-15, z: -0.00000007549791, w: 0}
+      scale: {x: 1, y: 0.99999946, z: 0.99999946}
+    - name: RightLowerLeg
+      parentName: RightUpperLeg
+      position: {x: 0.0000000013274541, y: 0.36, z: -2.976268e-10}
+      rotation: {x: 0.015619278, y: 0.000000075488686, z: -0.0000000011792191, w: 0.99987805}
+      scale: {x: 1, y: 1.0000014, z: 1.0000015}
+    - name: Archer_RightLowerLeg_parts
+      parentName: RightLowerLeg
+      position: {x: -0, y: 0.13993166, z: -0.004372864}
+      rotation: {x: 0.695976, y: 1.0044953e-14, z: -1.0204321e-14, w: 0.718065}
+      scale: {x: 0.99999994, y: 0.99999994, z: 1}
+    - name: RightFoot
+      parentName: RightLowerLeg
+      position: {x: 0.000000022195309, y: 0.32015622, z: 0.0000000040745363}
+      rotation: {x: -0.52912444, y: 1.4210853e-14, z: 7.549516e-15, w: 0.84854424}
+      scale: {x: 1, y: 1.0000008, z: 1.0000005}
+    - name: Archer_RightFoot_parts
+      parentName: RightFoot
+      position: {x: -0, y: 0.085259564, z: 0.011437271}
+      rotation: {x: 0.9705122, y: -5.3498846e-17, z: -1.01050336e-16, w: 0.24105197}
+      scale: {x: 1, y: 1, z: 1.0000001}
+    - name: Archer_skirtB
+      parentName: ArcherChampion(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Archer_skirtF
+      parentName: ArcherChampion(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Archer_tunic
+      parentName: ArcherChampion(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 3
+  humanoidOversampling: 1
+  avatarSetup: 1
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -1,0 +1,579 @@
+fileFormatVersion: 2
+guid: cb7ab9abfac76443c8c81d5098b77c7e
+ModelImporter:
+  serializedVersion: 24300
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Core
+    second: {fileID: 2100000, guid: 44bace13437524de5ab111a3d0973e13, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Dusk
+    second: {fileID: 2100000, guid: f424b4cfa13b6491c87093f83f709ecb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Eye
+    second: {fileID: 2100000, guid: f8f79194f37ad49ae84bac378380926f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Obsidian
+    second: {fileID: 2100000, guid: 8e6e590a300f6431da293137092864c5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Rune
+    second: {fileID: 2100000, guid: e450ce1fdda0d48148d72efbddf08883, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shadow_Wisp
+    second: {fileID: 2100000, guid: c956ca2153668453b88f17642f3984e1, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: "\nClip 'Shadow_rig|Air_rig_Cast' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Shadow_rig|Crystal_rig_Cast'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Shadow_rig|Crystal_rig_Idle' has import animation warnings that might lower
+      retargeting quality:\nNote: Activate translation DOF on avatar to improve retargeting
+      quality.\n\t'Chest' is inbetween humanoid transforms and has rotation animation
+      that will be discarded.\n\nClip 'Shadow_rig|Lightning_rig_Cast' has import
+      animation warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Shadow_rig|Lightning_rig_Idle'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Shadow_rig|Magma_rig_Cast' has import animation warnings that might lower
+      retargeting quality:\nNote: Activate translation DOF on avatar to improve retargeting
+      quality.\n\t'Chest' is inbetween humanoid transforms and has rotation animation
+      that will be discarded.\n\nClip 'Shadow_rig|Magma_rig_Idle' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Shadow_rig|Shadow_rig_Cast'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Shadow_rig|Shadow_rig_Idle' has import animation warnings that might lower
+      retargeting quality:\nNote: Activate translation DOF on avatar to improve retargeting
+      quality.\n\t'Chest' is inbetween humanoid transforms and has rotation animation
+      that will be discarded.\n\nClip 'Shadow_rig|Water_rig_Cast' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Shadow_rig|Water_rig_Idle'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n"
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Shadow_Cast
+      takeName: Shadow_rig|Shadow_rig_Cast
+      internalID: 6885239408454432855
+      firstFrame: 0
+      lastFrame: 37
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Shadow_Idle
+      takeName: Shadow_rig|Shadow_rig_Idle
+      internalID: 8320467873171699818
+      firstFrame: 0
+      lastFrame: 89.00001
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human:
+    - boneName: Hips
+      humanName: Hips
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperLeg
+      humanName: LeftUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperLeg
+      humanName: RightUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerLeg
+      humanName: LeftLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerLeg
+      humanName: RightLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftFoot
+      humanName: LeftFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightFoot
+      humanName: RightFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Spine
+      humanName: Spine
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Neck
+      humanName: Neck
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Head
+      humanName: Head
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftShoulder
+      humanName: LeftShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightShoulder
+      humanName: RightShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperArm
+      humanName: LeftUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperArm
+      humanName: RightUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerArm
+      humanName: LeftLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerArm
+      humanName: RightLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHand
+      humanName: LeftHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHand
+      humanName: RightHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    skeleton:
+    - name: ShadowElemental(Clone)
+      parentName: 
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Shadow_body
+      parentName: ShadowElemental(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Shadow_rig
+      parentName: ShadowElemental(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Hips
+      parentName: Shadow_rig
+      position: {x: 0, y: 0.000000059604645, z: 0.7318998}
+      rotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
+      scale: {x: 1, y: 0.9999999, z: 0.9999999}
+    - name: Shadow_Hips_parts
+      parentName: Hips
+      position: {x: 0.11761585, y: 0.06975871, z: -0.28562364}
+      rotation: {x: 0.9837973, y: -0.081259824, z: 0.123517156, w: 0.10140632}
+      scale: {x: 1, y: 1.0000001, z: 1.0000001}
+    - name: Spine
+      parentName: Hips
+      position: {x: -0, y: 0.15999997, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 0.9999999, z: 0.9999999}
+    - name: Shadow_Spine_parts
+      parentName: Spine
+      position: {x: 0.17363313, y: 0.12287721, z: 0.30753097}
+      rotation: {x: -0.07495508, y: 0.1353815, z: -0.5231523, w: 0.83807236}
+      scale: {x: 1.0000001, y: 1.0000001, z: 1.0000002}
+    - name: Chest
+      parentName: Spine
+      position: {x: -0, y: 0.22000003, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Shadow_Chest_parts
+      parentName: Chest
+      position: {x: -0.0055583618, y: 0.001276046, z: -0.35496262}
+      rotation: {x: 0.9745911, y: -0.14774016, z: 0.025234757, w: 0.16645801}
+      scale: {x: 1, y: 1.0000002, z: 1.0000002}
+    - name: Neck
+      parentName: Chest
+      position: {x: -0, y: 0.26, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Head
+      parentName: Neck
+      position: {x: -0, y: 0.13999999, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 0.99999994, z: 0.99999994}
+    - name: Shadow_Head_parts
+      parentName: Head
+      position: {x: -0.31672573, y: 0.06539115, z: -0.1495561}
+      rotation: {x: 0.84467995, y: -0.1922584, z: -0.4157113, w: 0.27701378}
+      scale: {x: 0.9999999, y: 0.99999994, z: 0.99999994}
+    - name: LeftShoulder
+      parentName: Chest
+      position: {x: -0.12, y: 0.19999993, z: 0}
+      rotation: {x: 0.5393515, y: -0.49844882, z: -0.4984493, w: -0.4606485}
+      scale: {x: 1.0000001, y: 0.9999999, z: 1.0000001}
+    - name: Shadow_LeftShoulder_parts
+      parentName: LeftShoulder
+      position: {x: 0.280706, y: 0.15219042, z: 0.06545562}
+      rotation: {x: 0.40231356, y: 0.12678052, z: 0.90627587, w: -0.027102651}
+      scale: {x: 1.0000001, y: 1.0000002, z: 1.0000001}
+    - name: LeftUpperArm
+      parentName: LeftShoulder
+      position: {x: -0.0000000020582227, y: 0.38118234, z: -0.0000000072270634}
+      rotation: {x: 0.0045521255, y: -0.004564717, z: 0.00033855435, w: 0.99997914}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000001}
+    - name: Shadow_LeftUpperArm_parts
+      parentName: LeftUpperArm
+      position: {x: 0.16601592, y: 0.25215232, z: 0.021716356}
+      rotation: {x: -0.21849845, y: 0.6182751, z: -0.037745133, w: 0.75403565}
+      scale: {x: 1, y: 1, z: 1.0000001}
+    - name: LeftLowerArm
+      parentName: LeftUpperArm
+      position: {x: 0.0000000037252903, y: 0.4310453, z: -0.00000005804759}
+      rotation: {x: -0.0021367366, y: 0.0021421937, z: -0.00015366034, w: 0.9999954}
+      scale: {x: 1.0000001, y: 1.0000004, z: 1.0000001}
+    - name: Shadow_LeftLowerArm_parts
+      parentName: LeftLowerArm
+      position: {x: -0.05097142, y: 0.08572951, z: 0.16579461}
+      rotation: {x: 0.08333537, y: -0.13922971, z: 0.050177887, w: 0.9854707}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000001}
+    - name: LeftHand
+      parentName: LeftLowerArm
+      position: {x: 0.000000007450581, y: 0.27073982, z: -0.00000008614734}
+      rotation: {x: -0.0029370035, y: 0.0029458322, z: -0.0002263486, w: 0.99999136}
+      scale: {x: 1.0000002, y: 1.0000005, z: 1.0000002}
+    - name: Shadow_LeftHand_parts
+      parentName: LeftHand
+      position: {x: -0.09199898, y: 0.29030085, z: -0.03028977}
+      rotation: {x: 0.6973367, y: -0.27661785, z: -0.54675925, w: -0.3718312}
+      scale: {x: 1.0000001, y: 1.0000004, z: 1.0000002}
+    - name: RightShoulder
+      parentName: Chest
+      position: {x: 0.12, y: 0.19999993, z: 0}
+      rotation: {x: 0.5393515, y: 0.49844882, z: 0.4984493, w: -0.4606485}
+      scale: {x: 1.0000001, y: 0.9999999, z: 1.0000001}
+    - name: Shadow_RightShoulder_parts
+      parentName: RightShoulder
+      position: {x: 0.11232677, y: 0.3071739, z: 0.105805546}
+      rotation: {x: 0.10449396, y: 0.21853673, z: 0.5501051, w: 0.79919153}
+      scale: {x: 1.0000001, y: 1.0000001, z: 1}
+    - name: RightUpperArm
+      parentName: RightShoulder
+      position: {x: 0.0000000020582227, y: 0.38118234, z: -0.0000000072270634}
+      rotation: {x: 0.0045521255, y: 0.004564717, z: -0.00033855435, w: 0.99997914}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000001}
+    - name: Shadow_RightUpperArm_parts
+      parentName: RightUpperArm
+      position: {x: 0.15247723, y: 0.4025551, z: 0.022850811}
+      rotation: {x: 0.5885384, y: -0.33923894, z: 0.63472843, w: -0.36831957}
+      scale: {x: 1.0000004, y: 1.0000001, z: 1.0000001}
+    - name: RightLowerArm
+      parentName: RightUpperArm
+      position: {x: -0.0000000037252903, y: 0.4310453, z: -0.00000005804759}
+      rotation: {x: -0.0021367366, y: -0.0021421937, z: 0.00015366034, w: 0.9999954}
+      scale: {x: 1.0000001, y: 1.0000004, z: 1.0000001}
+    - name: Shadow_RightLowerArm_parts
+      parentName: RightLowerArm
+      position: {x: -0.035876006, y: 0.10746065, z: 0.17512357}
+      rotation: {x: -0.09650247, y: -0.10517816, z: 0.92856187, w: 0.34263358}
+      scale: {x: 1.0000001, y: 1.0000004, z: 1.0000001}
+    - name: RightHand
+      parentName: RightLowerArm
+      position: {x: -0.000000007450581, y: 0.27073982, z: -0.00000008614734}
+      rotation: {x: 0.1317673, y: -0.0029199852, z: -0.010150899, w: 0.99122447}
+      scale: {x: 1.0000002, y: 1.0000005, z: 1.0000002}
+    - name: Shadow_RightHand_parts
+      parentName: RightHand
+      position: {x: -0.17633256, y: 0.04291098, z: -0.005025327}
+      rotation: {x: -0.5151692, y: -0.49243122, z: 0.6236481, w: 0.32120922}
+      scale: {x: 1.0000001, y: 1.0000001, z: 1.0000004}
+    - name: LeftUpperLeg
+      parentName: Hips
+      position: {x: -0.22, y: -0.01999998, z: 0}
+      rotation: {x: 1, y: 3.5527137e-15, z: -0.00000007549791, w: 0}
+      scale: {x: 1, y: 0.9999998, z: 0.9999998}
+    - name: Shadow_LeftUpperLeg_parts
+      parentName: LeftUpperLeg
+      position: {x: 0.16251655, y: 0.34265918, z: -0.041410923}
+      rotation: {x: 0.0224445, y: 0.79405576, z: 0.21003115, w: 0.5699637}
+      scale: {x: 1.0000001, y: 1, z: 1}
+    - name: LeftLowerLeg
+      parentName: LeftUpperLeg
+      position: {x: 0.000000001327455, y: 0.33000004, z: 0.0000000034167513}
+      rotation: {x: 0.00027758008, y: -0.016657354, z: 0.01665743, w: 0.99972254}
+      scale: {x: 1, y: 0.9999999, z: 0.99999994}
+    - name: Shadow_LeftLowerLeg_parts
+      parentName: LeftLowerLeg
+      position: {x: -0.1238261, y: 0.13627164, z: -0.1238429}
+      rotation: {x: -0.41300404, y: 0.8406283, z: 0.14890008, w: -0.31717572}
+      scale: {x: 0.9999999, y: 1, z: 1}
+    - name: LeftFoot
+      parentName: LeftLowerLeg
+      position: {x: -0.000000001193257, y: 0.30016664, z: 0.000000002561137}
+      rotation: {x: -0.5533027, y: -0.28755978, z: -0.099496335, w: 0.77541345}
+      scale: {x: 1, y: 1.0000001, z: 1.0000001}
+    - name: Shadow_LeftFoot_parts
+      parentName: LeftFoot
+      position: {x: -0.17061779, y: 0.13093501, z: 0.008046433}
+      rotation: {x: 0.32552636, y: -0.6811339, z: -0.29764482, w: 0.58437735}
+      scale: {x: 1.0000001, y: 1.0000001, z: 0.99999994}
+    - name: RightUpperLeg
+      parentName: Hips
+      position: {x: 0.22, y: -0.01999998, z: 0}
+      rotation: {x: 1, y: 3.5527137e-15, z: -0.00000007549791, w: 0}
+      scale: {x: 1, y: 0.9999998, z: 0.9999998}
+    - name: Shadow_RightUpperLeg_parts
+      parentName: RightUpperLeg
+      position: {x: 0.11249575, y: -0.1372942, z: 0.19155045}
+      rotation: {x: -0.12511003, y: 0.39308456, z: 0.16311298, w: 0.89622885}
+      scale: {x: 1.0000001, y: 1.0000002, z: 1.0000002}
+    - name: RightLowerLeg
+      parentName: RightUpperLeg
+      position: {x: 0.000000001327455, y: 0.33000004, z: -0.0000000034167513}
+      rotation: {x: 0.00027757758, y: 0.016657513, z: -0.016657433, w: 0.99972254}
+      scale: {x: 1, y: 1, z: 1.0000002}
+    - name: Shadow_RightLowerLeg_parts
+      parentName: RightLowerLeg
+      position: {x: 0.15320426, y: 0.16550493, z: -0.083276436}
+      rotation: {x: 0.7542421, y: -0.42166126, z: 0.40930566, w: -0.29289842}
+      scale: {x: 0.9999999, y: 0.9999999, z: 0.9999999}
+    - name: RightFoot
+      parentName: RightLowerLeg
+      position: {x: 0.000000015163096, y: 0.30016664, z: 0.0000000011641532}
+      rotation: {x: -0.55810624, y: 0.19827734, z: 0.037943043, w: 0.8048378}
+      scale: {x: 1, y: 1.0000001, z: 1.0000004}
+    - name: Shadow_RightFoot_parts
+      parentName: RightFoot
+      position: {x: 0.15676682, y: 0.15993397, z: -0.038601547}
+      rotation: {x: -0.18542816, y: 0.8509111, z: -0.06370997, w: 0.48734772}
+      scale: {x: 1, y: 0.99999994, z: 0.99999994}
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 3
+  humanoidOversampling: 1
+  avatarSetup: 1
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

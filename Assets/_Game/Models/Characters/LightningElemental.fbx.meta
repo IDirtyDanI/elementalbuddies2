@@ -1,0 +1,584 @@
+fileFormatVersion: 2
+guid: e747e7bce21ed464c8b854dd10d74835
+ModelImporter:
+  serializedVersion: 24300
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Bolt
+    second: {fileID: 2100000, guid: 5575c861a794b4a86961d0770a9f2081, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Copper
+    second: {fileID: 2100000, guid: 204c99a2a622146e68e97cbe3d817c9b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_CopperDark
+    second: {fileID: 2100000, guid: 983e0905969f74fef836a6dc37eaf50a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Energy
+    second: {fileID: 2100000, guid: a74910522cb5d43478c3c947ade65ff4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Eye
+    second: {fileID: 2100000, guid: f971f0ba41c154a619012e9a725221f0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_Slate
+    second: {fileID: 2100000, guid: 2afa010ae7c3344e3a6c83ebe79e523d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Lightning_SlateBlue
+    second: {fileID: 2100000, guid: 69dc91e56c06c4500b63106e149b3a50, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: "\nClip 'Lightning_rig|Air_rig_Cast' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Lightning_rig|Crystal_rig_Cast'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Lightning_rig|Crystal_rig_Idle' has import animation warnings that might lower
+      retargeting quality:\nNote: Activate translation DOF on avatar to improve retargeting
+      quality.\n\t'Chest' is inbetween humanoid transforms and has rotation animation
+      that will be discarded.\n\nClip 'Lightning_rig|Lightning_rig_Cast' has import
+      animation warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Lightning_rig|Lightning_rig_Idle'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Lightning_rig|Magma_rig_Cast' has import animation warnings that might lower
+      retargeting quality:\nNote: Activate translation DOF on avatar to improve retargeting
+      quality.\n\t'Chest' is inbetween humanoid transforms and has rotation animation
+      that will be discarded.\n\nClip 'Lightning_rig|Magma_rig_Idle' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Lightning_rig|Shadow_rig_Cast'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'Lightning_rig|Shadow_rig_Idle' has import animation warnings that might lower
+      retargeting quality:\nNote: Activate translation DOF on avatar to improve retargeting
+      quality.\n\t'Chest' is inbetween humanoid transforms and has rotation animation
+      that will be discarded.\n\nClip 'Lightning_rig|Water_rig_Cast' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Chest' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\nClip 'Lightning_rig|Water_rig_Idle'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Chest'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n"
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Lightning_Cast
+      takeName: Lightning_rig|Lightning_rig_Cast
+      internalID: 5770070037880213244
+      firstFrame: 0
+      lastFrame: 33
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Lightning_Idle
+      takeName: Lightning_rig|Lightning_rig_Idle
+      internalID: -4879976263542663642
+      firstFrame: 0
+      lastFrame: 60
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human:
+    - boneName: Hips
+      humanName: Hips
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperLeg
+      humanName: LeftUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperLeg
+      humanName: RightUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerLeg
+      humanName: LeftLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerLeg
+      humanName: RightLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftFoot
+      humanName: LeftFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightFoot
+      humanName: RightFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Spine
+      humanName: Spine
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Neck
+      humanName: Neck
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Head
+      humanName: Head
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftShoulder
+      humanName: LeftShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightShoulder
+      humanName: RightShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperArm
+      humanName: LeftUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperArm
+      humanName: RightUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerArm
+      humanName: LeftLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerArm
+      humanName: RightLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHand
+      humanName: LeftHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHand
+      humanName: RightHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    skeleton:
+    - name: LightningElemental(Clone)
+      parentName: 
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Lightning_body
+      parentName: LightningElemental(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Lightning_rig
+      parentName: LightningElemental(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Hips
+      parentName: Lightning_rig
+      position: {x: 0, y: 0.000000059604645, z: 0.7318998}
+      rotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
+      scale: {x: 1, y: 0.9999999, z: 0.9999999}
+    - name: Lightning_Hips_parts
+      parentName: Hips
+      position: {x: -0.076261364, y: -0.035928607, z: -0.28344673}
+      rotation: {x: -0.4754055, y: 0.8741523, z: -0.037501868, w: -0.09187477}
+      scale: {x: 0.9999999, y: 0.99999994, z: 0.99999994}
+    - name: Spine
+      parentName: Hips
+      position: {x: -0, y: 0.15999997, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 0.9999999, z: 0.9999999}
+    - name: Lightning_Spine_parts
+      parentName: Spine
+      position: {x: -0.15940134, y: 0.105127096, z: -0.30815035}
+      rotation: {x: 0.3582575, y: 0.9236259, z: -0.04522351, w: -0.12853663}
+      scale: {x: 1.0000001, y: 1.0000001, z: 1.0000001}
+    - name: Chest
+      parentName: Spine
+      position: {x: -0, y: 0.22000003, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Lightning_Chest_parts
+      parentName: Chest
+      position: {x: -0.02861268, y: 0.07463282, z: -0.3687301}
+      rotation: {x: 0.99167305, y: 0.121308915, z: -0.016477278, w: 0.039965305}
+      scale: {x: 1, y: 1, z: 1.0000001}
+    - name: Neck
+      parentName: Chest
+      position: {x: -0, y: 0.26, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Head
+      parentName: Neck
+      position: {x: -0, y: 0.13999999, z: 0}
+      rotation: {x: -0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 0.99999994, z: 0.99999994}
+    - name: Lightning_Head_parts
+      parentName: Head
+      position: {x: -0, y: 0.2999997, z: 0.0000000055879354}
+      rotation: {x: -1.2509052e-14, y: 0.7071068, z: 0.7071067, w: -0.00000010677015}
+      scale: {x: 1.12, y: 1.12, z: 1}
+    - name: LeftShoulder
+      parentName: Chest
+      position: {x: -0.12, y: 0.19999993, z: 0}
+      rotation: {x: 0.5393515, y: -0.49844882, z: -0.4984493, w: -0.4606485}
+      scale: {x: 1.0000001, y: 0.9999999, z: 1.0000001}
+    - name: Lightning_LeftShoulder_parts
+      parentName: LeftShoulder
+      position: {x: 0.17545967, y: 0.33676767, z: 0.06211107}
+      rotation: {x: 0.4285403, y: -0.06993527, z: 0.84694195, w: -0.30684152}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftUpperArm
+      parentName: LeftShoulder
+      position: {x: -0.0000000020582227, y: 0.38118234, z: -0.0000000072270634}
+      rotation: {x: 0.0045521255, y: -0.004564717, z: 0.00033855435, w: 0.99997914}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000001}
+    - name: Lightning_LeftUpperArm_parts
+      parentName: LeftUpperArm
+      position: {x: -0.00951023, y: 0.090709835, z: 0.1363132}
+      rotation: {x: 0.15895513, y: 0.11061585, z: -0.68900895, w: 0.69840115}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftLowerArm
+      parentName: LeftUpperArm
+      position: {x: 0.0000000037252903, y: 0.4310453, z: -0.00000005804759}
+      rotation: {x: -0.0021367366, y: 0.0021421937, z: -0.00015366034, w: 0.9999954}
+      scale: {x: 1.0000001, y: 1.0000004, z: 1.0000001}
+    - name: Lightning_LeftLowerArm_parts
+      parentName: LeftLowerArm
+      position: {x: -0.00038190186, y: 0.06980893, z: 0.005156815}
+      rotation: {x: -0.027083592, y: 0.6800232, z: 0.7322584, w: 0.025151499}
+      scale: {x: 1.1800001, y: 1.1800001, z: 1.0000002}
+    - name: LeftHand
+      parentName: LeftLowerArm
+      position: {x: 0.000000007450581, y: 0.27073982, z: -0.00000008614734}
+      rotation: {x: -0.34252787, y: 0.0027665556, z: -0.026387285, w: 0.939133}
+      scale: {x: 1.0000002, y: 1.0000005, z: 1.0000002}
+    - name: Lightning_LeftHand_parts
+      parentName: LeftHand
+      position: {x: -0.027338013, y: 0.1635257, z: 0.17880952}
+      rotation: {x: -0.07045529, y: -0.08289806, z: 0.023187643, w: 0.9937939}
+      scale: {x: 1.0000002, y: 1.0000001, z: 0.99999994}
+    - name: RightShoulder
+      parentName: Chest
+      position: {x: 0.12, y: 0.19999993, z: 0}
+      rotation: {x: 0.5393515, y: 0.49844882, z: 0.4984493, w: -0.4606485}
+      scale: {x: 1.0000001, y: 0.9999999, z: 1.0000001}
+    - name: Lightning_RightShoulder_parts
+      parentName: RightShoulder
+      position: {x: 0.19367191, y: 0.2926822, z: -0.23289563}
+      rotation: {x: 0.6781522, y: 0.568083, z: 0.46494094, w: -0.034946833}
+      scale: {x: 0.99999994, y: 1, z: 0.99999994}
+    - name: RightUpperArm
+      parentName: RightShoulder
+      position: {x: 0.0000000020582227, y: 0.38118234, z: -0.0000000072270634}
+      rotation: {x: 0.0045521255, y: 0.004564717, z: -0.00033855435, w: 0.99997914}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000001}
+    - name: Lightning_RightUpperArm_parts
+      parentName: RightUpperArm
+      position: {x: 0.009510204, y: 0.090709895, z: 0.13631326}
+      rotation: {x: 0.15895513, y: -0.11061584, z: 0.68900895, w: 0.6984011}
+      scale: {x: 1, y: 1, z: 1}
+    - name: RightLowerArm
+      parentName: RightUpperArm
+      position: {x: -0.0000000037252903, y: 0.4310453, z: -0.00000005804759}
+      rotation: {x: -0.0021367366, y: -0.0021421937, z: 0.00015366034, w: 0.9999954}
+      scale: {x: 1.0000001, y: 1.0000004, z: 1.0000001}
+    - name: Lightning_RightLowerArm_parts
+      parentName: RightLowerArm
+      position: {x: 0.00038202107, y: 0.06980893, z: 0.0051567554}
+      rotation: {x: 0.73225844, y: 0.02515154, z: -0.027083548, w: 0.68002313}
+      scale: {x: 1.1800002, y: 1.1800001, z: 1.0000001}
+    - name: RightHand
+      parentName: RightLowerArm
+      position: {x: -0.000000007450581, y: 0.27073982, z: -0.00000008614734}
+      rotation: {x: 0.06884799, y: -0.0029388343, z: -0.0053036865, w: 0.9976088}
+      scale: {x: 1.0000002, y: 1.0000005, z: 1.0000002}
+    - name: Lightning_RightHand_parts
+      parentName: RightHand
+      position: {x: 0.15562753, y: 0.19409478, z: -0.07216835}
+      rotation: {x: 0.13782753, y: 0.8149551, z: 0.32584777, w: 0.45899355}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000004}
+    - name: LeftUpperLeg
+      parentName: Hips
+      position: {x: -0.22, y: -0.01999998, z: 0}
+      rotation: {x: 1, y: 3.5527137e-15, z: -0.00000007549791, w: 0}
+      scale: {x: 1, y: 0.9999998, z: 0.9999998}
+    - name: Lightning_LeftUpperLeg_parts
+      parentName: LeftUpperLeg
+      position: {x: 0.010170549, y: 0.19088209, z: -0.20080245}
+      rotation: {x: 0.9589512, y: -0.2816207, z: 0.022782106, w: -0.024155658}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftLowerLeg
+      parentName: LeftUpperLeg
+      position: {x: 0.000000001327455, y: 0.33000004, z: 0.0000000034167513}
+      rotation: {x: 0.00027758008, y: -0.016657354, z: 0.01665743, w: 0.99972254}
+      scale: {x: 1, y: 0.9999999, z: 0.99999994}
+    - name: Lightning_LeftLowerLeg_parts
+      parentName: LeftLowerLeg
+      position: {x: -0.008324087, y: 0.050305486, z: 0.0002774708}
+      rotation: {x: -0.000000013700042, y: -0.70671433, z: 0.7071068, w: 0.023557076}
+      scale: {x: 1.18, y: 1.1799998, z: 0.9999999}
+    - name: LeftFoot
+      parentName: LeftLowerLeg
+      position: {x: -0.000000001193257, y: 0.30016664, z: 0.000000002561137}
+      rotation: {x: -0.5506007, y: -0.045961846, z: 0.06434073, w: 0.8310154}
+      scale: {x: 1, y: 1.0000001, z: 1.0000001}
+    - name: Lightning_LeftFoot_parts
+      parentName: LeftFoot
+      position: {x: -0.00413619, y: 0.11184043, z: 0.00863833}
+      rotation: {x: 0.97554123, y: -0.0000000037090098, z: -0.09755402, w: 0.19698356}
+      scale: {x: 0.99999976, y: 0.9999999, z: 0.9999998}
+    - name: RightUpperLeg
+      parentName: Hips
+      position: {x: 0.22, y: -0.01999998, z: 0}
+      rotation: {x: 1, y: 3.5527137e-15, z: -0.00000007549791, w: 0}
+      scale: {x: 1, y: 0.9999998, z: 0.9999998}
+    - name: Lightning_RightUpperLeg_parts
+      parentName: RightUpperLeg
+      position: {x: 0.011604995, y: -0.15357804, z: -0.26603803}
+      rotation: {x: 0.640886, y: 0.7230662, z: 0.25137764, w: 0.05700715}
+      scale: {x: 1.0000001, y: 1, z: 1.0000001}
+    - name: RightLowerLeg
+      parentName: RightUpperLeg
+      position: {x: 0.000000001327455, y: 0.33000004, z: -0.0000000034167513}
+      rotation: {x: 0.00027757758, y: 0.016657513, z: -0.016657433, w: 0.99972254}
+      scale: {x: 1, y: 1, z: 1.0000002}
+    - name: Lightning_RightLowerLeg_parts
+      parentName: RightLowerLeg
+      position: {x: 0.008324087, y: 0.050305486, z: 0.0002774708}
+      rotation: {x: -0.000000091725546, y: -0.70671433, z: 0.7071068, w: -0.023557182}
+      scale: {x: 1.18, y: 1.1799998, z: 0.9999999}
+    - name: RightFoot
+      parentName: RightLowerLeg
+      position: {x: 0.000000015163096, y: 0.30016664, z: 0.0000000011641532}
+      rotation: {x: -0.5506007, y: 0.045961816, z: -0.06434073, w: 0.8310154}
+      scale: {x: 1, y: 1.0000001, z: 1.0000004}
+    - name: Lightning_RightFoot_parts
+      parentName: RightFoot
+      position: {x: 0.00413619, y: 0.11184043, z: 0.00863833}
+      rotation: {x: 0.97554123, y: 0.000000005526097, z: 0.09755402, w: 0.19698356}
+      scale: {x: 0.99999976, y: 0.9999999, z: 0.9999998}
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 3
+  humanoidOversampling: 1
+  avatarSetup: 1
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

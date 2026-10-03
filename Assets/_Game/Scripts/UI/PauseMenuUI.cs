@@ -3,11 +3,12 @@ using System.Globalization;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using TMPro;
 
 namespace ElementalBuddies
 {
-    // Pause-Menü (ESC): links Navigation, rechts Seiten "Übersicht" (Karten + Werte) und "Einstellungen".
+    // Pause-Menü (ESC): links Navigation, rechts Seiten "Übersicht" (Champion, Karten + Werte) und "Einstellungen".
     // Script auf ein immer aktives Objekt (Canvas) legen; Root wird ein-/ausgeblendet.
     public class PauseMenuUI : MonoBehaviour
     {
@@ -16,6 +17,8 @@ namespace ElementalBuddies
         public GameObject SettingsPage;         // Seite 2
         public GameObject ConfirmQuitPanel;     // Bestätigungs-Dialog (Kind von Root)
         public Button ResumeButton, OverviewButton, SettingsButton, RestartButton, QuitButton, ConfirmYesButton, ConfirmNoButton;
+        [Tooltip("Zurück ins Hauptmenü (GameSession.MenuScene).")]
+        public Button MainMenuButton;
         public Image OverviewButtonImage, SettingsButtonImage;   // Tab-Hervorhebung
         public Sprite TabNormalSprite, TabActiveSprite;           // optional; sonst Farbton
         public RectTransform CardsContainer;     // VerticalLayoutGroup für Karten-Zeilen
@@ -47,6 +50,7 @@ namespace ElementalBuddies
             if (SettingsButton != null) SettingsButton.onClick.AddListener(() => ShowPage(false));
             if (RestartButton != null) RestartButton.onClick.AddListener(() => { if (_pause != null) _pause.RestartGame(); });
             if (QuitButton != null) QuitButton.onClick.AddListener(() => SetConfirm(true));
+            if (MainMenuButton != null) MainMenuButton.onClick.AddListener(LoadMainMenu);
             if (ConfirmYesButton != null) ConfirmYesButton.onClick.AddListener(() => { if (_pause != null) _pause.QuitGame(); });
             if (ConfirmNoButton != null) ConfirmNoButton.onClick.AddListener(() => SetConfirm(false));
 
@@ -72,6 +76,19 @@ namespace ElementalBuddies
                 SyncSettings();
             }
             else if (Root != null) Root.SetActive(false);
+        }
+
+        // Zeit und Audio freigeben, dann das Hauptmenü laden
+        public void LoadMainMenu()
+        {
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
+            if (!Application.CanStreamedLevelBeLoaded(GameSession.MenuScene))
+            {
+                Debug.LogWarning($"PauseMenuUI: Szene '{GameSession.MenuScene}' ist nicht in den Build Settings.");
+                return;
+            }
+            SceneManager.LoadScene(GameSession.MenuScene);
         }
 
         private void SetConfirm(bool show)
@@ -246,13 +263,18 @@ namespace ElementalBuddies
                 return $"Gesamt: {Num(n * card.Value, "0")} HP geheilt";
 
             string stat = StatName(card) + TargetSuffix(card.Target);
+            if (card.StatToBuff == StatType.Cooldown)
+            {
+                float total = (1f - Mathf.Pow(1f - Mathf.Clamp(card.Value, 0f, 90f) / 100f, n)) * 100f;
+                return $"Gesamt: −{Num(total, "0.#")} % {stat}";
+            }
             if (card.IsPercentage)
             {
                 float total = (Mathf.Pow(1f + card.Value / 100f, n) - 1f) * 100f;
                 return $"Gesamt: {Signed(total, "0.#")} % {stat}";
             }
-            // Flacher Spieler-Schaden zählt als ganze Prozentpunkte (siehe UpgradeManager)
-            if (card.Target == UpgradeTarget.Player && card.StatToBuff == StatType.Damage)
+            // Flacher Spieler-Schaden / Mobilität zählt als ganze Prozentpunkte (siehe UpgradeManager)
+            if (card.Target == UpgradeTarget.Player && (card.StatToBuff == StatType.Damage || card.StatToBuff == StatType.Mobility))
                 return $"Gesamt: {Signed(n * card.Value, "0.#")} % {stat}";
             return $"Gesamt: {Signed(n * card.Value, "0.#")}{StatUnit(card.StatToBuff)} {stat}";
         }
@@ -261,7 +283,9 @@ namespace ElementalBuddies
         {
             switch (card.StatToBuff)
             {
-                case StatType.Damage: return card.Target == UpgradeTarget.Player ? "Zauberschaden" : "Schaden";
+                case StatType.Damage: return card.Target == UpgradeTarget.Player ? "Fähigkeitsschaden" : "Schaden";
+                case StatType.Cooldown: return "Abklingzeit";
+                case StatType.Mobility: return "Mobilität";
                 case StatType.Range: return "Reichweite";
                 case StatType.FireRate: return "Feuerrate";
                 case StatType.Health: return "Max. Leben";
@@ -305,16 +329,30 @@ namespace ElementalBuddies
             var sb = new StringBuilder();
             var um = UpgradeManager.Instance;
 
+            // Champion + Fähigkeiten (exakte Live-Werte wie im Tooltip)
+            var abilities = PlayerAbilities.Instance;
+            if (abilities != null && abilities.ActiveKit != null)
+            {
+                AppendChampion(sb, abilities);
+                sb.Append('\n');
+            }
+
             // Spieler
             sb.Append(HeaderOpen).Append("Spieler").Append(HeaderClose).Append('\n');
-            var abilities = PlayerAbilities.Instance;
             if (abilities != null)
             {
                 float cur = abilities.DamageMultiplier;
                 float bas = um != null ? um.BaseDamageMultiplier : 1f;
-                string line = "Zauberschaden: " + Colored(Num(cur * 100f, "0") + " %", cur > bas + 0.0001f);
+                string line = "Fähigkeitsschaden: " + Colored(Num(cur * 100f, "0") + " %", cur > bas + 0.0001f);
                 if (!Same(cur, bas)) line += $" ({Signed((cur - bas) * 100f, "0")} %)";
                 sb.Append(line).Append('\n');
+
+                float cdBase = um != null ? um.BaseCooldownMultiplier : 1f;
+                if (!Same(abilities.CooldownMultiplier, cdBase))
+                    sb.Append("Abklingzeiten: ").Append(Colored(Num(abilities.CooldownMultiplier * 100f, "0") + " %", abilities.CooldownMultiplier < cdBase)).Append($" ({Signed((abilities.CooldownMultiplier - cdBase) * 100f, "0")} %)").Append('\n');
+                float mobBase = um != null ? um.BaseMobilityMultiplier : 1f;
+                if (!Same(abilities.MobilityMultiplier, mobBase))
+                    sb.Append("Mobilität: ").Append(Colored(Num(abilities.MobilityMultiplier * 100f, "0") + " %", abilities.MobilityMultiplier > mobBase)).Append($" ({Signed((abilities.MobilityMultiplier - mobBase) * 100f, "0")} %)").Append('\n');
             }
 
             var controller = um != null && um.PlayerControllerRef != null ? um.PlayerControllerRef : FindFirstObjectByType<PlayerController>();
@@ -392,6 +430,35 @@ namespace ElementalBuddies
             }
 
             return sb.ToString().TrimEnd('\n');
+        }
+
+        // "Champion: Schwertkämpfer" + je Fähigkeit Name, Taste, Kosten und Beschreibung mit Live-Werten
+        private static void AppendChampion(StringBuilder sb, PlayerAbilities abilities)
+        {
+            var kit = abilities.ActiveKit;
+            string name = !string.IsNullOrEmpty(kit.DisplayName) ? kit.DisplayName : ChampionName(kit.Class);
+            sb.Append(HeaderOpen).Append("Champion: ").Append(name).Append(HeaderClose).Append('\n');
+            for (int i = 0; i < AbilitySlots.Count; i++)
+            {
+                var slot = (AbilitySlot)i;
+                AbilityId id = abilities.GetAbility(slot);
+                bool unlocked = abilities.IsUnlocked(id);
+                sb.Append("<b>").Append(kit.GetName(id)).Append("</b> <size=85%>(").Append(AbilitySlots.ShortKey(slot)).Append(") · ")
+                  .Append(kit.GetCostLine(id)).Append("</size>");
+                if (!unlocked) sb.Append(" <size=85%><color=#8a2a12>– gesperrt (").Append(ElementInfo.ShrineName(AbilitySlots.ElementOf(slot))).Append(")</color></size>");
+                sb.Append('\n');
+                sb.Append("<size=85%>").Append(kit.Describe(id, abilities.DamageMultiplier)).Append("</size>").Append('\n');
+            }
+        }
+
+        public static string ChampionName(ChampionClass cls)
+        {
+            switch (cls)
+            {
+                case ChampionClass.Knight: return "Schwertkämpfer";
+                case ChampionClass.Archer: return "Bogenschütze";
+                default: return "Magier";
+            }
         }
 
         private static string BuddyLine(UnitConfigSO cfg, UpgradeManager um)

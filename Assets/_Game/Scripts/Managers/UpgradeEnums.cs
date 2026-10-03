@@ -28,6 +28,8 @@ namespace ElementalBuddies
         Speed,
         ManaRegen,
         ManaCap,
-        BuddySlot
+        BuddySlot,
+        Cooldown,  // Spieler: Abklingzeiten aller Fähigkeiten (Wert = Prozent schneller)
+        Mobility   // Spieler: Blink-Reichweite / Rollen-Distanz
     }
 }

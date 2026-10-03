@@ -155,7 +155,12 @@ namespace ElementalBuddies
         {
             int i = s.ElementIndex;
             if (s.AbilityUnlocked)
-                Show($"{ElementInfo.AbilityName(i)} erlernt! (Taste {ElementInfo.AbilityKey(i)})", ElementIcon(i));
+            {
+                // Name der Element-Fähigkeit des aktiven Champions (Magier: Flammenwelle, Ritter: Flammenwirbel …)
+                var pa = PlayerAbilities.Instance;
+                string ability = pa != null ? pa.GetElementAbilityName(i) : ElementInfo.AbilityName(i);
+                Show($"{ability} erlernt! (Taste {ElementInfo.AbilityKey(i)})", ElementIcon(i));
+            }
             Show($"{ElementInfo.Name(i)}-Buddies: +{Mathf.RoundToInt(s.BuddyDamageBonus * 100f)} % Schaden", ElementIcon(i));
         }
 

@@ -10,9 +10,11 @@ namespace ElementalBuddies
         public Vector3 Origin;        // Player position (on the ground if a floor was found)
         public Vector3 AimDirection;  // Horizontal, normalized
         public float DamageMultiplier;
+        public Vector3 AimPoint;      // Mauspunkt auf dem Boden (Fallback: 5 m vor dem Spieler)
+        public bool HasAimPoint;
     }
 
-    // Common config for the four unlockable element spells
+    // Common config for the unlockable element abilities of all champions
     [System.Serializable]
     public abstract class ElementSpell
     {
@@ -39,23 +41,10 @@ namespace ElementalBuddies
 
         // ---------------- Shared helpers ----------------
 
-        private static readonly HashSet<EnemyBrain> _seen = new HashSet<EnemyBrain>();
-
         // All living enemies whose colliders overlap the sphere (deduplicated per enemy)
         protected static List<EnemyBrain> FindEnemies(Vector3 center, float radius)
         {
-            var result = new List<EnemyBrain>();
-            _seen.Clear();
-            Collider[] hits = Physics.OverlapSphere(center, radius, ~0, QueryTriggerInteraction.Collide);
-            foreach (var hit in hits)
-            {
-                if (hit == null) continue;
-                var enemy = hit.GetComponentInParent<EnemyBrain>();
-                if (enemy == null || !enemy.isActiveAndEnabled) continue;
-                if (_seen.Add(enemy)) result.Add(enemy);
-            }
-            _seen.Clear();
-            return result;
+            return CombatUtil.FindEnemies(center, radius);
         }
 
         protected static float HorizontalDistance(Vector3 a, Vector3 b)

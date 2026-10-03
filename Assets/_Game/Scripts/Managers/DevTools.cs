@@ -17,6 +17,9 @@ namespace ElementalBuddies
         public bool GodMode = true;
         public bool UnlimitedBuddies = true;
         public bool UnlockAllSpells = false;
+        [Tooltip("Champion beim Start erzwingen (statt Hauptmenü-Wahl). F6 wechselt im Spiel durch.")]
+        public bool ForceChampion = false;
+        public ChampionClass Champion = ChampionClass.Knight;
         [Tooltip("Pro übersprungene 3 Wellen einen Buddy-Slot geben (wie im normalen Spiel).")]
         public bool GrantSkippedSlots = true;
         public bool ShowHelp = true;
@@ -33,6 +36,8 @@ namespace ElementalBuddies
             if (wm != null && StartWave > 1)
             {
                 wm.DevSetStartWave(StartWave);
+                // Belagerung (Brände, Zäune, Tageszeit) sofort auf den Stand der Startwelle bringen
+                if (SiegeProgression.Instance != null) SiegeProgression.Instance.ApplyInstant(wm.CurrentWaveIndex);
                 if (GrantSkippedSlots && BuddySlotManager.Instance != null)
                 {
                     int every = EconomyManager.Instance != null && EconomyManager.Instance.Settings != null ? Mathf.Max(1, EconomyManager.Instance.Settings.SlotEveryNWaves) : 3;
@@ -42,6 +47,8 @@ namespace ElementalBuddies
                 var hud = FindFirstObjectByType<HUDManager>();
                 if (hud != null) hud.RefreshWave();
             }
+
+            if (ForceChampion && PlayerAbilities.Instance != null) PlayerAbilities.Instance.SetChampion(Champion);
 
             if (UnlockAllSpells && PlayerAbilities.Instance != null)
                 for (int i = 0; i < 4; i++) PlayerAbilities.Instance.UnlockElementAbility(i);
@@ -63,6 +70,13 @@ namespace ElementalBuddies
                 for (int i = 0; i < 4; i++) PlayerAbilities.Instance.UnlockElementAbility(i);
             if (kb.f4Key.wasPressedThisFrame && ShrineManager.Instance != null) ShrineManager.Instance.DevAwakenNext();
             if (kb.f5Key.wasPressedThisFrame && BuddySlotManager.Instance != null) BuddySlotManager.Instance.AddSlot(1);
+            if (kb.f6Key.wasPressedThisFrame && PlayerAbilities.Instance != null)
+            {
+                var pa = PlayerAbilities.Instance;
+                var next = (ChampionClass)(((int)pa.ActiveClass + 1) % 3);
+                pa.SetChampion(next);
+                ToastUI.Show("Champion: " + PauseMenuUI.ChampionName(next));
+            }
         }
 
         private void ApplyCheats()
@@ -104,9 +118,10 @@ namespace ElementalBuddies
                 "F2  alle Gegner töten\n" +
                 "F3  alle Zauber freischalten\n" +
                 "F4  nächsten Schrein erwecken\n" +
-                "F5  +1 Buddy-Slot";
-            GUI.Box(new Rect(12, y, 520, 150), GUIContent.none, _box);
-            GUI.Label(new Rect(22, y + 6, 510, 145), text, _label);
+                "F5  +1 Buddy-Slot\n" +
+                "F6  Champion wechseln";
+            GUI.Box(new Rect(12, y, 520, 170), GUIContent.none, _box);
+            GUI.Label(new Rect(22, y + 6, 510, 165), text, _label);
         }
     }
 }

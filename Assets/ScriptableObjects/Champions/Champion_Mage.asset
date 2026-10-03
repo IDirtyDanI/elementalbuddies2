@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38f39af1130d840989f14c0c0a5b0604, type: 3}
+  m_Name: Champion_Mage
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ChampionDefinitionSO
+  Class: 0
+  DisplayName: Magier
+  Tagline: "Meister der arkanen K\xFCnste"
+  Description: "Ein Gelehrter, der Gegner aus sicherer Entfernung mit arkanen Geschossen
+    zerm\xFCrbt. Mit Blink entkommt er jeder Umzingelung \u2013 und an den Schreinen
+    erweckt er die Macht der vier Elemente."
+  Portrait: {fileID: 21300000, guid: 7e429fdaa06d14a05b458aa7b9364f41, type: 3}
+  PreviewPrefab: {fileID: 7277937158695155944, guid: b07976165df6449949871d1d69257104, type: 3}
+  AccentColor: {r: 0.62, g: 0.4, b: 0.9, a: 1}
+  Abilities:
+  - Key: LMB
+    Name: Arkanball
+    Description: Schleudert eine arkane Kugel in Zielrichtung, die beim Aufprall
+      Schaden verursacht.
+    Icon: {fileID: 21300000, guid: 130095c7fc889496292f1ded8ffb3fac, type: 3}
+    Element: -1
+  - Key: RMB
+    Name: Blink
+    Description: Teleportiert dich bis zu 8 m Richtung Mauszeiger, kurz unverwundbar.
+    Icon: {fileID: 21300000, guid: 2eeaa7763e429483ab0c51d0d737d3b1, type: 3}
+    Element: -1
+  - Key: R
+    Name: Flammenwelle
+    Description: 'Feuerkegel nach vorne (7 m): hoher Schaden und Brand.'
+    Icon: {fileID: 21300000, guid: 9a24258b80f4649d187f6bb90fede365, type: 3}
+    Element: 0
+  - Key: F
+    Name: Frostnova
+    Description: 'Eisexplosion um dich (6 m): Schaden, Gegner frieren 2,5 s ein.'
+    Icon: {fileID: 21300000, guid: ea215e2e3d9dc4a10969e6bd7f024944, type: 3}
+    Element: 1
+  - Key: C
+    Name: Steinwall
+    Description: "Errichtet eine 6 m breite Steinmauer, die Gegner 7 s lang aufh\xE4lt."
+    Icon: {fileID: 21300000, guid: 00af7c33e46934479a0af2745f7829ab, type: 3}
+    Element: 2
+  - Key: V
+    Name: Heiliger Kreis
+    Description: "Heilt dich, Buddies und Nexus in der N\xE4he und blendet Gegner."
+    Icon: {fileID: 21300000, guid: 89e78796b6ecd44738bc8aa2fb2c758e, type: 3}
+    Element: 3
