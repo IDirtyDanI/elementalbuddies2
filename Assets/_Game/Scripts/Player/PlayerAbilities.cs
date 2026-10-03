@@ -21,6 +21,9 @@ namespace ElementalBuddies
         public float InvulnerabilityDuration = 0.4f;
         public LayerMask ObstacleLayer; // Assign "Default" or specific wall layer
 
+        // Raised on a successful Arcane Ball cast (e.g. for animation)
+        public event System.Action ArcaneBallCast;
+
         private float _lastArcaneBallTime;
         private float _lastBlinkTime;
 
@@ -64,6 +67,7 @@ namespace ElementalBuddies
 
             Vector3 spawnPos = SpawnPoint != null ? SpawnPoint.position : transform.position + transform.forward + Vector3.up; 
             Instantiate(ArcaneBallPrefab, spawnPos, transform.rotation);
+            ArcaneBallCast?.Invoke();
         }
 
         private void TryCastBlink()

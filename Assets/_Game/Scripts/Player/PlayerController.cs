@@ -35,6 +35,10 @@ namespace ElementalBuddies
         public float JumpForce = 8.0f;
         public float Gravity = -9.81f;
 
+        // Exposed for visuals/animation
+        public bool IsGrounded => _characterController != null && _characterController.isGrounded;
+        public event System.Action Jumped;
+
         void Awake()
         {
             _characterController = GetComponent<CharacterController>();
@@ -90,6 +94,7 @@ namespace ElementalBuddies
                 if (JumpAction != null && JumpAction.WasPressedThisFrame())
                 {
                     _playerVelocity.y = JumpForce;
+                    Jumped?.Invoke();
                 }
             }
 
