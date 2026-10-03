@@ -65,6 +65,8 @@ namespace ElementalBuddies
 
         void OnDestroy()
         {
+            if (WaveManager.Instance != null) WaveManager.Instance.OnWaveEnd -= RefillMana;
+
             // Restore original values to keep Editor clean
             if (settings != null)
             {
@@ -85,6 +87,16 @@ namespace ElementalBuddies
                 
             OnManaChanged?.Invoke();
             OnShardsChanged?.Invoke();
+
+            if (WaveManager.Instance != null) WaveManager.Instance.OnWaveEnd += RefillMana;
+        }
+
+        // Welle geschafft -> Player-Mana komplett auffüllen
+        private void RefillMana()
+        {
+            if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
+            CurrentMana = MaxMana;
+            OnManaChanged?.Invoke();
         }
 
         void Update()

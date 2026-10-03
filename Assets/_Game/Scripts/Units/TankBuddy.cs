@@ -18,6 +18,10 @@ namespace ElementalBuddies
             CurrentHP = 100f; 
         }
 
+        // Tank: "Damage" = Aura-DPS, "Range" = Taunt-/Aura-Radius, "FireRate" = Taunt-Rate (Config, z. B. 0.16 = alle ~6 s)
+        public override float GetDamageAtLevel(int level) => AuraDps * LevelMultiplier(DamageBonusPerLevel, level);
+        public override float GetRangeAtLevel(int level) => TauntRadius * LevelMultiplier(RangeBonusPerLevel, level);
+
         public override void TakeDamage(float amount)
         {
             float reduced = amount * (1f - DamageReduction);
@@ -26,8 +30,8 @@ namespace ElementalBuddies
 
         protected override bool TryPerformAction()
         {
-            // Taunt logic (controlled by Config.FireRate which should be 1/6 for 6s CD)
-            Collider[] hits = Physics.OverlapSphere(transform.position, TauntRadius);
+            // Taunt logic (controlled by EffectiveFireRate, Config.FireRate ~1/6 for 6s CD)
+            Collider[] hits = Physics.OverlapSphere(transform.position, EffectiveRange);
             bool tauntedAny = false;
             foreach (var hit in hits)
             {
@@ -52,13 +56,14 @@ namespace ElementalBuddies
             if (Time.time >= _lastAuraTime + 1f)
             {
                 _lastAuraTime = Time.time;
-                Collider[] hits = Physics.OverlapSphere(transform.position, TauntRadius); 
+                Collider[] hits = Physics.OverlapSphere(transform.position, EffectiveRange);
+                float auraDps = EffectiveDamage;
                 foreach (var hit in hits)
                 {
                     if (hit.CompareTag("Enemy"))
                     {
                         var dmg = hit.GetComponent<IDamageable>();
-                        if (dmg != null) dmg.TakeDamage(AuraDps);
+                        if (dmg != null) dmg.TakeDamage(auraDps);
                     }
                 }
             }

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36e24b81bfaa705478a0035f2137710d, type: 3}
   m_Name: LightConfig
   m_EditorClassIdentifier: 
-  Type: 0
+  Type: 3
   CostOutCombat: 65
   Range: 5
   FireRate: 2.5

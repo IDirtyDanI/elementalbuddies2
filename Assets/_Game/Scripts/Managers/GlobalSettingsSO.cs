@@ -23,5 +23,13 @@ namespace ElementalBuddies
         public int StartBuddySlots = 4;
         public int SlotEveryNWaves = 3; // Alle N abgeschlossenen Wellen +1 Slot
         public int MaxBuddySlots = 12;
+
+        [Header("Buddy-Aufwertung")]
+        public int BuddyMaxLevel = 3;
+        public float DamageBonusPerLevel = 0.35f; // +35 % pro Stufe über 1
+        public float FireRateBonusPerLevel = 0.2f; // +20 % pro Stufe über 1
+        public float RangeBonusPerLevel = 0.1f; // +10 % pro Stufe über 1
+        // Kosten-Faktor auf CostOutCombat: [0] = Stufe 2, [1] = Stufe 3, ... (letzter Wert gilt für höhere Stufen)
+        public float[] UpgradeCostFactors = new float[] { 0.6f, 1.0f };
     }
 }

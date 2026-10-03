@@ -9,7 +9,7 @@ namespace ElementalBuddies
 
         protected override bool TryPerformAction()
         {
-            Collider[] hits = Physics.OverlapSphere(transform.position, Config.Range);
+            Collider[] hits = Physics.OverlapSphere(transform.position, EffectiveRange);
             Transform bestTarget = null;
             float closestDist = float.MaxValue;
 
@@ -28,6 +28,7 @@ namespace ElementalBuddies
 
             if (bestTarget != null)
             {
+                CurrentTarget = bestTarget;
                 Shoot(bestTarget);
                 return true;
             }
@@ -41,7 +42,7 @@ namespace ElementalBuddies
             var projectileScript = proj.GetComponent<BuddyProjectile>();
             if (projectileScript != null)
             {
-                projectileScript.Initialize(target, Config.Damage, Config.Type);
+                projectileScript.Initialize(target, EffectiveDamage, Config.Type);
             }
         }
     }

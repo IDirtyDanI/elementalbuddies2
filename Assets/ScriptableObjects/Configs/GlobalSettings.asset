@@ -25,3 +25,10 @@ MonoBehaviour:
   StartBuddySlots: 4
   SlotEveryNWaves: 3
   MaxBuddySlots: 12
+  BuddyMaxLevel: 3
+  DamageBonusPerLevel: 0.35
+  FireRateBonusPerLevel: 0.2
+  RangeBonusPerLevel: 0.1
+  UpgradeCostFactors:
+  - 0.6
+  - 1

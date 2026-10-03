@@ -16,7 +16,19 @@ namespace ElementalBuddies
         public LayerMask ObstacleLayer; 
         public Material ValidMat;
         public Material InvalidMat;
-        public LayerMask BuddyLayer; // Für Verkaufen per Rechtsklick; leer = Layer "Buddy" bzw. alle Layer
+        public LayerMask BuddyLayer; // Für Auswahl/Verkaufen; leer = Layer "Buddy" bzw. alle Layer
+
+        [Header("Range Indicator")]
+        public Material RangeIndicatorMaterial; // Optional; leer = Laufzeit-Material mit "Sprites/Default"
+        public float RangeIndicatorAlpha = 0.7f;
+
+        // Ausgewählter (platzierter) Buddy für Info-Panel / Aufwerten
+        public ElementalBuddy SelectedBuddy { get; private set; }
+        public event System.Action<ElementalBuddy> OnBuddySelected; // null = abgewählt
+
+        private bool _hasBuddySelection;
+        private RangeIndicator _selectedRange;
+        private RangeIndicator _ghostRange;
 
         private UnitConfigSO _selectedUnitConfig;
         private int _selectedIndex = -1;
@@ -57,11 +69,29 @@ namespace ElementalBuddies
             }
         }
 
+        void Start()
+        {
+            _selectedRange = RangeIndicator.Create("RangeIndicator (Selected)", RangeIndicatorMaterial);
+            _ghostRange = RangeIndicator.Create("RangeIndicator (Ghost)", RangeIndicatorMaterial);
+            _selectedRange.transform.SetParent(transform, true);
+            _ghostRange.transform.SetParent(transform, true);
+        }
+
+        void OnDestroy()
+        {
+            if (SelectedBuddy != null) SelectedBuddy.OnLevelChanged -= RefreshSelectedRange;
+        }
+
         void Update()
         {
+            // Ausgewählter Buddy zerstört (Verkauf, Tod) oder Game Over -> abwählen
+            if (_hasBuddySelection && (SelectedBuddy == null || IsGameOver)) DeselectBuddy();
+
             HandleInput();
             UpdateGhost();
         }
+
+        private bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
 
         private void HandleInput()
         {
@@ -84,6 +114,11 @@ namespace ElementalBuddies
             {
                 TryBuild();
             }
+            // Linksklick ohne Ghost: Buddy auswählen (leerer Boden = abwählen)
+            else if (!pointerOverUI && _currentGhost == null && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                TrySelectBuddy();
+            }
 
             // Right Click: cancel ghost, otherwise sell buddy
             if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
@@ -91,33 +126,110 @@ namespace ElementalBuddies
                 if (_currentGhost != null) Deselect();
                 else TrySell();
             }
+
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) DeselectBuddy();
         }
 
-        private void TrySell()
+        // Buddy unter dem Mauszeiger (gleiche Layer-Logik wie beim Verkaufen)
+        private ElementalBuddy RaycastBuddy()
         {
-            // Nur in der Bauphase (und nicht während Pause/Upgrade-Screen)
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.Building) return;
-            if (Time.timeScale <= 0f) return;
-
+            if (Mouse.current == null) return null;
             if (_mainCamera == null) _mainCamera = Camera.main;
-            if (_mainCamera == null) return;
+            if (_mainCamera == null) return null;
 
             int mask = BuddyLayer.value;
             if (mask == 0) mask = LayerMask.GetMask("Buddy");
             if (mask == 0) mask = Physics.AllLayers;
 
             Ray ray = _mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (!Physics.Raycast(ray, out RaycastHit hit, 100f, mask, QueryTriggerInteraction.Collide)) return;
+            if (!Physics.Raycast(ray, out RaycastHit hit, 100f, mask, QueryTriggerInteraction.Collide)) return null;
 
-            var buddy = hit.collider.GetComponentInParent<ElementalBuddy>();
-            if (buddy == null) return;
+            return hit.collider.GetComponentInParent<ElementalBuddy>();
+        }
 
+        private void TrySelectBuddy()
+        {
+            // Auswahl in Bau- und Kampfphase, nicht bei Game Over / Pause / Upgrade-Screen
+            if (IsGameOver || Time.timeScale <= 0f) return;
+
+            var buddy = RaycastBuddy();
+            if (buddy != null) SelectBuddy(buddy);
+            else DeselectBuddy();
+        }
+
+        public void SelectBuddy(ElementalBuddy buddy)
+        {
+            if (buddy == null)
+            {
+                DeselectBuddy();
+                return;
+            }
+            if (buddy == SelectedBuddy) return;
+
+            if (SelectedBuddy != null) SelectedBuddy.OnLevelChanged -= RefreshSelectedRange;
+            SelectedBuddy = buddy;
+            _hasBuddySelection = true;
+            SelectedBuddy.OnLevelChanged += RefreshSelectedRange;
+            RefreshSelectedRange();
+            OnBuddySelected?.Invoke(SelectedBuddy);
+        }
+
+        public void DeselectBuddy()
+        {
+            if (!_hasBuddySelection) return;
+            if (SelectedBuddy != null) SelectedBuddy.OnLevelChanged -= RefreshSelectedRange;
+            SelectedBuddy = null;
+            _hasBuddySelection = false;
+            if (_selectedRange != null) _selectedRange.Hide();
+            OnBuddySelected?.Invoke(null);
+        }
+
+        private void RefreshSelectedRange()
+        {
+            if (_selectedRange == null || SelectedBuddy == null) return;
+            _selectedRange.Show(SelectedBuddy.transform, SelectedBuddy.EffectiveRange,
+                RangeIndicator.ElementColor(SelectedBuddy.ElementIndex, RangeIndicatorAlpha));
+        }
+
+        // Verkaufen nur in der Bauphase (und nicht während Pause/Upgrade-Screen)
+        public bool CanSellNow =>
+            (GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.Building) && Time.timeScale > 0f;
+
+        // Rückerstattung in Seelensplittern für einen Buddy (inkl. Aufwertungen)
+        public float GetSellRefund(ElementalBuddy buddy)
+        {
+            if (buddy == null) return 0f;
             // Vorplatzierte Buddies ohne PaidCost: Basis-Kosten als Grundlage
             float paid = buddy.PaidCost;
             if (paid <= 0f && buddy.Config != null) paid = buddy.Config.CostOutCombat;
+            return EconomyManager.Instance != null ? EconomyManager.Instance.GetRefundAmount(paid) : paid * 0.7f;
+        }
 
-            if (EconomyManager.Instance != null) EconomyManager.Instance.AddShards(EconomyManager.Instance.GetRefundAmount(paid));
+        private void TrySell()
+        {
+            if (!CanSellNow) return;
+            SellBuddy(RaycastBuddy());
+        }
+
+        private bool SellBuddy(ElementalBuddy buddy)
+        {
+            if (buddy == null || !CanSellNow) return false;
+
+            if (EconomyManager.Instance != null) EconomyManager.Instance.AddShards(GetSellRefund(buddy));
+            if (buddy == SelectedBuddy) DeselectBuddy();
             Destroy(buddy.gameObject);
+            return true;
+        }
+
+        // UI-Helfer für das Buddy-Info-Panel
+        public void SellSelected()
+        {
+            SellBuddy(SelectedBuddy);
+        }
+
+        public bool UpgradeSelected()
+        {
+            return SelectedBuddy != null && SelectedBuddy.TryUpgrade();
         }
 
         // Für UI-Buttons: gleiches Verhalten wie Hotkey (erneute Auswahl = abwählen)
@@ -156,6 +268,7 @@ namespace ElementalBuddies
             else
             {
                 // Debug.Log($"Selected Unit: {config.name}");
+                DeselectBuddy(); // Bauen beginnt -> Buddy-Auswahl aufheben
                 ClearSelection();
                 _selectedUnitConfig = config;
                 _selectedIndex = index;
@@ -176,6 +289,7 @@ namespace ElementalBuddies
             _selectedUnitConfig = null;
             _selectedIndex = -1;
             if (_currentGhost != null) Destroy(_currentGhost);
+            if (_ghostRange != null) _ghostRange.Hide();
         }
 
         private void CreateGhost()
@@ -201,6 +315,8 @@ namespace ElementalBuddies
         {
             if (_currentGhost == null) return;
 
+            UpdateGhostRange();
+
             // Safe check if Main Camera is lost
             if (_mainCamera == null) _mainCamera = Camera.main;
             if (_mainCamera == null) return;
@@ -221,6 +337,17 @@ namespace ElementalBuddies
                 bool isValid = ValidatePlacement(pos);
                 UpdateGhostVisuals(isValid);
             }
+        }
+
+        // Reichweite des Ghosts (Stufe 1); Ghost-Buddy ist deaktiviert, die Werte-Methoden funktionieren trotzdem
+        private void UpdateGhostRange()
+        {
+            if (_ghostRange == null) return;
+            var buddy = _currentGhost.GetComponentInChildren<ElementalBuddy>(true);
+            float range = buddy != null ? buddy.GetRangeAtLevel(1) : _selectedUnitConfig.Range;
+            int element = buddy != null ? buddy.ElementIndex : (int)_selectedUnitConfig.Type;
+            if (range > 0f) _ghostRange.Show(_currentGhost.transform, range, RangeIndicator.ElementColor(element, RangeIndicatorAlpha * 0.6f));
+            else _ghostRange.Hide();
         }
 
         private bool ValidatePlacement(Vector3 position)
