@@ -15,6 +15,6 @@ namespace ElementalBuddies
         public UpgradeTarget Target;
         public StatType StatToBuff;
         public float Value; 
-        public bool IsPercentage; // If true, Value 0.1 means +10%. If false, Value 5 means +5 flat.
+        public bool IsPercentage; // If true, Value 10 means +10% (whole percent). If false, Value 5 means +5 flat.
     }
 }

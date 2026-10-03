@@ -131,6 +131,12 @@ namespace ElementalBuddies
 
         private void ApplyStatUpgrade(UpgradeDefinitionSO upgrade)
         {
+            if (upgrade.StatToBuff == StatType.BuddySlot)
+            {
+                ApplySlotUpgrade(upgrade);
+                return;
+            }
+
             if (upgrade.Target == UpgradeTarget.Player)
             {
                 if (upgrade.StatToBuff == StatType.Speed && PlayerControllerRef != null)
@@ -194,16 +200,23 @@ namespace ElementalBuddies
             return false;
         }
 
+        // Percent values are whole percents (10 = +10 %, 100 = +100 %)
         private float ModifyValue(float current, UpgradeDefinitionSO upgrade)
         {
             if (upgrade.IsPercentage)
-                return current * (1f + upgrade.Value);
+                return current * (1f + upgrade.Value / 100f);
             else
                 return current + upgrade.Value;
         }
 
         private void ApplyManaUpgrade(UpgradeDefinitionSO upgrade)
         {
+            if (upgrade.StatToBuff == StatType.BuddySlot)
+            {
+                ApplySlotUpgrade(upgrade);
+                return;
+            }
+
             if (GlobalSettings == null) return;
             if (upgrade.StatToBuff == StatType.ManaCap)
                 GlobalSettings.ManaCap = ModifyValue(GlobalSettings.ManaCap, upgrade);
@@ -212,6 +225,13 @@ namespace ElementalBuddies
                 GlobalSettings.RegenOutCombat = ModifyValue(GlobalSettings.RegenOutCombat, upgrade);
                 GlobalSettings.RegenInCombat = ModifyValue(GlobalSettings.RegenInCombat, upgrade);
             }
+        }
+
+        private void ApplySlotUpgrade(UpgradeDefinitionSO upgrade)
+        {
+            if (BuddySlotManager.Instance == null) return;
+            int amount = Mathf.Max(1, Mathf.RoundToInt(upgrade.Value));
+            BuddySlotManager.Instance.AddSlot(amount);
         }
     }
 }

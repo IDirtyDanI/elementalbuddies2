@@ -12,5 +12,11 @@ namespace ElementalBuddies
         public float RegenInCombat = 0.5f;
         public float CombatSurcharge = 1.25f; // Multiplikator (25% = 1.25)
         public float RefundRatio = 0.7f; // 70% Rückerstattung
+        public float ManaPerKill = 3f; // Mana-Bounty pro getötetem Gegner
+
+        [Header("Buddy Slots")]
+        public int StartBuddySlots = 4;
+        public int SlotEveryNWaves = 3; // Alle N abgeschlossenen Wellen +1 Slot
+        public int MaxBuddySlots = 12;
     }
 }

@@ -27,6 +27,7 @@ namespace ElementalBuddies
         Health,
         Speed,
         ManaRegen,
-        ManaCap
+        ManaCap,
+        BuddySlot
     }
 }

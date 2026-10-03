@@ -15,6 +15,9 @@ namespace ElementalBuddies
         public TextMeshProUGUI WaveText;
         public Button StartWaveButton;
 
+        [Header("Buddies")]
+        public TextMeshProUGUI BuddySlotText; // Optional
+
         private PlayerStats _playerStats;
         
         void Start()
@@ -47,6 +50,12 @@ namespace ElementalBuddies
                 }
             }
 
+            if (BuddySlotManager.Instance != null)
+            {
+                BuddySlotManager.Instance.OnSlotsChanged += UpdateBuddySlots;
+            }
+            UpdateBuddySlots();
+
             var player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {
@@ -68,6 +77,18 @@ namespace ElementalBuddies
                  WaveManager.Instance.OnWaveEnd -= UpdateWaveInfo;
             }
             if (_playerStats != null) _playerStats.OnHealthChanged -= UpdateHP;
+            if (BuddySlotManager.Instance != null) BuddySlotManager.Instance.OnSlotsChanged -= UpdateBuddySlots;
+        }
+
+        private void UpdateBuddySlots()
+        {
+            if (BuddySlotText == null) return;
+            if (BuddySlotManager.Instance == null)
+            {
+                BuddySlotText.text = "";
+                return;
+            }
+            BuddySlotText.text = $"Buddies {BuddySlotManager.Instance.UsedSlots}/{BuddySlotManager.Instance.MaxSlots}";
         }
 
         private void UpdateMana()

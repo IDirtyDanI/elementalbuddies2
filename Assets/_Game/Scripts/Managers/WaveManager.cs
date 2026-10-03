@@ -26,16 +26,26 @@ namespace ElementalBuddies
         void Start()
         {
             EnemyBrain.OnEnemyDeath += HandleEnemyDeath;
+            if (GameManager.Instance != null) GameManager.Instance.OnGameOver += HandleGameOver;
         }
 
         void OnDestroy()
         {
             EnemyBrain.OnEnemyDeath -= HandleEnemyDeath;
+            if (GameManager.Instance != null) GameManager.Instance.OnGameOver -= HandleGameOver;
+        }
+
+        private bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
+
+        private void HandleGameOver(string reason)
+        {
+            // Stop spawning immediately; IsWaveActive stays as-is so the HUD still shows the wave the player died in
+            StopAllCoroutines();
         }
 
         public void StartNextWave()
         {
-            if (IsWaveActive) return;
+            if (IsWaveActive || IsGameOver) return;
 
             WaveConfigSO waveToSpawn;
 
@@ -101,6 +111,7 @@ namespace ElementalBuddies
             {
                 for (int i = 0; i < group.Count; i++)
                 {
+                    if (IsGameOver) yield break;
                     SpawnEnemy(group.EnemyType);
                     yield return new WaitForSeconds(group.SpawnInterval);
                 }
@@ -134,7 +145,7 @@ namespace ElementalBuddies
 
         private void HandleEnemyDeath()
         {
-            if (!IsWaveActive) return;
+            if (!IsWaveActive || IsGameOver) return;
 
             EnemiesRemaining--;
             Debug.Log($"WaveManager: Enemy died. Remaining: {EnemiesRemaining}");
@@ -147,6 +158,8 @@ namespace ElementalBuddies
 
         private void EndWave()
         {
+            if (IsGameOver) return;
+
             Debug.Log("WaveManager: Wave Ended!");
             IsWaveActive = false;
             if (GameManager.Instance != null) GameManager.Instance.EndCombat();

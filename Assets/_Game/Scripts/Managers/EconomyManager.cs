@@ -12,6 +12,7 @@ namespace ElementalBuddies
 
         public float CurrentMana { get; private set; }
         public float MaxMana => settings != null ? settings.ManaCap : 200f;
+        public GlobalSettingsSO Settings => settings;
 
         public event Action OnManaChanged;
 
@@ -39,6 +40,23 @@ namespace ElementalBuddies
                 _startRegenOut = settings.RegenOutCombat;
                 _startRegenIn = settings.RegenInCombat;
             }
+        }
+
+        void OnEnable()
+        {
+            EnemyBrain.OnEnemyDeath += HandleEnemyDeath;
+        }
+
+        void OnDisable()
+        {
+            EnemyBrain.OnEnemyDeath -= HandleEnemyDeath;
+        }
+
+        // Mana-Bounty pro Kill (zusätzlich zur passiven Regen)
+        private void HandleEnemyDeath()
+        {
+            float bounty = settings != null ? settings.ManaPerKill : 3f;
+            if (bounty > 0f) AddMana(bounty);
         }
 
         void OnDestroy()

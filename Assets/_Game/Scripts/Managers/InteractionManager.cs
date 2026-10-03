@@ -16,6 +16,7 @@ namespace ElementalBuddies
         public LayerMask ObstacleLayer; 
         public Material ValidMat;
         public Material InvalidMat;
+        public LayerMask BuddyLayer; // Für Verkaufen per Rechtsklick; leer = Layer "Buddy" bzw. alle Layer
 
         private UnitConfigSO _selectedUnitConfig;
         private GameObject _currentGhost;
@@ -75,6 +76,40 @@ namespace ElementalBuddies
             {
                 TryBuild();
             }
+
+            // Right Click: cancel ghost, otherwise sell buddy
+            if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+            {
+                if (_currentGhost != null) Deselect();
+                else TrySell();
+            }
+        }
+
+        private void TrySell()
+        {
+            // Nur in der Bauphase (und nicht während Pause/Upgrade-Screen)
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.Building) return;
+            if (Time.timeScale <= 0f) return;
+
+            if (_mainCamera == null) _mainCamera = Camera.main;
+            if (_mainCamera == null) return;
+
+            int mask = BuddyLayer.value;
+            if (mask == 0) mask = LayerMask.GetMask("Buddy");
+            if (mask == 0) mask = Physics.AllLayers;
+
+            Ray ray = _mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (!Physics.Raycast(ray, out RaycastHit hit, 100f, mask, QueryTriggerInteraction.Collide)) return;
+
+            var buddy = hit.collider.GetComponentInParent<ElementalBuddy>();
+            if (buddy == null) return;
+
+            // Vorplatzierte Buddies ohne PaidCost: Basis-Kosten als Grundlage
+            float paid = buddy.PaidCost;
+            if (paid <= 0f && buddy.Config != null) paid = buddy.Config.CostOutCombat;
+
+            if (EconomyManager.Instance != null) EconomyManager.Instance.AddMana(EconomyManager.Instance.GetRefundAmount(paid));
+            Destroy(buddy.gameObject);
         }
 
         private void SelectUnit(int index)
@@ -162,6 +197,9 @@ namespace ElementalBuddies
             if (_selectedUnitConfig == null) return false;
             if (EconomyManager.Instance == null) return false;
 
+            // Check Buddy Slots
+            if (BuddySlotManager.Instance != null && !BuddySlotManager.Instance.HasFreeSlot) return false;
+
             // Check Overlap
             if (Physics.CheckSphere(position, 0.45f, ObstacleLayer)) return false;
 
@@ -204,7 +242,9 @@ namespace ElementalBuddies
             float cost = EconomyManager.Instance.GetBuildingCost(_selectedUnitConfig.CostOutCombat);
             if (EconomyManager.Instance.TrySpendMana(cost))
             {
-                Instantiate(_selectedUnitConfig.Prefab, _currentGhost.transform.position, Quaternion.identity);
+                var go = Instantiate(_selectedUnitConfig.Prefab, _currentGhost.transform.position, Quaternion.identity);
+                var buddy = go.GetComponentInChildren<ElementalBuddy>();
+                if (buddy != null) buddy.PaidCost = cost;
             }
         }
     }

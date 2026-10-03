@@ -14,6 +14,8 @@ namespace ElementalBuddies
         public event Action OnHealthChanged;
         public event Action OnPlayerDeath;
 
+        private bool _isDead;
+
         void Awake()
         {
             CurrentHP = MaxHP;
@@ -21,7 +23,7 @@ namespace ElementalBuddies
 
         public void TakeDamage(float amount)
         {
-            if (IsInvulnerable) return;
+            if (IsInvulnerable || _isDead) return;
 
             CurrentHP -= amount;
             if (CurrentHP < 0) CurrentHP = 0;
@@ -44,9 +46,12 @@ namespace ElementalBuddies
 
         private void Die()
         {
+            if (_isDead) return;
+            _isDead = true;
+
             Debug.Log("Player Died!");
             OnPlayerDeath?.Invoke();
-            // Implement death logic (game over screen, etc.)
+            GameManager.Instance?.TriggerGameOver("Der Zauberer ist gefallen");
         }
     }
 }

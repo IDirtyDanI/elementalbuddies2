@@ -9,6 +9,14 @@ namespace ElementalBuddies
     {
         public EnemyConfigSO Config;
 
+        [Header("Targeting")]
+        [Tooltip("Enemies switch from the Nexus to the player while the player is within this radius.")]
+        public float PlayerAggroRadius = 6f;
+        [Tooltip("Attack range against units (player / taunt target), measured center to center.")]
+        public float AttackRange = 1.5f;
+        [Tooltip("Attack range against the Nexus, measured to the closest point of its collider.")]
+        public float NexusAttackRange = 2.5f;
+
         private NavMeshAgent _agent;
         private Transform _player;
         private Transform _tauntTarget;
@@ -19,6 +27,7 @@ namespace ElementalBuddies
         private float _stuckTimer;
         
         public static event System.Action OnEnemyDeath;
+        private bool _isDead;
 
         void Start()
         {
@@ -47,26 +56,74 @@ namespace ElementalBuddies
 
         void Update()
         {
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver)
+            {
+                if (_agent.isOnNavMesh && !_agent.isStopped) _agent.isStopped = true;
+                return;
+            }
+
             HandleMovement();
             HandleAntiCheese();
             HandleAttack();
         }
 
+        // Priority: Taunt > Player (within aggro radius) > Nexus > Player (fallback if no Nexus)
+        private Transform GetCurrentTarget()
+        {
+            if (_tauntTarget != null) return _tauntTarget;
+
+            if (_player != null)
+            {
+                float playerDist = Vector3.Distance(transform.position, _player.position);
+                if (playerDist <= PlayerAggroRadius) return _player;
+            }
+
+            if (Nexus.Instance != null) return Nexus.Instance.transform;
+
+            return _player;
+        }
+
+        private bool IsNexus(Transform target)
+        {
+            return Nexus.Instance != null && target == Nexus.Instance.transform;
+        }
+
+        private bool IsInAttackRange(Transform target)
+        {
+            if (target == null) return false;
+
+            if (IsNexus(target))
+                return Nexus.Instance.GetDistanceFrom(transform.position) <= NexusAttackRange;
+
+            return Vector3.Distance(transform.position, target.position) < AttackRange;
+        }
+
         private void HandleMovement()
         {
-            if (_tauntTarget != null)
+            Transform target = GetCurrentTarget();
+            if (target == null) return;
+
+            if (IsNexus(target))
             {
-                _agent.SetDestination(_tauntTarget.position);
+                // Walk to the Nexus surface instead of its pivot (the Nexus is big / may carve the NavMesh)
+                _agent.SetDestination(Nexus.Instance.GetClosestPoint(transform.position));
             }
-            else if (_player != null)
+            else
             {
-                _agent.SetDestination(_player.position);
+                _agent.SetDestination(target.position);
             }
         }
 
         private void HandleAntiCheese()
         {
-            if (_agent.velocity.magnitude < 0.1f && !_agent.pathPending && (_agent.hasPath || _player != null))
+            // Standing still while attacking our target is not "stuck"
+            if (IsInAttackRange(GetCurrentTarget()))
+            {
+                _stuckTimer = 0;
+                return;
+            }
+
+            if (_agent.velocity.magnitude < 0.1f && !_agent.pathPending && (_agent.hasPath || _player != null || Nexus.Instance != null))
             {
                 _stuckTimer += Time.deltaTime;
             }
@@ -93,26 +150,25 @@ namespace ElementalBuddies
         
         private void HandleAttack()
         {
-             Transform target = _tauntTarget != null ? _tauntTarget : _player;
-             if (target != null)
+             Transform target = GetCurrentTarget();
+             if (target != null && IsInAttackRange(target))
              {
-                 float dist = Vector3.Distance(transform.position, target.position);
-                 if (dist < 1.5f)
+                 var dmg = target.GetComponent<IDamageable>();
+                 if (dmg != null)
                  {
-                     var dmg = target.GetComponent<IDamageable>();
-                     if (dmg != null)
-                     {
-                         dmg.TakeDamage((Config != null ? Config.AttackDamage : 10f) * Time.deltaTime);
-                     }
+                     dmg.TakeDamage((Config != null ? Config.AttackDamage : 10f) * Time.deltaTime);
                  }
              }
         }
 
         public void TakeDamage(float amount)
         {
+            if (_isDead) return;
             _currentHP -= amount;
             if (_currentHP <= 0)
             {
+                // Guard: several hits in one frame must not report the death twice (bounty / wave count)
+                _isDead = true;
                 OnEnemyDeath?.Invoke();
                 Destroy(gameObject);
             }
