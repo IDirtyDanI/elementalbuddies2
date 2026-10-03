@@ -83,7 +83,7 @@ namespace ElementalBuddies
 
         public void StartNextWave()
         {
-            if (IsWaveActive || IsGameOver) return;
+            if (IsWaveActive || IsGameOver || PauseManager.IsPaused) return;
 
             WaveConfigSO waveToSpawn;
 

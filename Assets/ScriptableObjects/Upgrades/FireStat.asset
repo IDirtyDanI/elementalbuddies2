@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Title: Flammenzorn
   Description: Feuer-Buddies verursachen 10 % mehr Schaden.
-  Icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+  Icon: {fileID: 21300000, guid: d42bc77a7d37948f08f170461ed2b8f9, type: 3}
   Type: 0
   Target: 2
   StatToBuff: 1

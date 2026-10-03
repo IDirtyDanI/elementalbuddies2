@@ -99,6 +99,9 @@ namespace ElementalBuddies
 
         void Update()
         {
+            // Pause-Menü offen -> kein Laufen/Drehen/Springen
+            if (PauseManager.IsPaused) return;
+
             HandleMovement();
             HandleRotation();
         }

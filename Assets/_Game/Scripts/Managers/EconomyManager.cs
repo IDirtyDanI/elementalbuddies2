@@ -14,6 +14,13 @@ namespace ElementalBuddies
         public float MaxMana => settings != null ? settings.ManaCap : 200f;
         public GlobalSettingsSO Settings => settings;
 
+        // Startwerte (vor Upgrade-Karten) und aktuelle Regeneration, z. B. für die Pause-Übersicht
+        public float BaseManaCap => _startManaCap;
+        public float BaseRegenOut => _startRegenOut;
+        public float BaseRegenIn => _startRegenIn;
+        public float RegenOut => settings != null ? settings.RegenOutCombat : 0f;
+        public float RegenIn => settings != null ? settings.RegenInCombat : 0f;
+
         // Seelensplitter: Bau-Währung (keine passive Regen; Quellen: Kopfgeld + Wellen-Bonus)
         public float CurrentShards { get; private set; }
 

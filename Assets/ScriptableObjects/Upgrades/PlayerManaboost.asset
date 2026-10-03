@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Title: Tiefer Manabrunnen
   Description: Dein maximales Mana steigt um 100.
-  Icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+  Icon: {fileID: 21300000, guid: 767d56866c2104b3489176ee2cdc8189, type: 3}
   Type: 2
   Target: 0
   StatToBuff: 7

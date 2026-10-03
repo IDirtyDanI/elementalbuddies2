@@ -84,6 +84,9 @@ namespace ElementalBuddies
 
         void Update()
         {
+            // Pause-Menü offen -> keine Eingaben (ESC übernimmt der PauseManager)
+            if (PauseManager.IsPaused) return;
+
             // Ausgewählter Buddy zerstört (Verkauf, Tod) oder Game Over -> abwählen
             if (_hasBuddySelection && (SelectedBuddy == null || IsGameOver)) DeselectBuddy();
 
@@ -128,8 +131,25 @@ namespace ElementalBuddies
                 Deselect();
             }
 
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) DeselectBuddy();
+            // ESC: erst Platzieren abbrechen, dann Buddy abwählen; sonst öffnet der PauseManager das Pause-Menü
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                if (_currentGhost != null)
+                {
+                    _escapeConsumedFrame = Time.frameCount;
+                    Deselect();
+                }
+                else if (_hasBuddySelection)
+                {
+                    _escapeConsumedFrame = Time.frameCount;
+                    DeselectBuddy();
+                }
+            }
         }
+
+        // ESC wurde in diesem Frame schon verbraucht (PauseManager prüft das in LateUpdate)
+        private int _escapeConsumedFrame = -1;
+        public bool EscapeConsumedThisFrame => _escapeConsumedFrame == Time.frameCount;
 
         // ---------------- Maus-Teilung mit den Spieler-Zaubern ----------------
         // Linksklick = Arcane Ball, außer er wird hier gebraucht (UI, Platzieren, Buddy anklicken)

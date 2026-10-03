@@ -19,6 +19,16 @@ namespace ElementalBuddies
         // UI Event
         public event System.Action<List<UpgradeDefinitionSO>> OnUpgradesAvailable;
         public event System.Action OnUpgradeSelected;
+        public event System.Action<UpgradeDefinitionSO> OnUpgradePicked;
+
+        // Bisher gewählte Karten (in Wahl-Reihenfolge, Mehrfachwahl möglich)
+        private readonly List<UpgradeDefinitionSO> _picked = new List<UpgradeDefinitionSO>();
+        public IReadOnlyList<UpgradeDefinitionSO> PickedUpgrades => _picked;
+
+        // Spieler-Startwerte vor allen Karten (für die Pause-Übersicht)
+        public float BasePlayerSpeed { get; private set; }
+        public float BasePlayerMaxHP { get; private set; }
+        public float BaseDamageMultiplier { get; private set; } = 1f;
 
         // Backup for UnitConfigs
         private struct UnitBackup
@@ -41,6 +51,11 @@ namespace ElementalBuddies
              if (PlayerControllerRef == null) PlayerControllerRef = FindObjectOfType<PlayerController>();
              if (InteractionRef == null) InteractionRef = FindObjectOfType<InteractionManager>();
              if (GlobalSettings == null) Debug.LogWarning("UpgradeManager: Please assign GlobalSettings in Inspector!");
+
+             // Spieler-Basiswerte merken
+             if (PlayerControllerRef != null) BasePlayerSpeed = PlayerControllerRef.MoveSpeed;
+             if (PlayerStatsRef != null) BasePlayerMaxHP = PlayerStatsRef.MaxHP;
+             if (PlayerAbilities.Instance != null) BaseDamageMultiplier = PlayerAbilities.Instance.DamageMultiplier;
 
              // Create Backups
              if (InteractionRef != null)
@@ -103,12 +118,34 @@ namespace ElementalBuddies
 
         public void SelectUpgrade(UpgradeDefinitionSO upgrade)
         {
+            // Pause-Menü liegt darüber -> keine Wahl (defensiv)
+            if (PauseManager.IsPaused || upgrade == null) return;
+
             ApplyUpgrade(upgrade);
             
             // Resume Game
             Time.timeScale = 1f;
-            
+
+            _picked.Add(upgrade);
+            OnUpgradePicked?.Invoke(upgrade);
             OnUpgradeSelected?.Invoke();
+        }
+
+        // Unit-Werte vor allen Karten (aus dem Backup)
+        public bool TryGetBaseUnitStats(UnitConfigSO cfg, out float damage, out float range, out float fireRate)
+        {
+            foreach (var b in _backups)
+            {
+                if (b.Config == cfg)
+                {
+                    damage = b.Damage;
+                    range = b.Range;
+                    fireRate = b.FireRate;
+                    return true;
+                }
+            }
+            damage = range = fireRate = 0f;
+            return false;
         }
 
         private void ApplyUpgrade(UpgradeDefinitionSO upgrade)

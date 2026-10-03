@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Title: "Beschw\xF6rerband"
   Description: "Du kannst einen weiteren Buddy beschw\xF6ren."
-  Icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+  Icon: {fileID: 21300000, guid: ca744bfe7345b4aba86fbeee1c15b4b7, type: 3}
   Type: 0
   Target: 2
   StatToBuff: 8

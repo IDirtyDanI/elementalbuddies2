@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Title: Quell der Klarheit
   Description: Dein Mana regeneriert doppelt so schnell.
-  Icon: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+  Icon: {fileID: 21300000, guid: 9b788dbe2e6fb4a0f8ac582c4f4f80b5, type: 3}
   Type: 2
   Target: 0
   StatToBuff: 6
