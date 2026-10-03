@@ -24,6 +24,8 @@ namespace ElementalBuddies
         public float ForcedTargetPlayerAggroRadius = 10f;
         [Tooltip("Ab dieser Distanz zum ForcedTarget gilt der Gegner als angekommen (kein Anti-Cheese-Stuck).")]
         public float ForcedTargetArriveDistance = 2.5f;
+        [Tooltip("Kommt ein Gegner so lange (s) nicht voran (< 1,5 m, kein Angriff), wird er an ein offenes Portal zurückgesetzt – z. B. auf einer abgeschnittenen NavMesh-Insel.")]
+        public float StragglerRescueTime = 15f;
 
         [Header("HP-Bar")]
         [Tooltip("World-Space-HP-Bar (mit EnemyHealthBar), erscheint erst nach dem ersten Treffer.")]
@@ -79,6 +81,9 @@ namespace ElementalBuddies
 
         // Anti-Cheese
         private float _stuckTimer;
+        private Vector3 _progressPos;
+        private float _noProgressTimer;
+        private bool _blockedByBuddy;
         
         public static event System.Action OnEnemyDeath;
         // Wie OnEnemyDeath, aber mit dem getöteten Gegner (z. B. Kopfgeld je Gegnertyp)
@@ -158,7 +163,36 @@ namespace ElementalBuddies
             UpdateSpeed();
             HandleMovement();
             HandleAntiCheese();
+            HandleStraggler();
             HandleAttack();
+        }
+
+        // Nachzügler-Rettung: Ein Gegner, der lange weder läuft noch angreift, kann die Welle sonst endlos blockieren
+        private void HandleStraggler()
+        {
+            if (StragglerRescueTime <= 0f) return;
+            bool blocked = _blockedByBuddy;
+            _blockedByBuddy = false;
+            if (blocked || IsInAttackRange(GetCurrentTarget()) || (transform.position - _progressPos).sqrMagnitude > 2.25f)
+            {
+                _progressPos = transform.position;
+                _noProgressTimer = 0f;
+                return;
+            }
+
+            _noProgressTimer += Time.deltaTime;
+            if (_noProgressTimer < StragglerRescueTime) return;
+
+            _noProgressTimer = 0f;
+            var wm = WaveManager.Instance;
+            if (wm == null || !wm.TryGetRescuePosition(out Vector3 pos)) return;
+            if (!NavMesh.SamplePosition(pos, out NavMeshHit hit, 4f, NavMesh.AllAreas)) return;
+
+            Debug.LogWarning($"EnemyBrain: {name} hing bei {transform.position} fest – zurück an ein Portal.");
+            ForcedTarget = null;
+            _agent.Warp(hit.position);
+            _progressPos = hit.position;
+            _stuckTimer = 0f;
         }
 
         // Priority: Taunt > Player (within aggro radius) > ForcedTarget > Nexus > Player (fallback if no Nexus)
@@ -253,6 +287,7 @@ namespace ElementalBuddies
                      {
                          float dmg = (Config != null ? Config.AttackDamage : 10f) * Time.deltaTime;
                          buddy.TakeDamage(dmg);
+                         _blockedByBuddy = true; // blockiert = kein Nachzügler
                          return; 
                      }
                 }

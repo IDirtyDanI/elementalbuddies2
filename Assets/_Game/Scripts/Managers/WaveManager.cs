@@ -59,6 +59,11 @@ namespace ElementalBuddies
 
         private int _portalCursor;
 
+        // Sicherheitsnetz Wellenende: laufende Spawn-Coroutines und Zeitpunkt der nächsten Lebend-Zählung
+        private int _spawnRoutinesRunning;
+        private bool _spawnPhaseStarted;
+        private float _nextAliveCheck;
+
         // Schrein-Verlängerung: startet erst, wenn die übrigen Gruppen durch sind (Versatz relativ zum StartDelay)
         private EnemySpawnInfo _shrineExtension;
         private float _shrineExtensionDelay;
@@ -329,6 +334,8 @@ namespace ElementalBuddies
         {
             IsWaveActive = true;
             _shrineExtension = null;
+            _spawnPhaseStarted = false;
+            _spawnRoutinesRunning = 0;
 
             // Calculate total enemies BEFORE OnWaveStart, so extra enemies spawned by listeners
             // (e.g. shrine attackers via SpawnEnemyAt) are added on top and not overwritten.
@@ -349,8 +356,10 @@ namespace ElementalBuddies
             {
                 var group = wave.EnemiesToSpawn[g];
                 if (group == null || group.Count <= 0) continue;
+                _spawnRoutinesRunning++;
                 StartCoroutine(SpawnGroupRoutine(group, GetGroupDelay(g, group)));
             }
+            _spawnPhaseStarted = true;
 
             // If it was a procedural instance, we might want to clean it up, but Unity GC handles ScriptableObject instances eventually or on scene change.
         }
@@ -364,6 +373,29 @@ namespace ElementalBuddies
                 SpawnEnemy(group.EnemyType);
                 yield return new WaitForSeconds(group.SpawnInterval);
             }
+            _spawnRoutinesRunning--;
+        }
+
+        void Update()
+        {
+            // Sicherheitsnetz: Sind alle Gruppen gespawnt und lebt kein Gegner mehr, die Zählung aber > 0
+            // (z. B. Gegner ohne Tod-Meldung zerstört), endet die Welle trotzdem.
+            if (!IsWaveActive || IsGameOver || !_spawnPhaseStarted || _spawnRoutinesRunning > 0) return;
+            if (Time.time < _nextAliveCheck) return;
+            _nextAliveCheck = Time.time + 1f;
+
+            if (EnemiesRemaining > 0 && FindObjectsByType<EnemyBrain>(FindObjectsSortMode.None).Length == 0)
+            {
+                Debug.LogWarning($"WaveManager: Zählung {EnemiesRemaining}, aber kein Gegner lebt – Welle wird beendet.");
+                EnemiesRemaining = 0;
+                CheckWaveEnd();
+            }
+        }
+
+        // Rettungspunkt für festhängende Gegner (EnemyBrain): ein offenes Portal bzw. ein Spawnpunkt
+        public bool TryGetRescuePosition(out Vector3 pos)
+        {
+            return TryGetSpawnPose(out pos, out _);
         }
 
         private void SpawnEnemy(EnemyConfigSO config)

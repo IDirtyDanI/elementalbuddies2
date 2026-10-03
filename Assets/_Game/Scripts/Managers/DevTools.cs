@@ -30,6 +30,15 @@ namespace ElementalBuddies
         private const float ShardReserve = 9999f;
         private GUIStyle _box, _label;
 
+        void Awake()
+        {
+#if !UNITY_EDITOR
+            // Im Spieler-Build nie aktiv – unabhängig von der Inspector-Einstellung
+            Enabled = false;
+            enabled = false;
+#endif
+        }
+
         IEnumerator Start()
         {
             if (!Enabled) yield break;
