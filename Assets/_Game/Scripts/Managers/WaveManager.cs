@@ -11,6 +11,10 @@ namespace ElementalBuddies
         public List<WaveConfigSO> Waves;
         public List<Transform> SpawnPoints;
 
+        [Header("Schrein-Wellen")]
+        [Tooltip("Ist in einer Welle ein Schrein erwacht, dauert die Spawn-Phase mindestens Schrein-Dauer + dieser Puffer (Weg zum Schrein, Umkämpft-Verlangsamung). Fehlende Zeit wird mit zusätzlichen Gegnern aufgefüllt.")]
+        public float ShrineWaveExtraTime = 25f;
+
         public int CurrentWaveIndex { get; private set; } = 0;
         public bool IsWaveActive { get; private set; } = false;
         public int EnemiesRemaining { get; private set; }
@@ -200,6 +204,33 @@ namespace ElementalBuddies
             return newWave;
         }
 
+        // Schrein-Welle: so viele Gegner anhängen, dass die Spawn-Phase lang genug für die Einnahme ist.
+        // Arbeitet auf einer Kopie, die WaveConfig-Assets bleiben unverändert.
+        private WaveConfigSO ExtendForShrine(WaveConfigSO wave)
+        {
+            var sm = ShrineManager.Instance;
+            Shrine shrine = sm != null ? sm.ActiveShrine : null;
+            if (shrine == null || !shrine.IsAwakened || wave.EnemiesToSpawn == null || wave.EnemiesToSpawn.Count == 0) return wave;
+
+            float spawnTime = wave.StartDelay;
+            foreach (var g in wave.EnemiesToSpawn) spawnTime += g.Count * g.SpawnInterval;
+
+            float target = shrine.RequiredTime + ShrineWaveExtraTime;
+            EnemySpawnInfo last = wave.EnemiesToSpawn[wave.EnemiesToSpawn.Count - 1];
+            float interval = Mathf.Max(0.2f, last.SpawnInterval);
+            int extra = Mathf.CeilToInt((target - spawnTime) / interval);
+            if (extra <= 0) return wave;
+
+            var copy = ScriptableObject.CreateInstance<WaveConfigSO>();
+            copy.StartDelay = wave.StartDelay;
+            copy.EndBonusShards = wave.EndBonusShards;
+            copy.EnemiesToSpawn = new List<EnemySpawnInfo>(wave.EnemiesToSpawn);
+            copy.EnemiesToSpawn.Add(new EnemySpawnInfo { EnemyType = last.EnemyType, Count = extra, SpawnInterval = interval });
+            EnemiesRemaining += extra;
+            Debug.Log($"WaveManager: Schrein-Welle ({shrine.DisplayName}) – +{extra} Gegner, Spawn-Phase {spawnTime:0}s → {target:0}s.");
+            return copy;
+        }
+
         private IEnumerator SpawnWaveRoutine(WaveConfigSO wave)
         {
             IsWaveActive = true;
@@ -211,6 +242,7 @@ namespace ElementalBuddies
             Debug.Log($"WaveManager: Expecting {EnemiesRemaining} enemies.");
 
             OnWaveStart?.Invoke();
+            wave = ExtendForShrine(wave); // Schrein erwacht erst in OnWaveStart
             if (GameManager.Instance != null) GameManager.Instance.StartCombat();
             Debug.Log($"WaveManager: Wave {CurrentWaveIndex + 1} Started!");
 

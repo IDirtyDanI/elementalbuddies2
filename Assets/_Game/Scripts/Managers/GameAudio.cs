@@ -40,11 +40,18 @@ namespace ElementalBuddies
         public int Voices = 16;
         public List<SfxEntry> Entries = new List<SfxEntry>();
 
+        [Header("Musik")]
+        [Tooltip("Hintergrundmusik in Schleife (aus dem FunProject: Game Music Intro).")]
+        public AudioClip MusicClip;
+        [Range(0f, 1f)] public float MusicVolume = 0.2f;
+        public float MusicFadeIn = 2f;
+
         private readonly Dictionary<SfxId, SfxEntry> _map = new Dictionary<SfxId, SfxEntry>();
         private readonly Dictionary<SfxId, float> _lastPlayed = new Dictionary<SfxId, float>();
         private AudioSource[] _pool;
         private int _next;
         private PlayerAbilities _abilities;
+        private AudioSource _music;
 
         void Awake()
         {
@@ -67,6 +74,27 @@ namespace ElementalBuddies
             }
         }
 
+        private void StartMusic()
+        {
+            if (MusicClip == null) return;
+            _music = gameObject.AddComponent<AudioSource>();
+            _music.clip = MusicClip;
+            _music.loop = true;
+            _music.playOnAwake = false;
+            _music.spatialBlend = 0f;
+            _music.priority = 0;
+            _music.volume = 0f;
+            _music.Play();
+        }
+
+        void Update()
+        {
+            if (_music == null) return;
+            float target = MusicVolume * MasterVolume;
+            float step = MusicFadeIn > 0f ? target / MusicFadeIn * Time.unscaledDeltaTime : target;
+            _music.volume = Mathf.MoveTowards(_music.volume, target, step);
+        }
+
         void OnEnable()
         {
             Shrine.OnAnyShrineCompleted += OnShrineCompleted;
@@ -80,6 +108,7 @@ namespace ElementalBuddies
 
         void Start()
         {
+            StartMusic();
             _abilities = PlayerAbilities.Instance;
             if (_abilities != null) _abilities.OnAbilityCast += OnAbilityCast;
         }

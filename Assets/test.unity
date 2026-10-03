@@ -6423,10 +6423,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 999994612}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 50}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &400034399
 MonoBehaviour:
@@ -6448,7 +6448,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: Flammenwelle
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: fe812b7a3025b412482029f1eb733860, type: 2}
   m_sharedMaterial: {fileID: -4309202593055424434, guid: fe812b7a3025b412482029f1eb733860, type: 2}
@@ -6457,7 +6457,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4279510589
   m_fontColor: {r: 0.23921569, g: 0.14901961, b: 0.078431375, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -6470,7 +6470,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -16720,8 +16720,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 500, y: 200}
+  m_AnchoredPosition: {x: -911.99994, y: -532.997}
+  m_SizeDelta: {x: 500, y: 0}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!225 &999994613
 CanvasGroup:
@@ -19179,7 +19179,7 @@ Canvas:
   serializedVersion: 3
   m_RenderMode: 0
   m_Camera: {fileID: 0}
-  m_PlaneDistance: 1
+  m_PlaneDistance: 5
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
   m_OverrideSorting: 0
@@ -24123,6 +24123,9 @@ MonoBehaviour:
     Volume: 0.7
     Pitch: {x: 1, y: 1}
     MinInterval: 1
+  MusicClip: {fileID: 8300000, guid: f877ffc5b635f0e438e6bd8d577002a5, type: 3}
+  MusicVolume: 0.2
+  MusicFadeIn: 2
 --- !u!1001 &1358249864
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -25176,10 +25179,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 999994612}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 50}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1395032862
 MonoBehaviour:
@@ -25201,7 +25204,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: "Taste R   \u2022   <color=#2f5f9e>35 Mana</color>   \u2022   6 s Abklingzeit"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: cb56afa4bd83542dda42bc95d0ab611b, type: 2}
   m_sharedMaterial: {fileID: 8303402932922596323, guid: cb56afa4bd83542dda42bc95d0ab611b, type: 2}
@@ -25210,7 +25213,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4280962938
   m_fontColor: {r: 0.47843137, g: 0.30980393, b: 0.16470589, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -25223,7 +25226,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -29061,10 +29064,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 999994612}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 50}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1606314505
 MonoBehaviour:
@@ -29086,7 +29089,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: "Eine Flammenwelle im Kegel vor dir (<color=#8a2a12><b>60</b></color>\xB0,
+    <color=#8a2a12><b>7</b></color> m). Sie verursacht <color=#8a2a12><b>40</b></color>
+    Schaden und setzt Gegner in Brand: <color=#8a2a12><b>8</b></color> Schaden pro
+    Sekunde f\xFCr <color=#8a2a12><b>3</b></color> s."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: bb24e7a7e2a864d38a8391798203d44a, type: 2}
   m_sharedMaterial: {fileID: 7442191383005675262, guid: bb24e7a7e2a864d38a8391798203d44a, type: 2}
@@ -29095,7 +29101,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4279510589
   m_fontColor: {r: 0.23921569, g: 0.14901961, b: 0.078431375, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -29108,7 +29114,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -34052,10 +34058,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 999994612}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 50}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1920387470
 MonoBehaviour:
@@ -34077,7 +34083,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: "Gesperrt \u2013 nimm den Feuer-Schrein ein, um diesen Zauber freizuschalten."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: cb56afa4bd83542dda42bc95d0ab611b, type: 2}
   m_sharedMaterial: {fileID: 8303402932922596323, guid: cb56afa4bd83542dda42bc95d0ab611b, type: 2}
@@ -34086,7 +34092,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4279509406
   m_fontColor: {r: 0.62, g: 0.13, b: 0.08, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -34099,7 +34105,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -35916,10 +35922,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 999994612}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2053521424
 MonoBehaviour:

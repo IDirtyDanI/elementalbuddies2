@@ -6,6 +6,7 @@ namespace ElementalBuddies
     public class GlobalSettingsSO : ScriptableObject
     {
         [Header("Mana Settings")]
+        [Tooltip("Nicht mehr genutzt: Das Spiel startet immer mit vollem Mana (ManaCap), jede Welle füllt beim Start und Ende auf.")]
         public float StartMana = 100f;
         public float ManaCap = 200f;
         public float RegenOutCombat = 1.5f;

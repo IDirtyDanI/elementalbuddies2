@@ -65,7 +65,11 @@ namespace ElementalBuddies
 
         void OnDestroy()
         {
-            if (WaveManager.Instance != null) WaveManager.Instance.OnWaveEnd -= RefillMana;
+            if (WaveManager.Instance != null)
+            {
+                WaveManager.Instance.OnWaveStart -= RefillMana;
+                WaveManager.Instance.OnWaveEnd -= RefillMana;
+            }
 
             // Restore original values to keep Editor clean
             if (settings != null)
@@ -78,20 +82,22 @@ namespace ElementalBuddies
 
         void Start()
         {
-            if (settings != null)
-                CurrentMana = settings.StartMana;
-            else
-                CurrentMana = 100f;
+            // Start immer mit vollem Mana (GlobalSettings.StartMana wird nicht mehr genutzt)
+            CurrentMana = MaxMana;
 
             CurrentShards = settings != null ? settings.StartShards : 130f;
                 
             OnManaChanged?.Invoke();
             OnShardsChanged?.Invoke();
 
-            if (WaveManager.Instance != null) WaveManager.Instance.OnWaveEnd += RefillMana;
+            if (WaveManager.Instance != null)
+            {
+                WaveManager.Instance.OnWaveStart += RefillMana;
+                WaveManager.Instance.OnWaveEnd += RefillMana;
+            }
         }
 
-        // Welle geschafft -> Player-Mana komplett auffüllen
+        // Welle gestartet / geschafft -> Player-Mana komplett auffüllen
         private void RefillMana()
         {
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
