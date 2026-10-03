@@ -9,9 +9,10 @@ namespace ElementalBuddies
         [Header("Frostnova")]
         public float Radius = 6f;
         public float Damage = 20f;
-        [Tooltip("EnemyBrain.ApplySlow semantics: speed = base * (1 - value). 1 = full stop.")]
-        [Range(0f, 1f)] public float FreezeSlow = 1f;
+        [Tooltip("Gegner stehen so lange komplett still (keine Bewegung, keine Angriffe).")]
         public float FreezeDuration = 2.5f;
+        [Tooltip("Eiskristalle/Frost am eingefrorenen Gegner.")]
+        public GameObject FrozenVfxPrefab;
 
         public FrostNovaSpell()
         {
@@ -26,8 +27,8 @@ namespace ElementalBuddies
             foreach (var enemy in FindEnemies(ctx.Origin, Radius))
             {
                 if (enemy == null) continue;
-                // Slow first: damage may kill (destroy) the enemy
-                if (FreezeDuration > 0f) enemy.ApplySlow(FreezeSlow, FreezeDuration);
+                // Freeze first: damage may kill (destroy) the enemy
+                if (FreezeDuration > 0f) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
                 enemy.TakeDamage(Damage * ctx.DamageMultiplier);
             }
         }

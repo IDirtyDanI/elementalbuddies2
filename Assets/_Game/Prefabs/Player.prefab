@@ -215,6 +215,7 @@ MonoBehaviour:
     Damage: 40
     BurnDps: 8
     BurnDuration: 3
+    BurnVfxPrefab: {fileID: 4481895208120942333, guid: 9b2f858c065484439a8507ccf83cb5c5, type: 3}
   FrostNova:
     ManaCost: 40
     Cooldown: 10
@@ -223,8 +224,8 @@ MonoBehaviour:
     ScaleEffectBySize: 0
     Radius: 6
     Damage: 20
-    FreezeSlow: 1
     FreezeDuration: 2.5
+    FrozenVfxPrefab: {fileID: 2592698230950355078, guid: 4a39c28ab0eae4e2baa0c34042ff2038, type: 3}
   StoneWall:
     ManaCost: 30
     Cooldown: 12

@@ -29,6 +29,7 @@ namespace ElementalBuddies
                 {
                     damageable.TakeDamage(Damage);
                 }
+                GameAudio.Play(SfxId.ArcaneBallHit, transform.position);
                 Destroy(gameObject);
             }
             else if (!other.isTrigger) // Hit a wall or obstacle

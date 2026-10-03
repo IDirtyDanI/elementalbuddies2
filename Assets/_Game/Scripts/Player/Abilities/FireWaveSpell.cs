@@ -13,6 +13,8 @@ namespace ElementalBuddies
         public float Damage = 40f;
         public float BurnDps = 8f;
         public float BurnDuration = 3f;
+        [Tooltip("Looping flame effect attached to burning enemies (optional).")]
+        public GameObject BurnVfxPrefab;
 
         public FireWaveSpell()
         {
@@ -36,7 +38,7 @@ namespace ElementalBuddies
                 if (to.sqrMagnitude > 0.25f && Vector3.Angle(ctx.AimDirection, to) > halfAngle) continue;
 
                 if (BurnDps > 0f && BurnDuration > 0f)
-                    BurnEffect.Apply(enemy.gameObject, BurnDps * ctx.DamageMultiplier, BurnDuration);
+                    BurnEffect.Apply(enemy.gameObject, BurnDps * ctx.DamageMultiplier, BurnDuration, BurnVfxPrefab);
                 enemy.TakeDamage(Damage * ctx.DamageMultiplier);
             }
         }

@@ -28,6 +28,7 @@ namespace ElementalBuddies
 
             CurrentHP -= amount;
             if (CurrentHP < 0) CurrentHP = 0;
+            if (amount > 0f) GameAudio.Play(SfxId.PlayerHurt);
             
             OnHealthChanged?.Invoke();
 

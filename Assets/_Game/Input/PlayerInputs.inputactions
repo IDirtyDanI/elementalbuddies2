@@ -256,45 +256,12 @@
                 },
                 {
                     "name": "",
-                    "id": "6732918d-f938-417a-8531-1e9671510663",
-                    "path": "<Keyboard>/6",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Skill6",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "b139097e-2936-4927-9436-189674033224",
-                    "path": "<Keyboard>/e",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "SkillE",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "a0b1c2d3-e4f5-6a7b-8c9d-0e1f2a3b4c5d",
                     "path": "<Keyboard>/space",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
                     "action": "Jump",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "b7d1b43e-2e15-444a-9656-2bd0acb34ede",
-                    "path": "<Keyboard>/q",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Skill6",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -339,6 +306,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "SpellLight",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "9c7238a3-916f-4944-a22c-0deca1a5b836",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Skill6",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "df4e94a3-3d89-48e0-9d06-9c602163e4e7",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "SkillE",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -25,7 +25,19 @@ namespace ElementalBuddies
         [Tooltip("Ab dieser Distanz zum ForcedTarget gilt der Gegner als angekommen (kein Anti-Cheese-Stuck).")]
         public float ForcedTargetArriveDistance = 2.5f;
 
+        [Header("HP-Bar")]
+        [Tooltip("World-Space-HP-Bar (mit EnemyHealthBar), erscheint erst nach dem ersten Treffer.")]
+        public EnemyHealthBar HealthBarPrefab;
+
+        public float CurrentHP => _currentHP;
+        public float MaxHP => _maxHP;
+
         private NavMeshAgent _agent;
+        private float _maxHP;
+        private float _slowPercent;
+        private float _slowUntil;
+        private FreezeEffect _freeze;
+        private bool _wasFrozen;
         private Transform _player;
         private Transform _tauntTarget;
         private float _currentHP;
@@ -54,12 +66,17 @@ namespace ElementalBuddies
                 _agent.speed = 3.5f;
                 _baseSpeed = 3.5f;
             }
+            if (_maxHP <= 0f) _maxHP = _currentHP;
+
+            if (HealthBarPrefab != null)
+                Instantiate(HealthBarPrefab).Bind(this);
         }
 
         public void Initialize(float hpBonus)
         {
              if (Config != null) _currentHP = Config.BaseHP + hpBonus; 
              else _currentHP = 60f + hpBonus;
+             _maxHP = _currentHP;
         }
 
         void Update()
@@ -70,6 +87,20 @@ namespace ElementalBuddies
                 return;
             }
 
+            if (IsFrozen)
+            {
+                _wasFrozen = true;
+                if (_agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
+                return;
+            }
+            if (_wasFrozen)
+            {
+                _wasFrozen = false;
+                _stuckTimer = 0f;
+                if (_agent.isOnNavMesh) _agent.isStopped = false;
+            }
+
+            UpdateSpeed();
             HandleMovement();
             HandleAntiCheese();
             HandleAttack();
@@ -195,20 +226,46 @@ namespace ElementalBuddies
                 // Guard: several hits in one frame must not report the death twice (bounty / wave count)
                 _isDead = true;
                 OnEnemyDeath?.Invoke();
+                GameAudio.Play(SfxId.EnemyDeath, transform.position);
                 Destroy(gameObject);
             }
         }
 
+        // Mehrere Slows überschreiben sich nicht mehr: es gilt der stärkste noch laufende
         public void ApplySlow(float percentage, float duration)
         {
-            StartCoroutine(SlowRoutine(percentage, duration));
+            percentage = Mathf.Clamp01(percentage);
+            bool active = Time.time < _slowUntil;
+            if (!active || percentage > _slowPercent)
+            {
+                _slowPercent = percentage;
+                _slowUntil = Time.time + duration;
+            }
+            else if (Mathf.Approximately(percentage, _slowPercent))
+            {
+                _slowUntil = Mathf.Max(_slowUntil, Time.time + duration);
+            }
+            // schwächerer Slow während eines stärkeren: ignoriert
         }
 
-        private IEnumerator SlowRoutine(float percentage, float duration)
+        // Komplett einfrieren (Frostnova): steht still, greift nicht an, Animation pausiert
+        public void Freeze(float duration, GameObject vfxPrefab = null)
         {
-            _agent.speed = _baseSpeed * (1f - percentage);
-            yield return new WaitForSeconds(duration);
-            _agent.speed = _baseSpeed;
+            if (_isDead || duration <= 0f) return;
+            _freeze = FreezeEffect.Apply(gameObject, duration, vfxPrefab);
+            if (_agent != null && _agent.isOnNavMesh)
+            {
+                _agent.isStopped = true;
+                _agent.velocity = Vector3.zero;
+            }
+        }
+
+        public bool IsFrozen => _freeze != null && _freeze.IsActive;
+
+        private void UpdateSpeed()
+        {
+            float slow = Time.time < _slowUntil ? _slowPercent : 0f;
+            _agent.speed = _baseSpeed * (1f - slow);
         }
 
         public void Taunt(Transform target, float duration)

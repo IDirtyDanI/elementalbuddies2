@@ -19,7 +19,7 @@ namespace ElementalBuddies
         public float ArcaneBallCooldown = 1f;
         public Transform SpawnPoint;
 
-        [Header("Blink (E)")]
+        [Header("Blink (Rechte Maustaste)")]
         public float BlinkManaCost = 30f;
         public float BlinkCooldown = 8f;
         public float BlinkRange = 8f;
@@ -85,8 +85,9 @@ namespace ElementalBuddies
         {
             if (!CanCastNow()) return;
 
-            if (Pressed(_controller.Skill6Action)) TryCast(AbilityId.ArcaneBall); // Q / 6
-            if (Pressed(_controller.SkillEAction)) TryCast(AbilityId.Blink);      // E
+            var im = InteractionManager.Instance;
+            if (Pressed(_controller.Skill6Action) && (im == null || !im.WouldConsumeLeftClick())) TryCast(AbilityId.ArcaneBall); // Linke Maustaste
+            if (Pressed(_controller.SkillEAction) && (im == null || !im.WouldConsumeRightClick())) TryCast(AbilityId.Blink);      // Rechte Maustaste
             if (Pressed(_controller.SpellFireAction)) TryCast(AbilityId.FireWave);   // R
             if (Pressed(_controller.SpellIceAction)) TryCast(AbilityId.FrostNova);   // F
             if (Pressed(_controller.SpellEarthAction)) TryCast(AbilityId.StoneWall); // C
@@ -270,21 +271,23 @@ namespace ElementalBuddies
         {
             _stats.IsInvulnerable = true;
 
-            Vector3 blinkDir = transform.forward; // Default to facing direction
-
-            // Try get input direction
-            if (_controller.MoveAction != null)
+            // Richtung Mauszeiger (Rechtsklick); liegt der Zeiger näher als die Reichweite, landet man genau dort
+            Vector3 blinkDir = transform.forward;
+            float distance = BlinkRange;
+            if (_controller.HasAimPoint)
             {
-                Vector2 input = _controller.MoveAction.ReadValue<Vector2>();
-                if (input.sqrMagnitude > 0.1f)
+                Vector3 to = _controller.AimPoint - transform.position;
+                to.y = 0f;
+                if (to.sqrMagnitude > 0.04f)
                 {
-                    blinkDir = new Vector3(input.x, 0, input.y).normalized;
+                    blinkDir = to.normalized;
+                    distance = Mathf.Min(BlinkRange, to.magnitude);
                 }
             }
 
             // Wall Check
-            Vector3 targetPos = transform.position + blinkDir * BlinkRange;
-            if (Physics.Raycast(transform.position + Vector3.up, blinkDir, out RaycastHit hit, BlinkRange, ObstacleLayer))
+            Vector3 targetPos = transform.position + blinkDir * distance;
+            if (Physics.Raycast(transform.position + Vector3.up, blinkDir, out RaycastHit hit, distance, ObstacleLayer))
             {
                 targetPos = hit.point - blinkDir * 0.5f; // Stop slightly before wall
                 targetPos.y = transform.position.y;

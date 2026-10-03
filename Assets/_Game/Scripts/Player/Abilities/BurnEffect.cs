@@ -11,9 +11,14 @@ namespace ElementalBuddies
         private float _remaining;
         private float _tickTimer;
         private IDamageable _target;
+        private GameObject _vfx;
+        private ParticleSystem[] _vfxSystems;
+        private static readonly Vector3 VfxOffset = new Vector3(0f, 0.9f, 0f);
+
+        public bool IsActive => enabled && _remaining > 0f;
 
         // Adds or refreshes the burn (re-applying resets the duration and keeps the higher dps)
-        public static BurnEffect Apply(GameObject target, float dps, float duration)
+        public static BurnEffect Apply(GameObject target, float dps, float duration, GameObject vfxPrefab = null)
         {
             if (target == null || dps <= 0f || duration <= 0f) return null;
 
@@ -23,6 +28,7 @@ namespace ElementalBuddies
             burn._dps = Mathf.Max(burn._remaining > 0f ? burn._dps : 0f, dps);
             burn._remaining = Mathf.Max(burn._remaining, duration);
             burn.enabled = true;
+            burn.StartVfx(vfxPrefab);
             return burn;
         }
 
@@ -46,6 +52,49 @@ namespace ElementalBuddies
             }
 
             if (_remaining <= 0f) enabled = false;
+        }
+
+        // Flammen am Körper, solange der Brand läuft
+        private void StartVfx(GameObject prefab)
+        {
+            if (prefab == null) return;
+            if (_vfx == null)
+            {
+                _vfx = Instantiate(prefab, transform);
+                _vfx.transform.position = BodyCenter();
+                _vfx.transform.localRotation = Quaternion.identity;
+                _vfxSystems = _vfx.GetComponentsInChildren<ParticleSystem>();
+            }
+            foreach (var ps in _vfxSystems) if (ps != null && !ps.isEmitting) ps.Play(true);
+            SetTint(true);
+        }
+
+        // Brennende Gegner glühen orange-rot (gemeinsam mit Frost über StatusTint)
+        private void SetTint(bool on)
+        {
+            StatusTint.Refresh(gameObject);
+        }
+
+        // Mitte des sichtbaren Körpers (Modelle sind unterschiedlich groß); Fallback: feste Höhe
+        private Vector3 BodyCenter()
+        {
+            bool found = false;
+            Bounds b = new Bounds(transform.position, Vector3.zero);
+            foreach (var r in GetComponentsInChildren<Renderer>())
+            {
+                if (r is ParticleSystemRenderer || !r.enabled) continue;
+                if (!found) { b = r.bounds; found = true; }
+                else b.Encapsulate(r.bounds);
+            }
+            return found ? new Vector3(transform.position.x, b.center.y - b.extents.y * 0.2f, transform.position.z) : transform.position + VfxOffset;
+        }
+
+        void OnDisable()
+        {
+            // Flammen ausklingen lassen statt hart abzuschneiden
+            SetTint(false);
+            if (_vfxSystems == null) return;
+            foreach (var ps in _vfxSystems) if (ps != null) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
         }
     }
 }

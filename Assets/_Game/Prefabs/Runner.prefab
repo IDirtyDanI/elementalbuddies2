@@ -157,6 +157,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Config: {fileID: 11400000, guid: 4794f4703af3b5a44b9fc56c29d839ea, type: 2}
+  PlayerAggroRadius: 6
+  AttackRange: 1.5
+  NexusAttackRange: 2.5
+  ForcedTarget: {fileID: 0}
+  ForcedTargetPlayerAggroRadius: 10
+  ForcedTargetArriveDistance: 2.5
+  HealthBarPrefab: {fileID: 5244898874104492140, guid: cb1bfdd947e684758a7fbcc4ed9f36c9, type: 3}
 --- !u!1 &532677387468363722
 GameObject:
   m_ObjectHideFlags: 0

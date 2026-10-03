@@ -112,6 +112,7 @@ namespace ElementalBuddies
             bool pointerOverUI = UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
             if (!pointerOverUI && _selectedUnitConfig != null && _currentGhost != null && _fireAction != null && _fireAction.WasPressedThisFrame())
             {
+                _leftClickConsumedFrame = Time.frameCount;
                 TryBuild();
             }
             // Linksklick ohne Ghost: Buddy auswählen (leerer Boden = abwählen)
@@ -120,14 +121,34 @@ namespace ElementalBuddies
                 TrySelectBuddy();
             }
 
-            // Right Click: cancel ghost, otherwise sell buddy
-            if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+            // Rechtsklick bricht nur das Platzieren ab (sonst gehört er dem Blink); Verkaufen läuft über das Info-Panel
+            if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame && _currentGhost != null)
             {
-                if (_currentGhost != null) Deselect();
-                else TrySell();
+                _rightClickConsumedFrame = Time.frameCount;
+                Deselect();
             }
 
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) DeselectBuddy();
+        }
+
+        // ---------------- Maus-Teilung mit den Spieler-Zaubern ----------------
+        // Linksklick = Arcane Ball, außer er wird hier gebraucht (UI, Platzieren, Buddy anklicken)
+        private int _leftClickConsumedFrame = -1;
+        private int _rightClickConsumedFrame = -1;
+
+        private static bool PointerOverUI =>
+            UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+
+        public bool WouldConsumeLeftClick()
+        {
+            if (_leftClickConsumedFrame == Time.frameCount || PointerOverUI || _currentGhost != null) return true;
+            return RaycastBuddy() != null;
+        }
+
+        // Rechtsklick = Blink, außer beim Platzieren (Abbrechen) oder über UI
+        public bool WouldConsumeRightClick()
+        {
+            return _rightClickConsumedFrame == Time.frameCount || PointerOverUI || _currentGhost != null;
         }
 
         // Buddy unter dem Mauszeiger (gleiche Layer-Logik wie beim Verkaufen)
