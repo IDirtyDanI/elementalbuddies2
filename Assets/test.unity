@@ -28984,7 +28984,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1357329327}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6f8c9f9813d17407b9c8c73f64934349, type: 3}
   m_Name: 
@@ -29145,8 +29145,25 @@ MonoBehaviour:
     Description: "Verflucht bis zu 2 Gegner: Schaden \xFCber Zeit, und verfluchte
       Gegner nehmen 25 % mehr Schaden aus allen Quellen."
     Icon: {fileID: 21300000, guid: e6be4061f54af45259673602639aaad4, type: 3}
+  - ElementA: 0
+    ElementB: 2
+    Result: 4
+    ResultConfig: {fileID: 11400000, guid: 0b8b151252957483285e5dd25c84fa2f, type: 2}
+    Description: "Lavakugel auf die dichteste Gegnergruppe: Fl\xE4chenschaden und
+      Brand beim Einschlag. Hinterl\xE4sst eine Lavapf\xFCtze, die 4 s lang Schaden
+      macht und leicht verlangsamt."
+    Icon: {fileID: 21300000, guid: c52bc2e2cdf7d450fa2bc470e3128885, type: 3}
+  - ElementA: 1
+    ElementB: 2
+    Result: 5
+    ResultConfig: {fileID: 11400000, guid: eb5fed16989554851a158c21e08d2615, type: 2}
+    Description: "Super-Tank: viel Leben, 35 % weniger Schaden. Frost-Aura verlangsamt
+      Gegner in Reichweite, verspottet sie regelm\xE4\xDFig. Erlittener Schaden l\xE4dt
+      eine Splitter-Nova, die ihn an alle Gegner zur\xFCckgibt."
+    Icon: {fileID: 21300000, guid: 1263a003a346447a3bbef7fe192df3db, type: 3}
   FusionRange: 5
   MinLevel: 2
+  MaxFusionLevel: 2
   FusionBurstPrefab: {fileID: 4550167610172782757, guid: 556f26d3372a54e3086c7a936117973b, type: 3}
   LinkMaterial: {fileID: 0}
   LinkColor: {r: 0.85, g: 0.7, b: 1, a: 0.9}

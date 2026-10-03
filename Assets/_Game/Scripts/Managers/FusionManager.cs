@@ -43,6 +43,10 @@ namespace ElementalBuddies
                 Description = "Rückenwind: Buddies in Reichweite feuern 25 % schneller. Böe stößt Gegner den Weg zurück und trägt Brände auf Gegner in der Nähe weiter." },
             new FusionRecipe { ElementA = 2, ElementB = 3, Result = FusionElement.Shadow,
                 Description = "Verflucht bis zu 2 Gegner: Schaden über Zeit, und verfluchte Gegner nehmen 25 % mehr Schaden aus allen Quellen." },
+            new FusionRecipe { ElementA = 0, ElementB = 2, Result = FusionElement.Magma,
+                Description = "Lavakugel auf die dichteste Gegnergruppe: Flächenschaden und Brand beim Einschlag. Hinterlässt eine Lavapfütze, die 4 s lang Schaden macht und leicht verlangsamt." },
+            new FusionRecipe { ElementA = 1, ElementB = 2, Result = FusionElement.Crystal,
+                Description = "Super-Tank: viel Leben, 35 % weniger Schaden. Frost-Aura verlangsamt Gegner in Reichweite, verspottet sie regelmäßig. Erlittener Schaden lädt eine Splitter-Nova, die ihn an alle Gegner zurückgibt." },
         };
 
         [Header("Regeln")]

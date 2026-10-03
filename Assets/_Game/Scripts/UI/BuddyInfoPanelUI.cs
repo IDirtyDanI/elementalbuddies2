@@ -349,6 +349,19 @@ namespace ElementalBuddies
                           + $"+{Mathf.RoundToInt(s.DamageTakenBonus * 100f)} % Schaden genommen\n"
                           + rangeLine;
                     break;
+                case MagmaBuddy m:
+                    float puddleDps = dmg * m.PuddleDamageFactor;
+                    stats = Line("Einschlag-Schaden", dmg, dmg, false, "", "0.#") + "\n"
+                          + rateLine + "\n" + rangeLine + "\n"
+                          + $"Lavapfütze: {puddleDps.ToString("0.#", Inv)}/s für {m.PuddleLifetime.ToString("0.#", Inv)} s";
+                    break;
+                case CrystalBuddy c:
+                    stats = $"Leben: {Mathf.CeilToInt(c.CurrentHP)}/{Mathf.CeilToInt(c.MaxHP)}\n"
+                          + $"Frost-Aura: −{Mathf.RoundToInt(c.AuraSlow * 100f)} % Tempo\n"
+                          + Line("Spott alle", Interval(rate), Interval(rate), false, " s", "0.#") + "\n"
+                          + $"Splitter-Ladung: {Mathf.RoundToInt(c.Charge01 * 100f)} %\n"
+                          + Line("Radius", range, range, false, " m", "0.#");
+                    break;
                 default:
                     stats = Line("Schaden", dmg, dmg, false, "", "0.#") + "\n" + rateLine + "\n" + rangeLine;
                     break;

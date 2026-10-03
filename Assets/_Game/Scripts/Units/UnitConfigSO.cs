@@ -13,7 +13,9 @@ namespace ElementalBuddies
         Lightning,
         Water,
         Air,
-        Shadow
+        Shadow,
+        Magma,
+        Crystal
     }
 
     [CreateAssetMenu(fileName = "UnitConfig", menuName = "ElementalBuddies/Unit Config", order = 1)]
