@@ -12,10 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 232969f20748fec4d8d4d79953e45d44, type: 3}
   m_Name: FireStat
   m_EditorClassIdentifier: 
-  Title: 10%DAMAGE!!!!
-  Description: 'BIG DAMAGE FIRE ELE
-
-'
+  Title: Flammenzorn
+  Description: Feuer-Buddies verursachen 10 % mehr Schaden.
   Icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
   Type: 0
   Target: 2

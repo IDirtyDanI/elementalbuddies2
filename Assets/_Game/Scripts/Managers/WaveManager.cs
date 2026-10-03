@@ -77,7 +77,7 @@ namespace ElementalBuddies
         {
             WaveConfigSO newWave = ScriptableObject.CreateInstance<WaveConfigSO>();
             newWave.StartDelay = template.StartDelay;
-            newWave.EndBonusMana = template.EndBonusMana; // Constant bonus? Or scale it? Let's keep constant for challenge.
+            newWave.EndBonusShards = template.EndBonusShards; // Extra stays constant; the GlobalSettings formula scales with wave number
             newWave.EnemiesToSpawn = new List<EnemySpawnInfo>();
 
             float multiplier = 1f + (endlessDepth * 0.2f); // +20% count per endless wave
@@ -164,14 +164,21 @@ namespace ElementalBuddies
             IsWaveActive = false;
             if (GameManager.Instance != null) GameManager.Instance.EndCombat();
             
-            // Mana Bonus: If we are in range, take from config. If endless, take from last config.
-            float bonus = 0;
+            // Shard Bonus: WaveBonusShardsBase + WaveBonusShardsPerWave * (completedWave - 1),
+            // plus the optional per-wave extra from the WaveConfig (endless: last config).
+            float bonus = 0f;
             if (CurrentWaveIndex < Waves.Count)
-                bonus = Waves[CurrentWaveIndex].EndBonusMana;
+                bonus = Waves[CurrentWaveIndex].EndBonusShards;
             else if (Waves.Count > 0)
-                bonus = Waves[Waves.Count - 1].EndBonusMana;
+                bonus = Waves[Waves.Count - 1].EndBonusShards;
 
-            if (EconomyManager.Instance != null) EconomyManager.Instance.AddMana(bonus);
+            if (EconomyManager.Instance != null)
+            {
+                var settings = EconomyManager.Instance.Settings;
+                if (settings != null)
+                    bonus += settings.WaveBonusShardsBase + settings.WaveBonusShardsPerWave * CurrentWaveIndex; // CurrentWaveIndex = completedWave - 1
+                EconomyManager.Instance.AddShards(bonus);
+            }
 
             CurrentWaveIndex++;
             OnWaveEnd?.Invoke();

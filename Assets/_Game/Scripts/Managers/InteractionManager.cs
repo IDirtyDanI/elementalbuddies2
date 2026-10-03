@@ -19,6 +19,12 @@ namespace ElementalBuddies
         public LayerMask BuddyLayer; // Für Verkaufen per Rechtsklick; leer = Layer "Buddy" bzw. alle Layer
 
         private UnitConfigSO _selectedUnitConfig;
+        private int _selectedIndex = -1;
+
+        // Public API für die klickbare Bauleiste (Index = Hotkey - 1)
+        public IReadOnlyList<UnitConfigSO> Configs => UnitConfigs;
+        public int SelectedIndex => _selectedIndex;
+        public event System.Action OnSelectionChanged;
         private GameObject _currentGhost;
         private Camera _mainCamera;
         
@@ -72,7 +78,9 @@ namespace ElementalBuddies
             }
 
             // Check Click to Build
-            if (_selectedUnitConfig != null && _currentGhost != null && _fireAction != null && _fireAction.WasPressedThisFrame())
+            // Klicks auf UI (z. B. Bauleiste) bauen nicht in die Welt
+            bool pointerOverUI = UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+            if (!pointerOverUI && _selectedUnitConfig != null && _currentGhost != null && _fireAction != null && _fireAction.WasPressedThisFrame())
             {
                 TryBuild();
             }
@@ -108,13 +116,27 @@ namespace ElementalBuddies
             float paid = buddy.PaidCost;
             if (paid <= 0f && buddy.Config != null) paid = buddy.Config.CostOutCombat;
 
-            if (EconomyManager.Instance != null) EconomyManager.Instance.AddMana(EconomyManager.Instance.GetRefundAmount(paid));
+            if (EconomyManager.Instance != null) EconomyManager.Instance.AddShards(EconomyManager.Instance.GetRefundAmount(paid));
             Destroy(buddy.gameObject);
+        }
+
+        // Für UI-Buttons: gleiches Verhalten wie Hotkey (erneute Auswahl = abwählen)
+        public void SelectUnitByIndex(int index)
+        {
+            SelectUnit(index);
+        }
+
+        // Aktuelle Baukosten in Seelensplittern (inkl. Kampf-Aufschlag); -1 bei ungültigem Index
+        public float GetCurrentCost(int index)
+        {
+            if (UnitConfigs == null || index < 0 || index >= UnitConfigs.Count || UnitConfigs[index] == null) return -1f;
+            float baseCost = UnitConfigs[index].CostOutCombat;
+            return EconomyManager.Instance != null ? EconomyManager.Instance.GetBuildingCost(baseCost) : baseCost;
         }
 
         private void SelectUnit(int index)
         {
-            if (index < 0 || index >= UnitConfigs.Count) 
+            if (UnitConfigs == null || index < 0 || index >= UnitConfigs.Count) 
             {
                 Debug.LogWarning($"InteractionManager: Index {index} invalid or UnitConfigs list empty/too short!");
                 return;
@@ -134,15 +156,25 @@ namespace ElementalBuddies
             else
             {
                 // Debug.Log($"Selected Unit: {config.name}");
-                Deselect();
+                ClearSelection();
                 _selectedUnitConfig = config;
+                _selectedIndex = index;
                 CreateGhost();
+                OnSelectionChanged?.Invoke();
             }
         }
 
         private void Deselect()
         {
+            bool hadSelection = _selectedUnitConfig != null;
+            ClearSelection();
+            if (hadSelection) OnSelectionChanged?.Invoke();
+        }
+
+        private void ClearSelection()
+        {
             _selectedUnitConfig = null;
+            _selectedIndex = -1;
             if (_currentGhost != null) Destroy(_currentGhost);
         }
 
@@ -216,7 +248,7 @@ namespace ElementalBuddies
                 return false;
             }
 
-            if (EconomyManager.Instance.CurrentMana < cost) return false;
+            if (!EconomyManager.Instance.CanAfford(cost)) return false;
 
             return true;
         }
@@ -240,7 +272,7 @@ namespace ElementalBuddies
             if (!ValidatePlacement(_currentGhost.transform.position)) return;
 
             float cost = EconomyManager.Instance.GetBuildingCost(_selectedUnitConfig.CostOutCombat);
-            if (EconomyManager.Instance.TrySpendMana(cost))
+            if (EconomyManager.Instance.TrySpendShards(cost))
             {
                 var go = Instantiate(_selectedUnitConfig.Prefab, _currentGhost.transform.position, Quaternion.identity);
                 var buddy = go.GetComponentInChildren<ElementalBuddy>();

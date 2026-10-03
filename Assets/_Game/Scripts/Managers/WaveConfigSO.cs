@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using System.Collections.Generic;
 
 namespace ElementalBuddies
@@ -16,6 +17,7 @@ namespace ElementalBuddies
     {
         public List<EnemySpawnInfo> EnemiesToSpawn;
         public float StartDelay; // Delay before the first enemy of the wave spawns
-        public float EndBonusMana; // Mana awarded at the end of the wave
+        [FormerlySerializedAs("EndBonusMana")]
+        public float EndBonusShards; // Extra Seelensplitter am Wellenende (zusätzlich zur Formel aus GlobalSettings)
     }
 }

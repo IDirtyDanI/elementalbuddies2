@@ -6,7 +6,7 @@ namespace ElementalBuddies
     public abstract class ElementalBuddy : MonoBehaviour, IDamageable
     {
         public UnitConfigSO Config; // Public for setup if needed
-        [HideInInspector] public float PaidCost; // Tatsächlich bezahltes Mana (für Refund beim Verkauf)
+        [HideInInspector] public float PaidCost; // Tatsächlich bezahlte Seelensplitter (für Refund beim Verkauf)
 
         // Registry aller aktiven Buddies (für Slot-Limit)
         private static readonly List<ElementalBuddy> _active = new List<ElementalBuddy>();

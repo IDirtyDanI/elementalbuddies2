@@ -8,8 +8,10 @@ namespace ElementalBuddies
     {
         [Header("Stats")]
         public Slider HPSlider;
+        public TextMeshProUGUI HPText; // Optional
         public Slider ManaSlider;
         public TextMeshProUGUI ManaText;
+        public TextMeshProUGUI ShardText; // Seelensplitter (Bau-Währung)
 
         [Header("Wave")]
         public TextMeshProUGUI WaveText;
@@ -25,7 +27,9 @@ namespace ElementalBuddies
             if (EconomyManager.Instance != null)
             {
                 EconomyManager.Instance.OnManaChanged += UpdateMana;
+                EconomyManager.Instance.OnShardsChanged += UpdateShards;
                 UpdateMana(); 
+                UpdateShards();
             }
             
             if (WaveManager.Instance != null)
@@ -70,7 +74,11 @@ namespace ElementalBuddies
 
         void OnDestroy()
         {
-            if (EconomyManager.Instance != null) EconomyManager.Instance.OnManaChanged -= UpdateMana;
+            if (EconomyManager.Instance != null)
+            {
+                EconomyManager.Instance.OnManaChanged -= UpdateMana;
+                EconomyManager.Instance.OnShardsChanged -= UpdateShards;
+            }
             if (WaveManager.Instance != null)
             {
                  WaveManager.Instance.OnWaveStart -= UpdateWaveInfo;
@@ -88,7 +96,7 @@ namespace ElementalBuddies
                 BuddySlotText.text = "";
                 return;
             }
-            BuddySlotText.text = $"Buddies {BuddySlotManager.Instance.UsedSlots}/{BuddySlotManager.Instance.MaxSlots}";
+            BuddySlotText.text = $"{BuddySlotManager.Instance.UsedSlots}/{BuddySlotManager.Instance.MaxSlots}";
         }
 
         private void UpdateMana()
@@ -105,6 +113,12 @@ namespace ElementalBuddies
             if (ManaText != null) ManaText.text = $"{Mathf.FloorToInt(current)}/{Mathf.FloorToInt(max)}";
         }
 
+        private void UpdateShards()
+        {
+            if (ShardText == null || EconomyManager.Instance == null) return;
+            ShardText.text = $"{Mathf.FloorToInt(EconomyManager.Instance.CurrentShards)}";
+        }
+
         private void UpdateHP()
         {
             if (_playerStats == null) return;
@@ -113,13 +127,14 @@ namespace ElementalBuddies
                 HPSlider.maxValue = _playerStats.MaxHP;
                 HPSlider.value = _playerStats.CurrentHP;
             }
+            if (HPText != null) HPText.text = $"{Mathf.CeilToInt(Mathf.Max(0f, _playerStats.CurrentHP))}/{Mathf.FloorToInt(_playerStats.MaxHP)}";
         }
 
         private void UpdateWaveInfo()
         {
             if (WaveManager.Instance == null) return;
             if (WaveText != null) 
-                WaveText.text = $"Wave: {WaveManager.Instance.CurrentWaveIndex + 1}";
+                WaveText.text = $"Welle {WaveManager.Instance.CurrentWaveIndex + 1}";
                 
             if (StartWaveButton != null)
                 StartWaveButton.interactable = !WaveManager.Instance.IsWaveActive;

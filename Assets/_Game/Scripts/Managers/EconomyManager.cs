@@ -14,7 +14,11 @@ namespace ElementalBuddies
         public float MaxMana => settings != null ? settings.ManaCap : 200f;
         public GlobalSettingsSO Settings => settings;
 
+        // Seelensplitter: Bau-Währung (keine passive Regen; Quellen: Kopfgeld + Wellen-Bonus)
+        public float CurrentShards { get; private set; }
+
         public event Action OnManaChanged;
+        public event Action OnShardsChanged;
 
         // Backup variables for Reset
         private float _startManaCap;
@@ -52,11 +56,11 @@ namespace ElementalBuddies
             EnemyBrain.OnEnemyDeath -= HandleEnemyDeath;
         }
 
-        // Mana-Bounty pro Kill (zusätzlich zur passiven Regen)
+        // Splitter-Kopfgeld pro Kill (Mana gibt es nur noch über passive Regen)
         private void HandleEnemyDeath()
         {
-            float bounty = settings != null ? settings.ManaPerKill : 3f;
-            if (bounty > 0f) AddMana(bounty);
+            float bounty = settings != null ? settings.ShardsPerKill : 6f;
+            if (bounty > 0f) AddShards(bounty);
         }
 
         void OnDestroy()
@@ -76,8 +80,11 @@ namespace ElementalBuddies
                 CurrentMana = settings.StartMana;
             else
                 CurrentMana = 100f;
+
+            CurrentShards = settings != null ? settings.StartShards : 130f;
                 
             OnManaChanged?.Invoke();
+            OnShardsChanged?.Invoke();
         }
 
         void Update()
@@ -109,6 +116,30 @@ namespace ElementalBuddies
             return false;
         }
 
+        public void AddShards(float amount)
+        {
+            if (amount <= 0f) return;
+            CurrentShards += amount;
+            OnShardsChanged?.Invoke();
+        }
+
+        public bool CanAfford(float shardCost)
+        {
+            return CurrentShards >= shardCost;
+        }
+
+        public bool TrySpendShards(float amount)
+        {
+            if (CurrentShards >= amount)
+            {
+                CurrentShards -= amount;
+                OnShardsChanged?.Invoke();
+                return true;
+            }
+            return false;
+        }
+
+        // Baukosten in Seelensplittern (inkl. Kampf-Aufschlag)
         public float GetBuildingCost(float baseCost)
         {
             if (settings == null) return baseCost;
@@ -120,6 +151,7 @@ namespace ElementalBuddies
             return baseCost;
         }
         
+        // Rückerstattung in Seelensplittern
         public float GetRefundAmount(float buildCostPaid)
         {
              if (settings == null) return buildCostPaid * 0.7f;

@@ -17,4 +17,4 @@ MonoBehaviour:
     Count: 6
     SpawnInterval: 1.5
   StartDelay: 0
-  EndBonusMana: 25
+  EndBonusShards: 0

@@ -16,9 +16,12 @@ MonoBehaviour:
   ManaCap: 200
   RegenOutCombat: 1.5
   RegenInCombat: 0.5
+  StartShards: 130
+  ShardsPerKill: 6
+  WaveBonusShardsBase: 40
+  WaveBonusShardsPerWave: 10
   CombatSurcharge: 1.25
   RefundRatio: 0.7
-  ManaPerKill: 3
   StartBuddySlots: 4
   SlotEveryNWaves: 3
   MaxBuddySlots: 12

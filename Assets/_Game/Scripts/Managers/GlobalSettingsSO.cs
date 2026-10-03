@@ -10,9 +10,14 @@ namespace ElementalBuddies
         public float ManaCap = 200f;
         public float RegenOutCombat = 1.5f;
         public float RegenInCombat = 0.5f;
+
+        [Header("Seelensplitter (Bau-Währung)")]
+        public float StartShards = 130f;
+        public float ShardsPerKill = 6f; // Splitter-Kopfgeld pro getötetem Gegner
+        public float WaveBonusShardsBase = 40f; // Wellen-Bonus nach Welle 1
+        public float WaveBonusShardsPerWave = 10f; // + pro weiterer abgeschlossener Welle
         public float CombatSurcharge = 1.25f; // Multiplikator (25% = 1.25)
         public float RefundRatio = 0.7f; // 70% Rückerstattung
-        public float ManaPerKill = 3f; // Mana-Bounty pro getötetem Gegner
 
         [Header("Buddy Slots")]
         public int StartBuddySlots = 4;
