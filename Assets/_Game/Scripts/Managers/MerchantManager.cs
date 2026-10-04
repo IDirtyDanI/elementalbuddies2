@@ -6,8 +6,10 @@ namespace ElementalBuddies
     // Plant die Händler: ab FirstWave jede EveryNWaves-te Welle (11, 13, 15, …) öffnet genau ein Händler für diese
     // Welle. Auswahl über einen Beutel ohne Wiederholung unter den verfügbaren Händlern (Element-Händler nur, wenn
     // das Element freigeschaltet ist); ein gescheiterter Händler kommt zurück in den Beutel.
-    // Nach der Einnahme: Kartenauswahl (1 aus 3, kostenlos) mit Pause wie der Wellen-Kartenbildschirm. Trifft sie
-    // mit dem Upgrade-Bildschirm zusammen, wartet der spätere, bis der erste geschlossen ist (UpgradeManager).
+    // Nach der Einnahme: Laden mit 3 Karten (Pause wie der Wellen-Kartenbildschirm). Jede Karte einmal kaufbar, die
+    // erste pro Besuch gratis, weitere kosten Seelensplitter (60, 90, 120 …). Neu würfeln ersetzt alle nicht gekauften
+    // Karten (25, 40, 55 …). „Fertig" schließt. Trifft der Laden mit dem Upgrade-Bildschirm zusammen, wartet der
+    // spätere, bis der erste geschlossen ist (UpgradeManager).
     public class MerchantManager : MonoBehaviour
     {
         public static MerchantManager Instance { get; private set; }
@@ -22,6 +24,14 @@ namespace ElementalBuddies
         [Tooltip("Gesamter Kartenpool (alle Klassen, alle Fähigkeiten) – vom Editor-Setup befüllt.")]
         public List<MerchantCardSO> Cards = new List<MerchantCardSO>();
         public int CardsOffered = 3;
+
+        [Header("Laden (Preise in Seelensplittern)")]
+        [Tooltip("Preis der 2. gekauften Karte pro Besuch (die 1. ist gratis).")]
+        public int ExtraCardBaseCost = 60;
+        [Tooltip("Aufschlag je weiterer gekaufter Karte.")]
+        public int ExtraCardCostStep = 30;
+        public int RerollBaseCost = 25;
+        public int RerollCostStep = 15;
 
         [Header("Anzeige (optional, Reihenfolge Waffen, Feuer, Eis, Erde, Licht)")]
         public Sprite[] Portraits = new Sprite[MerchantInfo.Count];
@@ -40,6 +50,14 @@ namespace ElementalBuddies
         public bool IsChoosing { get; private set; }
         public Merchant OfferMerchant { get; private set; }
         public IReadOnlyList<MerchantCardSO> CurrentOffer => _offer;
+        // Pro Besuch: gekaufte Karten / Würfe (Reset beim Öffnen)
+        public int Purchases { get; private set; }
+        public int Rerolls { get; private set; }
+        public bool HasTakenFreeCard => Purchases > 0;
+        public int NextCardPrice => CardPrice(Purchases);
+        public int RerollPrice => RerollBaseCost + RerollCostStep * Rerolls;
+        public bool IsBought(int slot) => slot >= 0 && slot < _bought.Count && _bought[slot];
+        public bool CanReroll => IsChoosing && HasRerollableSlot();
 
         private readonly List<MerchantCardSO> _picked = new List<MerchantCardSO>();
         public IReadOnlyList<MerchantCardSO> PickedCards => _picked;
@@ -47,9 +65,14 @@ namespace ElementalBuddies
         public event System.Action<Merchant, List<MerchantCardSO>> OnCardsOffered;
         public event System.Action<MerchantCardSO> OnCardPicked;
         public event System.Action OnChoiceClosed;
+        // Angebot geändert (Kauf / Neu würfeln) – UI baut Preise und Karten neu
+        public event System.Action OnOfferChanged;
+        // Kauf/Wurf fehlgeschlagen (zu wenig Splitter): Slot-Index, -1 = Neu-würfeln-Knopf
+        public event System.Action<int> OnPurchaseFailed;
 
         private readonly List<MerchantKind> _bag = new List<MerchantKind>();
         private readonly List<MerchantCardSO> _offer = new List<MerchantCardSO>();
+        private readonly List<bool> _bought = new List<bool>();
         private Merchant _pendingOffer; // Einnahme, während der Upgrade-Bildschirm offen war
 
         void Awake()
@@ -207,51 +230,156 @@ namespace ElementalBuddies
             return Offer(m);
         }
 
-        private bool Offer(Merchant m)
+        // Preis der Karte nach n bisherigen Käufen in diesem Besuch: 0, 60, 90, 120 …
+        public int CardPrice(int purchasesSoFar)
         {
-            if (IsGameOver) return false;
+            if (purchasesSoFar <= 0) return 0;
+            return ExtraCardBaseCost + ExtraCardCostStep * (purchasesSoFar - 1);
+        }
+
+        private List<MerchantCardSO> PoolFor(Merchant m)
+        {
             var pa = PlayerAbilities.Instance;
             ChampionClass cls = pa != null ? pa.ActiveClass : ChampionClass.Mage;
+            var pool = new List<MerchantCardSO>();
+            if (m == null) return pool;
+            foreach (var c in Cards)
+                if (c != null && c.Class == cls && c.Merchant == m.Kind && !pool.Contains(c)) pool.Add(c);
+            return pool;
+        }
+
+        private bool Offer(Merchant m)
+        {
+            if (IsGameOver || m == null) return false;
 
             _offer.Clear();
-            var pool = new List<MerchantCardSO>();
-            foreach (var c in Cards)
-                if (c != null && c.Class == cls && c.Merchant == m.Kind) pool.Add(c);
+            _bought.Clear();
+            var pool = PoolFor(m);
             int n = Mathf.Min(Mathf.Max(1, CardsOffered), pool.Count);
             for (int i = 0; i < n; i++)
             {
                 int idx = Random.Range(0, pool.Count);
                 _offer.Add(pool[idx]);
+                _bought.Add(false);
                 pool.RemoveAt(idx);
             }
             if (_offer.Count == 0)
             {
-                Debug.LogWarning($"MerchantManager: keine Karten für {cls} beim {m.DisplayName}.");
+                Debug.LogWarning($"MerchantManager: keine Karten für {(PlayerAbilities.Instance != null ? PlayerAbilities.Instance.ActiveClass : ChampionClass.Mage)} beim {m.DisplayName}.");
                 return false;
             }
 
             OfferMerchant = m;
+            Purchases = 0;
+            Rerolls = 0;
             IsChoosing = true;
             Time.timeScale = 0f;
             OnCardsOffered?.Invoke(m, new List<MerchantCardSO>(_offer));
             return true;
         }
 
+        // Alte API (Karte statt Slot) – kauft den ersten noch offenen Slot mit dieser Karte
         public void SelectCard(MerchantCardSO card)
         {
-            if (!IsChoosing || card == null || PauseManager.IsPaused) return;
+            if (card == null) return;
+            for (int i = 0; i < _offer.Count; i++)
+                if (_offer[i] == card && !_bought[i])
+                {
+                    BuyCard(i);
+                    return;
+                }
+        }
 
+        // Karte im Slot kaufen. Erste pro Besuch gratis, sonst Seelensplitter. Der Laden bleibt offen.
+        public bool BuyCard(int slot)
+        {
+            if (!IsChoosing || PauseManager.IsPaused || IsGameOver) return false;
+            if (slot < 0 || slot >= _offer.Count || _bought[slot] || _offer[slot] == null) return false;
+
+            int price = NextCardPrice;
+            if (price > 0)
+            {
+                var eco = EconomyManager.Instance;
+                if (eco == null || !eco.TrySpendShards(price))
+                {
+                    OnPurchaseFailed?.Invoke(slot);
+                    return false;
+                }
+            }
+
+            var card = _offer[slot];
             card.Apply(PlayerAbilities.Instance);
             _picked.Add(card);
-            IsChoosing = false;
-            _offer.Clear();
-            Time.timeScale = 1f;
-            Debug.Log($"MerchantManager: Karte '{card.Title}' gewählt ({card.Ability} {card.Stat} {card.Value}).");
+            _bought[slot] = true;
+            Purchases++;
+            Debug.Log($"MerchantManager: Karte '{card.Title}' gekauft für {price} ({card.Ability} {card.Stat} {card.Value}).");
 
             OnCardPicked?.Invoke(card);
+            OnOfferChanged?.Invoke();
+            return true;
+        }
+
+        private bool HasRerollableSlot()
+        {
+            for (int i = 0; i < _offer.Count; i++)
+                if (!_bought[i]) return true;
+            return false;
+        }
+
+        // Alle nicht gekauften Karten neu ziehen. Gekaufte Karten dürfen wieder erscheinen (mehrfach kaufen = stapeln);
+        // unter den offenen Slots keine Doppelten, bisher sichtbare offene Karten möglichst vermeiden.
+        public bool Reroll()
+        {
+            if (!IsChoosing || PauseManager.IsPaused || IsGameOver || OfferMerchant == null) return false;
+            if (!HasRerollableSlot()) return false;
+
+            int price = RerollPrice;
+            var eco = EconomyManager.Instance;
+            if (price > 0 && (eco == null || !eco.TrySpendShards(price)))
+            {
+                OnPurchaseFailed?.Invoke(-1);
+                return false;
+            }
+            Rerolls++;
+
+            var pool = PoolFor(OfferMerchant);
+            // Bisher sichtbare offene Karten möglichst vermeiden (nur wenn genug andere da sind)
+            int open = 0;
+            for (int i = 0; i < _offer.Count; i++) if (!_bought[i]) open++;
+            var fresh = new List<MerchantCardSO>(pool);
+            for (int i = 0; i < _offer.Count; i++)
+                if (!_bought[i]) fresh.Remove(_offer[i]);
+            if (fresh.Count >= open) pool = fresh;
+
+            for (int i = _offer.Count - 1; i >= 0; i--)
+            {
+                if (_bought[i]) continue;
+                if (pool.Count == 0)
+                {
+                    _offer.RemoveAt(i);
+                    _bought.RemoveAt(i);
+                    continue;
+                }
+                int idx = Random.Range(0, pool.Count);
+                _offer[i] = pool[idx];
+                pool.RemoveAt(idx);
+            }
+
+            OnOfferChanged?.Invoke();
+            return true;
+        }
+
+        // „Fertig": Laden schließen, Spiel weiter, ggf. wartender Wellen-Kartenbildschirm
+        public void CloseShop()
+        {
+            if (!IsChoosing || PauseManager.IsPaused) return;
+            IsChoosing = false;
+            _offer.Clear();
+            _bought.Clear();
+            Time.timeScale = 1f;
+
             OnChoiceClosed?.Invoke();
 
-            // Wellen-Kartenbildschirm, der währenddessen fällig wurde
             if (UpgradeManager.Instance != null) UpgradeManager.Instance.PresentPendingUpgrades();
         }
 
@@ -261,6 +389,7 @@ namespace ElementalBuddies
             if (!IsChoosing) return;
             IsChoosing = false;
             _offer.Clear();
+            _bought.Clear();
             OnChoiceClosed?.Invoke();
         }
 

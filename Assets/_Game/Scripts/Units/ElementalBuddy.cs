@@ -1,9 +1,10 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using System.Collections.Generic;
 
 namespace ElementalBuddies
 {
-    public abstract class ElementalBuddy : MonoBehaviour, IDamageable
+    public abstract class ElementalBuddy : MonoBehaviour, IDamageable, IHealthBarTarget
     {
         public UnitConfigSO Config; // Public for setup if needed
         [HideInInspector] public float PaidCost; // Tatsächlich bezahlte Seelensplitter inkl. Aufwertungen (für Refund beim Verkauf)
@@ -13,10 +14,28 @@ namespace ElementalBuddies
         public static IReadOnlyList<ElementalBuddy> Active => _active;
         public static int ActiveCount => _active.Count;
         public static event System.Action OnBuddyCountChanged;
+        // Buddy im Kampf zerstört (nicht bei Verkauf/Fusion)
+        public static event System.Action<ElementalBuddy> OnBuddyDestroyed;
 
         protected float lastActionTime;
         public float CurrentHP { get; protected set; }
-        public float MaxHP = 50f;
+        [Tooltip("Leben auf Stufe 1, falls die Config kein BuddyMaxHP vorgibt.")]
+        [FormerlySerializedAs("MaxHP")] public float BaseMaxHP = 50f;
+        // Klassen-Standard (Subklassen können ihn überschreiben)
+        protected virtual float DefaultMaxHP => BaseMaxHP;
+        // Config.BuddyMaxHP > 0 hat Vorrang; skaliert mit der Stufe
+        public float GetMaxHPAtLevel(int level) =>
+            (Config != null && Config.BuddyMaxHP > 0f ? Config.BuddyMaxHP : DefaultMaxHP) * LevelMultiplier(HPBonusPerLevel, level);
+        public float MaxHP => GetMaxHPAtLevel(_level);
+        public bool IsDead => _isDead;
+        bool IHealthBarTarget.HealthBarVisible => isActiveAndEnabled && !_isDead;
+
+        private bool _isDead;
+        private EnemyHealthBar _healthBar;
+        private WaveManager _waveManager;
+        private float _nextHitFxTime;
+        private bool _lowHPWarned;
+        private static float _nextAttackedToastTime;
 
         private static readonly int CastTrigger = Animator.StringToHash("Cast");
         private Animator _visualAnimator;
@@ -47,6 +66,8 @@ namespace ElementalBuddies
         {
             _active.Clear();
             OnBuddyCountChanged = null;
+            OnBuddyDestroyed = null;
+            _nextAttackedToastTime = 0f;
         }
 
         // Ghosts werden direkt nach Instantiate deaktiviert -> netto nicht gezählt
@@ -68,6 +89,33 @@ namespace ElementalBuddies
         {
             CurrentHP = MaxHP;
             RefreshVisual();
+
+            // Ghosts sind deaktiviert -> Start läuft nur bei platzierten Buddies
+            var s = Settings;
+            if (s != null && s.BuddyHealthBarPrefab != null)
+            {
+                var bar = Instantiate(s.BuddyHealthBarPrefab);
+                _healthBar = bar.GetComponent<EnemyHealthBar>();
+                if (_healthBar != null) _healthBar.Bind(this);
+                else Destroy(bar);
+            }
+
+            _waveManager = WaveManager.Instance;
+            if (_waveManager != null) _waveManager.OnWaveEnd += HandleWaveEnd;
+        }
+
+        protected virtual void OnDestroy()
+        {
+            if (_waveManager != null) _waveManager.OnWaveEnd -= HandleWaveEnd;
+            if (_healthBar != null) Destroy(_healthBar.gameObject);
+        }
+
+        // Wellenende: einen Teil des Lebens zurück
+        private void HandleWaveEnd()
+        {
+            if (_isDead || !isActiveAndEnabled) return;
+            float pct = Settings != null ? Settings.BuddyWaveEndHealPercent : 0.5f;
+            Heal(MaxHP * pct);
         }
 
         // Aktives Animator-Visual neu suchen (nach Stufenwechsel durch BuddyEvolution); inaktive Visuals werden ignoriert
@@ -76,9 +124,21 @@ namespace ElementalBuddies
             _visualAnimator = GetComponentInChildren<Animator>();
         }
 
+        // Betäubt (Boss-Fähigkeiten): keine Aktionen, Auren/Segen der Subklassen pausieren
+        private float _stunUntil;
+        public bool IsStunned => Time.time < _stunUntil;
+
+        public void Stun(float duration, GameObject vfxPrefab = null)
+        {
+            if (_isDead || duration <= 0f) return;
+            _stunUntil = Mathf.Max(_stunUntil, Time.time + duration);
+            if (vfxPrefab == null && Settings != null) vfxPrefab = Settings.BuddyStunEffectPrefab;
+            if (vfxPrefab != null) BlindEffect.Apply(gameObject, duration, vfxPrefab);
+        }
+
         protected virtual void Update()
         {
-            if (Config == null) return;
+            if (Config == null || IsStunned) return;
 
             float fireRate = EffectiveFireRate;
             if (fireRate > 0 && Time.time >= lastActionTime + (1f / fireRate))
@@ -97,26 +157,76 @@ namespace ElementalBuddies
 
         public virtual void TakeDamage(float amount)
         {
+            if (_isDead || amount <= 0f) return;
             CurrentHP -= amount;
             if (CurrentHP <= 0)
             {
                 Die();
+                return;
+            }
+
+            var s = Settings;
+            if (s != null && s.BuddyHitEffectPrefab != null && Time.time >= _nextHitFxTime)
+            {
+                _nextHitFxTime = Time.time + 0.5f;
+                Destroy(Instantiate(s.BuddyHitEffectPrefab, transform.position + Vector3.up * 0.9f, Quaternion.identity), 2f);
+            }
+
+            // Warnung unter 60 % (einmal pro Absinken, global höchstens alle 8 s)
+            if (!_lowHPWarned && CurrentHP < MaxHP * 0.6f)
+            {
+                _lowHPWarned = true;
+                if (Time.time >= _nextAttackedToastTime)
+                {
+                    _nextAttackedToastTime = Time.time + 8f;
+                    ToastUI.Show($"{StageName} wird angegriffen!");
+                }
             }
         }
 
         // Heilung (z. B. durch den Segen des Licht-Buddys); gibt die tatsächlich geheilte Menge zurück
         public float Heal(float amount)
         {
-            if (amount <= 0f || CurrentHP >= MaxHP) return 0f;
+            if (_isDead || amount <= 0f || CurrentHP >= MaxHP) return 0f;
             float before = CurrentHP;
             CurrentHP = Mathf.Min(MaxHP, CurrentHP + amount);
+            if (CurrentHP >= MaxHP * 0.6f) _lowHPWarned = false;
             return CurrentHP - before;
         }
 
         protected virtual void Die()
         {
+            if (_isDead) return;
+            _isDead = true;
+            CurrentHP = 0f;
+            Vector3 pos = transform.position;
+
+            var s = Settings;
+            if (s != null && s.BuddyDeathEffectPrefab != null)
+                Destroy(Instantiate(s.BuddyDeathEffectPrefab, pos, Quaternion.identity), 3f);
+            GameAudio.Play(GameAudio.Has(SfxId.BuddyDeath) ? SfxId.BuddyDeath : SfxId.StoneWall, pos);
+            ToastUI.Show($"{StageName} wurde zerstört!");
+
+            var im = InteractionManager.Instance;
+            if (im != null && im.SelectedBuddy == this) im.DeselectBuddy();
+            if (_healthBar != null) Destroy(_healthBar.gameObject);
+
+            OnBuddyDestroyed?.Invoke(this);
+            // Sofort deaktivieren: verlässt die Registry (Slots, Gegner-Ziele, Auren) noch in diesem Frame
+            gameObject.SetActive(false);
             Destroy(gameObject);
         }
+
+        // Nächster Punkt auf dem Collider (große Buddies wie der Kristall), sonst Pivot
+        public Vector3 GetClosestPoint(Vector3 from)
+        {
+            if (_collider == null) _collider = GetComponentInChildren<Collider>();
+            if (_collider == null || !_collider.enabled) return transform.position;
+            var mesh = _collider as MeshCollider;
+            if (mesh != null && !mesh.convex) return _collider.ClosestPointOnBounds(from);
+            return _collider.ClosestPoint(from);
+        }
+        private Collider _collider;
 
         // ---------------- Aufwertung ----------------
 
@@ -125,6 +235,7 @@ namespace ElementalBuddies
         protected static float DamageBonusPerLevel => Settings != null ? Settings.DamageBonusPerLevel : 0.35f;
         protected static float FireRateBonusPerLevel => Settings != null ? Settings.FireRateBonusPerLevel : 0.2f;
         protected static float RangeBonusPerLevel => Settings != null ? Settings.RangeBonusPerLevel : 0.1f;
+        protected static float HPBonusPerLevel => Settings != null ? Settings.HPBonusPerLevel : 0.35f;
 
         public virtual int MaxLevel => Settings != null ? Mathf.Max(1, Settings.BuddyMaxLevel) : 3;
         public bool CanUpgrade => Config != null && _level < MaxLevel;
@@ -181,7 +292,10 @@ namespace ElementalBuddies
             if (PaidCost <= 0f && Config != null) PaidCost = Config.CostOutCombat;
             PaidCost += cost;
 
+            float oldMaxHP = MaxHP;
             _level++;
+            CurrentHP += MaxHP - oldMaxHP; // Leben steigt mit
+            if (_healthBar != null) _healthBar.MarkDirty();
             OnLevelChanged?.Invoke();
             return true;
         }

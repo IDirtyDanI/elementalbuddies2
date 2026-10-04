@@ -21,8 +21,17 @@ namespace ElementalBuddies
         public float RegenOut => settings != null ? settings.RegenOutCombat : 0f;
         public float RegenIn => settings != null ? settings.RegenInCombat : 0f;
 
-        // Seelensplitter: Bau-Währung (keine passive Regen; Quellen: Kopfgeld + Wellen-Bonus)
+        // Seelensplitter: Bau-Währung (keine passive Regen; Quellen: Kill-Drops (ShardPickup) + Wellen-Bonus)
         public float CurrentShards { get; private set; }
+
+        // Wellenkarte „Seelenernte": +X % auf Kill-Drops (additiv, nicht auf den Wellen-Bonus)
+        public float ShardGainPercent { get; private set; }
+        public float ShardGainMultiplier => 1f + ShardGainPercent / 100f;
+
+        public void AddShardGainPercent(float percent)
+        {
+            ShardGainPercent = Mathf.Max(0f, ShardGainPercent + percent);
+        }
 
         public event Action OnManaChanged;
         public event Action OnShardsChanged;
@@ -63,12 +72,14 @@ namespace ElementalBuddies
             EnemyBrain.OnEnemyKilled -= HandleEnemyKilled;
         }
 
-        // Splitter-Kopfgeld pro Kill × Gegnertyp-Faktor (Mana gibt es nur noch über passive Regen)
+        // Splitter-Kopfgeld pro Kill × Gegnertyp-Faktor × Seelenernte – fällt als Drop, der Spieler sammelt ihn ein
         private void HandleEnemyKilled(EnemyBrain enemy)
         {
+            if (enemy == null || (GameManager.Instance != null && GameManager.Instance.IsGameOver)) return;
             float bounty = settings != null ? settings.ShardsPerKill : 6f;
-            if (enemy != null && enemy.Config != null) bounty *= enemy.Config.BountyMultiplier;
-            if (bounty > 0f) AddShards(bounty);
+            if (enemy.Config != null) bounty *= enemy.Config.BountyMultiplier;
+            bounty *= ShardGainMultiplier;
+            if (bounty > 0f) ShardPickup.Spawn(enemy.transform.position, bounty, settings);
         }
 
         void OnDestroy()

@@ -41,7 +41,7 @@ namespace ElementalBuddies
         protected override void Reset()
         {
             base.Reset();
-            MaxHP = 300f;
+            BaseMaxHP = 300f;
         }
 
         public override void TakeDamage(float amount)
@@ -56,6 +56,7 @@ namespace ElementalBuddies
         protected override void Update()
         {
             base.Update();
+            if (IsStunned) return;
 
             _auraTimer += Time.deltaTime;
             if (_auraTimer >= AuraTickInterval)

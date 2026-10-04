@@ -192,7 +192,7 @@ MonoBehaviour:
     Name: Heiliger Kreis
     Icon: {fileID: 21300000, guid: 89e78796b6ecd44738bc8aa2fb2c758e, type: 3}
   ArcaneBallPrefab: {fileID: 8282255884464883281, guid: 2fa7ba8529f249e449fa121e4b5d8476, type: 3}
-  ArcaneBallManaCost: 15
+  ArcaneBallManaCost: 0
   ArcaneBallCooldown: 1
   SpawnPoint: {fileID: 0}
   BlinkManaCost: 30

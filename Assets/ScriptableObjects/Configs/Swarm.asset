@@ -18,9 +18,19 @@ MonoBehaviour:
   FireRate: 0
   Damage: 0
   Prefab: {fileID: 405400792992039941, guid: 915284acaa2fc497c92620256a0e0534, type: 3}
+  BuddyMaxHP: 0
   BaseHP: 22
   Speed: 5.2
   AttackDamage: 4
   Armor: 0
   BountyMultiplier: 0.35
   VisualScale: 0.6
+  BuddyAggroRadius: 0
+  HuntsBuddies: 0
+  BuddyDamageMultiplier: 1
+  AttackRange: 0
+  ProjectilePrefab: {fileID: 0}
+  AttackInterval: 1.5
+  ProjectileSpeed: 14
+  AttackWindup: 0.35
+  ProjectileSpawnHeight: 1.3

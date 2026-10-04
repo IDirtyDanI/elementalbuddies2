@@ -5,7 +5,7 @@ using System.Collections;
 namespace ElementalBuddies
 {
     [RequireComponent(typeof(NavMeshAgent))]
-    public class EnemyBrain : MonoBehaviour, IDamageable, ISlowable, ITauntable
+    public class EnemyBrain : MonoBehaviour, IDamageable, ISlowable, ITauntable, IHealthBarTarget
     {
         public EnemyConfigSO Config;
 
@@ -33,6 +33,7 @@ namespace ElementalBuddies
 
         public float CurrentHP => _currentHP;
         public float MaxHP => _maxHP;
+        bool IHealthBarTarget.HealthBarVisible => true;
 
         // Status-Effekte (für Synergien, z. B. Blitz-Bonus auf nasse Gegner)
         // Komponenten können auch direkt per XyzEffect.Apply angehängt werden → bei Bedarf nachschlagen
@@ -84,17 +85,80 @@ namespace ElementalBuddies
         private Vector3 _progressPos;
         private float _noProgressTimer;
         private bool _blockedByBuddy;
+
+        // Buddy-Ziel (gecacht, alle BuddyRescanInterval s neu bewertet)
+        private const float BuddyRescanInterval = 0.4f;
+        private ElementalBuddy _buddyTarget;
+        private float _nextBuddyScan;
+        private ElementalBuddy _destBuddy;
+        private Vector3 _buddyDest;
+        private float _nextDestUpdate;
+        private Transform _lookupTransform;
+        private ElementalBuddy _lookupBuddy;
+
+        // Fernkampf / Angriffs-Animation
+        private float _nextAttackTime;
+        private bool _shotPending;
+        private float _shotFireTime;
+        private Transform _shotTarget;
+
+        // Animator (optional, Parameter nur wenn vorhanden)
+        private static readonly int AttackHash = Animator.StringToHash("Attack");
+        private static readonly int SpeedHash = Animator.StringToHash("Speed");
+        private static readonly int MovingHash = Animator.StringToHash("Moving");
+        private Animator _animator;
+        private bool _hasAttackTrigger, _hasSpeedFloat, _hasMovingBool;
+
+        private bool IsRanged => Config != null && Config.ProjectilePrefab != null;
+        // Reichweite gegen Einheiten (Spieler, Buddies, Spott-Ziel)
+        private float UnitAttackRange => Config != null && Config.AttackRange > 0f ? Config.AttackRange : AttackRange;
+        private float NexusRange => Config != null && Config.AttackRange > 0f ? Mathf.Max(NexusAttackRange, Config.AttackRange) : NexusAttackRange;
+        private float BuddyDamageMultiplier => Config != null ? Config.BuddyDamageMultiplier : 1f;
         
         public static event System.Action OnEnemyDeath;
         // Wie OnEnemyDeath, aber mit dem getöteten Gegner (z. B. Kopfgeld je Gegnertyp)
         public static event System.Action<EnemyBrain> OnEnemyKilled;
+        // Boss ist erschienen (in Start, nur Config.IsBoss); Boss-Tod läuft über OnEnemyKilled
+        public static event System.Action<EnemyBrain> OnBossSpawned;
         private bool _isDead;
+        public bool IsDead => _isDead;
+
+        // Lebende Bosse in Spawn-Reihenfolge (für die Boss-HP-Leiste)
+        private static readonly System.Collections.Generic.List<EnemyBrain> _activeBosses = new System.Collections.Generic.List<EnemyBrain>();
+        public static System.Collections.Generic.IReadOnlyList<EnemyBrain> ActiveBosses => _activeBosses;
+        public bool IsBoss => Config != null && Config.IsBoss;
+        public string DisplayName => Config != null && !string.IsNullOrEmpty(Config.DisplayName) ? Config.DisplayName : name;
+
+        // Kontroll-Resistenz (Bosse): 1 = volle Dauer
+        private float ControlFactor => Config != null ? 1f - Mathf.Clamp(Config.ControlResistance, 0f, 0.9f) : 1f;
+
+        // Zauber-Sperre (BossBrain): steht still, kein Grundangriff
+        private float _castUntil;
+        public bool IsCasting => !_isDead && Time.time < _castUntil;
+
+        // Aktuelles Ziel (Taunt > Buddy-Jäger > Spieler > Buddy > ForcedTarget > Nexus), pro Frame gecacht
+        private Transform _cachedTarget;
+        private int _cachedTargetFrame = -1;
+        public Transform CurrentTarget
+        {
+            get
+            {
+                if (_cachedTargetFrame != Time.frameCount)
+                {
+                    _cachedTargetFrame = Time.frameCount;
+                    _cachedTarget = GetCurrentTarget();
+                }
+                return _cachedTarget;
+            }
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
             OnEnemyDeath = null;
             OnEnemyKilled = null;
+            OnBossSpawned = null;
+            _activeBosses.Clear();
         }
 
         void Start()
@@ -122,11 +186,33 @@ namespace ElementalBuddies
 
             if (HealthBarPrefab != null)
                 Instantiate(HealthBarPrefab).Bind(this);
+
+            _animator = GetComponentInChildren<Animator>();
+            if (_animator != null)
+            {
+                foreach (var p in _animator.parameters)
+                {
+                    if (p.nameHash == AttackHash && p.type == AnimatorControllerParameterType.Trigger) _hasAttackTrigger = true;
+                    else if (p.nameHash == SpeedHash && p.type == AnimatorControllerParameterType.Float) _hasSpeedFloat = true;
+                    else if (p.nameHash == MovingHash && p.type == AnimatorControllerParameterType.Bool) _hasMovingBool = true;
+                }
+            }
+
+            if (IsBoss && !_isDead)
+            {
+                if (!_activeBosses.Contains(this)) _activeBosses.Add(this);
+                OnBossSpawned?.Invoke(this);
+            }
+        }
+
+        void OnDestroy()
+        {
+            _activeBosses.Remove(this);
         }
 
         public void Initialize(float hpBonus)
         {
-             if (Config != null) _currentHP = Config.BaseHP + hpBonus; 
+             if (Config != null) _currentHP = Config.BaseHP + hpBonus * Mathf.Max(0f, Config.HpBonusMultiplier);
              else _currentHP = 60f + hpBonus;
              _maxHP = _currentHP;
         }
@@ -136,11 +222,15 @@ namespace ElementalBuddies
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver)
             {
                 if (_agent.isOnNavMesh && !_agent.isStopped) _agent.isStopped = true;
+                _shotPending = false;
+                UpdateAnimator(0f);
                 return;
             }
 
             if (IsFrozen || IsStunned)
             {
+                _shotPending = false; // laufender Schuss bricht ab
+                UpdateAnimator(0f);
                 _wasFrozen = true;
                 if (_agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
                 return;
@@ -152,11 +242,25 @@ namespace ElementalBuddies
                 if (_agent.isOnNavMesh && !_knockedBack) _agent.isStopped = false;
             }
 
+            // Boss-Zauber: steht still, kein Grundangriff (Neustart des Agents über _wasFrozen)
+            if (IsCasting)
+            {
+                _shotPending = false;
+                _wasFrozen = true;
+                _stuckTimer = 0f;
+                _noProgressTimer = 0f;
+                UpdateAnimator(0f);
+                if (_agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
+                return;
+            }
+
             // Rückstoß: Bewegung und Angriff kurz unterbrochen
             if (_knockedBack)
             {
                 if (_agent.isOnNavMesh) _agent.isStopped = true;
                 _stuckTimer = 0f;
+                _shotPending = false;
+                UpdateAnimator(0f);
                 return;
             }
 
@@ -165,6 +269,14 @@ namespace ElementalBuddies
             HandleAntiCheese();
             HandleStraggler();
             HandleAttack();
+            UpdateAnimator(_agent.velocity.magnitude);
+        }
+
+        private void UpdateAnimator(float speed)
+        {
+            if (_animator == null || !_animator.isActiveAndEnabled) return;
+            if (_hasSpeedFloat) _animator.SetFloat(SpeedHash, speed);
+            if (_hasMovingBool) _animator.SetBool(MovingHash, speed > 0.1f);
         }
 
         // Nachzügler-Rettung: Ein Gegner, der lange weder läuft noch angreift, kann die Welle sonst endlos blockieren
@@ -195,10 +307,14 @@ namespace ElementalBuddies
             _stuckTimer = 0f;
         }
 
-        // Priority: Taunt > Player (within aggro radius) > ForcedTarget > Nexus > Player (fallback if no Nexus)
+        // Priority: Taunt > Buddy (Jäger) > Player (within aggro radius) > Buddy > ForcedTarget > Nexus > Player (fallback if no Nexus)
         private Transform GetCurrentTarget()
         {
-            if (_tauntTarget != null) return _tauntTarget;
+            if (_tauntTarget != null && _tauntTarget.gameObject.activeInHierarchy) return _tauntTarget;
+
+            ElementalBuddy buddy = GetBuddyTarget();
+            bool hunter = Config != null && Config.HuntsBuddies;
+            if (hunter && buddy != null) return buddy.transform;
 
             if (_player != null)
             {
@@ -206,6 +322,8 @@ namespace ElementalBuddies
                 float playerDist = Vector3.Distance(transform.position, _player.position);
                 if (playerDist <= aggro) return _player;
             }
+
+            if (buddy != null) return buddy.transform;
 
             if (ForcedTarget != null) return ForcedTarget;
 
@@ -219,12 +337,94 @@ namespace ElementalBuddies
             return Nexus.Instance != null && target == Nexus.Instance.transform;
         }
 
+        private static bool IsValidBuddy(ElementalBuddy b) =>
+            b != null && b.isActiveAndEnabled && !b.IsDead && b.CurrentHP > 0f;
+
+        // Nächster lebender Buddy im BuddyAggroRadius (gecacht; zerstörte Ziele fallen sofort weg)
+        private ElementalBuddy GetBuddyTarget()
+        {
+            float radius = Config != null ? Config.BuddyAggroRadius : 0f;
+            if (radius <= 0f) return null;
+
+            if ((object)_buddyTarget != null && !IsValidBuddy(_buddyTarget))
+            {
+                _buddyTarget = null;
+                _nextBuddyScan = 0f;
+            }
+            if (Time.time >= _nextBuddyScan)
+            {
+                _nextBuddyScan = Time.time + BuddyRescanInterval;
+                _buddyTarget = FindBuddyTarget(radius);
+            }
+            return _buddyTarget;
+        }
+
+        private ElementalBuddy FindBuddyTarget(float radius)
+        {
+            ElementalBuddy best = null;
+            float bestDist = float.MaxValue;
+            Vector3 pos = transform.position;
+            var active = ElementalBuddy.Active;
+            for (int i = 0; i < active.Count; i++)
+            {
+                var b = active[i];
+                if (!IsValidBuddy(b)) continue;
+                Vector3 d = b.transform.position - pos;
+                d.y = 0f;
+                float dist = d.magnitude;
+                // Hysterese: aktuelles Ziel bleibt etwas länger und wird bevorzugt (kein Flackern)
+                bool current = b == _buddyTarget;
+                if (dist > (current ? radius * 1.2f : radius)) continue;
+                if (current) dist -= 1.5f;
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    best = b;
+                }
+            }
+            return best;
+        }
+
+        // Buddy hinter einem Ziel-Transform (Buddy-Ziel oder Spott durch Erde/Kristall); null = kein Buddy
+        private ElementalBuddy BuddyOf(Transform target)
+        {
+            if (target == null) return null;
+            if (_buddyTarget != null && target == _buddyTarget.transform) return _buddyTarget;
+            if (target != _lookupTransform)
+            {
+                _lookupTransform = target;
+                _lookupBuddy = target.GetComponent<ElementalBuddy>();
+            }
+            return _lookupBuddy;
+        }
+
+        // Erreichbarer NavMesh-Punkt am Buddy (Collider-Rand), alle 0,5 s neu
+        private Vector3 BuddyDestination(ElementalBuddy b)
+        {
+            if (b != _destBuddy || Time.time >= _nextDestUpdate)
+            {
+                _destBuddy = b;
+                _nextDestUpdate = Time.time + 0.5f;
+                Vector3 p = b.GetClosestPoint(transform.position);
+                p.y = b.transform.position.y;
+                _buddyDest = NavMesh.SamplePosition(p, out NavMeshHit hit, 2f, NavMesh.AllAreas) ? hit.position : b.transform.position;
+            }
+            return _buddyDest;
+        }
+
+        private static float HorizontalDistance(Vector3 a, Vector3 b)
+        {
+            a.y = 0f;
+            b.y = 0f;
+            return Vector3.Distance(a, b);
+        }
+
         private bool IsInAttackRange(Transform target)
         {
             if (target == null) return false;
 
             if (IsNexus(target))
-                return Nexus.Instance.GetDistanceFrom(transform.position) <= NexusAttackRange;
+                return Nexus.Instance.GetDistanceFrom(transform.position) <= NexusRange;
 
             if (target == ForcedTarget)
             {
@@ -233,7 +433,12 @@ namespace ElementalBuddies
                 return d.magnitude <= ForcedTargetArriveDistance;
             }
 
-            return Vector3.Distance(transform.position, target.position) < AttackRange;
+            // Buddies: bis zum Collider-Rand (große Buddies wie der Kristall)
+            var buddy = BuddyOf(target);
+            if (buddy != null)
+                return HorizontalDistance(transform.position, buddy.GetClosestPoint(transform.position)) <= UnitAttackRange;
+
+            return Vector3.Distance(transform.position, target.position) < UnitAttackRange;
         }
 
         private void HandleMovement()
@@ -248,15 +453,33 @@ namespace ElementalBuddies
                 return;
             }
 
+            if (IsRanged && IsInAttackRange(target))
+            {
+                // Fernkämpfer: in Reichweite stehen bleiben und schießen
+                if (_agent.isOnNavMesh && _agent.hasPath) _agent.ResetPath();
+                return;
+            }
+
             if (IsNexus(target))
             {
                 // Walk to the Nexus surface instead of its pivot (the Nexus is big / may carve the NavMesh)
-                _agent.SetDestination(Nexus.Instance.GetClosestPoint(transform.position));
+                RequestDestination(Nexus.Instance.GetClosestPoint(transform.position));
             }
             else
             {
-                _agent.SetDestination(target.position);
+                var buddy = BuddyOf(target);
+                RequestDestination(buddy != null ? BuddyDestination(buddy) : target.position);
             }
+        }
+
+        // Gleiches Ziel nicht jeden Frame neu setzen: bei unerreichbarem Ziel (Teil-Pfad, z. B. Buddy auf einer
+        // NavMesh-Insel) verwirft SetDestination den fertigen Teil-Pfad und rechnet neu -> Gegner stand dauerhaft still
+        private Vector3 _requestedDest;
+        private void RequestDestination(Vector3 dest)
+        {
+            if ((_agent.pathPending || _agent.hasPath) && (dest - _requestedDest).sqrMagnitude < 0.25f) return;
+            _requestedDest = dest;
+            _agent.SetDestination(dest);
         }
 
         private void HandleAntiCheese()
@@ -297,9 +520,21 @@ namespace ElementalBuddies
         private void HandleAttack()
         {
              Transform target = GetCurrentTarget();
+             if (IsRanged)
+             {
+                 HandleRangedAttack(target);
+                 return;
+             }
              if (target != null && IsInAttackRange(target))
              {
                  float amount = (Config != null ? Config.AttackDamage : 10f) * Time.deltaTime;
+                 if (BuddyOf(target) != null) amount *= BuddyDamageMultiplier;
+                 // Optik: Angriffs-Animation im Takt von AttackInterval (Schaden bleibt kontinuierlich)
+                 if (_hasAttackTrigger && _animator.isActiveAndEnabled && target != ForcedTarget && Time.time >= _nextAttackTime)
+                 {
+                     _nextAttackTime = Time.time + AttackInterval;
+                     _animator.SetTrigger(AttackHash);
+                 }
                  // Spieler bekommt die Angriffsrichtung mit (Schildblock blockt nur frontal)
                  var directional = target.GetComponent<IDirectionalDamageable>();
                  if (directional != null)
@@ -313,6 +548,64 @@ namespace ElementalBuddies
                      dmg.TakeDamage(amount);
                  }
              }
+        }
+
+        private float AttackInterval => Config != null && Config.AttackInterval > 0f ? Config.AttackInterval : 1.5f;
+
+        // Fernkampf: in Reichweite zum Ziel drehen, alle AttackInterval s Attack-Trigger + Projektil nach AttackWindup.
+        // ForcedTarget (Schrein) wird nicht beschossen – dort nur stehen.
+        private void HandleRangedAttack(Transform target)
+        {
+            if (_shotPending)
+            {
+                if (_shotTarget == null || !_shotTarget.gameObject.activeInHierarchy) _shotPending = false;
+                else
+                {
+                    FaceTowards(_shotTarget);
+                    if (Time.time >= _shotFireTime) FireShot();
+                    return;
+                }
+            }
+
+            if (target == null || target == ForcedTarget || !IsInAttackRange(target)) return;
+            FaceTowards(target);
+            if (Time.time < _nextAttackTime) return;
+
+            _nextAttackTime = Time.time + AttackInterval;
+            if (_hasAttackTrigger && _animator.isActiveAndEnabled) _animator.SetTrigger(AttackHash);
+            _shotTarget = target;
+            _shotPending = true;
+            _shotFireTime = Time.time + Mathf.Max(0f, Config.AttackWindup);
+            if (Config.AttackWindup <= 0f) FireShot();
+        }
+
+        private void FireShot()
+        {
+            _shotPending = false;
+            if (Config == null || Config.ProjectilePrefab == null || _shotTarget == null) return;
+
+            bool nexus = IsNexus(_shotTarget);
+            Vector3 aimOffset = nexus ? Vector3.zero : Vector3.up * 0.9f;
+            Vector3 spawn = transform.position + Vector3.up * Config.ProjectileSpawnHeight + transform.forward * 0.5f;
+            Vector3 aim = nexus ? Nexus.Instance.GetClosestPoint(spawn) : _shotTarget.position + aimOffset;
+            Vector3 dir = aim - spawn;
+            var go = Instantiate(Config.ProjectilePrefab, spawn, dir.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(dir) : transform.rotation);
+            var proj = go.GetComponent<EnemyProjectile>();
+            if (proj == null) proj = go.AddComponent<EnemyProjectile>();
+
+            float damage = Config.AttackDamage;
+            if (BuddyOf(_shotTarget) != null) damage *= BuddyDamageMultiplier;
+            proj.Init(_shotTarget, aimOffset, damage, Config.ProjectileSpeed, transform.position);
+        }
+
+        // Weich zum Ziel drehen (Agent dreht im Stand nicht selbst)
+        private void FaceTowards(Transform target)
+        {
+            Vector3 p = IsNexus(target) ? Nexus.Instance.GetClosestPoint(transform.position) : target.position;
+            Vector3 d = p - transform.position;
+            d.y = 0f;
+            if (d.sqrMagnitude < 0.0001f) return;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(d), 540f * Time.deltaTime);
         }
 
         // Schadens-Pipeline: verflucht → Bonus-Schaden, Rüstung ignoriert; sonst Rüstung reduziert
@@ -333,6 +626,7 @@ namespace ElementalBuddies
             {
                 // Guard: several hits in one frame must not report the death twice (bounty / wave count)
                 _isDead = true;
+                _activeBosses.Remove(this);
                 OnEnemyDeath?.Invoke();
                 OnEnemyKilled?.Invoke(this);
                 GameAudio.Play(SfxId.EnemyDeath, transform.position);
@@ -344,6 +638,7 @@ namespace ElementalBuddies
         public void ApplySlow(float percentage, float duration)
         {
             percentage = Mathf.Clamp01(percentage);
+            duration *= ControlFactor;
             bool active = Time.time < _slowUntil;
             if (!active || percentage > _slowPercent)
             {
@@ -362,6 +657,7 @@ namespace ElementalBuddies
         {
             if (_isDead || duration <= 0f) return;
             if (IsWet) duration *= 2f; // Nass + Frost: friert doppelt so lange ein
+            duration *= ControlFactor;
             _freeze = FreezeEffect.Apply(gameObject, duration, vfxPrefab);
             if (_agent != null && _agent.isOnNavMesh)
             {
@@ -376,6 +672,7 @@ namespace ElementalBuddies
         public void Stun(float duration, GameObject vfxPrefab = null)
         {
             if (_isDead || duration <= 0f) return;
+            duration *= ControlFactor;
             _stunUntil = Mathf.Max(_stunUntil, Time.time + duration);
             if (vfxPrefab != null) BlindEffect.Apply(gameObject, duration, vfxPrefab);
             if (_agent == null) _agent = GetComponent<NavMeshAgent>();
@@ -408,6 +705,7 @@ namespace ElementalBuddies
         // Rückstoß entlang des NavMesh (agent.Move, verlässt das NavMesh nicht); unterbricht kurz die Bewegung
         public void Knockback(Vector3 direction, float distance, float duration = 0.25f)
         {
+            distance *= ControlFactor;
             if (_isDead || distance <= 0f) return;
             direction.y = 0f;
             if (direction.sqrMagnitude < 0.0001f) return;
@@ -437,7 +735,7 @@ namespace ElementalBuddies
             _knockedBack = false;
             _knockbackRoutine = null;
             _stuckTimer = 0f;
-            if (_agent.isOnNavMesh && !IsFrozen && !IsStunned) _agent.isStopped = false;
+            if (_agent.isOnNavMesh && !IsFrozen && !IsStunned && !IsCasting) _agent.isStopped = false;
         }
 
         // Horizontale Richtung entgegen der aktuellen Laufrichtung (z. B. für Rückstoß „den Weg zurück“)
@@ -475,7 +773,33 @@ namespace ElementalBuddies
 
         public void Taunt(Transform target, float duration)
         {
-            StartCoroutine(TauntRoutine(target, duration));
+            if (_isDead) return;
+            StartCoroutine(TauntRoutine(target, duration * ControlFactor));
+        }
+
+        // Heilung (z. B. Totenkreis des Nekromanten), auf MaxHP begrenzt; gibt die geheilte Menge zurück
+        public float Heal(float amount)
+        {
+            if (_isDead || amount <= 0f || _currentHP >= _maxHP) return 0f;
+            float before = _currentHP;
+            _currentHP = Mathf.Min(_maxHP, _currentHP + amount);
+            return _currentHP - before;
+        }
+
+        // Steht für duration s still und greift nicht an (Boss-Fähigkeit: Ausholen + Erholung)
+        public void LockForCast(float duration)
+        {
+            if (_isDead) return;
+            _castUntil = Mathf.Max(_castUntil, Time.time + Mathf.Max(0f, duration));
+            _shotPending = false;
+            if (_agent == null) _agent = GetComponent<NavMeshAgent>();
+            if (_agent != null && _agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
+        }
+
+        // Sperre vorzeitig aufheben (abgebrochener Zauber)
+        public void EndCast()
+        {
+            _castUntil = 0f;
         }
 
         private IEnumerator TauntRoutine(Transform target, float duration)

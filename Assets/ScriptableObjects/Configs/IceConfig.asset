@@ -18,3 +18,4 @@ MonoBehaviour:
   FireRate: 0.8
   Damage: 6
   Prefab: {fileID: 356276487605491224, guid: d4d997f9f7eb49e4fbec5447bc18605f, type: 3}
+  BuddyMaxHP: 60

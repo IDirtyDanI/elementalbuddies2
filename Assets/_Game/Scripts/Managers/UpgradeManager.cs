@@ -112,6 +112,12 @@ namespace ElementalBuddies
             }
 
             List<UpgradeDefinitionSO> selection = GetRandomUpgrades(3);
+            if (selection.Count == 0)
+            {
+                // Pool leer → keine Pause, wartende Händlerauswahl trotzdem freigeben
+                OnUpgradeSelected?.Invoke();
+                return;
+            }
             
             // Pause Game
             Time.timeScale = 0f;
@@ -130,20 +136,36 @@ namespace ElementalBuddies
             return true;
         }
 
-        private List<UpgradeDefinitionSO> GetRandomUpgrades(int count)
+        // count zufällige Karten ohne Doppelte; Slot-Karten fallen raus, sobald die Slot-Obergrenze erreicht ist
+        public List<UpgradeDefinitionSO> GetRandomUpgrades(int count)
         {
-            if (AllUpgrades.Count <= count) return new List<UpgradeDefinitionSO>(AllUpgrades);
+            var pool = new List<UpgradeDefinitionSO>();
+            if (AllUpgrades != null)
+            {
+                foreach (var up in AllUpgrades)
+                {
+                    if (up == null || pool.Contains(up)) continue;
+                    if (!IsDraftable(up)) continue;
+                    pool.Add(up);
+                }
+            }
 
-            List<UpgradeDefinitionSO> pool = new List<UpgradeDefinitionSO>(AllUpgrades);
-            List<UpgradeDefinitionSO> picked = new List<UpgradeDefinitionSO>();
-
-            for (int i = 0; i < count; i++)
+            var picked = new List<UpgradeDefinitionSO>();
+            while (picked.Count < count && pool.Count > 0)
             {
                 int idx = Random.Range(0, pool.Count);
                 picked.Add(pool[idx]);
                 pool.RemoveAt(idx);
             }
             return picked;
+        }
+
+        public static bool IsDraftable(UpgradeDefinitionSO up)
+        {
+            if (up == null) return false;
+            var slots = BuddySlotManager.Instance;
+            if (up.StatToBuff == StatType.BuddySlot && slots != null && slots.IsAtCap) return false;
+            return true;
         }
 
         public void SelectUpgrade(UpgradeDefinitionSO upgrade)
@@ -202,6 +224,11 @@ namespace ElementalBuddies
             if (upgrade.StatToBuff == StatType.BuddySlot)
             {
                 ApplySlotUpgrade(upgrade);
+                return;
+            }
+            if (upgrade.StatToBuff == StatType.ShardGain)
+            {
+                ApplyShardGain(upgrade);
                 return;
             }
 
@@ -308,6 +335,12 @@ namespace ElementalBuddies
                 return;
             }
 
+            if (upgrade.StatToBuff == StatType.ShardGain)
+            {
+                ApplyShardGain(upgrade);
+                return;
+            }
+
             if (GlobalSettings == null) return;
             if (upgrade.StatToBuff == StatType.ManaCap)
                 GlobalSettings.ManaCap = ModifyValue(GlobalSettings.ManaCap, upgrade);
@@ -316,6 +349,12 @@ namespace ElementalBuddies
                 GlobalSettings.RegenOutCombat = ModifyValue(GlobalSettings.RegenOutCombat, upgrade);
                 GlobalSettings.RegenInCombat = ModifyValue(GlobalSettings.RegenInCombat, upgrade);
             }
+        }
+
+        // Seelenernte: Wert = Prozent mehr Splitter pro Kill-Drop (additiv, 15 = +15 %)
+        private void ApplyShardGain(UpgradeDefinitionSO upgrade)
+        {
+            if (EconomyManager.Instance != null) EconomyManager.Instance.AddShardGainPercent(upgrade.Value);
         }
 
         private void ApplySlotUpgrade(UpgradeDefinitionSO upgrade)

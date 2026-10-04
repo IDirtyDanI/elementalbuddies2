@@ -1151,9 +1151,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Config: {fileID: 11400000, guid: 6557c62142188084b81b62593c2bbd36, type: 2}
   PaidCost: 0
-  MaxHP: 50
+  BaseMaxHP: 50
   ProjectilePrefab: {fileID: 8282255884464883281, guid: 91e5c213fbabbdb40a3ef2ab5bb456fa, type: 3}
   FirePoint: {fileID: 1980540893964816702}
+  SniperFromLevel: 3
+  SniperRange: 18
+  SniperFireRateFactor: 0.45
+  SniperDamageFactor: 3
+  SniperBossDamageMultiplier: 1.5
+  SniperProjectileSpeed: 40
 --- !u!114 &3103286317907650601
 MonoBehaviour:
   m_ObjectHideFlags: 0

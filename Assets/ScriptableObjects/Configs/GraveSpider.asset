@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e8abe452fb0a3b47845a6d44bc7b082, type: 3}
+  m_Name: GraveSpider
+  m_EditorClassIdentifier: 
+  Type: 2
+  CostOutCombat: 0
+  Range: 0
+  FireRate: 0
+  Damage: 0
+  Prefab: {fileID: 3288911130309668864, guid: d81cf58c7fe9045b5ad6b5308e25fbb0, type: 3}
+  BuddyMaxHP: 0
+  BaseHP: 75
+  Speed: 4.6
+  AttackDamage: 16
+  Armor: 0
+  BountyMultiplier: 2
+  VisualScale: 1
+  BuddyAggroRadius: 200
+  HuntsBuddies: 1
+  BuddyDamageMultiplier: 1
+  AttackRange: 0
+  ProjectilePrefab: {fileID: 0}
+  AttackInterval: 1
+  ProjectileSpeed: 14
+  AttackWindup: 0.35
+  ProjectileSpawnHeight: 1.3

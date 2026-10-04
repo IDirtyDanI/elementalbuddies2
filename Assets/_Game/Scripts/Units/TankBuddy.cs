@@ -12,11 +12,8 @@ namespace ElementalBuddies
 
         private float _lastAuraTime;
 
-        protected override void Start()
-        {
-            base.Start();
-            CurrentHP = 100f; 
-        }
+        // Earth-Prefab hat kein serialisiertes BaseMaxHP -> Tank-Standard hier (Config.BuddyMaxHP hat Vorrang)
+        protected override float DefaultMaxHP => 100f;
 
         // Tank: "Damage" = Aura-DPS, "Range" = Taunt-/Aura-Radius, "FireRate" = Taunt-Rate (Config, z. B. 0.16 = alle ~6 s)
         protected override float GetBaseDamageAtLevel(int level) => AuraDps * LevelMultiplier(DamageBonusPerLevel, level);
@@ -51,7 +48,8 @@ namespace ElementalBuddies
         protected override void Update()
         {
             base.Update();
-            
+            if (IsStunned) return;
+
             // Aura Logic (1 tick per second)
             if (Time.time >= _lastAuraTime + 1f)
             {

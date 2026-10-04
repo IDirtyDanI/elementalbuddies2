@@ -22,13 +22,26 @@ MonoBehaviour:
   WaveBonusShardsPerWave: 10
   CombatSurcharge: 1.25
   RefundRatio: 0.7
+  ShardMagnetRadius: 3
+  ShardCollectRadius: 0.5
+  ShardMagnetSpeed: 14
+  ShardPickupSmall: {fileID: 6795268281977184892, guid: e6c24824a93a94e4ab429f876c065ea3, type: 3}
+  ShardPickupMedium: {fileID: 8046600825847995517, guid: e9d074852762f41eeb93e69a68fc41d4, type: 3}
+  ShardPickupLarge: {fileID: 7474223960088736489, guid: 1054c6c440bef4c27a8680483d990df4, type: 3}
+  ShardCollectEffect: {fileID: 8942987047938432881, guid: 67fad83652e204c3c8d06358c1bc3ca2, type: 3}
   StartBuddySlots: 4
   SlotEveryNWaves: 3
-  MaxBuddySlots: 12
+  MaxBuddySlots: 30
   BuddyMaxLevel: 3
   DamageBonusPerLevel: 0.35
   FireRateBonusPerLevel: 0.2
   RangeBonusPerLevel: 0.1
+  HPBonusPerLevel: 0.35
   UpgradeCostFactors:
   - 0.6
   - 1
+  BuddyWaveEndHealPercent: 0.5
+  BuddyHealthBarPrefab: {fileID: 3596947236582065483, guid: 64ba8f5ef2b144be794ec99f2e3c9d23, type: 3}
+  BuddyDeathEffectPrefab: {fileID: 1821139266253955050, guid: aae9d8cd7e5c94e0e821a62a75b74155, type: 3}
+  BuddyHitEffectPrefab: {fileID: 7775074343575362573, guid: 6d49e4e92496741b4bd1af1a5054fcba, type: 3}
+  BuddyStunEffectPrefab: {fileID: 7651933627681563699, guid: e8dcdc109ff9c4c4f978531732e0bfd3, type: 3}

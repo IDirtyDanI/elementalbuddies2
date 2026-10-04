@@ -307,6 +307,9 @@ namespace ElementalBuddies
             if (card.Type == UpgradeType.Heal)
                 return $"Gesamt: {Num(n * card.Value, "0")} HP geheilt";
 
+            if (card.StatToBuff == StatType.ShardGain)
+                return $"Gesamt: Splitter-Ausbeute {Signed(n * card.Value, "0.#")} %";
+
             string stat = StatName(card) + TargetSuffix(card.Target);
             if (card.StatToBuff == StatType.Cooldown)
             {
@@ -337,6 +340,7 @@ namespace ElementalBuddies
                 case StatType.Speed: return "Lauftempo";
                 case StatType.ManaRegen: return "Mana-Regeneration";
                 case StatType.ManaCap: return "Max. Mana";
+                case StatType.ShardGain: return "Splitter-Ausbeute";
                 default: return "";
             }
         }
@@ -423,6 +427,9 @@ namespace ElementalBuddies
                     regen += $" (Basis {Num(eco.BaseRegenOut, "0.#")} / {Num(eco.BaseRegenIn, "0.#")}{pct})";
                 }
                 sb.Append("Mana-Regeneration: ").Append(regen).Append('\n');
+
+                if (eco.ShardGainPercent > 0.0001f)
+                    sb.Append("Splitter-Ausbeute: ").Append(Colored($"{Signed(eco.ShardGainPercent, "0.#")} %", true)).Append('\n');
             }
 
             // Buddies

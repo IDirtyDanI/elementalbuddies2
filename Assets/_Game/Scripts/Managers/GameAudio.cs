@@ -15,7 +15,10 @@ namespace ElementalBuddies
         EnemyDeath,
         PlayerHurt,
         ShrineCaptured,
-        Fusion
+        Fusion,
+        BuddyDeath,
+        BossSpawn,
+        ShardPickup
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.
@@ -156,6 +159,10 @@ namespace ElementalBuddies
         {
             if (Instance != null) Instance.PlayInternal(id, position);
         }
+
+        // Hat der Eintrag Clips? (für Fallback-Sounds)
+        public static bool Has(SfxId id) =>
+            Instance != null && Instance._map.TryGetValue(id, out var e) && e.Clips != null && e.Clips.Length > 0;
 
         private void PlayInternal(SfxId id, Vector3? position)
         {

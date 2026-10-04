@@ -1,11 +1,14 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
 
 namespace ElementalBuddies
 {
     // Eine Händlerkarte auf BuffCard.prefab-Basis: Fähigkeits-Icon + optionale Plakette, Titel, Wert und der
     // konkrete neue Wert („Schwerthieb – Reichweite: 2,6 m → 3,1 m“). Kinder werden über Namen gefunden.
+    // Laden: Preisschild („Gratis“ / „60 ✦“, rot wenn zu teuer), „Gekauft“-Stempel, Abdunkeln nach dem Kauf.
+    // Alle Laden-Refs sind optional (Fallback: Text auf dem Knopf).
     public class MerchantCardUI : MonoBehaviour
     {
         public TextMeshProUGUI TitleText;
@@ -14,8 +17,29 @@ namespace ElementalBuddies
         public Image BadgeImage;
         public Button SelectButton;
 
+        [Header("Laden (optional)")]
+        [Tooltip("Preis: „Gratis“ oder Zahl (mit PriceIcon) bzw. „60 ✦“.")]
+        public TMP_Text PriceText;
+        [Tooltip("Optional: Splitter-Symbol neben dem Preis (ausgeblendet bei „Gratis“).")]
+        public Image PriceIcon;
+        [Tooltip("Container des Preisschilds, wird nach dem Kauf ausgeblendet.")]
+        public GameObject PriceTag;
+        [Tooltip("Stempel „Gekauft“, sichtbar nach dem Kauf.")]
+        public GameObject BoughtOverlay;
+        [Tooltip("Abdunkeln nach dem Kauf (wird bei Bedarf ergänzt).")]
+        public CanvasGroup CanvasGroup;
+        public Color UnaffordableColor = new Color(0.78f, 0.15f, 0.12f);
+        [Range(0f, 1f)] public float BoughtAlpha = 0.55f;
+
+        public int Slot { get; private set; } = -1;
+
         private MerchantCardSO _data;
         private const string PreviewColor = "#2e6b2e";
+        private Color _priceColor = Color.white;
+        private bool _priceColorRead;
+        private Color _labelColor = Color.white;
+        private bool _labelColorRead;
+        private Coroutine _shake;
 
         void Awake()
         {
@@ -25,12 +49,26 @@ namespace ElementalBuddies
             if (SelectButton == null) SelectButton = Find<Button>("SelectButton");
             if (BadgeImage == null) BadgeImage = Find<Image>("Badge");
             if (BadgeImage == null && IconImage != null) BadgeImage = CreateBadge(IconImage.rectTransform);
+            if (PriceText == null) PriceText = Find<TMP_Text>("Price");
+            if (PriceIcon == null) PriceIcon = Find<Image>("PriceIcon");
+            if (PriceTag == null) { var t = Find<Transform>("PriceTag"); if (t != null) PriceTag = t.gameObject; }
+            if (BoughtOverlay == null) { var t = Find<Transform>("Bought"); if (t != null) BoughtOverlay = t.gameObject; }
+            if (CanvasGroup == null) CanvasGroup = GetComponent<CanvasGroup>();
+            if (CanvasGroup == null) CanvasGroup = gameObject.AddComponent<CanvasGroup>();
+            if (PriceText != null && !_priceColorRead)
+            {
+                _priceColor = PriceText.color;
+                _priceColorRead = true;
+            }
         }
 
-        public void Setup(MerchantCardSO data, Sprite badge)
+        public void Setup(MerchantCardSO data, Sprite badge) => Setup(data, badge, -1);
+
+        public void Setup(MerchantCardSO data, Sprite badge, int slot)
         {
             if (TitleText == null) Awake();
             _data = data;
+            Slot = slot;
 
             if (TitleText != null) TitleText.text = data.Title;
             if (DescriptionText != null)
@@ -54,14 +92,88 @@ namespace ElementalBuddies
             {
                 SelectButton.onClick.RemoveAllListeners();
                 SelectButton.onClick.AddListener(OnClick);
-                var label = SelectButton.GetComponentInChildren<TextMeshProUGUI>(true);
-                if (label != null) label.text = "Nehmen";
             }
+            RefreshShopState();
+        }
+
+        // Preis/Gekauft/Leistbar aus dem MerchantManager übernehmen
+        public void RefreshShopState()
+        {
+            var mgr = MerchantManager.Instance;
+            bool bought = mgr != null && Slot >= 0 && mgr.IsBought(Slot);
+            int price = mgr != null ? mgr.NextCardPrice : 0;
+            float shards = EconomyManager.Instance != null ? EconomyManager.Instance.CurrentShards : 0f;
+            bool affordable = price <= 0 || shards >= price;
+
+            if (BoughtOverlay != null) BoughtOverlay.SetActive(bought);
+            if (PriceTag != null) PriceTag.SetActive(!bought);
+            if (CanvasGroup != null) CanvasGroup.alpha = bought ? BoughtAlpha : 1f;
+
+            if (PriceText != null)
+            {
+                if (PriceTag == null) PriceText.gameObject.SetActive(!bought);
+                bool icon = PriceIcon != null && price > 0;
+                PriceText.text = price <= 0 ? "Gratis" : icon ? price.ToString() : $"{price} {ShardGlyph(PriceText)}";
+                PriceText.color = affordable ? _priceColor : UnaffordableColor;
+            }
+            if (PriceIcon != null) PriceIcon.gameObject.SetActive(!bought && price > 0);
+
+            if (SelectButton != null)
+            {
+                SelectButton.interactable = !bought;
+                var label = SelectButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (label != null)
+                {
+                    // Ohne Preisschild steht der Preis auf dem Knopf
+                    string buy = PriceText != null ? "Kaufen" : $"Kaufen ({price} {ShardGlyph(label)})";
+                    label.text = bought ? "Gekauft" : price <= 0 ? (PriceText != null ? "Nehmen" : "Nehmen (gratis)") : buy;
+                    if (!_labelColorRead)
+                    {
+                        _labelColor = label.color;
+                        _labelColorRead = true;
+                    }
+                    label.color = PriceText == null && !bought && !affordable ? UnaffordableColor : _labelColor;
+                }
+            }
+        }
+
+        // „✦“, falls die Schrift das Zeichen hat, sonst Wort
+        private static string ShardGlyph(TMP_Text text)
+        {
+            var font = text.font;
+            return font != null && font.HasCharacter('\u2726', true) ? "\u2726" : "Splitter";
+        }
+
+        // Zu wenig Splitter: kurz wackeln (unskalierte Zeit, Spiel steht)
+        public void Shake()
+        {
+            if (!isActiveAndEnabled) return;
+            if (_shake != null) StopCoroutine(_shake);
+            _shake = StartCoroutine(ShakeRoutine());
+        }
+
+        private IEnumerator ShakeRoutine()
+        {
+            Transform target = PriceTag != null ? PriceTag.transform : transform;
+            Vector3 basePos = target.localPosition;
+            float t = 0f;
+            while (t < 0.35f)
+            {
+                t += Time.unscaledDeltaTime;
+                float a = (1f - t / 0.35f) * 10f;
+                target.localPosition = basePos + new Vector3(Mathf.Sin(t * 70f) * a, 0f, 0f);
+                yield return null;
+            }
+            target.localPosition = basePos;
+            _shake = null;
         }
 
         private void OnClick()
         {
-            if (MerchantManager.Instance != null) MerchantManager.Instance.SelectCard(_data);
+            var mgr = MerchantManager.Instance;
+            if (mgr == null) return;
+            if (Slot >= 0) mgr.BuyCard(Slot);
+            else mgr.SelectCard(_data);
         }
 
         // Plakette unten rechts am Icon (Modifikator-Symbol)

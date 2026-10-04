@@ -75,7 +75,7 @@ namespace ElementalBuddies
         // Defaults beim Hinzufügen der Komponente im Editor
         protected virtual void Reset()
         {
-            MaxHP = 120f;
+            BaseMaxHP = 120f;
             Element = DefaultElement;
         }
 

@@ -15,6 +15,9 @@ namespace ElementalBuddies
         public int UsedSlots => ElementalBuddy.ActiveCount;
         public bool HasFreeSlot => Unlimited || UsedSlots < MaxSlots;
         public bool Unlimited { get; private set; } // Dev-Modus: kein Buddy-Limit
+        public int Cap => settings != null ? settings.MaxBuddySlots : 30;
+        // Obergrenze erreicht → keine Slot-Karten mehr im Wellen-Draft
+        public bool IsAtCap => MaxSlots >= Cap;
 
         public void SetUnlimited(bool value)
         {
@@ -81,7 +84,7 @@ namespace ElementalBuddies
 
         public void AddSlot(int n = 1)
         {
-            int cap = settings != null ? settings.MaxBuddySlots : 12;
+            int cap = Cap;
             int newMax = Mathf.Clamp(MaxSlots + n, 0, Mathf.Max(cap, MaxSlots));
             if (newMax == MaxSlots) return;
             MaxSlots = newMax;

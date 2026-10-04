@@ -30,6 +30,7 @@ namespace ElementalBuddies
         ManaCap,
         BuddySlot,
         Cooldown,  // Spieler: Abklingzeiten aller Fähigkeiten (Wert = Prozent schneller)
-        Mobility   // Spieler: Blink-Reichweite / Rollen-Distanz
+        Mobility,  // Spieler: Blink-Reichweite / Rollen-Distanz
+        ShardGain  // Seelensplitter-Drops (Wert = Prozent mehr, additiv)
     }
 }

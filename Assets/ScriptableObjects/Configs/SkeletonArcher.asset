@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e8abe452fb0a3b47845a6d44bc7b082, type: 3}
+  m_Name: SkeletonArcher
+  m_EditorClassIdentifier: 
+  Type: 2
+  CostOutCombat: 0
+  Range: 0
+  FireRate: 0
+  Damage: 0
+  Prefab: {fileID: 2875852259225389983, guid: 978a4e5760f28450bbfa1a6e342ac413, type: 3}
+  BuddyMaxHP: 0
+  BaseHP: 40
+  Speed: 3
+  AttackDamage: 9
+  Armor: 0
+  BountyMultiplier: 1.5
+  VisualScale: 1
+  BuddyAggroRadius: 14
+  HuntsBuddies: 0
+  BuddyDamageMultiplier: 1
+  AttackRange: 9
+  ProjectilePrefab: {fileID: 1575777186252332544, guid: fd9e743bbddf24b2fb125baa4565307f, type: 3}
+  AttackInterval: 1.6
+  ProjectileSpeed: 16
+  AttackWindup: 0.35
+  ProjectileSpawnHeight: 1.3

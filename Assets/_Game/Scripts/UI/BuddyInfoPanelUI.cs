@@ -405,6 +405,16 @@ namespace ElementalBuddies
                 float ratio = _buddy.GetDamageAtLevel(level) > 0f ? _buddy.GetDamageAtLevel(next) / _buddy.GetDamageAtLevel(level) : 1f;
                 stats += "\n" + Line("Segen", healer.EffectiveBlessHeal, healer.EffectiveBlessHeal * ratio, canUpgrade, $" HP / {healer.BlessInterval:0.#} s", "0.#");
             }
+            var shooter = _buddy as ShooterBuddy;
+            if (shooter != null && (shooter.IsSniperAtLevel(level) || (canUpgrade && shooter.IsSniperAtLevel(next))))
+            {
+                // Scharfschütze: Zielwahl und Boss-Bonus (beim Aufwerten als Vorschau);
+                // zweizeilig und kleiner, da StatsText nicht umbricht (300 px breit)
+                int bonus = Mathf.RoundToInt((shooter.SniperBossDamageMultiplier - 1f) * 100f);
+                stats += "\n<size=80%>" + (shooter.IsSniperAtLevel(level)
+                    ? $"<color=#B4500A>Scharfschütze: Bosse & Fernkämpfer zuerst,\n+{bonus} % Schaden gegen Bosse</color>"
+                    : $"<color=#3E7A26>Ab Stufe {shooter.SniperFromLevel}: Scharfschütze – Bosse &\nFernkämpfer zuerst, +{bonus} % gegen Bosse</color>") + "</size>";
+            }
             return stats + AuraLine();
         }
 

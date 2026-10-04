@@ -39,7 +39,7 @@ namespace ElementalBuddies
             var active = Active;
             for (int i = 0; i < active.Count; i++)
             {
-                if (!(active[i] is AirBuddy air) || air == null || air.Config == null || !air.isActiveAndEnabled) continue;
+                if (!(active[i] is AirBuddy air) || air == null || air.Config == null || !air.isActiveAndEnabled || air.IsStunned) continue;
                 float r = air.EffectiveRange;
                 Vector3 d = air.transform.position - pos;
                 d.y = 0f;

@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e8abe452fb0a3b47845a6d44bc7b082, type: 3}
+  m_Name: BossNecromancer
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.EnemyConfigSO
+  Type: 4
+  CostOutCombat: 0
+  Range: 0
+  FireRate: 0
+  Damage: 0
+  Prefab: {fileID: 7766600034171190633, guid: c7de8552d8cbe41ab8bd4091bf4d438b, type: 3}
+  BuddyMaxHP: 0
+  BaseHP: 900
+  Speed: 2.2
+  AttackDamage: 18
+  Armor: 0.15
+  BountyMultiplier: 20
+  VisualScale: 1.9
+  BuddyAggroRadius: 13
+  HuntsBuddies: 0
+  BuddyDamageMultiplier: 1
+  AttackRange: 11
+  ProjectilePrefab: {fileID: 7031300016643574152, guid: a7462c6ff9a864d17a5761767acc16bf, type: 3}
+  AttackInterval: 2
+  ProjectileSpeed: 12
+  AttackWindup: 0.4
+  ProjectileSpawnHeight: 0.6
+  IsBoss: 1
+  DisplayName: Nekromant
+  HpBonusMultiplier: 5
+  ControlResistance: 0.6
+  ThemeColor: {r: 0.35, g: 1, b: 0.25, a: 1}

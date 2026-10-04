@@ -36,7 +36,7 @@ namespace ElementalBuddies
         protected override void Update()
         {
             base.Update();
-            if (Config == null || Time.time < _nextBlessTime) return;
+            if (Config == null || IsStunned || Time.time < _nextBlessTime) return;
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver) return;
 
             _nextBlessTime = Time.time + BlessInterval;

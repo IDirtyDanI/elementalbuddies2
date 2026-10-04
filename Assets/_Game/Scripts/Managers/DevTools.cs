@@ -26,6 +26,9 @@ namespace ElementalBuddies
         [Tooltip("Pro übersprungene 3 Wellen einen Buddy-Slot geben (wie im normalen Spiel).")]
         public bool GrantSkippedSlots = true;
         public bool ShowHelp = true;
+        [Tooltip("F9 spawnt reihum den nächsten Boss am nächstgelegenen offenen Portal.")]
+        public System.Collections.Generic.List<EnemyConfigSO> DevBossConfigs = new System.Collections.Generic.List<EnemyConfigSO>();
+        private int _bossCursor;
 
         private const float ShardReserve = 9999f;
         private GUIStyle _box, _label;
@@ -97,6 +100,7 @@ namespace ElementalBuddies
             }
             if (kb.f7Key.wasPressedThisFrame) DevActivateMerchant(kb.shiftKey.isPressed);
             if (kb.f8Key.wasPressedThisFrame) DevCaptureMerchant();
+            if (kb.f9Key.wasPressedThisFrame) DevSpawnBoss();
         }
 
         // F7: nächsten Händler sofort öffnen (Beutel bzw. ForceMerchant); Shift+F7: nächsten Händlertyp erzwingen
@@ -117,6 +121,34 @@ namespace ElementalBuddies
             }
             else m = mm.ActivateNext();
             if (m == null) ToastUI.Show("DEV: kein Händler verfügbar");
+        }
+
+        // F9: nächsten Boss aus DevBossConfigs am nächsten offenen Portal (zum Spieler) spawnen, mit Wellen-HP-Bonus
+        public EnemyBrain DevSpawnBoss()
+        {
+            var wm = WaveManager.Instance;
+            if (wm == null || DevBossConfigs == null || DevBossConfigs.Count == 0) { ToastUI.Show("DEV: keine Boss-Configs"); return null; }
+            EnemyConfigSO config = null;
+            for (int k = 0; k < DevBossConfigs.Count && config == null; k++)
+            {
+                var c = DevBossConfigs[(_bossCursor + k) % DevBossConfigs.Count];
+                if (c != null && c.Prefab != null) { config = c; _bossCursor = (_bossCursor + k + 1) % DevBossConfigs.Count; }
+            }
+            if (config == null) { ToastUI.Show("DEV: Boss-Config ohne Prefab"); return null; }
+
+            Vector3 from = PlayerAbilities.Instance != null ? PlayerAbilities.Instance.transform.position : Vector3.zero;
+            SpawnPortal best = null;
+            float bestDist = float.MaxValue;
+            foreach (var p in SpawnPortal.All)
+            {
+                if (p == null || !p.IsOpen) continue;
+                float d = (p.SpawnTransform.position - from).sqrMagnitude;
+                if (d < bestDist) { bestDist = d; best = p; }
+            }
+            Vector3 pos;
+            if (best != null) pos = best.GetSpawnPosition();
+            else if (!wm.TryGetRescuePosition(out pos)) { ToastUI.Show("DEV: kein Spawnpunkt"); return null; }
+            return wm.SpawnEnemyAt(config, pos);
         }
 
         // F8: aktiven Händler sofort einnehmen (Kartenauswahl öffnet sich)
@@ -168,9 +200,10 @@ namespace ElementalBuddies
                 "F5  +1 Buddy-Slot\n" +
                 "F6  Champion wechseln\n" +
                 "F7  nächsten Händler öffnen (Shift: Händlertyp durchschalten)\n" +
-                "F8  aktiven Händler sofort einnehmen";
-            GUI.Box(new Rect(12, y, 520, 214), GUIContent.none, _box);
-            GUI.Label(new Rect(22, y + 6, 510, 209), text, _label);
+                "F8  aktiven Händler sofort einnehmen\n" +
+                "F9  nächsten Boss spawnen";
+            GUI.Box(new Rect(12, y, 520, 236), GUIContent.none, _box);
+            GUI.Label(new Rect(22, y + 6, 510, 231), text, _label);
         }
     }
 }

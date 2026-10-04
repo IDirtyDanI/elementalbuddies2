@@ -16,10 +16,13 @@ namespace ElementalBuddies
         [Tooltip("Zusätzliche Gegner pro Welle nach StartWave (abgerundet).")]
         public float PerWave;
         public float SpawnInterval = 1f;
+        [Tooltip("0 = jede Welle ab StartWave; n > 0 = nur jede n-te Welle (StartWave, StartWave + n, …), z. B. Bosse.")]
+        public int EveryNthWave = 0;
 
         public int GetCount(int waveNumber)
         {
             if (Config == null || waveNumber < StartWave) return 0;
+            if (EveryNthWave > 0 && (waveNumber - StartWave) % EveryNthWave != 0) return 0;
             return Mathf.Max(0, BaseCount + Mathf.FloorToInt(PerWave * (waveNumber - StartWave)));
         }
     }
@@ -79,6 +82,7 @@ namespace ElementalBuddies
         void Start()
         {
             EnemyBrain.OnEnemyDeath += HandleEnemyDeath;
+            EnemyBrain.OnBossSpawned += HandleBossSpawned;
             if (GameManager.Instance != null) GameManager.Instance.OnGameOver += HandleGameOver;
 
             // Portale für die erste Welle schon beim Spielstart sichtbar öffnen (ohne Meldung)
@@ -88,7 +92,16 @@ namespace ElementalBuddies
         void OnDestroy()
         {
             EnemyBrain.OnEnemyDeath -= HandleEnemyDeath;
+            EnemyBrain.OnBossSpawned -= HandleBossSpawned;
             if (GameManager.Instance != null) GameManager.Instance.OnGameOver -= HandleGameOver;
+        }
+
+        // Boss-Ankündigung
+        private void HandleBossSpawned(EnemyBrain boss)
+        {
+            if (boss == null) return;
+            ToastUI.Show($"{boss.DisplayName} ist erschienen!");
+            GameAudio.Play(GameAudio.Has(SfxId.BossSpawn) ? SfxId.BossSpawn : SfxId.StoneWall);
         }
 
         private bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
@@ -371,7 +384,9 @@ namespace ElementalBuddies
             {
                 if (IsGameOver) yield break;
                 SpawnEnemy(group.EnemyType);
-                yield return new WaitForSeconds(group.SpawnInterval);
+                // Nach dem letzten Gegner nicht mehr warten: sonst läuft die Routine über das Wellenende hinaus und
+                // zählt _spawnRoutinesRunning der NÄCHSTEN Welle herunter → Sicherheitsnetz beendet sie zu früh.
+                if (i < group.Count - 1) yield return new WaitForSeconds(group.SpawnInterval);
             }
             _spawnRoutinesRunning--;
         }

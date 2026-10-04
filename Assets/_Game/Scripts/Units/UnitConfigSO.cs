@@ -29,6 +29,10 @@ namespace ElementalBuddies
         public float Damage;
         public GameObject Prefab; // Reference to the unit's prefab
 
+        [Header("Buddy-Leben")]
+        [Tooltip("Basis-Leben des Buddys auf Stufe 1 (0 = Standard der Buddy-Klasse).")]
+        public float BuddyMaxHP = 0f;
+
         // Reference to global settings for surcharge calculation
         private GlobalSettingsSO _globalSettings;
         public GlobalSettingsSO GlobalSettings

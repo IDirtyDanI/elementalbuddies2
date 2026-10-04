@@ -342,6 +342,7 @@ namespace ElementalBuddies
         {
             if (_selectedUnitConfig == null || _selectedUnitConfig.Prefab == null) return;
             
+            _reachCache.Clear(); // NavMesh kann sich zwischen den Bauphasen ändern (Belagerung)
             _currentGhost = Instantiate(_selectedUnitConfig.Prefab);
             
             // Disable logic components on ghost
@@ -423,7 +424,44 @@ namespace ElementalBuddies
 
             if (!EconomyManager.Instance.CanAfford(cost)) return false;
 
+            // Gegner müssen den Buddy erreichen können (keine abgeschnittenen NavMesh-Inseln)
+            if (!IsReachableByEnemies(position)) return false;
+
             return true;
+        }
+
+        [Header("Erreichbarkeit")]
+        [Tooltip("Max. horizontaler Abstand des Bauplatzes zum nächsten begehbaren NavMesh-Punkt, der mit dem Nexus verbunden ist (Nahkampf-Reichweite).")]
+        public float MaxReachDistance = 1.3f;
+
+        // Cache pro Rasterzelle (Ghost-Validierung läuft jeden Frame); wird pro Bau-Auswahl geleert
+        private readonly Dictionary<Vector2Int, bool> _reachCache = new Dictionary<Vector2Int, bool>();
+        private UnityEngine.AI.NavMeshPath _reachPath;
+
+        private bool IsReachableByEnemies(Vector3 position)
+        {
+            var nexus = Nexus.Instance;
+            if (nexus == null) return true;
+
+            var cell = new Vector2Int(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z));
+            if (_reachCache.TryGetValue(cell, out bool cached)) return cached;
+
+            bool reachable = false;
+            if (UnityEngine.AI.NavMesh.SamplePosition(position, out var hit, MaxReachDistance + 1f, UnityEngine.AI.NavMesh.AllAreas))
+            {
+                Vector3 d = hit.position - position;
+                d.y = 0f;
+                Vector3 nexusPoint = nexus.GetClosestPoint(hit.position);
+                if (d.magnitude <= MaxReachDistance
+                    && UnityEngine.AI.NavMesh.SamplePosition(nexusPoint, out var nexusHit, 4f, UnityEngine.AI.NavMesh.AllAreas))
+                {
+                    if (_reachPath == null) _reachPath = new UnityEngine.AI.NavMeshPath();
+                    reachable = UnityEngine.AI.NavMesh.CalculatePath(hit.position, nexusHit.position, UnityEngine.AI.NavMesh.AllAreas, _reachPath)
+                                && _reachPath.status == UnityEngine.AI.NavMeshPathStatus.PathComplete;
+                }
+            }
+            _reachCache[cell] = reachable;
+            return reachable;
         }
         
         private void UpdateGhostVisuals(bool isValid)
@@ -442,7 +480,12 @@ namespace ElementalBuddies
 
         private void TryBuild()
         {
-            if (!ValidatePlacement(_currentGhost.transform.position)) return;
+            if (!ValidatePlacement(_currentGhost.transform.position))
+            {
+                if (!IsReachableByEnemies(_currentGhost.transform.position))
+                    ToastUI.Show("Hier können Gegner nicht hin – dort darf kein Buddy stehen.");
+                return;
+            }
 
             float cost = EconomyManager.Instance.GetBuildingCost(_selectedUnitConfig.CostOutCombat);
             if (EconomyManager.Instance.TrySpendShards(cost))

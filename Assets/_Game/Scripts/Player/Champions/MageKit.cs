@@ -8,7 +8,7 @@ namespace ElementalBuddies
     {
         [Header("Arkanball (LMB)")]
         public GameObject ArcaneBallPrefab;
-        public float ArcaneBallManaCost = 15f;
+        public float ArcaneBallManaCost = 0f;
         public float ArcaneBallCooldown = 1f;
         public Transform SpawnPoint;
 

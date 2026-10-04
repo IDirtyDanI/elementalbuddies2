@@ -20,6 +20,17 @@ namespace ElementalBuddies
         public bool MovementLocked { get; set; }
         public bool RotationLocked { get; set; }
 
+        // Verlangsamung durch Gegner (Boss-Fähigkeiten): stärkste laufende gewinnt, unabhängig von SpeedMultiplier.
+        // Wirkt nur aufs normale Laufen (Rolle/Blink/Sprung-Stampfer bewegen selbst).
+        private float _slowPercent;
+        private float _slowUntil;
+        public float SlowMultiplier => Time.time < _slowUntil ? 1f - _slowPercent : 1f;
+        public bool IsSlowed => Time.time < _slowUntil && _slowPercent > 0f;
+
+        // Rückstoß durch Gegner: Restweg, der über die Dauer abgebaut wird
+        private Vector3 _pushDir;
+        private float _pushRemaining, _pushTime, _pushDuration, _pushDistance;
+
         private CharacterController _characterController;
         public InputAction MoveAction { get; private set; } // Changed to public property
         private InputAction _aimAction;
@@ -136,8 +147,50 @@ namespace ElementalBuddies
             _playerVelocity.y += Gravity * Time.deltaTime;
 
             // Apply movement input (Absolute / World Space)
-            Vector3 movement = moveInput * (MoveSpeed * SpeedMultiplier);
-            _characterController.Move((movement + _playerVelocity) * Time.deltaTime);
+            Vector3 movement = moveInput * (MoveSpeed * SpeedMultiplier * SlowMultiplier);
+            Vector3 delta = (movement + _playerVelocity) * Time.deltaTime;
+
+            // Rückstoß (ease-out)
+            if (_pushRemaining > 0f)
+            {
+                _pushTime = Mathf.Min(_pushDuration, _pushTime + Time.deltaTime);
+                float k = _pushTime / _pushDuration;
+                float target = _pushDistance * (1f - (1f - k) * (1f - k));
+                float step = Mathf.Min(_pushRemaining, target - (_pushDistance - _pushRemaining));
+                if (step > 0f) { delta += _pushDir * step; _pushRemaining -= step; }
+                if (_pushTime >= _pushDuration) _pushRemaining = 0f;
+            }
+
+            _characterController.Move(delta);
+        }
+
+        // Wie EnemyBrain.ApplySlow: percent 0..1 (0.4 = 40 % langsamer), der stärkste laufende Slow gewinnt
+        public void ApplySlow(float percent, float duration)
+        {
+            percent = Mathf.Clamp01(percent);
+            if (percent <= 0f || duration <= 0f) return;
+            bool active = Time.time < _slowUntil;
+            if (!active || percent > _slowPercent)
+            {
+                _slowPercent = percent;
+                _slowUntil = Time.time + duration;
+            }
+            else if (Mathf.Approximately(percent, _slowPercent))
+            {
+                _slowUntil = Mathf.Max(_slowUntil, Time.time + duration);
+            }
+        }
+
+        // Horizontaler Rückstoß (z. B. Blutwirbel des Knochenfürsten)
+        public void ApplyKnockback(Vector3 direction, float distance, float duration = 0.25f)
+        {
+            direction.y = 0f;
+            if (distance <= 0f || direction.sqrMagnitude < 0.0001f) return;
+            _pushDir = direction.normalized;
+            _pushDistance = distance;
+            _pushRemaining = distance;
+            _pushTime = 0f;
+            _pushDuration = Mathf.Max(0.02f, duration);
         }
 
         // Nur den Mauspunkt aktualisieren (ohne Drehung), z. B. während einer Rolle
