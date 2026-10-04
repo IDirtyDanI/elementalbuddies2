@@ -15,7 +15,12 @@ namespace ElementalBuddies
         Air,
         Shadow,
         Magma,
-        Crystal
+        Crystal,
+        // Super-Elementare (Tri-Fusion, angehängt)
+        VolcanoTitan,
+        StormLord,
+        Phoenix,
+        WorldTree
     }
 
     [CreateAssetMenu(fileName = "UnitConfig", menuName = "ElementalBuddies/Unit Config", order = 1)]

@@ -11,15 +11,22 @@ namespace ElementalBuddies
         Air,
         Shadow,
         Magma,
-        Crystal
+        Crystal,
+        // Super-Elementare (Tri-Fusion aus drei Elementen, angehängt)
+        VolcanoTitan,
+        StormLord,
+        Phoenix,
+        WorldTree
     }
 
     // Anzeige-Daten pro Fusions-Element
     public static class FusionInfo
     {
-        public static readonly string[] Names = { "Blitz", "Wasser", "Luft", "Schatten", "Magma", "Kristall" };
+        public static readonly string[] Names =
+            { "Blitz", "Wasser", "Luft", "Schatten", "Magma", "Kristall", "Vulkan-Titan", "Sturmfürst", "Phönix", "Weltenbaum" };
         public static readonly string[] DisplayNames =
-            { "Blitz-Elementar", "Wasser-Elementar", "Luft-Elementar", "Schatten-Elementar", "Magma-Elementar", "Kristall-Elementar" };
+            { "Blitz-Elementar", "Wasser-Elementar", "Luft-Elementar", "Schatten-Elementar", "Magma-Elementar", "Kristall-Elementar",
+              "Vulkan-Titan", "Sturmfürst", "Phönix", "Weltenbaum" };
         public static readonly Color[] Colors =
         {
             new Color(1f, 0.88f, 0.35f),   // Blitz
@@ -28,6 +35,10 @@ namespace ElementalBuddies
             new Color(0.55f, 0.25f, 0.85f),// Schatten
             new Color(1f, 0.35f, 0.1f),    // Magma
             new Color(0.6f, 0.9f, 1f),     // Kristall
+            new Color(1f, 0.45f, 0.15f),   // Vulkan-Titan
+            new Color(0.55f, 0.6f, 1f),    // Sturmfürst
+            new Color(1f, 0.6f, 0.2f),     // Phönix
+            new Color(0.45f, 0.85f, 0.4f), // Weltenbaum
         };
         // Standard-Eltern (Basis-Element-Index), falls ein Fusions-Buddy ohne Fusion platziert wurde
         public static readonly Vector2Int[] DefaultParents =
@@ -39,6 +50,26 @@ namespace ElementalBuddies
             new Vector2Int(0, 2), // Magma = Feuer + Erde
             new Vector2Int(1, 2), // Kristall = Eis + Erde
         };
+        // Super-Elementare: drei Eltern-Elemente
+        public static readonly Vector3Int[] DefaultTriParents =
+        {
+            new Vector3Int(0, 1, 2), // Vulkan-Titan = Feuer + Eis + Erde
+            new Vector3Int(0, 1, 3), // Sturmfürst = Feuer + Eis + Licht
+            new Vector3Int(0, 2, 3), // Phönix = Feuer + Erde + Licht
+            new Vector3Int(1, 2, 3), // Weltenbaum = Eis + Erde + Licht
+        };
+
+        public static bool IsSuper(FusionElement e) => (int)e >= (int)FusionElement.VolcanoTitan;
+
+        // Eltern-Elemente (z = -1 bei 2er-Fusionen)
+        public static Vector3Int GetDefaultParents(FusionElement e)
+        {
+            int i = (int)e;
+            if (IsSuper(e))
+                return DefaultTriParents[Mathf.Clamp(i - (int)FusionElement.VolcanoTitan, 0, DefaultTriParents.Length - 1)];
+            var p = DefaultParents[Mathf.Clamp(i, 0, DefaultParents.Length - 1)];
+            return new Vector3Int(p.x, p.y, -1);
+        }
 
         private static int Clamp(FusionElement e) => Mathf.Clamp((int)e, 0, Names.Length - 1);
         public static string Name(FusionElement e) => Names[Clamp(e)];
@@ -58,8 +89,11 @@ namespace ElementalBuddies
         public override bool IsFusion => true;
         public override int MaxLevel => 1;
 
-        public int ParentA => ParentElementA >= 0 ? ParentElementA : FusionInfo.DefaultParents[(int)Element].x;
-        public int ParentB => ParentElementB >= 0 ? ParentElementB : FusionInfo.DefaultParents[(int)Element].y;
+        public int ParentA => ParentElementA >= 0 ? ParentElementA : FusionInfo.GetDefaultParents(Element).x;
+        public int ParentB => ParentElementB >= 0 ? ParentElementB : FusionInfo.GetDefaultParents(Element).y;
+
+        // Bitmaske der Eltern-Elemente (1 << Index)
+        public virtual int ElementMask => (1 << ParentA) | (1 << ParentB);
 
         public override int ElementIndex => Mathf.Clamp(ParentA, 0, ShrineBonuses.ElementCount - 1);
         public override string DisplayName => FusionInfo.Name(Element);

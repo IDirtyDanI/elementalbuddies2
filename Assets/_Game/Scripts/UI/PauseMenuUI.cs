@@ -443,22 +443,23 @@ namespace ElementalBuddies
                     sb.Append(BuddyLine(cfg, um)).Append('\n');
                 }
 
-                // Aktive Fusions-Buddies pro Typ
+                // Aktive Fusions- und Super-Buddies pro Typ
                 var fusionCounts = new int[FusionInfo.Names.Length];
-                bool anyFusion = false;
                 foreach (var b in ElementalBuddy.Active)
                 {
                     if (!(b is FusionBuddy f)) continue;
                     fusionCounts[Mathf.Clamp((int)f.Element, 0, fusionCounts.Length - 1)]++;
-                    anyFusion = true;
                 }
-                if (anyFusion)
+                var fusions = new List<string>();
+                var supers = new List<string>();
+                for (int i = 0; i < fusionCounts.Length; i++)
                 {
-                    var fusions = new List<string>();
-                    for (int i = 0; i < fusionCounts.Length; i++)
-                        if (fusionCounts[i] > 0) fusions.Add($"{fusionCounts[i]}× {FusionInfo.Names[i]}");
-                    sb.Append("Fusionen: ").Append(string.Join(" · ", fusions)).Append('\n');
+                    if (fusionCounts[i] <= 0) continue;
+                    var list = FusionInfo.IsSuper((FusionElement)i) ? supers : fusions;
+                    list.Add($"{fusionCounts[i]}× {FusionInfo.Names[i]}");
                 }
+                if (fusions.Count > 0) sb.Append("Fusionen: ").Append(string.Join(" · ", fusions)).Append('\n');
+                if (supers.Count > 0) sb.Append("Super-Elementare: ").Append(string.Join(" · ", supers)).Append('\n');
             }
 
             // Buddy-Slots

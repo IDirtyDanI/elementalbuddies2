@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace ElementalBuddies
 {
-    public abstract class ElementalBuddy : MonoBehaviour, IDamageable, IHealthBarTarget
+    public abstract class ElementalBuddy : MonoBehaviour, IDamageable, IHealthBarTarget, IShieldedTarget
     {
         public UnitConfigSO Config; // Public for setup if needed
         [HideInInspector] public float PaidCost; // Tatsächlich bezahlte Seelensplitter inkl. Aufwertungen (für Refund beim Verkauf)
@@ -57,7 +57,11 @@ namespace ElementalBuddies
             new[] { "Flämmchen", "Eiszapfen", "Kiesel", "Funkenlicht" },
             new[] { "Feuer-Elementar", "Eis-Elementar", "Erd-Golem", "Licht-Geist" },
             new[] { "Flammenritter", "Frostwächter", "Steinkoloss", "Sonnenpaladin" },
+            new[] { "Flammenkaiser", "Frostkönig", "Bergkönig", "Sonnenerzengel" },
         };
+        // Ab dieser Stufe hat ein Basis-Buddy seinen Stufe-4-Bonus (Perk)
+        public const int PerkLevel = 4;
+        public bool HasPerk => !IsFusion && _level >= PerkLevel;
         private int _elementIndex = -1;
 
         // Reset bei deaktiviertem Domain Reload
@@ -87,7 +91,7 @@ namespace ElementalBuddies
 
         protected virtual void Start()
         {
-            CurrentHP = MaxHP;
+            CurrentHP = MaxHP * Mathf.Clamp(_startHPFraction, 0.01f, 1f);
             RefreshVisual();
 
             // Ghosts sind deaktiviert -> Start läuft nur bei platzierten Buddies
@@ -158,6 +162,16 @@ namespace ElementalBuddies
         public virtual void TakeDamage(float amount)
         {
             if (_isDead || amount <= 0f) return;
+            // Steinhaut eines Stufe-4-Erd-Buddys in der Nähe (nach den eigenen Reduktionen der Subklassen)
+            amount *= TankBuddy.GetDamageTakenMultiplier(this);
+            // Schild fängt zuerst ab
+            if (ShieldAmount > 0f)
+            {
+                float absorbed = Mathf.Min(_shield, amount);
+                _shield -= absorbed;
+                amount -= absorbed;
+                if (amount <= 0f) return;
+            }
             CurrentHP -= amount;
             if (CurrentHP <= 0)
             {
@@ -183,6 +197,38 @@ namespace ElementalBuddies
                 }
             }
         }
+
+        // ---------------- Schild (Segen des Sonnenerzengels) ----------------
+
+        private float _shield, _shieldUntil;
+        public float ShieldAmount => Time.time < _shieldUntil ? _shield : 0f;
+
+        // Schild, der Schaden zuerst abfängt; stapelt nicht (stärkerer Wert bleibt, Dauer wird erneuert)
+        public void AddShield(float amount, float duration)
+        {
+            if (_isDead || amount <= 0f || duration <= 0f) return;
+            _shield = Mathf.Max(ShieldAmount, amount);
+            _shieldUntil = Time.time + duration;
+        }
+
+        // ---------------- Wiedergeburt (Phönix) ----------------
+
+        private float _startHPFraction = 1f;
+        public bool SuppressLevelFx { get; private set; }
+
+        // Vor Start() aufrufen: Stufe ohne Kosten setzen (Wiedergeburt), Level-Up-Effekte unterdrückt
+        public void RestoreLevel(int level)
+        {
+            level = Mathf.Clamp(level, 1, MaxLevel);
+            if (level == _level) return;
+            _level = level;
+            SuppressLevelFx = true;
+            try { OnLevelChanged?.Invoke(); }
+            finally { SuppressLevelFx = false; }
+        }
+
+        // Vor Start() aufrufen: mit diesem Anteil des Max-Lebens starten
+        public void SetStartHealthFraction(float fraction) => _startHPFraction = Mathf.Clamp01(fraction);
 
         // Heilung (z. B. durch den Segen des Licht-Buddys); gibt die tatsächlich geheilte Menge zurück
         public float Heal(float amount)
@@ -274,7 +320,8 @@ namespace ElementalBuddies
         public virtual float GetFireRateAtLevel(int level) => Config != null ? Config.FireRate * LevelMultiplier(FireRateBonusPerLevel, level) : 0f;
         public virtual float GetRangeAtLevel(int level) => Config != null ? Config.Range * LevelMultiplier(RangeBonusPerLevel, level) : 0f;
 
-        public float EffectiveDamage => GetDamageAtLevel(_level);
+        // inkl. Phönix-Aura (nur hier, nicht in GetDamageAtLevel -> kein Doppelzählen in Subklassen/Anzeige)
+        public float EffectiveDamage => GetDamageAtLevel(_level) * PhoenixBuddy.GetDamageMultiplier(this);
         // inkl. Feuerrate-Aura eines Luft-Buddys in der Nähe
         public float EffectiveFireRate => GetFireRateAtLevel(_level) * AirBuddy.GetFireRateMultiplier(this);
         public float EffectiveRange => GetRangeAtLevel(_level);
@@ -315,8 +362,9 @@ namespace ElementalBuddies
 
         public virtual string DisplayName => ElementNames[ElementIndex];
         public virtual bool IsFusion => false;
+        public virtual bool IsSuper => false;
 
-        // Entwicklungsstufe 1–3 (Stufen über 3 zeigen die letzte Entwicklung)
+        // Entwicklungsstufe 1–4 (höhere Stufen zeigen die letzte Entwicklung)
         public int Stage => Mathf.Clamp(_level, 1, StageNames.Length);
         public virtual string StageName => StageNames[Stage - 1][ElementIndex];
 
@@ -332,7 +380,7 @@ namespace ElementalBuddies
         {
             if (string.IsNullOrEmpty(n)) return -1;
             n = n.ToLowerInvariant();
-            if (n.Contains("fusion")) return -1; // Fusions-Configs ("Fusion_Blitz" …) nie als Basis-Element deuten
+            if (n.Contains("fusion") || n.Contains("super")) return -1; // Fusions-/Super-Configs nie als Basis-Element deuten
             if (n.Contains("fire")) return 0;
             if (n.Contains("ice")) return 1;
             if (n.Contains("earth")) return 2;

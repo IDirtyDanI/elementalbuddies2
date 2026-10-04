@@ -85371,6 +85371,11 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 9933fd87b9f944537b20b0b7fa62d403, type: 3}
   - {fileID: 21300000, guid: 460a8ed3bcab841eead9ab2649de2e2d, type: 3}
   - {fileID: 21300000, guid: 2e4858fe7397b431aaff129c3db00d70, type: 3}
+  Stage4Sprites:
+  - {fileID: 21300000, guid: 4c8bcc57e0a514b2fad99f2140c95145, type: 3}
+  - {fileID: 21300000, guid: beba4124e6dce4fbfa481bc08e069c9e, type: 3}
+  - {fileID: 21300000, guid: a3ce55bbc1f8d4d6b8963d1b927da900, type: 3}
+  - {fileID: 21300000, guid: e11572ba349c64d51ab54a8ca5bbac44, type: 3}
   EmblemSprites:
   - {fileID: 21300000, guid: 9a24258b80f4649d187f6bb90fede365, type: 3}
   - {fileID: 21300000, guid: ea215e2e3d9dc4a10969e6bd7f024944, type: 3}
@@ -85390,6 +85395,14 @@ MonoBehaviour:
   FusionInfoText: {fileID: 1570492107}
   FusionInfoBox: {fileID: 931649431}
   UnaffordableColor: {r: 0.85, g: 0.2, b: 0.2, a: 1}
+  BottomHud: {fileID: 0}
+  TopHud: {fileID: 0}
+  HudMargin: 12
+  BottomReserve: 160
+  TopReserve: 110
+  TriOptionHeight: 54
+  ScrollTrackColor: {r: 0.24, g: 0.15, b: 0.08, a: 0.15}
+  ScrollHandleColor: {r: 0.45, g: 0.29, b: 0.14, a: 0.85}
 --- !u!114 &1103239709
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -104259,9 +104272,48 @@ MonoBehaviour:
       Gegner in Reichweite, verspottet sie regelm\xE4\xDFig. Erlittener Schaden l\xE4dt
       eine Splitter-Nova, die ihn an alle Gegner zur\xFCckgibt."
     Icon: {fileID: 21300000, guid: 1263a003a346447a3bbef7fe192df3db, type: 3}
+  TriRecipes:
+  - ElementA: 0
+    ElementB: 1
+    ElementC: 2
+    Result: 6
+    ResultConfig: {fileID: 11400000, guid: fa6a093dbb8fc4d50bba12bfe9fff2e2, type: 2}
+    Description: "Meteor auf die dichteste Gegnergruppe: gro\xDFer Fl\xE4chenschaden,
+      bet\xE4ubt und st\xF6\xDFt zur\xFCck. Hinterl\xE4sst einen Krater, der verlangsamt
+      und brennt. Nimmt 20 % weniger Schaden."
+    Icon: {fileID: 21300000, guid: 5ac48075a25174c3299319f7064a272e, type: 3}
+  - ElementA: 0
+    ElementB: 1
+    ElementC: 3
+    Result: 7
+    ResultConfig: {fileID: 11400000, guid: 43e5be07c4e574a75b53912e09c05e4c, type: 2}
+    Description: "Ruft eine Sturmwolke \xFCber die dichteste Gruppe: macht Gegner
+      nass und schl\xE4gt mit Kettenblitzen ein (doppelter Schaden auf Nasse). Aura:
+      Gegner in der N\xE4he sind 25 % langsamer."
+    Icon: {fileID: 21300000, guid: 497fced424a154a82ab41ab1e122b09b, type: 3}
+  - ElementA: 0
+    ElementB: 2
+    ElementC: 3
+    Result: 8
+    ResultConfig: {fileID: 11400000, guid: 7d3fe00401b8c42bdb4b33ce2d6c3261, type: 2}
+    Description: "Sturzflug durch die Gegnerlinie: Schaden, Brand und eine Feuerspur.
+      Aura: +30 % Schaden f\xFCr Buddies in der N\xE4he. Wiedergeburt: Einmal pro
+      Welle ersteht ein zerst\xF6rter Buddy in der N\xE4he (oder der Ph\xF6nix selbst)
+      mit halbem Leben neu."
+    Icon: {fileID: 21300000, guid: 2e0535e5fcafa4983a59d7fe3d786e38, type: 3}
+  - ElementA: 1
+    ElementB: 2
+    ElementC: 3
+    Result: 9
+    ResultConfig: {fileID: 11400000, guid: 43a333a85f2394357a0281df200a028e, type: 2}
+    Description: "Riesiger W\xE4chter (25 % weniger Schaden): Wurzeln halten bis
+      zu 6 Gegner fest, die dem Nexus am n\xE4chsten sind. Heilt Buddies und den
+      Nexus in der N\xE4he. Dornen werfen Nahkampf-Schaden zur\xFCck."
+    Icon: {fileID: 21300000, guid: 6854237859014449fabe03a677c5afc8, type: 3}
   FusionRange: 5
   MinLevel: 2
   MaxFusionLevel: 2
+  TriFusionLevel: 3
   FusionBurstPrefab: {fileID: 4550167610172782757, guid: 556f26d3372a54e3086c7a936117973b, type: 3}
   LinkMaterial: {fileID: 0}
   LinkColor: {r: 0.85, g: 0.7, b: 1, a: 0.9}

@@ -22,6 +22,7 @@ namespace ElementalBuddies
         public Sprite[] Stage1Sprites; // Kleine Wesen
         public Sprite[] Stage2Sprites; // Humanoid
         public Sprite[] Stage3Sprites; // Humanoid mit Rüstung
+        public Sprite[] Stage4Sprites; // Stufe 4 (Krone, Waffe, Aura); fehlt der Eintrag → Stage3Sprites
         public Sprite[] EmblemSprites; // Fallback, falls das Stufen-Array leer ist / keinen Eintrag hat
 
         [Header("Buttons")]
@@ -45,6 +46,21 @@ namespace ElementalBuddies
         public GameObject FusionInfoBox;
         public Color UnaffordableColor = new Color(0.85f, 0.2f, 0.2f);
 
+        [Header("Fusions-Liste: Platz & Scrollen")]
+        [Tooltip("HUD unten links (Fähigkeitenleiste); die Fusions-Box endet darüber. Leer → Objekt \"AbilityBar\" im Canvas, sonst BottomReserve.")]
+        public RectTransform BottomHud;
+        [Tooltip("HUD oben (TopBar); das Panel wird höchstens bis darunter nach oben geschoben. Leer → \"TopBar\", sonst TopReserve.")]
+        public RectTransform TopHud;
+        public float HudMargin = 12f;
+        public float BottomReserve = 160f;   // Canvas-Einheiten, falls BottomHud fehlt
+        public float TopReserve = 110f;      // Canvas-Einheiten, falls TopHud fehlt
+        [Tooltip("Zeilenhöhe der kompakten Tri-Fusions-Optionen (2er-Optionen behalten die Vorlagen-Höhe).")]
+        public float TriOptionHeight = 54f;
+        public Color ScrollTrackColor = new Color(0.24f, 0.15f, 0.08f, 0.15f);
+        public Color ScrollHandleColor = new Color(0.45f, 0.29f, 0.14f, 0.85f);
+        [Tooltip("Mindestabstand zwischen Werte-Block und Button-Reihe; das Panel wächst nach unten, wenn der Platz nicht reicht.")]
+        public float StatsButtonGap = 12f;
+
         private ElementalBuddy _buddy;
 
         // Fusions-Optionen: Buttons werden nur neu gebaut, wenn sich die Menge der Optionen ändert
@@ -58,6 +74,15 @@ namespace ElementalBuddies
         private string _optionsKey = "";
         private readonly StringBuilder _keyBuilder = new StringBuilder();
         private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
+        // Fusions-Liste in einer ScrollRect (zur Laufzeit gebaut); Panel wird bei Bedarf nach oben geschoben
+        private RectTransform _panelRect;
+        private float _panelBaseY;
+        private float _panelBaseHeight, _statsTop, _buttonsTop;
+        private float _growth; // zusätzliche Panel-Höhe für lange Werte-Blöcke
+        private ScrollRect _optionsScroll;
+        private LayoutElement _optionsScrollLayout;
+        private readonly Vector3[] _corners = new Vector3[4];
 
         void Start()
         {
@@ -92,6 +117,13 @@ namespace ElementalBuddies
             if (GameManager.Instance != null) GameManager.Instance.OnGameOver += HandleGameOver;
 
             if (FusionOptionTemplate != null) FusionOptionTemplate.gameObject.SetActive(false);
+
+            _panelRect = Panel != null ? Panel.transform as RectTransform : null;
+            if (_panelRect != null) _panelBaseY = _panelRect.anchoredPosition.y;
+            SetupStatsArea();
+            if (BottomHud == null) BottomHud = FindInCanvas("AbilityBar");
+            if (TopHud == null) TopHud = FindInCanvas("TopBar");
+            SetupOptionsScroll();
 
             HandleBuddySelected(InteractionManager.Instance != null ? InteractionManager.Instance.SelectedBuddy : null);
         }
@@ -142,11 +174,16 @@ namespace ElementalBuddies
             int next = level + 1;
 
             var fusion = _buddy as FusionBuddy;
-            var fusionRecipe = fusion != null && FusionManager.Instance != null ? FusionManager.Instance.FindRecipe(fusion.Element) : null;
+            var super = _buddy as SuperBuddy;
+            var fm = FusionManager.Instance;
+            string fusionDescription = fusion != null && fm != null ? fm.GetDescription(fusion.Element) : null;
+            Sprite fusionIcon = fusion != null && fm != null ? fm.GetIcon(fusion.Element) : null;
 
             if (NameText != null) NameText.text = _buddy.StageName;
             if (LevelText != null)
-                LevelText.text = fusion != null
+                LevelText.text = super != null
+                    ? $"Super-Elementar aus {ElementInfo.Name(super.ParentA)} + {ElementInfo.Name(super.ParentB)} + {ElementInfo.Name(super.ParentC)}"
+                    : fusion != null
                     ? $"Fusion aus {ElementInfo.Name(fusion.ParentA)} + {ElementInfo.Name(fusion.ParentB)}"
                     : $"Stufe {level} / {_buddy.MaxLevel}";
 
@@ -154,7 +191,8 @@ namespace ElementalBuddies
             {
                 int idx = _buddy.ElementIndex;
                 Sprite[] stageSprites = _buddy.Stage >= 3 ? Stage3Sprites : (_buddy.Stage == 2 ? Stage2Sprites : Stage1Sprites);
-                Sprite sprite = fusionRecipe != null ? fusionRecipe.Icon : null;
+                Sprite sprite = fusionIcon;
+                if (sprite == null && _buddy.Stage >= 4) sprite = PickSprite(Stage4Sprites, idx);
                 if (sprite == null) sprite = PickSprite(stageSprites, idx);
                 if (sprite == null) sprite = PickSprite(EmblemSprites, idx);
                 EmblemImage.sprite = sprite;
@@ -170,7 +208,7 @@ namespace ElementalBuddies
                 bool interactable;
                 if (fusion != null)
                 {
-                    label = "Fusion – keine Stufen";
+                    label = "Keine Stufen";
                     interactable = false;
                 }
                 else if (!canUpgrade)
@@ -204,20 +242,237 @@ namespace ElementalBuddies
             // Fusion
             if (FusionInfoText != null)
             {
-                bool show = fusion != null && fusionRecipe != null && !string.IsNullOrEmpty(fusionRecipe.Description);
+                bool show = fusion != null && !string.IsNullOrEmpty(fusionDescription);
                 FusionInfoText.gameObject.SetActive(show);
                 if (FusionInfoBox != null && FusionInfoBox.activeSelf != show) FusionInfoBox.SetActive(show);
-                if (show) FusionInfoText.text = fusionRecipe.Description;
+                if (show) FusionInfoText.text = fusionDescription;
             }
-            RefreshFusionSection(fusion != null);
+            // Super-Elementare: keine weitere Fusion; 2er-Fusionen können zum Super-Elementar verschmelzen
+            RefreshFusionSection(super != null);
+            FitStatsArea();
+            LayoutFusionArea();
+        }
+
+        // ---------------- Werte-Block ----------------
+
+        // Ausgangsmaße merken; StatsText bricht um, damit lange Zeilen nicht seitlich aus dem Panel ragen
+        private void SetupStatsArea()
+        {
+            if (_panelRect == null || StatsText == null) return;
+            _panelBaseHeight = _panelRect.sizeDelta.y;
+            var stats = StatsText.rectTransform;
+            _statsTop = -(stats.anchoredPosition.y + stats.rect.height * (1f - stats.pivot.y)); // Abstand zur Panel-Oberkante
+            StatsText.textWrappingMode = TextWrappingModes.Normal;
+            // Oberkante der Button-Reihe über der Panel-Unterkante (Buttons unten verankert)
+            _buttonsTop = 0f;
+            foreach (var b in new[] { UpgradeButton, SellButton })
+            {
+                if (b == null) continue;
+                var rt = (RectTransform)b.transform;
+                if (rt.anchorMax.y > 0.001f) continue;
+                _buttonsTop = Mathf.Max(_buttonsTop, rt.anchoredPosition.y + rt.rect.height * (1f - rt.pivot.y));
+            }
+        }
+
+        // Panel nach unten verlängern, bis der ganze Werte-Block über der Button-Reihe Platz hat (Oberkante bleibt)
+        private void FitStatsArea()
+        {
+            if (_panelRect == null || StatsText == null || _panelBaseHeight <= 0f) return;
+            var stats = StatsText.rectTransform;
+            if (stats.anchorMin.y < 0.999f) return; // nur oben verankerter Werte-Block
+            float textHeight = StatsText.GetPreferredValues(StatsText.text, stats.rect.width, 0f).y;
+            float needed = _statsTop + textHeight + StatsButtonGap + _buttonsTop;
+            float height = Mathf.Max(_panelBaseHeight, Mathf.Ceil(needed));
+            _growth = height - _panelBaseHeight;
+            if (!Mathf.Approximately(_panelRect.sizeDelta.y, height))
+                _panelRect.sizeDelta = new Vector2(_panelRect.sizeDelta.x, height);
+            // Werte-Block füllt genau den Platz bis über die Buttons (Oberkante bleibt)
+            float statsHeight = height - _statsTop - StatsButtonGap - _buttonsTop;
+            if (!Mathf.Approximately(stats.sizeDelta.y, statsHeight))
+            {
+                stats.sizeDelta = new Vector2(stats.sizeDelta.x, statsHeight);
+                stats.anchoredPosition = new Vector2(stats.anchoredPosition.x, -_statsTop - statsHeight * (1f - stats.pivot.y));
+            }
+        }
+
+        // Ausgangs-Y ohne Fusions-Verschiebung: bei gewachsenem Panel so weit tiefer, dass die Oberkante bleibt
+        private float PanelBaseY => _panelBaseY - _growth * (1f - _panelRect.pivot.y);
+
+        // ---------------- Platz für die Fusions-Box ----------------
+
+        private RectTransform FindInCanvas(string objectName)
+        {
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas == null) return null;
+            foreach (var t in canvas.rootCanvas.GetComponentsInChildren<RectTransform>(true))
+                if (t.name == objectName) return t;
+            return null;
+        }
+
+        // Options-Container in eine ScrollRect (Viewport mit RectMask2D + schmale Pergament-Scrollleiste) einhängen
+        private void SetupOptionsScroll()
+        {
+            if (_optionsScroll != null || FusionOptionsContainer == null || FusionSection == null) return;
+            var content = FusionOptionsContainer;
+            Transform section = content.parent;
+            int index = content.GetSiblingIndex();
+
+            var root = new GameObject("OptionsScroll", typeof(RectTransform));
+            var rootRect = (RectTransform)root.transform;
+            rootRect.SetParent(section, false);
+            rootRect.SetSiblingIndex(index);
+            _optionsScrollLayout = root.AddComponent<LayoutElement>();
+            _optionsScrollLayout.flexibleWidth = 1f;
+            _optionsScrollLayout.minHeight = _optionsScrollLayout.preferredHeight = content.rect.height;
+
+            var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
+            var vpRect = (RectTransform)viewport.transform;
+            vpRect.SetParent(rootRect, false);
+            Stretch(vpRect);
+            var vpImage = viewport.GetComponent<Image>();
+            vpImage.color = new Color(1f, 1f, 1f, 0f); // unsichtbar, fängt das Mausrad auch zwischen den Zeilen
+
+            content.SetParent(vpRect, false);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = new Vector2(0f, content.sizeDelta.y);
+            var fitter = content.GetComponent<ContentSizeFitter>();
+            if (fitter == null) fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var bar = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            var barRect = (RectTransform)bar.transform;
+            barRect.SetParent(rootRect, false);
+            barRect.anchorMin = new Vector2(1f, 0f);
+            barRect.anchorMax = new Vector2(1f, 1f);
+            barRect.pivot = new Vector2(1f, 0.5f);
+            barRect.sizeDelta = new Vector2(8f, 0f);
+            barRect.anchoredPosition = Vector2.zero;
+            bar.GetComponent<Image>().color = ScrollTrackColor;
+
+            var area = new GameObject("Sliding Area", typeof(RectTransform));
+            var areaRect = (RectTransform)area.transform;
+            areaRect.SetParent(barRect, false);
+            Stretch(areaRect);
+            var handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            var handleRect = (RectTransform)handle.transform;
+            handleRect.SetParent(areaRect, false);
+            Stretch(handleRect);
+            var handleImage = handle.GetComponent<Image>();
+            handleImage.color = ScrollHandleColor;
+
+            var scrollbar = bar.GetComponent<Scrollbar>();
+            scrollbar.handleRect = handleRect;
+            scrollbar.targetGraphic = handleImage;
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+
+            _optionsScroll = root.AddComponent<ScrollRect>();
+            _optionsScroll.horizontal = false;
+            _optionsScroll.vertical = true;
+            _optionsScroll.movementType = ScrollRect.MovementType.Clamped;
+            _optionsScroll.inertia = false;
+            _optionsScroll.scrollSensitivity = 30f;
+            _optionsScroll.viewport = vpRect;
+            _optionsScroll.content = content;
+            _optionsScroll.verticalScrollbar = scrollbar;
+            _optionsScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+            _optionsScroll.verticalScrollbarSpacing = 4f;
+        }
+
+        private static void Stretch(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = Vector2.zero;
+        }
+
+        // Unter dem Panel hängt die Fusions-Box (bzw. FusionInfoBox). Sie darf nicht in die Fähigkeitenleiste ragen:
+        // erst das Panel nach oben schieben (höchstens bis unter die TopBar), reicht das nicht, wird die Liste gescrollt.
+        private void LayoutFusionArea()
+        {
+            if (_panelRect == null || _panelRect.parent == null) return;
+            var canvasRect = _panelRect.parent as RectTransform;
+            if (canvasRect == null) return;
+
+            RectTransform section = null;
+            float sectionHeight = 0f;
+            bool fusionList = FusionSection != null && FusionSection.activeSelf;
+            float overhead = 0f, desired = 0f;
+            if (fusionList)
+            {
+                section = FusionSection.transform as RectTransform;
+                var vlg = FusionSection.GetComponent<VerticalLayoutGroup>();
+                if (vlg != null) overhead = vlg.padding.vertical;
+                if (FusionHint != null && FusionHint.gameObject.activeSelf)
+                    overhead += LayoutUtility.GetPreferredHeight(FusionHint.rectTransform) + (vlg != null ? vlg.spacing : 0f);
+                if (_optionsScroll != null && FusionOptionsContainer != null)
+                {
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(FusionOptionsContainer);
+                    desired = LayoutUtility.GetPreferredHeight(FusionOptionsContainer);
+                }
+                sectionHeight = overhead + desired;
+            }
+            else if (FusionInfoBox != null && FusionInfoBox.activeSelf)
+            {
+                section = FusionInfoBox.transform as RectTransform;
+                sectionHeight = LayoutUtility.GetPreferredHeight(section);
+            }
+
+            // Panel-Grenzen in Canvas-Koordinaten ohne aktuelle Verschiebung
+            float baseY = PanelBaseY;
+            float currentShift = _panelRect.anchoredPosition.y - baseY;
+            _panelRect.GetWorldCorners(_corners);
+            float panelBottom = canvasRect.InverseTransformPoint(_corners[0]).y - currentShift;
+            float panelTop = canvasRect.InverseTransformPoint(_corners[1]).y - currentShift;
+            Rect canvas = canvasRect.rect;
+
+            float bottomLimit = canvas.yMin + BottomReserve;
+            if (BottomHud != null && BottomHud.gameObject.activeInHierarchy)
+            {
+                BottomHud.GetWorldCorners(_corners);
+                bottomLimit = canvasRect.InverseTransformPoint(_corners[1]).y + HudMargin;
+            }
+            float topLimit = canvas.yMax - TopReserve;
+            if (TopHud != null && TopHud.gameObject.activeInHierarchy)
+            {
+                TopHud.GetWorldCorners(_corners);
+                topLimit = canvasRect.InverseTransformPoint(_corners[0]).y - HudMargin;
+            }
+
+            float maxShift = Mathf.Max(0f, topLimit - panelTop);
+            float gap = section != null ? -section.anchoredPosition.y : 0f; // Abstand Panel-Unterkante → Box
+            float freeBelow = panelBottom - gap - bottomLimit;
+
+            if (fusionList && _optionsScrollLayout != null)
+            {
+                float maxView = freeBelow + maxShift - overhead;
+                float minView = Mathf.Min(desired, TriOptionHeight);
+                float view = Mathf.Min(desired, Mathf.Max(maxView, minView));
+                if (!Mathf.Approximately(_optionsScrollLayout.preferredHeight, view))
+                {
+                    _optionsScrollLayout.minHeight = _optionsScrollLayout.preferredHeight = view;
+                    if (view >= desired - 0.5f && _optionsScroll != null) _optionsScroll.verticalNormalizedPosition = 1f;
+                }
+                sectionHeight = overhead + view;
+            }
+
+            float shift = section != null ? Mathf.Clamp(sectionHeight - freeBelow, 0f, maxShift) : 0f;
+            float y = baseY + shift;
+            if (!Mathf.Approximately(_panelRect.anchoredPosition.y, y))
+                _panelRect.anchoredPosition = new Vector2(_panelRect.anchoredPosition.x, y);
         }
 
         // ---------------- Fusion ----------------
 
-        private void RefreshFusionSection(bool isFusion)
+        private void RefreshFusionSection(bool isSuper)
         {
             var fm = FusionManager.Instance;
-            bool show = !isFusion && fm != null;
+            bool show = !isSuper && fm != null;
             if (FusionSection != null && FusionSection.activeSelf != show) FusionSection.SetActive(show);
             if (!show)
             {
@@ -237,7 +492,8 @@ namespace ElementalBuddies
             // Menge der Optionen geändert? -> Buttons neu bauen, sonst nur Texte/Zustände aktualisieren
             _keyBuilder.Clear();
             foreach (var o in options)
-                _keyBuilder.Append(o.Partner.GetInstanceID()).Append(':').Append((int)o.Recipe.Result).Append(';');
+                _keyBuilder.Append(o.Partner.GetInstanceID()).Append('+').Append(o.Partner2 != null ? o.Partner2.GetInstanceID() : 0)
+                    .Append(':').Append((int)o.Result).Append(';');
             string key = _keyBuilder.ToString();
             if (key != _optionsKey) RebuildFusionOptions(options, key);
 
@@ -250,7 +506,15 @@ namespace ElementalBuddies
                 {
                     string cost = $"{Mathf.CeilToInt(o.Cost)} Splitter";
                     if (!o.Affordable) cost = $"<color=#{red}>{cost}</color>";
-                    entry.Label.text = $"<b>{FusionInfo.DisplayName(o.Recipe.Result)}</b>  ·  mit {o.Partner.StageName} ({o.Distance.ToString("0.#", Inv)} m)  ·  {cost}";
+                    string dist = $"({o.Distance.ToString("0.#", Inv)} m)";
+                    if (o.IsTri)
+                    {
+                        // kompakt, zwei Zeilen: "Phönix · 200 Splitter", darunter die Partner (Elemente der Partner zeigt der Hover-Link)
+                        string with = o.Partner2 != null ? $"{o.Partner.StageName} & {o.Partner2.StageName}" : o.Partner.StageName;
+                        entry.Label.text = $"<b>{FusionInfo.DisplayName(o.Result)}</b>  ·  {cost}\n<size=85%>mit {with} {dist}</size>";
+                    }
+                    else
+                        entry.Label.text = $"<b>{FusionInfo.DisplayName(o.Result)}</b>  ·  mit {o.Partner.StageName} {dist}  ·  {cost}";
                 }
                 if (entry.Button != null) entry.Button.interactable = canFuse && o.Affordable;
             }
@@ -266,27 +530,29 @@ namespace ElementalBuddies
             foreach (var o in options)
             {
                 var button = Instantiate(FusionOptionTemplate, parent);
-                button.gameObject.name = "FusionOption_" + FusionInfo.Name(o.Recipe.Result);
+                button.gameObject.name = "FusionOption_" + FusionInfo.Name(o.Result);
                 button.gameObject.SetActive(true);
 
                 var icon = FindChild<Image>(button.transform, "Icon");
                 if (icon != null)
                 {
-                    icon.sprite = o.Recipe.Icon;
-                    icon.gameObject.SetActive(o.Recipe.Icon != null);
+                    icon.sprite = o.Icon;
+                    icon.gameObject.SetActive(o.Icon != null);
                 }
 
                 var entry = new OptionEntry { Button = button, Label = FindChild<TextMeshProUGUI>(button.transform, "Label"), Partner = o.Partner };
-                ElementalBuddy partner = o.Partner;
+                if (o.IsTri) MakeCompact(button, icon, entry.Label);
+                ElementalBuddy partner = o.Partner, partner2 = o.Partner2;
+                var option = o;
 
                 button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(() => OnFusionOptionClicked(partner));
+                button.onClick.AddListener(() => OnFusionOptionClicked(option));
 
                 var hover = button.GetComponent<FusionOptionHover>();
                 if (hover == null) hover = button.gameObject.AddComponent<FusionOptionHover>();
                 hover.OnEnter = () =>
                 {
-                    if (FusionManager.Instance != null && _buddy != null && partner != null) FusionManager.Instance.ShowLink(_buddy, partner);
+                    if (FusionManager.Instance != null && _buddy != null && partner != null) FusionManager.Instance.ShowLink(_buddy, partner, partner2);
                 };
                 hover.OnExit = () =>
                 {
@@ -297,22 +563,42 @@ namespace ElementalBuddies
             }
         }
 
+        // Tri-Optionen: flachere Zeile, kleineres Porträt, etwas kleinere Schrift
+        private void MakeCompact(Button button, Image icon, TextMeshProUGUI label)
+        {
+            var row = button.GetComponent<LayoutElement>();
+            if (row != null) row.minHeight = TriOptionHeight;
+            var hlg = button.GetComponent<HorizontalLayoutGroup>();
+            if (hlg != null) hlg.padding = new RectOffset(hlg.padding.left, hlg.padding.right, 4, 4);
+            var iconLayout = icon != null ? icon.GetComponent<LayoutElement>() : null;
+            if (iconLayout != null) iconLayout.preferredWidth = iconLayout.preferredHeight = TriOptionHeight - 12f;
+            if (label != null)
+            {
+                label.fontSize = Mathf.Min(label.fontSize, 17f);
+                label.lineSpacing = -6f;
+            }
+        }
+
         private void ClearFusionOptions()
         {
             foreach (var e in _optionEntries)
-                if (e.Button != null) Destroy(e.Button.gameObject);
+                if (e.Button != null)
+                {
+                    e.Button.gameObject.SetActive(false); // Destroy ist verzögert → sonst zählt die Layout-Berechnung im selben Frame noch mit
+                    Destroy(e.Button.gameObject);
+                }
             _optionEntries.Clear();
             _optionsKey = "";
             if (FusionManager.Instance != null) FusionManager.Instance.HideLink();
         }
 
-        private void OnFusionOptionClicked(ElementalBuddy partner)
+        private void OnFusionOptionClicked(FusionManager.FusionOption option)
         {
             var fm = FusionManager.Instance;
-            if (fm == null || _buddy == null || partner == null) return;
+            if (fm == null || _buddy == null || option.Partner == null) return;
             fm.HideLink();
             // Bei Erfolg wählt der FusionManager den neuen Buddy aus -> HandleBuddySelected baut das Panel neu
-            if (fm.TryFuse(_buddy, partner) == null) Refresh();
+            if (fm.TryFuse(_buddy, option) == null) Refresh();
         }
 
         // Werte eines Fusions-Buddys (keine Stufen -> keine Pfeile)
@@ -362,6 +648,29 @@ namespace ElementalBuddies
                           + $"Splitter-Ladung: {Mathf.RoundToInt(c.Charge01 * 100f)} %\n"
                           + Line("Radius", range, range, false, " m", "0.#");
                     break;
+                case VolcanoTitanBuddy v:
+                    stats = $"Leben: {Mathf.CeilToInt(v.CurrentHP)}/{Mathf.CeilToInt(v.MaxHP)} (−{Mathf.RoundToInt(v.DamageReduction * 100f)} % Schaden)\n"
+                          + Line("Meteor", dmg, dmg, false, "", "0.#") + $" (r {v.ImpactRadius.ToString("0.#", Inv)} m)\n"
+                          + Line("Meteor alle", Interval(rate), Interval(rate), false, " s", "0.#") + "\n" + rangeLine + "\n"
+                          + $"Krater: −{Mathf.RoundToInt(v.CraterSlow * 100f)} % Tempo, {v.CraterDps.ToString("0.#", Inv)}/s";
+                    break;
+                case StormLordBuddy st:
+                    stats = Line("Blitz", dmg, dmg, false, "", "0.#") + $" (×{st.WetMultiplier.ToString("0.#", Inv)} nass)\n"
+                          + Line("Wolke alle", Interval(rate), Interval(rate), false, " s", "0.#") + "\n" + rangeLine + "\n"
+                          + $"Aura: −{Mathf.RoundToInt(st.AuraSlow * 100f)} % Tempo in {st.AuraRadius.ToString("0.#", Inv)} m";
+                    break;
+                case PhoenixBuddy ph:
+                    stats = Line("Sturzflug", dmg, dmg, false, "", "0.#") + $" + Brand {ph.DiveBurnDps.ToString("0.#", Inv)}/s\n"
+                          + Line("Sturzflug alle", Interval(rate), Interval(rate), false, " s", "0.#") + "\n"
+                          + $"Aura: +{Mathf.RoundToInt(ph.DamageBonus * 100f)} % Schaden in {ph.AuraRadius.ToString("0.#", Inv)} m\n"
+                          + (ph.RebirthUsed ? "Wiedergeburt: in dieser Welle verbraucht" : "Wiedergeburt: bereit");
+                    break;
+                case WorldTreeBuddy wt:
+                    stats = $"Leben: {Mathf.CeilToInt(wt.CurrentHP)}/{Mathf.CeilToInt(wt.MaxHP)} (−{Mathf.RoundToInt(wt.DamageReduction * 100f)} % Schaden)\n"
+                          + Line("Wurzeln", dmg, dmg, false, "", "0.#") + $" · {wt.MaxRootTargets} Ziele · {wt.RootDuration.ToString("0.#", Inv)} s\n"
+                          + $"Heilung: {Mathf.RoundToInt(wt.HealPercent * 100f)} % + {wt.HealFlat.ToString("0.#", Inv)} pro s\n"
+                          + rangeLine;
+                    break;
                 default:
                     stats = Line("Schaden", dmg, dmg, false, "", "0.#") + "\n" + rateLine + "\n" + rangeLine;
                     break;
@@ -369,13 +678,37 @@ namespace ElementalBuddies
             return stats + AuraLine();
         }
 
-        // Rückenwind eines Luft-Buddys in der Nähe
+        // Buffs durch Nachbarn: Rückenwind (Luft), Phönix-Aura, Steinhaut (Bergkönig), Schild (Sonnenerzengel)
         private string AuraLine()
         {
-            float m = AirBuddy.GetFireRateMultiplier(_buddy);
-            if (m <= 1.0001f) return "";
             string hex = ColorUtility.ToHtmlStringRGB(NextValueColor);
-            return $"\n<color=#{hex}>Rückenwind: +{Mathf.RoundToInt((m - 1f) * 100f)} % Feuerrate</color>";
+            string text = "";
+            float m = AirBuddy.GetFireRateMultiplier(_buddy);
+            if (m > 1.0001f) text += $"\n<color=#{hex}>Rückenwind: +{Mathf.RoundToInt((m - 1f) * 100f)} % Feuerrate</color>";
+            float p = PhoenixBuddy.GetDamageMultiplier(_buddy);
+            if (p > 1.0001f) text += $"\n<color=#{hex}>Phönix-Glut: +{Mathf.RoundToInt((p - 1f) * 100f)} % Schaden</color>";
+            float t = TankBuddy.GetDamageTakenMultiplier(_buddy);
+            if (t < 0.9999f) text += $"\n<color=#{hex}>Steinhaut: −{Mathf.RoundToInt((1f - t) * 100f)} % Schaden</color>";
+            float shield = _buddy.ShieldAmount;
+            if (shield > 0f) text += $"\n<color=#{hex}>Schild: {Mathf.CeilToInt(shield)}</color>";
+            return text;
+        }
+
+        // Stufe-4-Bonus (Perk) eines Basis-Buddys: aktiv bzw. Vorschau beim Aufwerten 3 → 4
+        private static string PerkText(ElementalBuddy b)
+        {
+            switch (b)
+            {
+                case ShooterBuddy s when s.ElementIndex == 0:
+                    return $"Durchschlag: +{s.Stage4PierceCount} Gegner, Brand {s.Stage4BurnDps.ToString("0.#", Inv)}/s für {s.Stage4BurnDuration.ToString("0.#", Inv)} s";
+                case ShooterBuddy s when s.ElementIndex == 1:
+                    return $"Jeder {s.Stage4FreezeEvery}. Schuss friert {s.Stage4FreezeDuration.ToString("0.#", Inv)} s ein";
+                case TankBuddy t:
+                    return $"Steinhaut: Buddies im Radius −{Mathf.RoundToInt(t.Stage4StoneSkinReduction * 100f)} % Schaden,\nSpott-Radius ×{t.Stage4TauntRadiusFactor.ToString("0.##", Inv)}";
+                case HealerBuddy h:
+                    return $"Segen ×{h.Stage4HealMultiplier.ToString("0.#", Inv)}, geheilte Buddies erhalten\n{h.Stage4ShieldAmount.ToString("0", Inv)} Schild für {h.Stage4ShieldDuration.ToString("0.#", Inv)} s";
+            }
+            return null;
         }
 
         private static T FindChild<T>(Transform root, string childName) where T : Component
@@ -392,7 +725,8 @@ namespace ElementalBuddies
                 // Tank: Damage = Aura-DPS, FireRate = Spott-Rate, Range = Spott-/Aura-Radius
                 return Line("Aura-Schaden", _buddy.GetDamageAtLevel(level), _buddy.GetDamageAtLevel(next), canUpgrade, "/s", "0.#") + "\n"
                      + Line("Spott alle", Interval(_buddy.GetFireRateAtLevel(level)), Interval(_buddy.GetFireRateAtLevel(next)), canUpgrade, " s", "0.#") + "\n"
-                     + Line("Radius", _buddy.GetRangeAtLevel(level), _buddy.GetRangeAtLevel(next), canUpgrade, " m", "0.#");
+                     + Line("Radius", _buddy.GetRangeAtLevel(level), _buddy.GetRangeAtLevel(next), canUpgrade, " m", "0.#")
+                     + PerkLine(canUpgrade, level, next) + AuraLine();
             }
 
             var healer = _buddy as HealerBuddy;
@@ -402,20 +736,28 @@ namespace ElementalBuddies
             if (healer != null)
             {
                 // Segen skaliert wie der Schaden mit der Stufe
-                float ratio = _buddy.GetDamageAtLevel(level) > 0f ? _buddy.GetDamageAtLevel(next) / _buddy.GetDamageAtLevel(level) : 1f;
-                stats += "\n" + Line("Segen", healer.EffectiveBlessHeal, healer.EffectiveBlessHeal * ratio, canUpgrade, $" HP / {healer.BlessInterval:0.#} s", "0.#");
+                stats += "\n" + Line("Segen", healer.GetBlessHealAtLevel(level), healer.GetBlessHealAtLevel(next), canUpgrade, $" HP / {healer.BlessInterval:0.#} s", "0.#");
             }
             var shooter = _buddy as ShooterBuddy;
             if (shooter != null && (shooter.IsSniperAtLevel(level) || (canUpgrade && shooter.IsSniperAtLevel(next))))
             {
                 // Scharfschütze: Zielwahl und Boss-Bonus (beim Aufwerten als Vorschau);
-                // zweizeilig und kleiner, da StatsText nicht umbricht (300 px breit)
+                // zweizeilig und kleiner (StatsText ist nur 300 px breit)
                 int bonus = Mathf.RoundToInt((shooter.SniperBossDamageMultiplier - 1f) * 100f);
                 stats += "\n<size=80%>" + (shooter.IsSniperAtLevel(level)
                     ? $"<color=#B4500A>Scharfschütze: Bosse & Fernkämpfer zuerst,\n+{bonus} % Schaden gegen Bosse</color>"
                     : $"<color=#3E7A26>Ab Stufe {shooter.SniperFromLevel}: Scharfschütze – Bosse &\nFernkämpfer zuerst, +{bonus} % gegen Bosse</color>") + "</size>";
             }
-            return stats + AuraLine();
+            return stats + PerkLine(canUpgrade, level, next) + AuraLine();
+        }
+
+        private string PerkLine(bool canUpgrade, int level, int next)
+        {
+            string perk = PerkText(_buddy);
+            if (perk == null) return "";
+            if (level >= ElementalBuddy.PerkLevel) return $"\n<size=80%><color=#B4500A>Stufe 4: {perk}</color></size>";
+            if (canUpgrade && next == ElementalBuddy.PerkLevel) return $"\n<size=80%><color=#3E7A26>Ab Stufe 4: {perk}</color></size>";
+            return "";
         }
 
         private static Sprite PickSprite(Sprite[] sprites, int idx)

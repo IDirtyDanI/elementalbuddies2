@@ -12,7 +12,8 @@ namespace ElementalBuddies
         [SerializeField] private GlobalSettingsSO settings;
 
         public int MaxSlots { get; private set; } = 4;
-        public int UsedSlots => ElementalBuddy.ActiveCount;
+        // Wartende Phönix-Wiedergeburten reservieren ihren Slot
+        public int UsedSlots => ElementalBuddy.ActiveCount + PhoenixRebirth.PendingCount;
         public bool HasFreeSlot => Unlimited || UsedSlots < MaxSlots;
         public bool Unlimited { get; private set; } // Dev-Modus: kein Buddy-Limit
         public int Cap => settings != null ? settings.MaxBuddySlots : 30;
@@ -47,11 +48,13 @@ namespace ElementalBuddies
         void OnEnable()
         {
             ElementalBuddy.OnBuddyCountChanged += NotifyChanged;
+            PhoenixRebirth.OnPendingChanged += NotifyChanged;
         }
 
         void OnDisable()
         {
             ElementalBuddy.OnBuddyCountChanged -= NotifyChanged;
+            PhoenixRebirth.OnPendingChanged -= NotifyChanged;
         }
 
         void Start()

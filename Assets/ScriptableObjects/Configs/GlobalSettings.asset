@@ -32,7 +32,7 @@ MonoBehaviour:
   StartBuddySlots: 4
   SlotEveryNWaves: 3
   MaxBuddySlots: 30
-  BuddyMaxLevel: 3
+  BuddyMaxLevel: 4
   DamageBonusPerLevel: 0.35
   FireRateBonusPerLevel: 0.2
   RangeBonusPerLevel: 0.1
@@ -40,6 +40,7 @@ MonoBehaviour:
   UpgradeCostFactors:
   - 0.6
   - 1
+  - 1.6
   BuddyWaveEndHealPercent: 0.5
   BuddyHealthBarPrefab: {fileID: 3596947236582065483, guid: 64ba8f5ef2b144be794ec99f2e3c9d23, type: 3}
   BuddyDeathEffectPrefab: {fileID: 1821139266253955050, guid: aae9d8cd7e5c94e0e821a62a75b74155, type: 3}

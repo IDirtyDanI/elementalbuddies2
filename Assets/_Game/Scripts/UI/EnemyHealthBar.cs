@@ -12,6 +12,12 @@ namespace ElementalBuddies
         bool HealthBarVisible { get; } // false = Bar ausblenden (z. B. deaktivierter Buddy)
     }
 
+    // Optional: Ziel mit Schild (Buddy-Segen) – Schild wird als Segment an der HP-Bar gezeigt
+    public interface IShieldedTarget
+    {
+        float ShieldAmount { get; }
+    }
+
     // World-Space-HP-Bar über einem Gegner oder Buddy (Prefab aus dem FunProject: HPBar).
     // Unsichtbar, bis das Ziel Schaden genommen hat; schaut immer zur Kamera.
     public class EnemyHealthBar : MonoBehaviour
@@ -21,6 +27,8 @@ namespace ElementalBuddies
         public Image Fill;
         [Tooltip("Optional: verzögerte helle Leiste hinter der Füllung (zeigt den gerade verlorenen Schaden).")]
         public RectTransform DamageChip;
+        [Tooltip("Optional: Schild-Segment, hinter der Füllung angehängt (bzw. am rechten Ende überlagert bei vollen HP).")]
+        public RectTransform Shield;
         public Color FullColor = new Color(0.85f, 0.2f, 0.15f);
         public Color LowColor = new Color(0.55f, 0.05f, 0.05f);
         public Color BuddyFullColor = new Color(0.3f, 0.85f, 0.3f);
@@ -31,6 +39,7 @@ namespace ElementalBuddies
         public float ChipSpeed = 1.5f;
 
         private IHealthBarTarget _target;
+        private IShieldedTarget _shielded;
         private Object _targetObject; // für Unitys Null-Check (zerstörtes Ziel)
         private Renderer[] _renderers;
         private Color _full, _low;
@@ -48,6 +57,7 @@ namespace ElementalBuddies
         private void Bind(IHealthBarTarget target, Object targetObject, Color full, Color low)
         {
             _target = target;
+            _shielded = target as IShieldedTarget;
             _targetObject = targetObject;
             _full = full;
             _low = low;
@@ -98,9 +108,13 @@ namespace ElementalBuddies
             if (_targetObject == null) { Destroy(gameObject); return; }
 
             float hp01 = _target.MaxHP > 0f ? Mathf.Clamp01(_target.CurrentHP / _target.MaxHP) : 1f;
+            float shield01 = _shielded != null && _target.MaxHP > 0f ? Mathf.Clamp01(_shielded.ShieldAmount / _target.MaxHP) : 0f;
             bool damaged = hp01 < 0.999f;
-            SetVisible(damaged && _target.HealthBarVisible);
-            if (!damaged) { _chip = 1f; _lastValue = 1f; return; }
+            bool shielded = shield01 > 0.001f;
+            // Mit aktivem Schild auch bei vollen HP sichtbar
+            SetVisible((damaged || shielded) && _target.HealthBarVisible);
+            UpdateShield(hp01, shield01);
+            if (!damaged && !shielded) { _chip = 1f; _lastValue = 1f; return; }
             if (!_measured) MeasureHeight();
 
             if (hp01 < _lastValue) _chipHoldUntil = Time.time + ChipDelay;
@@ -115,6 +129,19 @@ namespace ElementalBuddies
             transform.position = _target.transform.position + Vector3.up * (_height + HeightOffset);
             Camera cam = Camera.main;
             if (cam != null) transform.rotation = cam.transform.rotation;
+        }
+
+        // Schild-Segment direkt hinter der Füllung; passt es nicht mehr hinein, überlagert es das rechte Ende
+        private void UpdateShield(float hp01, float shield01)
+        {
+            if (Shield == null) return;
+            bool on = shield01 > 0.001f;
+            if (Shield.gameObject.activeSelf != on) Shield.gameObject.SetActive(on);
+            if (!on) return;
+            float end = Mathf.Min(1f, hp01 + shield01);
+            float start = Mathf.Max(0f, end - shield01);
+            Shield.anchorMin = new Vector2(start, Shield.anchorMin.y);
+            Shield.anchorMax = new Vector2(end, Shield.anchorMax.y);
         }
     }
 }

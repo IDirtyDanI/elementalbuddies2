@@ -21,6 +21,27 @@ namespace ElementalBuddies
         [Tooltip("Projektil-Tempo im Scharfschützen-Modus (0 = Prefab-Wert).")]
         public float SniperProjectileSpeed = 40f;
 
+        [Header("Stufe 4 – Feuer (Flammenkaiser)")]
+        [Tooltip("Zusätzliche Gegner, die ein Schuss durchschlägt.")]
+        public int Stage4PierceCount = 1;
+        [Tooltip("Suchradius für das nächste Ziel hinter dem getroffenen Gegner (m).")]
+        public float Stage4PierceRange = 6f;
+        public float Stage4BurnDps = 8f;
+        public float Stage4BurnDuration = 3f;
+        public GameObject Stage4BurnVfxPrefab; // optional, an BurnEffect übergeben
+
+        [Header("Stufe 4 – Eis (Frostkönig)")]
+        [Tooltip("Jeder n-te Schuss friert das Ziel ein.")]
+        public int Stage4FreezeEvery = 3;
+        public float Stage4FreezeDuration = 1.2f;
+        public GameObject Stage4FreezeVfxPrefab; // optional, an EnemyBrain.Freeze übergeben
+
+        private int _shotCount;
+
+        // Perks hängen am Element (Feuer- und Eis-Prefab nutzen beide ShooterBuddy)
+        public bool HasPiercePerk => HasPerk && ElementIndex == 0;
+        public bool HasFreezePerk => HasPerk && ElementIndex == 1;
+
         public bool IsSniperAtLevel(int level) => SniperFromLevel > 0 && level >= SniperFromLevel;
         public bool IsSniper => IsSniperAtLevel(Level);
 
@@ -98,6 +119,15 @@ namespace ElementalBuddies
                     proj.transform.localScale *= 1.4f;
                 }
                 projectileScript.Initialize(target, damage, Config.Type);
+
+                if (HasPiercePerk)
+                    projectileScript.SetPierce(Stage4PierceCount, Stage4PierceRange, Stage4BurnDps, Stage4BurnDuration, Stage4BurnVfxPrefab);
+                if (HasFreezePerk)
+                {
+                    _shotCount++;
+                    if (Stage4FreezeEvery > 0 && _shotCount % Stage4FreezeEvery == 0)
+                        projectileScript.SetFreeze(Stage4FreezeDuration, Stage4FreezeVfxPrefab);
+                }
             }
         }
     }

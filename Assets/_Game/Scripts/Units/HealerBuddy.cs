@@ -20,6 +20,12 @@ namespace ElementalBuddies
         public GameObject BlessPulsePrefab;         // optional, Ring-Effekt in Reichweite
         public GameObject HealSparklePrefab;        // optional, Funkeln auf geheilten Zielen
 
+        [Header("Stufe 4 – Sonnenerzengel")]
+        public float Stage4HealMultiplier = 2f;
+        [Tooltip("Schild für geheilte Buddies (absorbiert Schaden zuerst).")]
+        public float Stage4ShieldAmount = 20f;
+        public float Stage4ShieldDuration = 4f;
+
         private PlayerStats _playerStats;
         private float _nextBlessTime;
         private LineRenderer _beam;
@@ -114,7 +120,9 @@ namespace ElementalBuddies
 
         // ---------------- Segen ----------------
 
-        public float EffectiveBlessHeal => BlessHeal * LevelMultiplier(DamageBonusPerLevel, Level);
+        public float EffectiveBlessHeal => GetBlessHealAtLevel(Level);
+        public float GetBlessHealAtLevel(int level) =>
+            BlessHeal * LevelMultiplier(DamageBonusPerLevel, level) * (level >= PerkLevel ? Stage4HealMultiplier : 1f);
 
         private void Bless()
         {
@@ -138,6 +146,7 @@ namespace ElementalBuddies
                 if (Vector3.Distance(transform.position, buddy.transform.position) > range) continue;
                 if (buddy.Heal(heal) > 0f)
                 {
+                    if (HasPerk) buddy.AddShield(Stage4ShieldAmount, Stage4ShieldDuration);
                     Sparkle(buddy.transform.position);
                     healedAny = true;
                 }
