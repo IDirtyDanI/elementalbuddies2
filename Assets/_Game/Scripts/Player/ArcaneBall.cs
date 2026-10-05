@@ -7,12 +7,15 @@ namespace ElementalBuddies
         public float Speed = 20f;
         public float Damage = 35f;
         public float Lifetime = 5f;
-        [Tooltip("Trefferzone reicht so weit unter die Kugel (m, × Kugelgröße) – trifft auch kleine Gegner (Schwarm), über die die Kugel sonst hinwegfliegt.")]
-        public float VerticalReach = 1.4f;
+        [Tooltip("Trefferzone reicht so weit unter die Kugel (Meter, unabhängig von der Prefab-Skalierung) – trifft auch kleine Gegner (Schwarm), über die die Kugel sonst hinwegfliegt.")]
+        public float VerticalReach = 1.8f;
+        [Tooltip("Mindest-Trefferradius der Kugel in Metern (der Kollider ist durch die Prefab-Skalierung sehr klein).")]
+        public float MinHitRadius = 0.45f;
+        [Tooltip("Kugelgröße durch Händlerkarten (setzt der MageKit); vergrößert Trefferradius und -zone.")]
+        public float SizeFactor = 1f;
 
         private SphereCollider _sphere;
         private bool _hit;
-        private static readonly Collider[] _overlap = new Collider[16];
 
         void Start()
         {
@@ -30,16 +33,17 @@ namespace ElementalBuddies
         private void CheckBelow()
         {
             if (_hit || VerticalReach <= 0f) return;
-            float scale = transform.lossyScale.x;
-            float radius = (_sphere != null ? _sphere.radius : 0.5f) * scale;
+            float size = Mathf.Max(0.1f, SizeFactor);
+            float radius = Mathf.Max((_sphere != null ? _sphere.radius : 0.5f) * transform.lossyScale.x, MinHitRadius * size);
             Vector3 top = transform.position;
-            Vector3 bottom = top + Vector3.down * VerticalReach * scale;
-            int n = Physics.OverlapCapsuleNonAlloc(top, bottom, radius, _overlap, ~0, QueryTriggerInteraction.Collide);
-            for (int i = 0; i < n; i++)
+            Vector3 bottom = top + Vector3.down * VerticalReach * size;
+            // Ohne festen Puffer: in der Stadt liegen Boden, Deko und Trigger mit in der Kapsel (Gegner nicht alle auf Ebene "Enemy")
+            var hits = Physics.OverlapCapsule(top, bottom, radius, ~0, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < hits.Length; i++)
             {
-                if (_overlap[i] != null && _overlap[i].CompareTag("Enemy"))
+                if (hits[i] != null && hits[i].CompareTag("Enemy"))
                 {
-                    HitEnemy(_overlap[i]);
+                    HitEnemy(hits[i]);
                     return;
                 }
             }
@@ -49,7 +53,7 @@ namespace ElementalBuddies
         {
             if (_hit) return;
             _hit = true;
-            var damageable = other.GetComponent<IDamageable>();
+            var damageable = other.GetComponentInParent<IDamageable>(); // Kollider kann am Kind (Visual) hängen
             if (damageable != null)
             {
                 EnemyBrain.DealPlayerDamage(damageable, Damage); // Quelle Spieler (Telemetrie)

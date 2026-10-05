@@ -4,7 +4,8 @@ using UnityEngine;
 namespace ElementalBuddies
 {
     // Prüft im Spiel die Bedingungen der Erfolge (AchievementDatabaseSO) und speichert neue Erfolge über Progression.
-    // Freischaltungen wirken erst ab dem nächsten Spiel (Snapshot beim Szenenstart). Liegt auf dem Managers-Objekt.
+    // Erfolge gelten für die gespielte Stufe (und leichtere); Freischaltungen wirken erst ab dem nächsten Spiel
+    // (Snapshot beim Szenenstart). Liegt auf dem Managers-Objekt.
     // Quellen: Wellenstart (WaveManager), Buddy-Scan (ElementalBuddy.Active, periodisch), Fusionen (FusionManager.OnFused),
     // Boss-Kills (EnemyBrain.OnEnemyKilled), Splitter-Einnahmen (EconomyManager.OnShardsEarned).
     // Cheat-Schutz: Bei aktiven DevTools-Cheats werden keine Erfolge vergeben (außer DevTools.AllowAchievementsWithCheats).
@@ -195,6 +196,7 @@ namespace ElementalBuddies
         {
             if (!AchievementsAllowed) return;
             Progression.ReportLive(a.Id, value);
+            // Neu ist ein Erfolg auch, wenn er bisher nur auf einer leichteren Stufe erreicht wurde
             if (value < Mathf.Max(1, a.Threshold) || Progression.IsAchieved(a.Id)) return;
             Progression.Grant(a);
         }
@@ -210,15 +212,18 @@ namespace ElementalBuddies
             GameAudio.Play(GameAudio.Has(Sound) ? Sound : SfxId.Fusion, PlayerAbilities.Instance != null ? PlayerAbilities.Instance.transform.position : Vector3.zero);
         }
 
-        // "Erfolg: Zwillingskraft – 2er-Fusionen ab dem nächsten Spiel" (Trophäe: nur "Erfolg: <Titel>")
+        // "Erfolg (Normal): Zwillingskraft – 2er-Fusionen ab dem nächsten Spiel auf Normal und Leicht"
+        // (Trophäe: nur "Erfolg (Normal): <Titel>"); Stufe = höchster erreichter Rang des Erfolgs
         public static string ToastText(AchievementDefinition a)
         {
             if (a == null) return "";
-            if (a.IsTrophy) return $"Erfolg: {a.Title}";
+            int rank = Mathf.Max(1, Progression.AchievedRank(a));
+            string head = $"Erfolg ({Progression.RankName(rank)}): {a.Title}";
+            if (a.IsTrophy) return head;
             string unlock = Progression.GetUnlockName(a.Unlock);
-            if (Progression.IsUnlockedPersistent(a.Unlock)) return $"Erfolg: {a.Title} – {unlock} ab dem nächsten Spiel";
+            if (Progression.IsUnlockedPersistent(a.Unlock, rank)) return $"{head} – {unlock} ab dem nächsten Spiel {Progression.RankScopeText(rank)}";
             // Freischaltung braucht noch weitere Erfolge (z. B. Super-Elementare)
-            return $"Erfolg: {a.Title} – Teil von „{unlock}“";
+            return $"{head} – Teil von „{unlock}“";
         }
     }
 }

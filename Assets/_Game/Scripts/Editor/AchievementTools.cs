@@ -285,11 +285,25 @@ namespace ElementalBuddies.EditorTools
             Debug.Log("AchievementTools: Alle Erfolge zurückgesetzt (Bestwelle bleibt).\n" + Progression.DescribeState());
         }
 
-        [MenuItem("BuddyTD/Erfolge/Alle freischalten")]
+        [MenuItem("BuddyTD/Erfolge/Alle freischalten (Schwer = alle Stufen)")]
         public static void UnlockAll()
         {
-            Progression.UnlockAllPersistent();
-            Debug.Log("AchievementTools: Alle Erfolge freigeschaltet (wirkt ab dem nächsten Spiel).\n" + Progression.DescribeState());
+            Progression.UnlockAllPersistent(Progression.RankHard);
+            Debug.Log("AchievementTools: Alle Erfolge auf Schwer freigeschaltet – gilt für alle Stufen, ab dem nächsten Spiel.\n" + Progression.DescribeState());
+        }
+
+        [MenuItem("BuddyTD/Erfolge/Alle freischalten – nur Normal (und Leicht)")]
+        public static void UnlockAllNormal()
+        {
+            Progression.UnlockAllPersistent(Progression.RankNormal);
+            Debug.Log("AchievementTools: Alle Erfolge auf Normal freigeschaltet – gilt für Normal und Leicht, ab dem nächsten Spiel.\n" + Progression.DescribeState());
+        }
+
+        [MenuItem("BuddyTD/Erfolge/Alle freischalten – nur Leicht")]
+        public static void UnlockAllEasy()
+        {
+            Progression.UnlockAllPersistent(Progression.RankEasy);
+            Debug.Log("AchievementTools: Alle Erfolge auf Leicht freigeschaltet – gilt nur für Leicht, ab dem nächsten Spiel.\n" + Progression.DescribeState());
         }
 
         [MenuItem("BuddyTD/Erfolge/Stand ausgeben")]

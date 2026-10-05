@@ -12,7 +12,8 @@ namespace ElementalBuddies
 {
     // Hauptmenü (Szene MainMenu): Champion-Karten, Detail-Panel mit Fähigkeiten, 3D-Vorschau (MenuChampionStage),
     // Spielen / Einstellungen / Erfolge / Beenden. Die Hierarchie baut der Editor-Builder (BuddyTD/Hauptmenü/Szene bauen).
-    // Gesperrte Champions (Progression.IsChampionUnlocked) sind ansehbar, aber nicht spielbar.
+    // Gesperrte Champions (Progression.IsChampionUnlocked) sind ansehbar, aber nicht spielbar. Sperren und Erfolge-Seite
+    // beziehen sich auf die gewählte Schwierigkeitsstufe (Erfolge gelten pro Stufe, siehe Progression).
     public class MainMenuUI : MonoBehaviour
     {
         [System.Serializable]
@@ -74,15 +75,22 @@ namespace ElementalBuddies
         public GameObject AchievementsPanel;
         public Button AchievementsBackButton;
         public TextMeshProUGUI AchievementsCounter;
+        [Tooltip("Überschrift im Banner (\"Erfolge – Normal\"); fehlt sie, wird Ribbon/Title im Panel gesucht.")]
+        public TextMeshProUGUI AchievementsTitle;
         public ScrollRect AchievementsScroll;
         public RectTransform AchievementsContent;
-        [Tooltip("Inaktive Vorlage; Kinder: MedalIcon, MedalFrame (Image), Title, Desc, Progress (TMP), Bar/BarFill (Image), RewardLabel, RewardName (TMP), RewardIcon (Image). Hintergrund = Image auf der Vorlage.")]
+        [Tooltip("Inaktive Vorlage; Kinder: MedalIcon, MedalFrame (Image), Title, Desc, Progress (TMP), Bar/BarFill (Image), RewardLabel, RewardName (TMP), RewardIcon (Image), Tiers/Tier1..3 (Image + Label) = Stufen-Marker L/N/S. Hintergrund = Image auf der Vorlage.")]
         public GameObject AchievementRowTemplate;
         public Color AchievedRowColor = new Color(1f, 0.93f, 0.72f, 1f);
         public Color OpenRowColor = new Color(0.9f, 0.87f, 0.82f, 1f);
         public Color LockedIconTint = new Color(0.42f, 0.42f, 0.45f, 1f);
         public Color AchievedBarColor = new Color(0.86f, 0.64f, 0.18f);
         public Color OpenBarColor = new Color(0.62f, 0.45f, 0.28f);
+        [Tooltip("Stufen-Marker (L/N/S) einer Zeile: auf dieser Stufe erreicht bzw. nicht erreicht.")]
+        public Color TierAchievedColor = new Color(0.86f, 0.64f, 0.18f);
+        public Color TierOpenColor = new Color(0.6f, 0.58f, 0.55f, 0.75f);
+        public Color TierAchievedTextColor = new Color(0.24f, 0.15f, 0.08f);
+        public Color TierOpenTextColor = new Color(0.93f, 0.91f, 0.87f);
 
         [Header("Schwierigkeit")]
         [Tooltip("Segment-Knöpfe in der Reihenfolge von DifficultySO.All (Leicht, Normal, Schwer); Beschriftung = DisplayName.")]
@@ -208,6 +216,9 @@ namespace ElementalBuddies
             if (AchievementsPanel != null && AchievementsPanel.activeSelf)
             {
                 if (kb.escapeKey.wasPressedThisFrame) ShowAchievements(false);
+                // Stufe auch auf der Erfolge-Seite wechseln (Liste zeigt den Stand der gewählten Stufe)
+                else if (kb.qKey.wasPressedThisFrame) SelectDifficulty(DifficultyIndex() - 1);
+                else if (kb.eKey.wasPressedThisFrame) SelectDifficulty(DifficultyIndex() + 1);
                 return;
             }
 
@@ -376,10 +387,14 @@ namespace ElementalBuddies
 
         // ---------------- Sperren ----------------
 
-        public static bool IsLocked(ChampionClass c) => !Progression.IsChampionUnlocked(c);
+        // Rang der im Menü gewählten Stufe (Erfolge und Freischaltungen gelten pro Stufe)
+        private static int MenuRank => Progression.Rank(GameSession.Difficulty);
 
-        // "Erreiche Welle 6"
-        private static string LockGoal(ChampionClass c) => Progression.GoalText(Progression.ChampionUnlock(c));
+        public static bool IsLocked(ChampionClass c) => !Progression.IsChampionUnlocked(c, false, MenuRank);
+
+        // "Erreiche Welle 6 auf Schwer" (withRank = false: "Erreiche Welle 6" für die schmalen Karten)
+        private static string LockGoal(ChampionClass c, bool withRank = true) =>
+            Progression.GoalText(Progression.ChampionUnlock(c), MenuRank, withRank);
 
         private Color _nameColor = Color.white;
 
@@ -432,7 +447,7 @@ namespace ElementalBuddies
                 }
                 if (card.Tagline != null && def != null)
                 {
-                    card.Tagline.text = locked ? "Gesperrt: " + LockGoal(card.Class) : def.Tagline;
+                    card.Tagline.text = locked ? "Gesperrt: " + LockGoal(card.Class, false) : def.Tagline;
                     card.Tagline.color = locked ? LockedTextColor : _taglineColor;
                 }
                 if (Stage != null) Stage.SetLocked(card.Class, locked);
@@ -440,9 +455,10 @@ namespace ElementalBuddies
 
             bool selLocked = IsLocked(_selected);
             var sdef = Def(_selected);
+            string onRank = " auf " + Progression.RankName(MenuRank);
             if (DetailTagline != null && sdef != null)
             {
-                DetailTagline.text = selLocked ? "Gesperrt – " + LockGoal(_selected) : sdef.Tagline;
+                DetailTagline.text = selLocked ? "Gesperrt" + onRank + " – " + LockGoal(_selected) : sdef.Tagline;
                 DetailTagline.color = selLocked ? LockedTextColor : _detailTaglineColor;
             }
             if (PlayButton != null)
@@ -455,7 +471,7 @@ namespace ElementalBuddies
             {
                 PlayLockHint.gameObject.SetActive(selLocked);
                 if (selLocked)
-                    PlayLockHint.text = (sdef != null ? sdef.DisplayName : _selected.ToString()) + " gesperrt – " + LockGoal(_selected);
+                    PlayLockHint.text = (sdef != null ? sdef.DisplayName : _selected.ToString()) + onRank + " gesperrt – " + LockGoal(_selected);
             }
             // Sperr-Hinweis und Stufen-Beschreibung teilen sich die Zeile über "Spielen"
             if (DifficultyDescription != null) DifficultyDescription.gameObject.SetActive(!(selLocked && PlayLockHint != null));
@@ -472,7 +488,7 @@ namespace ElementalBuddies
             return 0;
         }
 
-        // Stufe wählen und sofort speichern (gilt für das nächste Spiel)
+        // Stufe wählen und sofort speichern (gilt für das nächste Spiel); Sperren und Erfolge-Seite folgen der Stufe
         public void SelectDifficulty(int index)
         {
             var all = DifficultySO.All;
@@ -481,6 +497,12 @@ namespace ElementalBuddies
             if (all[index] == null) return;
             GameSession.Difficulty = all[index];
             RefreshDifficulty();
+            RefreshLocks();
+            if (AchievementsPanel != null && AchievementsPanel.activeSelf)
+            {
+                FillAchievements();
+                return; // Fokus bleibt auf der Erfolge-Seite
+            }
             // Fokus zurück auf "Spielen", damit Enter weiter direkt startet
             if (Application.isPlaying && PlayButton != null && EventSystem.current != null)
                 EventSystem.current.SetSelectedGameObject(PlayButton.gameObject);
@@ -552,7 +574,14 @@ namespace ElementalBuddies
             _achievementRows.Clear();
 
             var all = Progression.All;
-            if (AchievementsCounter != null) AchievementsCounter.text = $"{Progression.AchievedCount} / {all.Count}";
+            int rank = MenuRank;
+            if (AchievementsTitle == null && AchievementsPanel != null)
+            {
+                var ribbon = FindChild<RectTransform>(AchievementsPanel.transform, "Ribbon");
+                if (ribbon != null) AchievementsTitle = FindChild<TextMeshProUGUI>(ribbon, "Title");
+            }
+            if (AchievementsTitle != null) AchievementsTitle.text = "Erfolge – " + Progression.RankName(rank);
+            if (AchievementsCounter != null) AchievementsCounter.text = $"{Progression.AchievedCountFor(rank)} / {all.Count}";
             if (AchievementRowTemplate == null || AchievementsContent == null) return;
 
             var db = AchievementDatabaseSO.Instance;
@@ -563,14 +592,15 @@ namespace ElementalBuddies
                 row.name = "Achievement_" + a.Id;
                 row.SetActive(true);
                 _achievementRows.Add(row);
-                FillAchievementRow(row, a, db);
+                FillAchievementRow(row, a, db, rank);
             }
             if (Application.isPlaying) Canvas.ForceUpdateCanvases();
         }
 
-        private void FillAchievementRow(GameObject row, AchievementDefinition a, AchievementDatabaseSO db)
+        // Zeile für die Stufe rank: Status/Fortschritt der Stufe, Marker L/N/S für alle Stufen
+        private void FillAchievementRow(GameObject row, AchievementDefinition a, AchievementDatabaseSO db, int rank)
         {
-            bool done = Progression.IsAchieved(a);
+            bool done = Progression.IsAchieved(a, rank);
             var t = row.transform;
 
             var bg = row.GetComponent<Image>();
@@ -603,7 +633,7 @@ namespace ElementalBuddies
             if (desc != null) desc.text = AchievementDatabaseSO.GetConditionText(a);
 
             int cur, target;
-            Progression.GetProgress(a, out cur, out target);
+            Progression.GetProgress(a, out cur, out target, rank);
             var fill = FindChild<Image>(t, "BarFill");
             if (fill != null)
             {
@@ -615,6 +645,8 @@ namespace ElementalBuddies
             var progress = FindChild<TextMeshProUGUI>(t, "Progress");
             if (progress != null)
                 progress.text = done ? "<color=#3E7A26>Erreicht</color>" : cur.ToString(Inv) + " / " + target.ToString(Inv);
+
+            FillTierMarkers(t, Progression.AchievedRank(a));
 
             // Belohnung
             var label = FindChild<TextMeshProUGUI>(t, "RewardLabel");
@@ -649,6 +681,28 @@ namespace ElementalBuddies
                 rIcon.sprite = rs;
                 rIcon.enabled = rs != null;
                 rIcon.color = done ? Color.white : new Color(0.8f, 0.8f, 0.8f, 1f);
+            }
+        }
+
+        // Marker Tier1..3 (Leicht/Normal/Schwer): erreicht, wenn der Erfolg auf dieser Stufe oder höher geschafft wurde
+        private void FillTierMarkers(Transform row, int achievedRank)
+        {
+            var tiers = FindChild<RectTransform>(row, "Tiers");
+            if (tiers == null) return;
+            for (int r = Progression.RankEasy; r <= Progression.MaxRank; r++)
+            {
+                var marker = tiers.Find("Tier" + r);
+                if (marker == null) continue;
+                bool on = achievedRank >= r;
+                var img = marker.GetComponent<Image>();
+                if (img != null) img.color = on ? TierAchievedColor : TierOpenColor;
+                var lbl = marker.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (lbl != null)
+                {
+                    string name = Progression.RankName(r);
+                    lbl.text = name.Length > 0 ? name.Substring(0, 1) : r.ToString(Inv);
+                    lbl.color = on ? TierAchievedTextColor : TierOpenTextColor;
+                }
             }
         }
 

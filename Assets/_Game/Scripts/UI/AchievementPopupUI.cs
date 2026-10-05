@@ -44,7 +44,8 @@ namespace ElementalBuddies
         [Tooltip("Einflug-Strecke von oben.")]
         public float SlideDistance = 70f;
 
-        private static readonly Queue<AchievementDefinition> _queue = new Queue<AchievementDefinition>();
+        // Erfolg + Stufe (Rang), auf der er erreicht wurde
+        private static readonly Queue<KeyValuePair<AchievementDefinition, int>> _queue = new Queue<KeyValuePair<AchievementDefinition, int>>();
         private Coroutine _routine;
         private Canvas _canvas;
         private BossHealthBarUI _bossBar;
@@ -75,7 +76,7 @@ namespace ElementalBuddies
             if (a == null) return false;
             var ui = EnsureInstance();
             if (ui == null) return false;
-            _queue.Enqueue(a);
+            _queue.Enqueue(new KeyValuePair<AchievementDefinition, int>(a, Mathf.Max(1, Progression.AchievedRank(a))));
             ui.Pump();
             return true;
         }
@@ -132,8 +133,8 @@ namespace ElementalBuddies
                     _queue.Clear();
                     break;
                 }
-                var a = _queue.Dequeue();
-                Fill(a);
+                var entry = _queue.Dequeue();
+                Fill(entry.Key, entry.Value);
                 float top = CurrentTopOffset();
 
                 // Einflug: von oben herein, leichtes Überschwingen
@@ -211,7 +212,7 @@ namespace ElementalBuddies
             return Mathf.Max(top, below);
         }
 
-        private void Fill(AchievementDefinition a)
+        private void Fill(AchievementDefinition a, int rank)
         {
             var db = AchievementDatabaseSO.Instance;
             if (MedalIcon != null)
@@ -220,12 +221,12 @@ namespace ElementalBuddies
                 MedalIcon.enabled = a.Icon != null;
             }
             if (MedalFrame != null && db != null && db.MedalFrame != null) MedalFrame.sprite = db.MedalFrame;
-            if (Header != null) Header.text = "Erfolg freigeschaltet!";
+            if (Header != null) Header.text = $"Erfolg freigeschaltet! ({Progression.RankName(rank)})";
             if (Title != null) Title.text = a.Title;
 
             Sprite icon;
-            if (Reward != null) Reward.text = RewardText(a, out icon);
-            else RewardText(a, out icon);
+            if (Reward != null) Reward.text = RewardText(a, rank, out icon);
+            else RewardText(a, rank, out icon);
             if (RewardIcon != null)
             {
                 RewardIcon.sprite = icon;
@@ -233,8 +234,9 @@ namespace ElementalBuddies
             }
         }
 
-        // "Ab dem nächsten Spiel: Schwertkämpfer" · Teil-Freischaltung · "Trophäe"
-        public static string RewardText(AchievementDefinition a, out Sprite icon)
+        // "Ab dem nächsten Spiel auf Normal und Leicht: Schwertkämpfer" · Teil-Freischaltung · "Trophäe"
+        // rank = Stufe, auf der der Erfolg erreicht wurde
+        public static string RewardText(AchievementDefinition a, int rank, out Sprite icon)
         {
             var db = AchievementDatabaseSO.Instance;
             if (a == null)
@@ -249,8 +251,8 @@ namespace ElementalBuddies
             }
             icon = db != null ? db.GetUnlockIcon(a.Unlock) : null;
             string name = Progression.GetUnlockName(a.Unlock);
-            if (Progression.IsUnlockedPersistent(a.Unlock)) return $"Ab dem nächsten Spiel: <b>{name}</b>";
-            return $"Teil von „{name}“ – {Progression.GoalText(a.Unlock)}";
+            if (Progression.IsUnlockedPersistent(a.Unlock, rank)) return $"Ab dem nächsten Spiel {Progression.RankScopeText(rank)}: <b>{name}</b>";
+            return $"Teil von „{name}“ – {Progression.GoalText(a.Unlock, rank)}";
         }
     }
 }

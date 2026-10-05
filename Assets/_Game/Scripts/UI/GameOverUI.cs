@@ -93,7 +93,7 @@ namespace ElementalBuddies
             ShowEarnedAchievements();
         }
 
-        // "In diesem Spiel erreichte Erfolge: Verteidiger, Zwillingskraft" (nur wenn welche erreicht wurden)
+        // "In diesem Spiel erreichte Erfolge (Normal): Verteidiger, Zwillingskraft" (nur wenn welche erreicht wurden)
         private void ShowEarnedAchievements()
         {
             var am = AchievementManager.Instance;
@@ -125,7 +125,7 @@ namespace ElementalBuddies
 
             var names = new System.Collections.Generic.List<string>();
             foreach (var a in earned) if (a != null) names.Add(a.Title);
-            AchievementsText.text = $"<b>In diesem Spiel erreichte Erfolge:</b>\n{string.Join(", ", names)}";
+            AchievementsText.text = $"<b>In diesem Spiel erreichte Erfolge ({Progression.RankName(Progression.SnapshotRank)}):</b>\n{string.Join(", ", names)}";
             AchievementsText.gameObject.SetActive(true);
         }
     }

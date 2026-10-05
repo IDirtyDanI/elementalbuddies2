@@ -58,6 +58,9 @@ namespace ElementalBuddies.EditorTools
         [MenuItem("BuddyTD/Hauptmenü/Schwierigkeitsauswahl in bestehende Szene einbauen")]
         public static void AddDifficultyUIMenu() { AddDifficultyUIToScene(); }
 
+        [MenuItem("BuddyTD/Hauptmenü/Erfolge: Stufen-Marker in bestehende Szene einbauen")]
+        public static void AddAchievementTierUIMenu() { AddAchievementTierUIToScene(); }
+
         // ---------------- Build Settings ----------------
 
         // MainMenu = Index 0, Spielszene danach. SampleScene (Unity-Vorlage, nicht referenziert) fliegt raus.
@@ -857,6 +860,7 @@ namespace ElementalBuddies.EditorTools
             Img(ribbon, UISprite("ribbon_banner"), Color.white, true);
             var t = Text(ribbon, "Title", "Erfolge", _fHead, 54f, Cream, TextAlignmentOptions.Center, null);
             Stretch(t.rectTransform, new Vector2(0f, 6f), new Vector2(0f, -12f));
+            ui.AchievementsTitle = t; // "Erfolge – Normal" (gewählte Stufe)
 
             // Zähler oben rechts
             var cIcon = Rect("CounterIcon", box, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(-300f, -34f), new Vector2(64f, 64f));
@@ -865,9 +869,10 @@ namespace ElementalBuddies.EditorTools
             Place(ui.AchievementsCounter.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(-228f, -36f), new Vector2(180f, 60f));
             ui.AchievementsCounter.textWrappingMode = TextWrappingModes.NoWrap;
 
-            var info = Text(box, "Info", "Freischaltungen gelten ab dem nächsten Spiel.", _fReg, 24f, InkLight, TextAlignmentOptions.MidlineLeft, null);
+            var info = Text(box, "Info", InfoText, _fReg, 24f, InkLight, TextAlignmentOptions.MidlineLeft, null);
             Place(info.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(72f, -36f), new Vector2(480f, 60f));
             info.fontStyle = FontStyles.Italic;
+            SetupInfo(info);
 
             // Scroll-Liste
             var scroll = Rect("Scroll", box, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(0f, 14f), new Vector2(-120f, -248f));
@@ -916,6 +921,18 @@ namespace ElementalBuddies.EditorTools
             Place((RectTransform)back.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(320f, 84f));
             ui.AchievementsBackButton = back;
             overlay.gameObject.SetActive(false);
+        }
+
+        // Hinweis oben links auf der Erfolge-Seite (Erfolge gelten pro Stufe)
+        private const string InfoText = "Erfolge zählen auf ihrer Stufe und allen leichteren.\nFreischaltungen ab dem nächsten Spiel · Q/E: Stufe";
+
+        private static void SetupInfo(TextMeshProUGUI info)
+        {
+            info.text = InfoText;
+            info.enableAutoSizing = true;
+            info.fontSizeMin = 16f;
+            info.fontSizeMax = 22f;
+            info.lineSpacing = -6f;
         }
 
         // Vorlage einer Erfolgs-Zeile: Medaille | Titel, Bedingung, Fortschritt | Belohnung
@@ -972,8 +989,76 @@ namespace ElementalBuddies.EditorTools
             rName.fontSizeMax = 28f;
             rName.lineSpacing = -8f;
 
+            BuildTierMarkers(row);
+
             row.gameObject.SetActive(false);
             ui.AchievementRowTemplate = row.gameObject;
+        }
+
+        // Stufen-Marker L/N/S oben rechts im linken Zeilenteil (vor dem Trenner); Farben/Buchstaben setzt MainMenuUI
+        private static void BuildTierMarkers(RectTransform row)
+        {
+            const float size = 40f, gap = 8f;
+            int count = Progression.MaxRank;
+            var tiers = Rect("Tiers", row, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-508f, -22f),
+                new Vector2(count * size + (count - 1) * gap, size));
+            for (int r = 1; r <= count; r++)
+            {
+                var m = Rect("Tier" + r, tiers, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                    new Vector2((r - 1) * (size + gap), 0f), new Vector2(size, size));
+                Img(m, MenuSprite("menu_disc"), new Color(0.6f, 0.58f, 0.55f, 0.75f), false).preserveAspect = true;
+                var lbl = Text(m, "Label", Progression.RankName(r).Substring(0, 1), _fBold, 24f, Cream, TextAlignmentOptions.Center, null);
+                Stretch(lbl.rectTransform, Vector2.zero);
+                lbl.textWrappingMode = TextWrappingModes.NoWrap;
+            }
+        }
+
+        // Ergänzt die Erfolge-Seite der bestehenden Menü-Szene um die Stufen-Marker (Zeilenvorlage) und verknüpft die
+        // Banner-Überschrift, ohne den Rest neu zu bauen (ersetzt nur frühere Marker).
+        public static void AddAchievementTierUIToScene()
+        {
+            if (EditorApplication.isPlaying) { Debug.LogWarning("MainMenuBuilder: nur im Edit-Modus."); return; }
+            if (!System.IO.File.Exists(ScenePath)) { Debug.LogWarning("MainMenuBuilder: " + ScenePath + " fehlt – erst \"Alles einrichten\"."); return; }
+            LoadFonts();
+            ImportMenuSprites();
+
+            Scene prevActive = SceneManager.GetActiveScene();
+            Scene menu = SceneManager.GetSceneByPath(ScenePath);
+            bool wasLoaded = menu.IsValid() && menu.isLoaded;
+            if (!wasLoaded) menu = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                MainMenuUI ui = null;
+                foreach (var go in menu.GetRootGameObjects())
+                {
+                    ui = go.GetComponentInChildren<MainMenuUI>(true);
+                    if (ui != null) break;
+                }
+                if (ui == null || ui.AchievementRowTemplate == null || ui.AchievementsPanel == null)
+                {
+                    Debug.LogWarning("MainMenuBuilder: keine Erfolge-Seite in " + ScenePath + " – erst \"Erfolge-UI in bestehende Szene einbauen\".");
+                    return;
+                }
+
+                var row = (RectTransform)ui.AchievementRowTemplate.transform;
+                var old = row.Find("Tiers");
+                if (old != null) Object.DestroyImmediate(old.gameObject);
+                BuildTierMarkers(row);
+                var ribbon = ui.AchievementsPanel.transform.Find("Box/Ribbon/Title");
+                if (ribbon != null) ui.AchievementsTitle = ribbon.GetComponent<TextMeshProUGUI>();
+                var info = ui.AchievementsPanel.transform.Find("Box/Info");
+                if (info != null && info.GetComponent<TextMeshProUGUI>() != null) SetupInfo(info.GetComponent<TextMeshProUGUI>());
+
+                EditorUtility.SetDirty(ui);
+                EditorSceneManager.MarkSceneDirty(menu);
+                EditorSceneManager.SaveScene(menu, ScenePath);
+                Debug.Log("MainMenuBuilder: Stufen-Marker der Erfolge in " + ScenePath + " eingebaut.");
+            }
+            finally
+            {
+                if (prevActive.IsValid() && prevActive.isLoaded && prevActive != menu) SceneManager.SetActiveScene(prevActive);
+                if (!wasLoaded && prevActive != menu) EditorSceneManager.CloseScene(menu, true);
+            }
         }
 
         private static Slider SliderRow(Transform parent, string name, string label, out TextMeshProUGUI value)

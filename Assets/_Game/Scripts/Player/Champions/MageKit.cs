@@ -128,6 +128,7 @@ namespace ElementalBuddies
             }
             float size = ArcaneBallSizeFactor;
             if (!Mathf.Approximately(size, 1f)) ball.transform.localScale *= size; // Trigger wächst mit
+            if (arcane != null) arcane.SizeFactor = size;
             ArcaneBallCast?.Invoke();
         }
 
