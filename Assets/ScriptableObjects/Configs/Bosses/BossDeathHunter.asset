@@ -19,8 +19,8 @@ MonoBehaviour:
   Damage: 0
   Prefab: {fileID: 7739312400145016387, guid: 1ec3f012234d048ed99b2d53955fea7f, type: 3}
   BuddyMaxHP: 0
-  BaseHP: 800
-  Speed: 2.3
+  BaseHP: 480
+  Speed: 1.7
   AttackDamage: 14
   Armor: 0.1
   BountyMultiplier: 20
@@ -36,6 +36,5 @@ MonoBehaviour:
   ProjectileSpawnHeight: -0.3
   IsBoss: 1
   DisplayName: "Totenj\xE4ger"
-  HpBonusMultiplier: 5
   ControlResistance: 0.6
   ThemeColor: {r: 0.6, g: 0.2, b: 1, a: 1}

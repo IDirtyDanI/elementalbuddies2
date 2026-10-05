@@ -20,3 +20,4 @@ MonoBehaviour:
   StatToBuff: 8
   Value: 1
   IsPercentage: 1
+  MaxPicks: 6

@@ -19,8 +19,8 @@ MonoBehaviour:
   Damage: 0
   Prefab: {fileID: 7766600034171190633, guid: c7de8552d8cbe41ab8bd4091bf4d438b, type: 3}
   BuddyMaxHP: 0
-  BaseHP: 900
-  Speed: 2.2
+  BaseHP: 800
+  Speed: 1.6
   AttackDamage: 18
   Armor: 0.15
   BountyMultiplier: 20
@@ -36,6 +36,5 @@ MonoBehaviour:
   ProjectileSpawnHeight: 0.6
   IsBoss: 1
   DisplayName: Nekromant
-  HpBonusMultiplier: 5
   ControlResistance: 0.6
   ThemeColor: {r: 0.35, g: 1, b: 0.25, a: 1}

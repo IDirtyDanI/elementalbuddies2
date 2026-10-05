@@ -15891,8 +15891,8 @@ MonoBehaviour:
   SniperFromLevel: 3
   SniperRange: 18
   SniperFireRateFactor: 0.45
-  SniperDamageFactor: 3
-  SniperBossDamageMultiplier: 1.5
+  SniperDamageFactor: 1.8
+  SniperBossDamageMultiplier: 1
   SniperProjectileSpeed: 40
   Stage4PierceCount: 1
   Stage4PierceRange: 6

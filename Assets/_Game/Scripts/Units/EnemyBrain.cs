@@ -96,6 +96,17 @@ namespace ElementalBuddies
         private Transform _lookupTransform;
         private ElementalBuddy _lookupBuddy;
 
+        // Patt-Schutz: kommt ein Angreifer bei einem Buddy nicht voran (z. B. Fernkampf-Boss gegen einen sich
+        // selbst heilenden Licht-Buddy außer Turmreichweite), wird dieser Buddy eine Weile ignoriert → weiter zum Nexus
+        private const float BuddyStallTime = 10f;     // so lange ohne neuen Tiefstwert der Ziel-HP → aufgeben
+        private const float BuddyStallProgress = 0.05f; // Fortschritt = Ziel-HP mindestens 5 % (vom Max) unter dem bisherigen Tiefstwert
+        private const float BuddyIgnoreTime = 20f;
+        private ElementalBuddy _stallBuddy;
+        private float _stallLowestFraction;
+        private float _stallSince;
+        private ElementalBuddy _ignoredBuddy;
+        private float _ignoreBuddyUntil;
+
         // Fernkampf / Angriffs-Animation
         private float _nextAttackTime;
         private bool _shotPending;
@@ -120,6 +131,25 @@ namespace ElementalBuddies
         public static event System.Action<EnemyBrain> OnEnemyKilled;
         // Boss ist erschienen (in Start, nur Config.IsBoss); Boss-Tod läuft über OnEnemyKilled
         public static event System.Action<EnemyBrain> OnBossSpawned;
+        // Gegner steht zum ersten Mal in Angriffsreichweite des Nexus (Telemetrie „durchgekommen“)
+        public static event System.Action<EnemyBrain> OnReachedNexus;
+        // Tatsächlich abgezogene HP (höchstens Rest-HP) – Ziel, Menge, vom Spieler/Champion (sonst Türme/Rest)
+        public static event System.Action<EnemyBrain, float, bool> OnDamageDealt;
+
+        // Schadensmultiplikator dieses Gegners (Wellen-Rampe × Schwierigkeit, aus Initialize): Nahkampf, Fernkampf,
+        // Kontaktschaden an Buddies und Boss-Fähigkeiten (BossBrain)
+        public float DamageMultiplier { get; private set; } = 1f;
+        public bool ReachedNexus { get; private set; }
+
+        // Spieler-Treffer (Champion-Angriffe/-Zauber) laufen über DealPlayerDamage → Quelle für die Telemetrie
+        private static int _playerSourceDepth;
+        public static void DealPlayerDamage(IDamageable target, float amount)
+        {
+            if (target == null) return;
+            _playerSourceDepth++;
+            try { target.TakeDamage(amount); }
+            finally { _playerSourceDepth--; }
+        }
         private bool _isDead;
         public bool IsDead => _isDead;
 
@@ -158,6 +188,9 @@ namespace ElementalBuddies
             OnEnemyDeath = null;
             OnEnemyKilled = null;
             OnBossSpawned = null;
+            OnReachedNexus = null;
+            OnDamageDealt = null;
+            _playerSourceDepth = 0;
             _activeBosses.Clear();
         }
 
@@ -210,11 +243,14 @@ namespace ElementalBuddies
             _activeBosses.Remove(this);
         }
 
-        public void Initialize(float hpBonus)
+        // Wellen-Skalierung (WaveManager): HP = BaseHP × hpMultiplier (Bosse: Boss-Kurve, siehe WaveManager.HpMultiplierFor),
+        // Schaden × damageMultiplier
+        public void Initialize(float hpMultiplier, float damageMultiplier = 1f)
         {
-             if (Config != null) _currentHP = Config.BaseHP + hpBonus * Mathf.Max(0f, Config.HpBonusMultiplier);
-             else _currentHP = 60f + hpBonus;
+             float baseHp = Config != null ? Config.BaseHP : 60f;
+             _currentHP = Mathf.Max(1f, baseHp * Mathf.Max(0f, hpMultiplier));
              _maxHP = _currentHP;
+             DamageMultiplier = Mathf.Max(0f, damageMultiplier);
         }
 
         void Update()
@@ -356,7 +392,40 @@ namespace ElementalBuddies
                 _nextBuddyScan = Time.time + BuddyRescanInterval;
                 _buddyTarget = FindBuddyTarget(radius);
             }
+            TrackBuddyStall();
             return _buddyTarget;
+        }
+
+        // Kein Fortschritt am aktuellen Buddy-Ziel → Ziel für BuddyIgnoreTime s ignorieren
+        private void TrackBuddyStall()
+        {
+            var b = _buddyTarget;
+            if (b == null)
+            {
+                _stallBuddy = null;
+                return;
+            }
+            float frac = b.MaxHP > 0f ? b.CurrentHP / b.MaxHP : 1f;
+            if (b != _stallBuddy)
+            {
+                _stallBuddy = b;
+                _stallLowestFraction = frac;
+                _stallSince = Time.time;
+                return;
+            }
+            if (frac <= _stallLowestFraction - BuddyStallProgress)
+            {
+                _stallLowestFraction = frac;
+                _stallSince = Time.time;
+            }
+            else if (Time.time - _stallSince >= BuddyStallTime)
+            {
+                _ignoredBuddy = b;
+                _ignoreBuddyUntil = Time.time + BuddyIgnoreTime;
+                _stallBuddy = null;
+                _buddyTarget = null;
+                _nextBuddyScan = 0f;
+            }
         }
 
         private ElementalBuddy FindBuddyTarget(float radius)
@@ -369,6 +438,7 @@ namespace ElementalBuddies
             {
                 var b = active[i];
                 if (!IsValidBuddy(b)) continue;
+                if (b == _ignoredBuddy && Time.time < _ignoreBuddyUntil) continue;
                 Vector3 d = b.transform.position - pos;
                 d.y = 0f;
                 float dist = d.magnitude;
@@ -508,7 +578,7 @@ namespace ElementalBuddies
                      var buddy = hit.GetComponent<IDamageable>();
                      if (buddy != null)
                      {
-                         float dmg = (Config != null ? Config.AttackDamage : 10f) * Time.deltaTime;
+                         float dmg = (Config != null ? Config.AttackDamage : 10f) * DamageMultiplier * Time.deltaTime;
                          buddy.TakeDamage(dmg);
                          _blockedByBuddy = true; // blockiert = kein Nachzügler
                          return; 
@@ -520,6 +590,11 @@ namespace ElementalBuddies
         private void HandleAttack()
         {
              Transform target = GetCurrentTarget();
+             if (!ReachedNexus && target != null && IsNexus(target) && IsInAttackRange(target))
+             {
+                 ReachedNexus = true;
+                 OnReachedNexus?.Invoke(this);
+             }
              if (IsRanged)
              {
                  HandleRangedAttack(target);
@@ -527,7 +602,7 @@ namespace ElementalBuddies
              }
              if (target != null && IsInAttackRange(target))
              {
-                 float amount = (Config != null ? Config.AttackDamage : 10f) * Time.deltaTime;
+                 float amount = (Config != null ? Config.AttackDamage : 10f) * DamageMultiplier * Time.deltaTime;
                  if (BuddyOf(target) != null) amount *= BuddyDamageMultiplier;
                  // Optik: Angriffs-Animation im Takt von AttackInterval (Schaden bleibt kontinuierlich)
                  if (_hasAttackTrigger && _animator.isActiveAndEnabled && target != ForcedTarget && Time.time >= _nextAttackTime)
@@ -593,7 +668,7 @@ namespace ElementalBuddies
             var proj = go.GetComponent<EnemyProjectile>();
             if (proj == null) proj = go.AddComponent<EnemyProjectile>();
 
-            float damage = Config.AttackDamage;
+            float damage = Config.AttackDamage * DamageMultiplier;
             if (BuddyOf(_shotTarget) != null) damage *= BuddyDamageMultiplier;
             proj.Init(_shotTarget, aimOffset, damage, Config.ProjectileSpeed, transform.position);
         }
@@ -621,6 +696,7 @@ namespace ElementalBuddies
         public void TakeTrueDamage(float amount)
         {
             if (_isDead) return;
+            if (amount > 0f && OnDamageDealt != null) OnDamageDealt(this, Mathf.Min(amount, Mathf.Max(0f, _currentHP)), _playerSourceDepth > 0);
             _currentHP -= amount;
             if (_currentHP <= 0)
             {

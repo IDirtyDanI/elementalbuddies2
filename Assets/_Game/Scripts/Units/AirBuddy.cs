@@ -85,7 +85,7 @@ namespace ElementalBuddies
                     nearest = e;
                 }
                 e.Knockback(e.PathBackDirection, KnockbackDistance, KnockbackDuration);
-                e.TakeDamage(damage);
+                e.TakeDamage(DamageAgainst(e, damage));
             }
             CurrentTarget = nearest != null ? nearest.transform : null;
 

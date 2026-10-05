@@ -137,8 +137,15 @@ namespace ElementalBuddies
         private void UpdateWaveInfo()
         {
             if (WaveManager.Instance == null) return;
-            if (WaveText != null) 
-                WaveText.text = $"Welle {WaveManager.Instance.CurrentWaveIndex + 1}";
+            if (WaveText != null)
+            {
+                // Schwierigkeit dezent als zweite Zeile unter der Wellennummer (kleiner, halbtransparent; passt in die 200er-Box)
+                var diff = WaveManager.Instance.Difficulty;
+                string wave = $"Welle {WaveManager.Instance.CurrentWaveIndex + 1}";
+                WaveText.text = diff != null
+                    ? $"<line-height=80%>{wave}\n<size=50%><alpha=#B0>{diff.DisplayName}</line-height>"
+                    : wave;
+            }
                 
             if (StartWaveButton != null)
                 StartWaveButton.interactable = !WaveManager.Instance.IsWaveActive;

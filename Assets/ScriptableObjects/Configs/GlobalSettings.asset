@@ -16,12 +16,15 @@ MonoBehaviour:
   ManaCap: 200
   RegenOutCombat: 1.5
   RegenInCombat: 0.5
-  StartShards: 130
+  StartShards: 110
   ShardsPerKill: 6
   WaveBonusShardsBase: 40
-  WaveBonusShardsPerWave: 10
+  WaveBonusShardsPerWave: 2
   CombatSurcharge: 1.25
   RefundRatio: 0.7
+  DropDecayStartWave: 10
+  DropDecayPerWave: 0.08
+  DropDecayMin: 0.25
   ShardMagnetRadius: 3
   ShardCollectRadius: 0.5
   ShardMagnetSpeed: 14
@@ -38,9 +41,9 @@ MonoBehaviour:
   RangeBonusPerLevel: 0.1
   HPBonusPerLevel: 0.35
   UpgradeCostFactors:
-  - 0.6
-  - 1
-  - 1.6
+  - 0.8
+  - 1.5
+  - 3
   BuddyWaveEndHealPercent: 0.5
   BuddyHealthBarPrefab: {fileID: 3596947236582065483, guid: 64ba8f5ef2b144be794ec99f2e3c9d23, type: 3}
   BuddyDeathEffectPrefab: {fileID: 1821139266253955050, guid: aae9d8cd7e5c94e0e821a62a75b74155, type: 3}

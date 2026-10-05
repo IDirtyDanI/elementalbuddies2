@@ -184,11 +184,13 @@ namespace ElementalBuddies
         private AoeShape _shape;
         private BossAbility _ability;
         private AoeTelegraph _telegraph;
+        private float _damageMultiplier = 1f;
         private float _t;
         private int _done;
 
-        public void Setup(AoeShape shape, BossAbility ability, AoeTelegraph telegraph)
+        public void Setup(AoeShape shape, BossAbility ability, AoeTelegraph telegraph, float damageMultiplier = 1f)
         {
+            _damageMultiplier = damageMultiplier;
             _shape = shape;
             _ability = ability;
             _telegraph = telegraph;
@@ -233,7 +235,7 @@ namespace ElementalBuddies
                 else if (_ability.PulseEffectPrefab != null)
                     CombatUtil.SpawnFx(_ability.PulseEffectPrefab, land, Quaternion.identity, 1.5f);
             }
-            BossCombat.Apply(_shape, _ability, c, _ability.Damage);
+            BossCombat.Apply(_shape, _ability, c, _ability.Damage * _damageMultiplier);
             if (_ability.PlaySfx && (_done == 1 || _done % 2 == 0)) GameAudio.Play(_ability.ImpactSfx, c);
         }
     }

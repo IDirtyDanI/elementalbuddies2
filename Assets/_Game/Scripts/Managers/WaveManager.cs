@@ -44,6 +44,31 @@ namespace ElementalBuddies
         [Tooltip("Alle Gruppen einer Welle spawnen parallel; Gruppe i startet i × diesen Versatz (s) nach dem StartDelay.")]
         public float GroupStartOffset = 2f;
 
+        [Header("Balancing – Gegner-HP")]
+        [Tooltip("HP Normalgegner: BaseHP · (1 + HpLinearPerWave·(w−1)) · HpGrowthPerWave^(w−1). Linearer Anteil.")]
+        public float HpLinearPerWave = 0.02f;
+        [Tooltip("Exponentieller Anteil der HP-Kurve (Faktor pro Welle).")]
+        public float HpGrowthPerWave = 1.031f;
+        [Tooltip("Boss-HP: BaseHP · w · min(1, w/BossRampWave)² – Anlauf für frühe Bosse (0 = kein Anlauf).")]
+        public float BossRampWave = 12f;
+
+        [Header("Balancing – Gegner-Anzahl und Spawn-Tempo")]
+        [Tooltip("Anzahl-Multiplikator M(w) = (1 + CountGrowth·(w−1))^CountExponent auf alle Nicht-Boss-Gruppen.")]
+        public float CountGrowth = 0.05f;
+        public float CountExponent = 1.2f;
+        [Tooltip("Höchstens so viele Normalgegner pro Welle (ohne Schrein-Verlängerung und Angreifer), Performance-Deckel.")]
+        public int MaxEnemiesPerWave = 260;
+        [Tooltip("Spawn-Intervall aller Nicht-Boss-Gruppen × IntervalDecayPerWave^(w−1) …")]
+        public float IntervalDecayPerWave = 0.98f;
+        [Tooltip("… aber nie unter diesem Anteil des Ausgangsintervalls.")]
+        public float MinIntervalFactor = 0.5f;
+        [Tooltip("Boss-Wellen: Normalgruppen × diesen Faktor, Intervall ÷ Faktor (gleiche Spawn-Dauer, weniger dicht).")]
+        public float BossWaveEscortFactor = 0.6f;
+
+        [Header("Balancing – Gegnerschaden")]
+        [Tooltip("Gegnerschaden × (1 + DamageGrowthPerWave·(w−1)) – Nahkampf, Fernkampf, Kontakt und Boss-Fähigkeiten.")]
+        public float DamageGrowthPerWave = 0.04f;
+
         public int CurrentWaveIndex { get; private set; } = 0;
         public bool IsWaveActive { get; private set; } = false;
         public int EnemiesRemaining { get; private set; }
@@ -57,8 +82,61 @@ namespace ElementalBuddies
         // 1-basierte Nummer der laufenden Welle bzw. (zwischen den Wellen) der nächsten Welle
         public int UpcomingWaveNumber => CurrentWaveIndex + 1;
 
-        // HP-Bonus für Gegner der aktuellen Welle (+8 HP pro Welle)
-        public float CurrentHpBonus => CurrentWaveIndex * 8f;
+        // Schwierigkeitsstufe dieses Spiels (beim Start aus GameSession gelesen)
+        public DifficultySO Difficulty { get; private set; }
+
+        // Wellen-Bonus der zuletzt abgeschlossenen Welle (inkl. Einkommens-Faktor), z. B. für die Telemetrie
+        public float LastWaveBonus { get; private set; }
+
+        // Neuer Wellengegner (Welle, Schrein-/Händler-Angreifer, Dev-Boss) – nach Initialize
+        public static event System.Action<EnemyBrain> OnEnemySpawned;
+
+        // ---------------- Balancing-Kurven (w = 1-basierte Wellennummer) ----------------
+
+        // Anzahl-Multiplikator M(w) inkl. Schwierigkeit – auch für das Kopfgeld (mehr Gegner ≠ mehr Splitter)
+        public float CountMultiplier(int wave)
+        {
+            float m = Mathf.Pow(1f + CountGrowth * Mathf.Max(0, wave - 1), CountExponent);
+            return m * (Difficulty != null ? Difficulty.CountMultiplier : 1f);
+        }
+
+        // HP-Multiplikator der Normalgegner inkl. Schwierigkeit
+        public float HpMultiplier(int wave)
+        {
+            int n = Mathf.Max(0, wave - 1);
+            float m = (1f + HpLinearPerWave * n) * Mathf.Pow(HpGrowthPerWave, n);
+            return m * (Difficulty != null ? Difficulty.HpMultiplier : 1f);
+        }
+
+        // HP-Multiplikator der Bosse: w · min(1, w/BossRampWave)² inkl. Schwierigkeit
+        public float BossHpMultiplier(int wave)
+        {
+            float w = Mathf.Max(1, wave);
+            float ramp = BossRampWave > 0f ? Mathf.Min(1f, w / BossRampWave) : 1f;
+            return w * ramp * ramp * (Difficulty != null ? Difficulty.BossHpMultiplier : 1f);
+        }
+
+        // HP-Multiplikator für einen Gegnertyp (Boss-Zweig über Config.IsBoss)
+        public float HpMultiplierFor(EnemyConfigSO config, int wave)
+        {
+            return config != null && config.IsBoss ? BossHpMultiplier(wave) : HpMultiplier(wave);
+        }
+
+        // Gegnerschaden-Multiplikator inkl. Schwierigkeit
+        public float DamageMultiplier(int wave)
+        {
+            float m = 1f + DamageGrowthPerWave * Mathf.Max(0, wave - 1);
+            return m * (Difficulty != null ? Difficulty.DamageMultiplier : 1f);
+        }
+
+        // Spawn-Intervall-Faktor der Nicht-Boss-Gruppen (ohne Boss-Eskorte)
+        public float IntervalFactor(int wave)
+        {
+            return Mathf.Max(MinIntervalFactor, Mathf.Pow(IntervalDecayPerWave, Mathf.Max(0, wave - 1)));
+        }
+
+        // Einkommens-Faktor der Stufe (Kill-Drops + Wellen-Bonus)
+        public float IncomeMultiplier => Difficulty != null ? Difficulty.IncomeMultiplier : 1f;
 
         private int _portalCursor;
 
@@ -72,11 +150,23 @@ namespace ElementalBuddies
         private float _shrineExtensionDelay;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => OnPortalOpened = null;
+        private static void ResetStatics()
+        {
+            OnPortalOpened = null;
+            OnEnemySpawned = null;
+        }
 
         void Awake()
         {
             Instance = this;
+            Difficulty = GameSession.Difficulty;
+            Debug.Log($"WaveManager: Schwierigkeit {Difficulty.DisplayName} (HP ×{Difficulty.HpMultiplier}, Anzahl ×{Difficulty.CountMultiplier}, Schaden ×{Difficulty.DamageMultiplier}, Einkommen ×{Difficulty.IncomeMultiplier}, Boss ×{Difficulty.BossHpMultiplier}).");
+        }
+
+        // Stufe zur Laufzeit wechseln (Tests / Dev); gilt ab dem nächsten Spawn bzw. Kill
+        public void SetDifficulty(DifficultySO difficulty)
+        {
+            Difficulty = difficulty != null ? difficulty : DifficultySO.Normal;
         }
 
         void Start()
@@ -156,6 +246,7 @@ namespace ElementalBuddies
             }
 
             waveToSpawn = AddExtraGroups(waveToSpawn, UpcomingWaveNumber);
+            waveToSpawn = ScaleWave(waveToSpawn, UpcomingWaveNumber);
 
             UpdatePortals(true);
             StartCoroutine(SpawnWaveRoutine(waveToSpawn));
@@ -279,6 +370,66 @@ namespace ElementalBuddies
                 copy.EnemiesToSpawn.Add(new EnemySpawnInfo { EnemyType = extra.Config, Count = count, SpawnInterval = Mathf.Max(0.05f, extra.SpawnInterval) });
             }
             return copy != null ? copy : wave;
+        }
+
+        // Wellen-Rampe auf alle Nicht-Boss-Gruppen (Basiswelle, Endless und Zusatzgruppen): Anzahl × M(w) (aufgerundet),
+        // Intervall × IntervalFactor(w); Boss-Wellen nur mit Eskorte (Anzahl × BossWaveEscortFactor, Intervall ÷ Faktor).
+        // Danach Deckel MaxEnemiesPerWave (anteilig abgerundet, je Gruppe mind. 1). Wie balance_model.py wave_groups().
+        // Arbeitet auf neuen EnemySpawnInfo-Objekten – die WaveConfig-Assets bleiben unverändert.
+        public WaveConfigSO ScaleWave(WaveConfigSO wave, int waveNumber)
+        {
+            if (wave == null || wave.EnemiesToSpawn == null) return wave;
+
+            bool bossWave = false;
+            foreach (var g in wave.EnemiesToSpawn)
+                if (g != null && g.Count > 0 && g.EnemyType != null && g.EnemyType.IsBoss) bossWave = true;
+
+            float m = CountMultiplier(waveNumber);
+            float f = IntervalFactor(waveNumber);
+            if (bossWave && BossWaveEscortFactor > 0f && !Mathf.Approximately(BossWaveEscortFactor, 1f))
+            {
+                m *= BossWaveEscortFactor;
+                f /= BossWaveEscortFactor;
+            }
+
+            var scaled = ScriptableObject.CreateInstance<WaveConfigSO>();
+            scaled.StartDelay = wave.StartDelay;
+            scaled.EndBonusShards = wave.EndBonusShards;
+            scaled.EnemiesToSpawn = new List<EnemySpawnInfo>();
+            int normal = 0;
+            foreach (var g in wave.EnemiesToSpawn)
+            {
+                if (g == null) continue;
+                var copy = new EnemySpawnInfo { EnemyType = g.EnemyType, Count = g.Count, SpawnInterval = g.SpawnInterval };
+                bool boss = g.EnemyType != null && g.EnemyType.IsBoss;
+                if (!boss && g.Count > 0)
+                {
+                    copy.Count = Mathf.Max(1, Mathf.CeilToInt(g.Count * m - 1e-4f));
+                    copy.SpawnInterval = Mathf.Max(0.05f, g.SpawnInterval * f);
+                    normal += copy.Count;
+                }
+                scaled.EnemiesToSpawn.Add(copy);
+            }
+
+            if (MaxEnemiesPerWave > 0 && normal > MaxEnemiesPerWave)
+            {
+                float s = (float)MaxEnemiesPerWave / normal;
+                foreach (var g in scaled.EnemiesToSpawn)
+                    if (g.Count > 0 && (g.EnemyType == null || !g.EnemyType.IsBoss))
+                        g.Count = Mathf.Max(1, Mathf.FloorToInt(g.Count * s));
+            }
+            return scaled;
+        }
+
+        // Komplette Gruppenliste einer Welle wie beim Start (Basis/Endless + Zusatzgruppen + Rampe), ohne Schrein-
+        // Verlängerung und Angreifer – für Tests/Telemetrie/Modellvergleich
+        public WaveConfigSO BuildWave(int waveNumber)
+        {
+            if (Waves == null || Waves.Count == 0 || waveNumber < 1) return null;
+            WaveConfigSO wave = waveNumber <= Waves.Count
+                ? Waves[waveNumber - 1]
+                : CreateProceduralWave(Waves[Waves.Count - 1], waveNumber - Waves.Count);
+            return ScaleWave(AddExtraGroups(wave, waveNumber), waveNumber);
         }
 
         // Startversatz einer Gruppe relativ zum StartDelay (Gruppen laufen parallel)
@@ -425,7 +576,7 @@ namespace ElementalBuddies
 
             if (config != null && config.Prefab != null)
             {
-                InstantiateEnemy(config, pos, rot, CurrentHpBonus); // +8 HP per wave logic
+                InstantiateEnemy(config, pos, rot, HpMultiplierFor(config, UpcomingWaveNumber));
             }
             else
             {
@@ -436,22 +587,25 @@ namespace ElementalBuddies
             }
         }
 
-        private EnemyBrain InstantiateEnemy(EnemyConfigSO config, Vector3 pos, Quaternion rot, float hpBonus)
+        // Gemeinsamer Spawn-Pfad: HP × hpMultiplier, Schaden × Multiplikator der laufenden (bzw. nächsten) Welle
+        private EnemyBrain InstantiateEnemy(EnemyConfigSO config, Vector3 pos, Quaternion rot, float hpMultiplier)
         {
             GameObject go = Instantiate(config.Prefab, pos, rot);
             var brain = go.GetComponent<EnemyBrain>();
             if (brain != null)
             {
                 brain.Config = config;
-                brain.Initialize(hpBonus);
+                brain.Initialize(hpMultiplier, DamageMultiplier(UpcomingWaveNumber));
+                OnEnemySpawned?.Invoke(brain);
             }
             return brain;
         }
 
-        // Zusatz-Gegner außerhalb der Wellenliste (z. B. Schrein-Angreifer). Gleicher Spawn-Pfad wie Wellengegner
-        // (Config + Initialize(hpBonus)). countTowardWave: während einer aktiven Welle wird EnemiesRemaining erhöht,
-        // d. h. die Welle endet erst, wenn auch diese Gegner tot sind. hpBonus < 0 → Bonus der aktuellen Welle.
-        public EnemyBrain SpawnEnemyAt(EnemyConfigSO config, Vector3 position, float hpBonus = -1f, bool countTowardWave = true)
+        // Zusatz-Gegner außerhalb der Wellenliste (z. B. Schrein-Angreifer, Dev-Boss F9). Gleicher Spawn-Pfad wie
+        // Wellengegner (Config + Initialize). countTowardWave: während einer aktiven Welle wird EnemiesRemaining erhöht,
+        // d. h. die Welle endet erst, wenn auch diese Gegner tot sind. hpMultiplier < 0 → Kurve der aktuellen Welle
+        // (Bosse: Boss-Kurve).
+        public EnemyBrain SpawnEnemyAt(EnemyConfigSO config, Vector3 position, float hpMultiplier = -1f, bool countTowardWave = true)
         {
             if (IsGameOver) return null;
             if (config == null || config.Prefab == null)
@@ -468,7 +622,7 @@ namespace ElementalBuddies
                 if (dir.sqrMagnitude > 0.01f) rot = Quaternion.LookRotation(dir);
             }
 
-            var brain = InstantiateEnemy(config, position, rot, hpBonus < 0f ? CurrentHpBonus : hpBonus);
+            var brain = InstantiateEnemy(config, position, rot, hpMultiplier < 0f ? HpMultiplierFor(config, UpcomingWaveNumber) : hpMultiplier);
             if (countTowardWave && IsWaveActive) EnemiesRemaining++;
             return brain;
         }
@@ -515,12 +669,15 @@ namespace ElementalBuddies
             else if (Waves.Count > 0)
                 bonus = Waves[Waves.Count - 1].EndBonusShards;
 
+            LastWaveBonus = 0f;
             if (EconomyManager.Instance != null)
             {
                 var settings = EconomyManager.Instance.Settings;
                 if (settings != null)
                     bonus += settings.WaveBonusShardsBase + settings.WaveBonusShardsPerWave * CurrentWaveIndex; // CurrentWaveIndex = completedWave - 1
-                EconomyManager.Instance.AddShards(bonus);
+                bonus *= IncomeMultiplier; // Schwierigkeit
+                LastWaveBonus = bonus;
+                EconomyManager.Instance.EarnShards(bonus);
             }
 
             CurrentWaveIndex++;

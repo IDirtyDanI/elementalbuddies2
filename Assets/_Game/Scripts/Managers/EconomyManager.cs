@@ -35,6 +35,8 @@ namespace ElementalBuddies
 
         public event Action OnManaChanged;
         public event Action OnShardsChanged;
+        // Seelensplitter verdient (eingesammelte Drops + Wellen-Bonus; nicht Verkauf/Dev-Auffüllen) – für Erfolge
+        public event Action<float> OnShardsEarned;
 
         // Backup variables for Reset
         private float _startManaCap;
@@ -72,14 +74,33 @@ namespace ElementalBuddies
             EnemyBrain.OnEnemyKilled -= HandleEnemyKilled;
         }
 
-        // Splitter-Kopfgeld pro Kill × Gegnertyp-Faktor × Seelenernte – fällt als Drop, der Spieler sammelt ihn ein
+        // Splitter-Kopfgeld pro Kill × Gegnertyp-Faktor × Seelenernte – fällt als Drop, der Spieler sammelt ihn ein.
+        // Balancing: ÷ Anzahl-Multiplikator M(w) (mehr Gegner bringen nicht mehr Splitter pro Welle), × Drop-Abnahme
+        // im Spätspiel (GlobalSettings.DropFactor) und × Einkommens-Faktor der Schwierigkeit.
         private void HandleEnemyKilled(EnemyBrain enemy)
         {
             if (enemy == null || (GameManager.Instance != null && GameManager.Instance.IsGameOver)) return;
-            float bounty = settings != null ? settings.ShardsPerKill : 6f;
-            if (enemy.Config != null) bounty *= enemy.Config.BountyMultiplier;
-            bounty *= ShardGainMultiplier;
+            float bounty = GetKillBounty(enemy.Config, CurrentWaveNumber);
             if (bounty > 0f) ShardPickup.Spawn(enemy.transform.position, bounty, settings);
+        }
+
+        // Laufende (bzw. zwischen den Wellen: nächste) Welle, 1-basiert
+        private static int CurrentWaveNumber => WaveManager.Instance != null ? WaveManager.Instance.UpcomingWaveNumber : 1;
+
+        // Kopfgeld eines Kills dieses Gegnertyps in Welle wave (inkl. Seelenernte)
+        public float GetKillBounty(EnemyConfigSO config, int wave)
+        {
+            float bounty = settings != null ? settings.ShardsPerKill : 6f;
+            if (config != null) bounty *= config.BountyMultiplier;
+            var wm = WaveManager.Instance;
+            if (wm != null)
+            {
+                float m = wm.CountMultiplier(wave);
+                if (m > 0f) bounty /= m;
+                bounty *= wm.IncomeMultiplier;
+            }
+            if (settings != null) bounty *= settings.DropFactor(wave);
+            return bounty * ShardGainMultiplier;
         }
 
         void OnDestroy()
@@ -88,6 +109,7 @@ namespace ElementalBuddies
             {
                 WaveManager.Instance.OnWaveStart -= RefillMana;
                 WaveManager.Instance.OnWaveEnd -= RefillMana;
+                WaveManager.Instance.OnWaveEnd -= RecallShards;
             }
 
             // Restore original values to keep Editor clean
@@ -104,7 +126,7 @@ namespace ElementalBuddies
             // Start immer mit vollem Mana (GlobalSettings.StartMana wird nicht mehr genutzt)
             CurrentMana = MaxMana;
 
-            CurrentShards = settings != null ? settings.StartShards : 130f;
+            CurrentShards = settings != null ? settings.StartShards : 110f;
                 
             OnManaChanged?.Invoke();
             OnShardsChanged?.Invoke();
@@ -113,7 +135,15 @@ namespace ElementalBuddies
             {
                 WaveManager.Instance.OnWaveStart += RefillMana;
                 WaveManager.Instance.OnWaveEnd += RefillMana;
+                WaveManager.Instance.OnWaveEnd += RecallShards;
             }
+        }
+
+        // Wellenende: alle noch liegenden Seelensplitter fliegen zum Spieler
+        private void RecallShards()
+        {
+            if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
+            ShardPickup.RecallAll();
         }
 
         // Welle gestartet / geschafft -> Player-Mana komplett auffüllen
@@ -158,6 +188,14 @@ namespace ElementalBuddies
             if (amount <= 0f) return;
             CurrentShards += amount;
             OnShardsChanged?.Invoke();
+        }
+
+        // Wie AddShards, zählt aber als Einnahme (OnShardsEarned)
+        public void EarnShards(float amount)
+        {
+            if (amount <= 0f) return;
+            AddShards(amount);
+            OnShardsEarned?.Invoke(amount);
         }
 
         public bool CanAfford(float shardCost)

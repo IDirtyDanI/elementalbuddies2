@@ -19,8 +19,8 @@ MonoBehaviour:
   Damage: 0
   Prefab: {fileID: 8994602642315031716, guid: 1937b1f2fa7664b4ebe990b3d07056cd, type: 3}
   BuddyMaxHP: 0
-  BaseHP: 1400
-  Speed: 2
+  BaseHP: 560
+  Speed: 1.5
   AttackDamage: 20
   Armor: 0.4
   BountyMultiplier: 20
@@ -36,6 +36,5 @@ MonoBehaviour:
   ProjectileSpawnHeight: 1.3
   IsBoss: 1
   DisplayName: "Knochenf\xFCrst"
-  HpBonusMultiplier: 6
   ControlResistance: 0.6
   ThemeColor: {r: 0.85, g: 0.1, b: 0.08, a: 1}

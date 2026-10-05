@@ -13,12 +13,25 @@ namespace ElementalBuddies
         public float RegenInCombat = 0.5f;
 
         [Header("Seelensplitter (Bau-Währung)")]
-        public float StartShards = 130f;
+        public float StartShards = 110f;
         public float ShardsPerKill = 6f; // Splitter-Kopfgeld pro getötetem Gegner
         public float WaveBonusShardsBase = 40f; // Wellen-Bonus nach Welle 1
-        public float WaveBonusShardsPerWave = 10f; // + pro weiterer abgeschlossener Welle
+        public float WaveBonusShardsPerWave = 2f; // + pro weiterer abgeschlossener Welle
         public float CombatSurcharge = 1.25f; // Multiplikator (25% = 1.25)
         public float RefundRatio = 0.7f; // 70% Rückerstattung
+
+        [Header("Seelensplitter – Drop-Abnahme im Spätspiel")]
+        [Tooltip("Kill-Drops ab der Welle nach dieser × max(DropDecayMin, 1 − DropDecayPerWave·(w − DropDecayStartWave)).")]
+        public int DropDecayStartWave = 10;
+        public float DropDecayPerWave = 0.08f;
+        [Range(0f, 1f)] public float DropDecayMin = 0.25f;
+
+        // Faktor auf das Kill-Kopfgeld in Welle w (1-basiert); bis DropDecayStartWave 1
+        public float DropFactor(int wave)
+        {
+            if (wave <= DropDecayStartWave) return 1f;
+            return Mathf.Max(DropDecayMin, 1f - DropDecayPerWave * (wave - DropDecayStartWave));
+        }
 
         [Header("Seelensplitter-Drops")]
         [Tooltip("Ab diesem Abstand zum Spieler fliegt ein Splitter-Drop zu ihm.")]
@@ -48,7 +61,7 @@ namespace ElementalBuddies
         public float RangeBonusPerLevel = 0.1f; // +10 % pro Stufe über 1
         public float HPBonusPerLevel = 0.35f; // +35 % Leben pro Stufe über 1
         // Kosten-Faktor auf CostOutCombat: [0] = Stufe 2, [1] = Stufe 3, ... (letzter Wert gilt für höhere Stufen)
-        public float[] UpgradeCostFactors = new float[] { 0.6f, 1.0f };
+        public float[] UpgradeCostFactors = new float[] { 0.8f, 1.5f, 3.0f };
 
         [Header("Buddy-Leben")]
         [Tooltip("Anteil des Max-Lebens, den jeder Buddy am Wellenende zurückbekommt.")]

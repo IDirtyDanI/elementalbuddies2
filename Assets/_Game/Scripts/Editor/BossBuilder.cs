@@ -769,13 +769,15 @@ namespace ElementalBuddies.EditorTools
         }
 
         // ---------------- Knochenfürst ----------------
+        // Boss-HP im Spiel: BaseHP · w · min(1, w/12)² (WaveManager.BossHpMultiplier). BaseHP der drei Bosse auf gleiche
+        // EHP normiert (BaseHP/(1−Rüstung) ≈ 935), im Play-Mode auf Boss-TTK W6 ~32 s / W10 ~48 s gemessen (2026-10-05).
 
         private static void BuildBoneLord(Fx fx, AnimatorController ctrl)
         {
             var c = Config("BossBoneLord");
             c.DisplayName = "Knochenfürst";
             c.ThemeColor = BoneLordColor;
-            c.BaseHP = 1400f; c.HpBonusMultiplier = 6f; c.Speed = 2f; c.AttackDamage = 20f; c.Armor = 0.4f;
+            c.BaseHP = 560f; c.Speed = 1.5f; c.AttackDamage = 20f; c.Armor = 0.4f;
             c.VisualScale = 2f; c.BuddyAggroRadius = 6f; c.AttackInterval = 1.6f;
             c.AttackRange = 0f; c.ProjectilePrefab = null;
 
@@ -811,7 +813,7 @@ namespace ElementalBuddies.EditorTools
             var c = Config("BossNecromancer");
             c.DisplayName = "Nekromant";
             c.ThemeColor = NecroColor;
-            c.BaseHP = 900f; c.HpBonusMultiplier = 5f; c.Speed = 2.2f; c.AttackDamage = 18f; c.Armor = 0.15f;
+            c.BaseHP = 800f; c.Speed = 1.6f; c.AttackDamage = 18f; c.Armor = 0.15f;
             c.VisualScale = 1.9f; c.BuddyAggroRadius = 13f;
             c.AttackRange = 11f; c.AttackInterval = 2f; c.AttackWindup = 0.4f; c.ProjectileSpeed = 12f;
             c.ProjectileSpawnHeight = NecroOrbHeight;
@@ -846,13 +848,16 @@ namespace ElementalBuddies.EditorTools
         public static float NecroOrbHeight = 0.6f;
 
         // ---------------- Totenjäger ----------------
+        // Fernkämpfer (14 m) beschießt Buddies vom Rand ihrer Reichweite aus → nur Scharfschützen (18 m) treffen zurück.
+        // Daher weniger BaseHP als die EHP-Normierung (840): W14-Messung 2026-10-05 (11 Türme laut Modell, ohne Champion)
+        // mit 840 → TTK ab erstem Treffer 91 s, mit 480 → 52–54 s (Türme am Nexus) bzw. 69 s (Türme verteilt).
 
         private static void BuildDeathHunter(Fx fx, AnimatorController ctrl)
         {
             var c = Config("BossDeathHunter");
             c.DisplayName = "Totenjäger";
             c.ThemeColor = HunterColor;
-            c.BaseHP = 800f; c.HpBonusMultiplier = 5f; c.Speed = 2.3f; c.AttackDamage = 14f; c.Armor = 0.1f;
+            c.BaseHP = 480f; c.Speed = 1.7f; c.AttackDamage = 14f; c.Armor = 0.1f;
             c.VisualScale = 1.9f; c.BuddyAggroRadius = 16f;
             c.AttackRange = 14f; c.AttackInterval = 1.8f; c.AttackWindup = 0.35f; c.ProjectileSpeed = 20f;
             c.ProjectileSpawnHeight = HunterArrowHeight;

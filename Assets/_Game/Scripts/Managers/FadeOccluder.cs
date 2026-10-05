@@ -53,10 +53,12 @@ namespace ElementalBuddies
             if (!isOpaque) _dirty = true;
         }
 
-        // Spätestens in Start (Awake anderer Komponenten darf vorher Materialien tauschen)
+        // Spätestens in Start (Awake anderer Komponenten darf vorher Materialien tauschen).
+        // Nach einem Hot-Reload im Play-Mode stellt Unity _renderers wieder her, die Material-Arrays (Material[][],
+        // nicht serialisierbar) aber nicht → dann neu erfassen (sonst NullReference in Update/ReplaceMaterial).
         private void Init()
         {
-            if (_renderers != null) return;
+            if (_renderers != null && _opaque != null && _faded != null && _opaque.Length == _renderers.Length) return;
             var all = GetComponentsInChildren<Renderer>(true);
             var list = new List<Renderer>();
             foreach (var r in all) if (r is MeshRenderer || r is SkinnedMeshRenderer) list.Add(r);
@@ -79,7 +81,7 @@ namespace ElementalBuddies
 
         void Update()
         {
-            if (_renderers == null) Init();
+            Init();
             if (Mathf.Approximately(_alpha, _target) && !_dirty) return;
             bool wasOpaque = _alpha >= 0.999f;
             _alpha = Mathf.MoveTowards(_alpha, _target, Time.unscaledDeltaTime * 4f);

@@ -30,6 +30,15 @@ namespace ElementalBuddies
         public System.Collections.Generic.List<EnemyConfigSO> DevBossConfigs = new System.Collections.Generic.List<EnemyConfigSO>();
         private int _bossCursor;
 
+        [Header("Erfolge")]
+        [Tooltip("Erfolge auch vergeben, wenn Cheats aktiv sind (nur zum Testen).")]
+        public bool AllowAchievementsWithCheats = false;
+        [Tooltip("Im Spiel alle Meta-Freischaltungen (Champions, Fusionen, Stufe 4, Super-Elementare) aktiv – nur diese Session, nichts wird gespeichert.")]
+        public bool UnlockAllContent = false;
+
+        // Irgendein spielverändernder Cheat aktiv? (sperrt die Vergabe von Erfolgen, siehe AchievementManager)
+        public bool CheatsActive => Enabled && (GodMode || UnlimitedResources || UnlimitedBuddies || InvulnerableNexus || UnlockAllSpells || UnlockAllContent || StartWave > 1);
+
         private const float ShardReserve = 9999f;
         private GUIStyle _box, _label;
 
@@ -79,6 +88,7 @@ namespace ElementalBuddies
 
         void Update()
         {
+            Progression.SessionUnlockAllOverride = Enabled && UnlockAllContent;
             if (!Enabled) return;
 
             ApplyCheats();
@@ -101,6 +111,11 @@ namespace ElementalBuddies
             if (kb.f7Key.wasPressedThisFrame) DevActivateMerchant(kb.shiftKey.isPressed);
             if (kb.f8Key.wasPressedThisFrame) DevCaptureMerchant();
             if (kb.f9Key.wasPressedThisFrame) DevSpawnBoss();
+        }
+
+        void OnDestroy()
+        {
+            Progression.SessionUnlockAllOverride = false;
         }
 
         // F7: nächsten Händler sofort öffnen (Beutel bzw. ForceMerchant); Shift+F7: nächsten Händlertyp erzwingen

@@ -6,7 +6,7 @@ namespace ElementalBuddies
     public class EnemyConfigSO : UnitConfigSO
     {
         [Header("Enemy Specific Stats")]
-        public float BaseHP; // Base HP, will be modified by wave progression
+        public float BaseHP; // Basis-HP; Welle skaliert über WaveManager.HpMultiplier (Bosse: BaseHP · w · min(1, w/12)²)
         public float Speed;
         public float AttackDamage; // Damage dealt to player or blocker
 
@@ -43,8 +43,6 @@ namespace ElementalBuddies
         public bool IsBoss;
         [Tooltip("Anzeigename (z. B. „Knochenfürst“).")]
         public string DisplayName = "";
-        [Tooltip("Faktor auf den Wellen-HP-Bonus aus Initialize.")]
-        public float HpBonusMultiplier = 1f;
         [Tooltip("Verkürzt Betäubung, Einfrieren, Verlangsamung und Spott sowie die Rückstoß-Distanz um diesen Anteil.")]
         [Range(0f, 0.9f)] public float ControlResistance = 0f;
         [Tooltip("Boss-Farbe für UI und Boden-Warnflächen.")]

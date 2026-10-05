@@ -165,7 +165,18 @@ namespace ElementalBuddies
             if (up == null) return false;
             var slots = BuddySlotManager.Instance;
             if (up.StatToBuff == StatType.BuddySlot && slots != null && slots.IsAtCap) return false;
+            // Deckel pro Run (z. B. Beschwörerband höchstens 6×)
+            if (up.MaxPicks > 0 && Instance != null && Instance.GetPickCount(up) >= up.MaxPicks) return false;
             return true;
+        }
+
+        // Wie oft diese Karte in diesem Run schon gewählt wurde
+        public int GetPickCount(UpgradeDefinitionSO up)
+        {
+            int n = 0;
+            foreach (var p in _picked)
+                if (p == up) n++;
+            return n;
         }
 
         public void SelectUpgrade(UpgradeDefinitionSO upgrade)
@@ -236,19 +247,20 @@ namespace ElementalBuddies
             {
                 if (upgrade.StatToBuff == StatType.Speed && PlayerControllerRef != null)
                 {
-                    PlayerControllerRef.MoveSpeed = ModifyValue(PlayerControllerRef.MoveSpeed, upgrade);
+                    PlayerControllerRef.MoveSpeed = ModifyValue(PlayerControllerRef.MoveSpeed, BasePlayerSpeed, upgrade);
                 }
                 else if (upgrade.StatToBuff == StatType.Health && PlayerStatsRef != null)
                 {
-                    PlayerStatsRef.MaxHP = ModifyValue(PlayerStatsRef.MaxHP, upgrade);
+                    PlayerStatsRef.MaxHP = ModifyValue(PlayerStatsRef.MaxHP, BasePlayerMaxHP, upgrade);
                     PlayerStatsRef.Heal(0);
                 }
                 else if (upgrade.StatToBuff == StatType.Damage && PlayerAbilities.Instance != null)
                 {
-                    // Spieler-Schaden skaliert alle Fähigkeiten des aktiven Champions (Multiplikator; flache Werte zählen als ganze Prozent)
+                    // Spieler-Schaden skaliert alle Fähigkeiten des aktiven Champions. Prozent additiv gegen den Basis-
+                    // Multiplikator (Arkane Wucht +25 % → +0,25 je Karte), flache Werte zählen als ganze Prozent
                     var pa = PlayerAbilities.Instance;
                     pa.DamageMultiplier = upgrade.IsPercentage
-                        ? ModifyValue(pa.DamageMultiplier, upgrade)
+                        ? ModifyValue(pa.DamageMultiplier, BaseDamageMultiplier, upgrade)
                         : pa.DamageMultiplier + upgrade.Value / 100f;
                 }
                 else if (upgrade.StatToBuff == StatType.Cooldown && PlayerAbilities.Instance != null)
@@ -263,7 +275,7 @@ namespace ElementalBuddies
                     // Mobilitäts-Karte: Blink-Reichweite bzw. Rollen-Distanz (Prozent oder flach in Prozentpunkten)
                     var pa = PlayerAbilities.Instance;
                     pa.MobilityMultiplier = upgrade.IsPercentage
-                        ? ModifyValue(pa.MobilityMultiplier, upgrade)
+                        ? ModifyValue(pa.MobilityMultiplier, BaseMobilityMultiplier, upgrade)
                         : pa.MobilityMultiplier + upgrade.Value / 100f;
                 }
             }
@@ -286,22 +298,24 @@ namespace ElementalBuddies
         {
             float oldValue = 0f;
             float newValue = 0f;
+            // Basiswerte vor allen Karten (Backup); ohne Backup gilt der aktuelle Wert als Basis
+            bool hasBase = TryGetBaseUnitStats(config, out float baseDamage, out float baseRange, out float baseFireRate);
 
             switch (upgrade.StatToBuff)
             {
                 case StatType.Damage: 
                     oldValue = config.Damage;
-                    config.Damage = ModifyValue(config.Damage, upgrade); 
+                    config.Damage = ModifyValue(config.Damage, hasBase ? baseDamage : config.Damage, upgrade); 
                     newValue = config.Damage;
                     break;
                 case StatType.Range: 
                     oldValue = config.Range;
-                    config.Range = ModifyValue(config.Range, upgrade); 
+                    config.Range = ModifyValue(config.Range, hasBase ? baseRange : config.Range, upgrade); 
                     newValue = config.Range;
                     break;
                 case StatType.FireRate: 
                     oldValue = config.FireRate;
-                    config.FireRate = ModifyValue(config.FireRate, upgrade); 
+                    config.FireRate = ModifyValue(config.FireRate, hasBase ? baseFireRate : config.FireRate, upgrade); 
                     newValue = config.FireRate;
                     break;
             }
@@ -318,11 +332,12 @@ namespace ElementalBuddies
             return false;
         }
 
-        // Percent values are whole percents (10 = +10 %, 100 = +100 %)
-        private float ModifyValue(float current, UpgradeDefinitionSO upgrade)
+        // Prozentwerte sind ganze Prozent (10 = +10 %, 100 = +100 %) und stapeln ADDITIV gegen den Basiswert vor allen
+        // Karten: Basis × (1 + Σ%) – kein Zinseszins (Balancing-Methode (e)). Flache Werte: + Value.
+        private static float ModifyValue(float current, float baseValue, UpgradeDefinitionSO upgrade)
         {
             if (upgrade.IsPercentage)
-                return current * (1f + upgrade.Value / 100f);
+                return current + baseValue * upgrade.Value / 100f;
             else
                 return current + upgrade.Value;
         }
@@ -342,12 +357,15 @@ namespace ElementalBuddies
             }
 
             if (GlobalSettings == null) return;
+            // Basiswerte aus dem EconomyManager-Backup (vor allen Karten)
+            var eco = EconomyManager.Instance;
+            bool hasBase = eco != null && eco.Settings == GlobalSettings;
             if (upgrade.StatToBuff == StatType.ManaCap)
-                GlobalSettings.ManaCap = ModifyValue(GlobalSettings.ManaCap, upgrade);
+                GlobalSettings.ManaCap = ModifyValue(GlobalSettings.ManaCap, hasBase ? eco.BaseManaCap : GlobalSettings.ManaCap, upgrade);
             else if (upgrade.StatToBuff == StatType.ManaRegen)
             {
-                GlobalSettings.RegenOutCombat = ModifyValue(GlobalSettings.RegenOutCombat, upgrade);
-                GlobalSettings.RegenInCombat = ModifyValue(GlobalSettings.RegenInCombat, upgrade);
+                GlobalSettings.RegenOutCombat = ModifyValue(GlobalSettings.RegenOutCombat, hasBase ? eco.BaseRegenOut : GlobalSettings.RegenOutCombat, upgrade);
+                GlobalSettings.RegenInCombat = ModifyValue(GlobalSettings.RegenInCombat, hasBase ? eco.BaseRegenIn : GlobalSettings.RegenInCombat, upgrade);
             }
         }
 

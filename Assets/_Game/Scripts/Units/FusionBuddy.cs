@@ -103,6 +103,12 @@ namespace ElementalBuddies
         protected override float ShrineDamageMultiplier =>
             ShrineBonuses.GetDamageMultiplier(ParentA) * ShrineBonuses.GetDamageMultiplier(ParentB);
 
+        // Boss-Bonus aus der Config (UnitConfigSO.BossDamageMultiplier, Default 1)
+        public float BossDamageMultiplier => Config != null && Config.BossDamageMultiplier > 0f ? Config.BossDamageMultiplier : 1f;
+
+        // Schaden gegen diesen Gegner: × BossDamageMultiplier, wenn er ein Boss ist (Direkttreffer, Fluch, Brand, Pfütze)
+        protected float DamageAgainst(EnemyBrain e, float damage) => e != null && e.IsBoss ? damage * BossDamageMultiplier : damage;
+
         // Element der Subklasse (Default fürs Inspector-Feld)
         protected abstract FusionElement DefaultElement { get; }
 

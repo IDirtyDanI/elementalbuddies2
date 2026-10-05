@@ -56,7 +56,7 @@ namespace ElementalBuddies
                     BurnEffect.Apply(enemy.gameObject, BurnDps * ctx.DamageMultiplier, BurnDuration, BurnVfxPrefab);
                 if (Knockback > 0f)
                     enemy.Knockback(CombatUtil.FlatDirection(ctx.Origin, enemy.transform.position, ctx.AimDirection), Knockback, 0.2f);
-                enemy.TakeDamage(Damage * ctx.DamageMultiplier);
+                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
             }
             GameAudio.Play(SfxId.FireWave, ctx.Origin);
         }
@@ -107,7 +107,7 @@ namespace ElementalBuddies
             {
                 if (enemy == null) continue;
                 if (FreezeDuration > 0f) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
-                enemy.TakeDamage(Damage * ctx.DamageMultiplier);
+                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
             }
             GameAudio.Play(SfxId.FrostNova, ctx.Origin);
         }
@@ -181,7 +181,7 @@ namespace ElementalBuddies
                 if (StunDuration > 0f) enemy.Stun(StunDuration, StunVfxPrefab);
                 if (Knockback > 0f)
                     enemy.Knockback(CombatUtil.FlatDirection(center, enemy.transform.position, ctx.AimDirection), Knockback, 0.3f);
-                enemy.TakeDamage(Damage * ctx.DamageMultiplier);
+                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
             }
             GameAudio.Play(SfxId.StoneWall, center);
         }

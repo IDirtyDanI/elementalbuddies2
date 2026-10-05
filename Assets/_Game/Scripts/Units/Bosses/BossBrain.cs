@@ -26,6 +26,8 @@ namespace ElementalBuddies
         public Color TelegraphColorOverride = new Color(0f, 0f, 0f, 0f);
 
         public bool IsCastingAbility => _casting != null;
+        // Fähigkeitsschaden × Gegnerschaden-Multiplikator des Bosses (Wellen-Rampe × Schwierigkeit)
+        private float DamageMultiplier => _brain != null ? _brain.DamageMultiplier : 1f;
         public BossAbility CurrentAbility { get; private set; }
 
         private EnemyBrain _brain;
@@ -305,7 +307,7 @@ namespace ElementalBuddies
                 {
                     // Pulse laufen im eigenen Objekt; Warnfläche bleibt bis zum letzten Puls
                     var go = new GameObject("BossRain");
-                    go.AddComponent<BossRainArea>().Setup(shape, a, telegraph);
+                    go.AddComponent<BossRainArea>().Setup(shape, a, telegraph, DamageMultiplier);
                     BossCombat.SpawnEffect(a, a.ImpactEffectPrefab, shape.Origin, Quaternion.identity);
                     return;
                 }
@@ -314,25 +316,25 @@ namespace ElementalBuddies
                     break;
                 case BossAbilityKind.Slam:
                     shape.Origin = me; // tatsächlicher Landepunkt
-                    BossCombat.Apply(shape, a, me, a.Damage);
+                    BossCombat.Apply(shape, a, me, a.Damage * DamageMultiplier);
                     break;
                 case BossAbilityKind.Beam:
                 {
                     Vector3 from = me + Vector3.up * BeamHeight;
                     var beam = BeamFx.Spawn(a.BeamPrefab, from, from + shape.Forward * shape.Length);
                     if (beam != null) beam.Color = ThemeColor;
-                    BossCombat.Apply(shape, a, me, a.Damage);
+                    BossCombat.Apply(shape, a, me, a.Damage * DamageMultiplier);
                     break;
                 }
                 case BossAbilityKind.Whirl:
                 {
                     var arc = SlashArcFx.Spawn(a.ArcFxPrefab, new Vector3(me.x, AoeTelegraph.GroundY(me), me.z) + Vector3.up * (0.6f * transform.lossyScale.y), dir, a.Radius, 360f, ThemeColor, true);
                     if (arc != null) { arc.SweepTime = 0.22f; arc.FadeTime = 0.3f; arc.TailLength = 0.6f; arc.Width = 1.3f; }
-                    BossCombat.Apply(shape, a, me, a.Damage);
+                    BossCombat.Apply(shape, a, me, a.Damage * DamageMultiplier);
                     break;
                 }
                 default:
-                    BossCombat.Apply(shape, a, me, a.Damage);
+                    BossCombat.Apply(shape, a, me, a.Damage * DamageMultiplier);
                     break;
             }
 

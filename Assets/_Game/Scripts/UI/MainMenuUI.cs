@@ -11,7 +11,8 @@ using TMPro;
 namespace ElementalBuddies
 {
     // Hauptmenü (Szene MainMenu): Champion-Karten, Detail-Panel mit Fähigkeiten, 3D-Vorschau (MenuChampionStage),
-    // Spielen / Einstellungen / Beenden. Die Hierarchie baut der Editor-Builder (BuddyTD/Hauptmenü/Szene bauen).
+    // Spielen / Einstellungen / Erfolge / Beenden. Die Hierarchie baut der Editor-Builder (BuddyTD/Hauptmenü/Szene bauen).
+    // Gesperrte Champions (Progression.IsChampionUnlocked) sind ansehbar, aber nicht spielbar.
     public class MainMenuUI : MonoBehaviour
     {
         [System.Serializable]
@@ -26,6 +27,7 @@ namespace ElementalBuddies
             public TextMeshProUGUI Name;
             public TextMeshProUGUI Tagline;
             public Image Accent;         // Farbstreifen unten
+            public Image Lock;           // Schloss über dem Porträt (nur bei gesperrtem Champion sichtbar)
         }
 
         [Header("Daten")]
@@ -57,6 +59,41 @@ namespace ElementalBuddies
         public TextMeshProUGUI MasterValue, MusicValue, SfxValue;
         public Toggle FullscreenToggle;
 
+        [Header("Gesperrte Champions")]
+        [Tooltip("Hinweiszeile über \"Spielen\" (Bedingung des gewählten, gesperrten Champions).")]
+        public TextMeshProUGUI PlayLockHint;
+        public Color LockedPortraitTint = new Color(0.36f, 0.36f, 0.38f, 1f);
+        public Color LockedTextColor = new Color(0.55f, 0.2f, 0.12f);
+        public Color LockedPlayTint = new Color(0.45f, 0.42f, 0.4f, 1f);
+        [Tooltip("Ausgegraute Karte (Rahmen) eines gesperrten Champions.")]
+        public Color LockedCardTint = new Color(0.62f, 0.62f, 0.62f, 1f);
+        public Color LockedNameColor = new Color(0.3f, 0.3f, 0.3f, 1f);
+
+        [Header("Erfolge")]
+        public Button AchievementsButton;
+        public GameObject AchievementsPanel;
+        public Button AchievementsBackButton;
+        public TextMeshProUGUI AchievementsCounter;
+        public ScrollRect AchievementsScroll;
+        public RectTransform AchievementsContent;
+        [Tooltip("Inaktive Vorlage; Kinder: MedalIcon, MedalFrame (Image), Title, Desc, Progress (TMP), Bar/BarFill (Image), RewardLabel, RewardName (TMP), RewardIcon (Image). Hintergrund = Image auf der Vorlage.")]
+        public GameObject AchievementRowTemplate;
+        public Color AchievedRowColor = new Color(1f, 0.93f, 0.72f, 1f);
+        public Color OpenRowColor = new Color(0.9f, 0.87f, 0.82f, 1f);
+        public Color LockedIconTint = new Color(0.42f, 0.42f, 0.45f, 1f);
+        public Color AchievedBarColor = new Color(0.86f, 0.64f, 0.18f);
+        public Color OpenBarColor = new Color(0.62f, 0.45f, 0.28f);
+
+        [Header("Schwierigkeit")]
+        [Tooltip("Segment-Knöpfe in der Reihenfolge von DifficultySO.All (Leicht, Normal, Schwer); Beschriftung = DisplayName.")]
+        public Button[] DifficultyButtons = new Button[0];
+        [Tooltip("Zeile unter den Knöpfen: Faktoren der gewählten Stufe (DifficultySO.EffectSummary). Teilt sich den Platz mit PlayLockHint.")]
+        public TextMeshProUGUI DifficultyDescription;
+        public Sprite DifficultySelectedSprite, DifficultySelectedHoverSprite;
+        public Sprite DifficultyNormalSprite, DifficultyNormalHoverSprite;
+        public Color DifficultySelectedTextColor = new Color(0.937f, 0.878f, 0.741f);
+        public Color DifficultyNormalTextColor = new Color(0.239f, 0.149f, 0.078f);
+
         [Header("Übergang")]
         [Tooltip("Schwarzer Vollbild-Überblender (Alpha 0..1) beim Spielstart.")]
         public CanvasGroup Fader;
@@ -69,6 +106,12 @@ namespace ElementalBuddies
 
         private ChampionClass _selected;
         private readonly List<GameObject> _rows = new List<GameObject>();
+        private readonly List<GameObject> _achievementRows = new List<GameObject>();
+        private readonly List<AchievementDefinition> _reqBuffer = new List<AchievementDefinition>();
+        private TextMeshProUGUI _playLabel;
+        private string _playLabelText;
+        private Color _taglineColor, _detailTaglineColor;
+        private bool _colorsCached;
         private bool _initialized;
         private bool _loading;
 
@@ -103,11 +146,21 @@ namespace ElementalBuddies
                 if (SettingsButton != null) SettingsButton.onClick.AddListener(() => ShowSettings(true));
                 if (QuitButton != null) QuitButton.onClick.AddListener(Quit);
                 if (SettingsBackButton != null) SettingsBackButton.onClick.AddListener(() => ShowSettings(false));
+                if (AchievementsButton != null) AchievementsButton.onClick.AddListener(() => ShowAchievements(true));
+                if (AchievementsBackButton != null) AchievementsBackButton.onClick.AddListener(() => ShowAchievements(false));
+                for (int i = 0; i < DifficultyButtons.Length; i++)
+                {
+                    if (DifficultyButtons[i] == null) continue;
+                    int idx = i;
+                    DifficultyButtons[i].onClick.AddListener(() => SelectDifficulty(idx));
+                }
                 InitSettings();
             }
 
             EnsureClickable();
             if (AbilityRowTemplate != null) AbilityRowTemplate.SetActive(false);
+            if (AchievementRowTemplate != null) AchievementRowTemplate.SetActive(false);
+            CacheColors();
             if (Fader != null)
             {
                 Fader.alpha = 0f;
@@ -116,7 +169,30 @@ namespace ElementalBuddies
             FillCards();
             if (Stage != null) Stage.SpawnPreviews(Champions);
             ShowSettings(false);
-            Select(GameSession.SelectedChampion, true);
+            ShowAchievements(false);
+            // Gespeicherte Wahl gesperrt (z. B. nach dem Zurücksetzen der Erfolge) → Magier vorwählen
+            ChampionClass start = GameSession.SelectedChampion;
+            if (IsLocked(start)) start = ChampionClass.Mage;
+            RefreshDifficulty();
+            Select(start, true);
+        }
+
+        void OnEnable()
+        {
+            Progression.OnProgressChanged += HandleProgressChanged;
+        }
+
+        void OnDisable()
+        {
+            Progression.OnProgressChanged -= HandleProgressChanged;
+        }
+
+        // Erfolge geändert (z. B. Editor-Menü "Alle freischalten") → Sperren und Erfolge-Seite aktualisieren
+        private void HandleProgressChanged()
+        {
+            if (!_initialized) return;
+            RefreshLocks();
+            if (AchievementsPanel != null && AchievementsPanel.activeSelf) FillAchievements();
         }
 
         void Update()
@@ -129,6 +205,11 @@ namespace ElementalBuddies
                 if (kb.escapeKey.wasPressedThisFrame) ShowSettings(false);
                 return;
             }
+            if (AchievementsPanel != null && AchievementsPanel.activeSelf)
+            {
+                if (kb.escapeKey.wasPressedThisFrame) ShowAchievements(false);
+                return;
+            }
 
             // Enter startet direkt – unabhängig davon, ob der Spielen-Button gerade ausgewählt ist
             if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)
@@ -136,6 +217,10 @@ namespace ElementalBuddies
                 Play();
                 return;
             }
+
+            // Schwierigkeit per Tastatur: Q leichter, E schwerer (ohne Umlauf)
+            if (kb.qKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() - 1); return; }
+            if (kb.eKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() + 1); return; }
 
             // Champion per Tastatur wechseln: ←/→, A/D oder 1–3
             int idx = IndexOf(_selected);
@@ -233,6 +318,7 @@ namespace ElementalBuddies
             }
 
             if (Stage != null) Stage.Focus(c, instant);
+            RefreshLocks();
 
             // Tastatur-Fokus auf "Spielen", damit Enter direkt startet
             if (Application.isPlaying && PlayButton != null && EventSystem.current != null)
@@ -288,11 +374,289 @@ namespace ElementalBuddies
             return null;
         }
 
+        // ---------------- Sperren ----------------
+
+        public static bool IsLocked(ChampionClass c) => !Progression.IsChampionUnlocked(c);
+
+        // "Erreiche Welle 6"
+        private static string LockGoal(ChampionClass c) => Progression.GoalText(Progression.ChampionUnlock(c));
+
+        private Color _nameColor = Color.white;
+
+        private void CacheColors()
+        {
+            if (_colorsCached) return;
+            _colorsCached = true;
+            foreach (var card in Cards)
+                if (card != null && card.Tagline != null) { _taglineColor = card.Tagline.color; break; }
+            foreach (var card in Cards)
+                if (card != null && card.Name != null) { _nameColor = card.Name.color; break; }
+            if (DetailTagline != null) _detailTaglineColor = DetailTagline.color;
+            if (PlayButton != null)
+            {
+                _playLabel = PlayButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (_playLabel != null) _playLabelText = _playLabel.text;
+            }
+        }
+
+        // Karten, Detail-Panel, 3D-Bühne und "Spielen" an den Sperr-Stand anpassen
+        private void RefreshLocks()
+        {
+            CacheColors();
+            foreach (var card in Cards)
+            {
+                if (card == null) continue;
+                var def = Def(card.Class);
+                bool locked = IsLocked(card.Class);
+                if (card.Lock != null) card.Lock.gameObject.SetActive(locked);
+                // Gesperrt: ganze Karte ausgrauen (Rahmen, Name, Farbstreifen)
+                if (card.Frame != null) card.Frame.color = locked ? LockedCardTint : Color.white;
+                if (card.Name != null) card.Name.color = locked ? LockedNameColor : _nameColor;
+                if (card.Initial != null) card.Initial.color = locked ? LockedNameColor : _nameColor;
+                if (card.Accent != null && def != null)
+                {
+                    float ga = def.AccentColor.grayscale;
+                    card.Accent.color = locked ? new Color(ga * 0.7f, ga * 0.7f, ga * 0.7f, def.AccentColor.a) : def.AccentColor;
+                }
+                if (card.Portrait != null) card.Portrait.color = locked ? LockedPortraitTint : Color.white;
+                if (card.PortraitBg != null && def != null)
+                {
+                    Color bg = Color.Lerp(def.AccentColor, Color.white, 0.15f);
+                    if (locked)
+                    {
+                        float g = bg.grayscale;
+                        bg = Color.Lerp(bg, new Color(g, g, g), 0.75f) * 0.55f;
+                        bg.a = 1f;
+                    }
+                    card.PortraitBg.color = bg;
+                }
+                if (card.Tagline != null && def != null)
+                {
+                    card.Tagline.text = locked ? "Gesperrt: " + LockGoal(card.Class) : def.Tagline;
+                    card.Tagline.color = locked ? LockedTextColor : _taglineColor;
+                }
+                if (Stage != null) Stage.SetLocked(card.Class, locked);
+            }
+
+            bool selLocked = IsLocked(_selected);
+            var sdef = Def(_selected);
+            if (DetailTagline != null && sdef != null)
+            {
+                DetailTagline.text = selLocked ? "Gesperrt – " + LockGoal(_selected) : sdef.Tagline;
+                DetailTagline.color = selLocked ? LockedTextColor : _detailTaglineColor;
+            }
+            if (PlayButton != null)
+            {
+                PlayButton.interactable = !selLocked;
+                if (PlayButton.image != null) PlayButton.image.color = selLocked ? LockedPlayTint : Color.white;
+            }
+            if (_playLabel != null) _playLabel.text = selLocked ? "Gesperrt" : _playLabelText;
+            if (PlayLockHint != null)
+            {
+                PlayLockHint.gameObject.SetActive(selLocked);
+                if (selLocked)
+                    PlayLockHint.text = (sdef != null ? sdef.DisplayName : _selected.ToString()) + " gesperrt – " + LockGoal(_selected);
+            }
+            // Sperr-Hinweis und Stufen-Beschreibung teilen sich die Zeile über "Spielen"
+            if (DifficultyDescription != null) DifficultyDescription.gameObject.SetActive(!(selLocked && PlayLockHint != null));
+        }
+
+        // ---------------- Schwierigkeit ----------------
+
+        // Index der gespeicherten Stufe in DifficultySO.All (unbekannt → Normal)
+        private static int DifficultyIndex()
+        {
+            var all = DifficultySO.All;
+            var cur = GameSession.Difficulty;
+            for (int i = 0; i < all.Count; i++) if (all[i] == cur) return i;
+            return 0;
+        }
+
+        // Stufe wählen und sofort speichern (gilt für das nächste Spiel)
+        public void SelectDifficulty(int index)
+        {
+            var all = DifficultySO.All;
+            if (all.Count == 0) return;
+            index = Mathf.Clamp(index, 0, all.Count - 1);
+            if (all[index] == null) return;
+            GameSession.Difficulty = all[index];
+            RefreshDifficulty();
+            // Fokus zurück auf "Spielen", damit Enter weiter direkt startet
+            if (Application.isPlaying && PlayButton != null && EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(PlayButton.gameObject);
+        }
+
+        // Knöpfe beschriften, gewählte Stufe hervorheben (Holz statt Pergament), Beschreibung füllen
+        private void RefreshDifficulty()
+        {
+            var all = DifficultySO.All;
+            var cur = GameSession.Difficulty;
+            for (int i = 0; i < DifficultyButtons.Length; i++)
+            {
+                var btn = DifficultyButtons[i];
+                if (btn == null) continue;
+                var d = i < all.Count ? all[i] : null;
+                btn.gameObject.SetActive(d != null);
+                if (d == null) continue;
+                bool sel = d == cur;
+                if (btn.image != null)
+                {
+                    var spr = sel ? DifficultySelectedSprite : DifficultyNormalSprite;
+                    if (spr != null) btn.image.sprite = spr;
+                }
+                var ss = btn.spriteState;
+                var hover = sel ? DifficultySelectedHoverSprite : DifficultyNormalHoverSprite;
+                if (hover != null)
+                {
+                    ss.highlightedSprite = hover;
+                    ss.selectedSprite = hover;
+                    ss.pressedSprite = hover;
+                    btn.spriteState = ss;
+                }
+                var label = btn.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (label != null)
+                {
+                    label.text = d.DisplayName;
+                    label.color = sel ? DifficultySelectedTextColor : DifficultyNormalTextColor;
+                }
+            }
+            if (DifficultyDescription != null)
+                DifficultyDescription.text = "<b>" + cur.DisplayName + "</b> – " + cur.EffectSummary();
+        }
+
+        // ---------------- Erfolge ----------------
+
+        public void ShowAchievements(bool show)
+        {
+            if (AchievementsPanel != null) AchievementsPanel.SetActive(show);
+            if (show)
+            {
+                FillAchievements();
+                if (AchievementsScroll != null) AchievementsScroll.verticalNormalizedPosition = 1f;
+            }
+            if (!Application.isPlaying || EventSystem.current == null) return;
+            if (show && AchievementsBackButton != null) EventSystem.current.SetSelectedGameObject(AchievementsBackButton.gameObject);
+            else if (!show && AchievementsButton != null && AchievementsPanel != null) EventSystem.current.SetSelectedGameObject(null);
+        }
+
+        // Liste neu aufbauen (Reihenfolge wie in der Datenbank)
+        public void FillAchievements()
+        {
+            foreach (var row in _achievementRows)
+            {
+                if (row == null) continue;
+                row.SetActive(false);
+                if (Application.isPlaying) Destroy(row);
+                else DestroyImmediate(row);
+            }
+            _achievementRows.Clear();
+
+            var all = Progression.All;
+            if (AchievementsCounter != null) AchievementsCounter.text = $"{Progression.AchievedCount} / {all.Count}";
+            if (AchievementRowTemplate == null || AchievementsContent == null) return;
+
+            var db = AchievementDatabaseSO.Instance;
+            foreach (var a in all)
+            {
+                if (a == null) continue;
+                var row = Instantiate(AchievementRowTemplate, AchievementsContent);
+                row.name = "Achievement_" + a.Id;
+                row.SetActive(true);
+                _achievementRows.Add(row);
+                FillAchievementRow(row, a, db);
+            }
+            if (Application.isPlaying) Canvas.ForceUpdateCanvases();
+        }
+
+        private void FillAchievementRow(GameObject row, AchievementDefinition a, AchievementDatabaseSO db)
+        {
+            bool done = Progression.IsAchieved(a);
+            var t = row.transform;
+
+            var bg = row.GetComponent<Image>();
+            if (bg != null)
+            {
+                if (CardNormalSprite != null && CardSelectedSprite != null) bg.sprite = done ? CardSelectedSprite : CardNormalSprite;
+                bg.color = done ? AchievedRowColor : OpenRowColor;
+            }
+
+            var icon = FindChild<Image>(t, "MedalIcon");
+            if (icon != null)
+            {
+                icon.sprite = a.Icon;
+                icon.enabled = a.Icon != null;
+                icon.color = done ? Color.white : LockedIconTint;
+            }
+            var frame = FindChild<Image>(t, "MedalFrame");
+            if (frame != null && db != null)
+            {
+                Sprite f = done ? db.MedalFrame : (db.MedalFrameLocked != null ? db.MedalFrameLocked : db.MedalFrame);
+                if (f != null) frame.sprite = f;
+            }
+
+            var title = FindChild<TextMeshProUGUI>(t, "Title");
+            if (title != null)
+            {
+                title.text = a.Title;
+            }
+            var desc = FindChild<TextMeshProUGUI>(t, "Desc");
+            if (desc != null) desc.text = AchievementDatabaseSO.GetConditionText(a);
+
+            int cur, target;
+            Progression.GetProgress(a, out cur, out target);
+            var fill = FindChild<Image>(t, "BarFill");
+            if (fill != null)
+            {
+                var frt = fill.rectTransform;
+                frt.anchorMax = new Vector2(Mathf.Clamp01(target > 0 ? cur / (float)target : 0f), frt.anchorMax.y);
+                fill.color = done ? AchievedBarColor : OpenBarColor;
+                fill.enabled = cur > 0;
+            }
+            var progress = FindChild<TextMeshProUGUI>(t, "Progress");
+            if (progress != null)
+                progress.text = done ? "<color=#3E7A26>Erreicht</color>" : cur.ToString(Inv) + " / " + target.ToString(Inv);
+
+            // Belohnung
+            var label = FindChild<TextMeshProUGUI>(t, "RewardLabel");
+            var name = FindChild<TextMeshProUGUI>(t, "RewardName");
+            var rIcon = FindChild<Image>(t, "RewardIcon");
+            Sprite rs;
+            string rLabel, rName;
+            if (a.IsTrophy)
+            {
+                rs = db != null ? db.TrophyIcon : null;
+                rLabel = "Belohnung";
+                rName = "Trophäe";
+            }
+            else
+            {
+                rs = db != null ? db.GetUnlockIcon(a.Unlock) : null;
+                rName = Progression.GetUnlockName(a.Unlock);
+                rLabel = "Schaltet frei:";
+                if (db != null)
+                {
+                    // Gemeinsame Freischaltung (z. B. Super-Elementare): Partner-Erfolge nennen
+                    var others = new List<string>();
+                    foreach (var r in db.GetRequirements(a.Unlock, _reqBuffer))
+                        if (r != a) others.Add("„" + r.Title + "“");
+                    if (others.Count > 0) rLabel = "Schaltet frei (mit " + string.Join(", ", others.ToArray()) + "):";
+                }
+            }
+            if (label != null) label.text = rLabel;
+            if (name != null) name.text = rName;
+            if (rIcon != null)
+            {
+                rIcon.sprite = rs;
+                rIcon.enabled = rs != null;
+                rIcon.color = done ? Color.white : new Color(0.8f, 0.8f, 0.8f, 1f);
+            }
+        }
+
         // ---------------- Buttons ----------------
 
         public void Play()
         {
-            if (_loading) return;
+            if (_loading || IsLocked(_selected)) return;
             GameSession.SelectedChampion = _selected;
             if (!Application.isPlaying) return;
             _loading = true;

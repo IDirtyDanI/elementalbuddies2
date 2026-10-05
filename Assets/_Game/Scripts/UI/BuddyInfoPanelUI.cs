@@ -84,6 +84,11 @@ namespace ElementalBuddies
         private LayoutElement _optionsScrollLayout;
         private readonly Vector3[] _corners = new Vector3[4];
 
+        // Schloss-Icons vor Sperrhinweisen (Meta-Freischaltungen, zur Laufzeit erzeugt)
+        private Image _upgradeLock, _fusionLock;
+        private Vector4 _upgradeTextMargin, _fusionHintMargin;
+        private bool _marginsCached;
+
         void Start()
         {
             if (UpgradeButton != null)
@@ -211,6 +216,12 @@ namespace ElementalBuddies
                     label = "Keine Stufen";
                     interactable = false;
                 }
+                else if (!canUpgrade && _buddy.IsStage4Locked && level == ElementalBuddy.PerkLevel - 1)
+                {
+                    // Meta-Freischaltung fehlt (Erfolg siehe Werte-Block)
+                    label = "Stufe 4 gesperrt";
+                    interactable = false;
+                }
                 else if (!canUpgrade)
                 {
                     label = "Maximale Stufe";
@@ -229,6 +240,7 @@ namespace ElementalBuddies
                 }
                 if (UpgradeButtonText != null) UpgradeButtonText.text = label;
                 if (UpgradeButton != null) UpgradeButton.interactable = interactable;
+                SetLockIcon(UpgradeButtonText, ref _upgradeLock, fusion == null && !canUpgrade && _buddy.IsStage4Locked && level == ElementalBuddy.PerkLevel - 1);
             }
 
             // Verkaufen (nur in der Bauphase, wie Rechtsklick)
@@ -251,6 +263,46 @@ namespace ElementalBuddies
             RefreshFusionSection(super != null);
             FitStatsArea();
             LayoutFusionArea();
+        }
+
+        // Schloss-Icon links im Text (AchievementDatabase.LockIcon); Text rückt per Margin nach rechts
+        private void SetLockIcon(TextMeshProUGUI text, ref Image icon, bool show)
+        {
+            if (text == null) return;
+            if (!_marginsCached)
+            {
+                _marginsCached = true;
+                if (UpgradeButtonText != null) _upgradeTextMargin = UpgradeButtonText.margin;
+                if (FusionHint != null) _fusionHintMargin = FusionHint.margin;
+            }
+            Vector4 baseMargin = text == FusionHint ? _fusionHintMargin : _upgradeTextMargin;
+            var db = AchievementDatabaseSO.Instance;
+            Sprite sprite = db != null ? db.LockIcon : null;
+            show &= sprite != null;
+            if (show && icon == null)
+            {
+                var go = new GameObject("LockIcon", typeof(RectTransform));
+                var rt = (RectTransform)go.transform;
+                rt.SetParent(text.rectTransform, false);
+                icon = go.AddComponent<Image>();
+                icon.sprite = sprite;
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+            }
+            if (icon == null) return;
+            if (icon.gameObject.activeSelf != show) icon.gameObject.SetActive(show);
+            float size = Mathf.Round(text.fontSize * 1.25f);
+            if (show)
+            {
+                var rt = icon.rectTransform;
+                // Am Button-Text mittig links, am Hinweis oben links (erste Zeile)
+                bool top = text == FusionHint;
+                rt.anchorMin = rt.anchorMax = new Vector2(0f, top ? 1f : 0.5f);
+                rt.pivot = new Vector2(0f, top ? 1f : 0.5f);
+                rt.anchoredPosition = new Vector2(baseMargin.x + (top ? 0f : 10f), top ? -2f : 0f);
+                rt.sizeDelta = new Vector2(size, size);
+            }
+            text.margin = show ? new Vector4(baseMargin.x + size + (text == FusionHint ? 6f : 16f), baseMargin.y, baseMargin.z, baseMargin.w) : baseMargin;
         }
 
         // ---------------- Werte-Block ----------------
@@ -487,6 +539,7 @@ namespace ElementalBuddies
             {
                 if (options.Count == 0) FusionHint.text = fm.GetBlockReason(_buddy) ?? "";
                 else FusionHint.text = canFuse ? "Verschmelzen mit:" : "Verschmelzen mit: <i>(nur zwischen den Wellen)</i>";
+                SetLockIcon(FusionHint, ref _fusionLock, options.Count == 0 && fm.GetLockReason(_buddy) != null);
             }
 
             // Menge der Optionen geändert? -> Buttons neu bauen, sonst nur Texte/Zustände aktualisieren
@@ -757,6 +810,8 @@ namespace ElementalBuddies
             if (perk == null) return "";
             if (level >= ElementalBuddy.PerkLevel) return $"\n<size=80%><color=#B4500A>Stufe 4: {perk}</color></size>";
             if (canUpgrade && next == ElementalBuddy.PerkLevel) return $"\n<size=80%><color=#3E7A26>Ab Stufe 4: {perk}</color></size>";
+            if (level == ElementalBuddy.PerkLevel - 1 && _buddy.IsStage4Locked)
+                return $"\n<size=80%><color=#7A6A55>Gesperrt: {Progression.RequirementText(Progression.Stage4Unlock(_buddy.ElementIndex))}</color></size>";
             return "";
         }
 

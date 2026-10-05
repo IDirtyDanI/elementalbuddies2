@@ -54,7 +54,7 @@ namespace ElementalBuddies
                 if (e == null || HorizontalDistanceToSegment(e.transform.position, start, end) > JetWidth) continue;
                 e.ApplyWet(WetDuration, WetVfxPrefab);
                 e.ApplySlow(JetSlow, JetSlowDuration);
-                e.TakeDamage(damage);
+                e.TakeDamage(DamageAgainst(e, damage));
             }
 
             Vector3 jetEnd = end;
@@ -75,7 +75,7 @@ namespace ElementalBuddies
                 if (e == null) continue;
                 e.ApplyWet(WetDuration, WetVfxPrefab);
                 e.ApplySlow(1f, WhirlpoolRootDuration); // festhalten
-                e.TakeDamage(damage);
+                e.TakeDamage(DamageAgainst(e, damage));
             }
 
             if (WhirlpoolVfxPrefab != null)

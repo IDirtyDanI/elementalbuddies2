@@ -16,6 +16,10 @@ namespace ElementalBuddies
         public Button MainMenuButton;
         [Tooltip("Abstand der Button-Mitten, wenn der Hauptmenü-Button automatisch erzeugt wird.")]
         public float AutoButtonSpacing = 330f;
+        [Tooltip("Optional: Zeile \"In diesem Spiel erreichte Erfolge\". Fehlt sie, wird bei Bedarf eine Kopie von BestText darunter erzeugt.")]
+        public TextMeshProUGUI AchievementsText;
+        [Tooltip("So viel wächst die Box, wenn die Erfolge-Zeile automatisch erzeugt wird.")]
+        public float AutoAchievementsHeight = 80f;
 
         void Start()
         {
@@ -83,8 +87,46 @@ namespace ElementalBuddies
             int best = GameManager.Instance != null ? GameManager.Instance.BestWave : 0;
 
             if (ReasonText != null) ReasonText.text = reason;
-            if (WaveText != null) WaveText.text = $"Welle erreicht: {wave}";
+            var diff = WaveManager.Instance != null ? WaveManager.Instance.Difficulty : null;
+            if (WaveText != null) WaveText.text = diff != null ? $"Welle erreicht: {wave} ({diff.DisplayName})" : $"Welle erreicht: {wave}";
             if (BestText != null) BestText.text = $"Beste Welle: {best}";
+            ShowEarnedAchievements();
+        }
+
+        // "In diesem Spiel erreichte Erfolge: Verteidiger, Zwillingskraft" (nur wenn welche erreicht wurden)
+        private void ShowEarnedAchievements()
+        {
+            var am = AchievementManager.Instance;
+            var earned = am != null ? am.EarnedThisGame : null;
+            if (earned == null || earned.Count == 0)
+            {
+                if (AchievementsText != null) AchievementsText.gameObject.SetActive(false);
+                return;
+            }
+
+            if (AchievementsText == null && BestText != null)
+            {
+                // Kopie von BestText darunter; Box wächst nach oben und unten, damit der Neustart-Button frei bleibt
+                var brt = BestText.rectTransform;
+                AchievementsText = Instantiate(BestText, brt.parent);
+                AchievementsText.name = "Achievements";
+                var art = AchievementsText.rectTransform;
+                art.sizeDelta = new Vector2(brt.sizeDelta.x, AutoAchievementsHeight);
+                art.anchoredPosition = brt.anchoredPosition - new Vector2(0f, brt.sizeDelta.y * 0.5f + AutoAchievementsHeight * 0.5f + 4f);
+                AchievementsText.fontSize = Mathf.Max(18f, BestText.fontSize - 2f);
+                AchievementsText.enableAutoSizing = true;
+                AchievementsText.fontSizeMin = 16f;
+                AchievementsText.fontSizeMax = AchievementsText.fontSize;
+                AchievementsText.color = new Color(0.55f, 0.36f, 0.05f);
+                var box = brt.parent as RectTransform;
+                if (box != null) box.sizeDelta += new Vector2(0f, AutoAchievementsHeight);
+            }
+            if (AchievementsText == null) return;
+
+            var names = new System.Collections.Generic.List<string>();
+            foreach (var a in earned) if (a != null) names.Add(a.Title);
+            AchievementsText.text = $"<b>In diesem Spiel erreichte Erfolge:</b>\n{string.Join(", ", names)}";
+            AchievementsText.gameObject.SetActive(true);
         }
     }
 }

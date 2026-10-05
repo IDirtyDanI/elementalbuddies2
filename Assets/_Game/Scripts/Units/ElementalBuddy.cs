@@ -283,7 +283,19 @@ namespace ElementalBuddies
         protected static float RangeBonusPerLevel => Settings != null ? Settings.RangeBonusPerLevel : 0.1f;
         protected static float HPBonusPerLevel => Settings != null ? Settings.HPBonusPerLevel : 0.35f;
 
-        public virtual int MaxLevel => Settings != null ? Mathf.Max(1, Settings.BuddyMaxLevel) : 3;
+        // Ohne Meta-Freischaltung "Stufe 4" des Elements (Progression, Stand dieses Spiels) endet ein Basis-Buddy auf Stufe 3
+        public virtual int MaxLevel
+        {
+            get
+            {
+                int max = Settings != null ? Mathf.Max(1, Settings.BuddyMaxLevel) : 3;
+                if (max >= PerkLevel && IsStage4Locked) max = PerkLevel - 1;
+                return max;
+            }
+        }
+        // Stufe 4 per Erfolg gesperrt (nur Basis-Buddies); Hinweistext über Stage4LockText
+        public bool IsStage4Locked => !IsFusion && Progression.IsStage4Locked(ElementIndex);
+        public string Stage4LockText => Progression.LockText(Progression.Stage4Unlock(ElementIndex));
         public bool CanUpgrade => Config != null && _level < MaxLevel;
 
         // Aufwerten nur in der Bauphase (nicht im Kampf, nicht bei Game Over / Pause / Upgrade-Screen)

@@ -52,6 +52,12 @@ namespace ElementalBuddies.EditorTools
         [MenuItem("BuddyTD/Hauptmenü/Build Settings setzen")]
         public static void BuildSettingsMenu() { SetupBuildSettings(); }
 
+        [MenuItem("BuddyTD/Hauptmenü/Erfolge-UI in bestehende Szene einbauen")]
+        public static void AddAchievementUIMenu() { AddAchievementUIToScene(); }
+
+        [MenuItem("BuddyTD/Hauptmenü/Schwierigkeitsauswahl in bestehende Szene einbauen")]
+        public static void AddDifficultyUIMenu() { AddDifficultyUIToScene(); }
+
         // ---------------- Build Settings ----------------
 
         // MainMenu = Index 0, Spielszene danach. SampleScene (Unity-Vorlage, nicht referenziert) fliegt raus.
@@ -472,12 +478,14 @@ namespace ElementalBuddies.EditorTools
             ui.QuitButton = MakeButton(root, "QuitButton", "Beenden", true, 34f, new Vector2(80f, 86f), new Vector2(540f, 82f));
             SetVerticalNav(ui.PlayButton, ui.SettingsButton, ui.QuitButton);
 
-            var hint = Text(root, "KeyHint", "←/→ oder 1–3: Champion wechseln   ·   Enter: Spielen   ·   Esc: zurück",
+            var hint = Text(root, "KeyHint", KeyHintText,
                 _fBold, 22f, new Color(0.95f, 0.85f, 0.7f, 0.85f), TextAlignmentOptions.Bottom, _mBoldOutline);
             Place(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-120f, 26f), new Vector2(1100f, 34f));
 
             BuildDetailPanel(root, ui);
             BuildSettings(root, ui);
+            BuildAchievementExtras(root, ui);
+            BuildDifficultyExtras(root, ui);
 
             // Überblender (zuletzt = oben)
             var fader = Rect("Fader", root, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -631,6 +639,341 @@ namespace ElementalBuddies.EditorTools
             Place(brt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 46f), new Vector2(320f, 84f));
             ui.SettingsBackButton = back;
             overlay.gameObject.SetActive(false);
+        }
+
+        // ---------------- Erfolge & Champion-Sperren ----------------
+
+        // Ergänzt die bestehende Menü-Szene um Erfolge-Knopf/-Seite, Schlösser auf den Karten und die Sperr-Hinweiszeile,
+        // ohne den Rest neu zu bauen (ersetzt nur frühere Versionen dieser Objekte).
+        public static void AddAchievementUIToScene()
+        {
+            if (EditorApplication.isPlaying) { Debug.LogWarning("MainMenuBuilder: nur im Edit-Modus."); return; }
+            if (!System.IO.File.Exists(ScenePath)) { Debug.LogWarning("MainMenuBuilder: " + ScenePath + " fehlt – erst \"Alles einrichten\"."); return; }
+            LoadFonts();
+            ImportMenuSprites();
+
+            Scene prevActive = SceneManager.GetActiveScene();
+            Scene menu = SceneManager.GetSceneByPath(ScenePath);
+            bool wasLoaded = menu.IsValid() && menu.isLoaded;
+            if (!wasLoaded) menu = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                MainMenuUI ui = null;
+                foreach (var go in menu.GetRootGameObjects())
+                {
+                    ui = go.GetComponentInChildren<MainMenuUI>(true);
+                    if (ui != null) break;
+                }
+                if (ui == null) { Debug.LogWarning("MainMenuBuilder: kein MainMenuUI in " + ScenePath); return; }
+
+                var root = ui.transform;
+                foreach (var n in new[] { "AchievementsPanel", "AchievementsButton", "PlayLockHint" })
+                {
+                    var old = root.Find(n);
+                    if (old != null) Object.DestroyImmediate(old.gameObject);
+                }
+                foreach (var card in ui.Cards)
+                {
+                    if (card == null || card.PortraitBg == null) continue;
+                    var oldLock = card.PortraitBg.transform.Find("Lock");
+                    if (oldLock != null) Object.DestroyImmediate(oldLock.gameObject);
+                }
+
+                BuildAchievementExtras(root, ui);
+                if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
+                EditorUtility.SetDirty(ui);
+                EditorSceneManager.MarkSceneDirty(menu);
+                EditorSceneManager.SaveScene(menu, ScenePath);
+                Debug.Log("MainMenuBuilder: Erfolge-UI in " + ScenePath + " eingebaut.");
+            }
+            finally
+            {
+                if (prevActive.IsValid() && prevActive.isLoaded && prevActive != menu) SceneManager.SetActiveScene(prevActive);
+                if (!wasLoaded && prevActive != menu) EditorSceneManager.CloseScene(menu, true);
+            }
+        }
+
+        private static void BuildAchievementExtras(Transform root, MainMenuUI ui)
+        {
+            // Einstellungen + Erfolge teilen sich die mittlere Button-Zeile
+            if (ui.SettingsButton != null)
+                Place((RectTransform)ui.SettingsButton.transform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(80f, 186f), new Vector2(264f, 82f));
+            var ach = MakeButton(root, "AchievementsButton", "Erfolge", false, 32f, new Vector2(356f, 186f), new Vector2(264f, 82f));
+            var achIcon = Rect("Icon", ach.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(22f, 2f), new Vector2(58f, 58f));
+            Img(achIcon, Icon("icon_trophy"), Color.white, false).preserveAspect = true;
+            var achText = ach.GetComponentInChildren<TextMeshProUGUI>();
+            if (achText != null) achText.margin = new Vector4(64f, 0f, 0f, 0f);
+            ui.AchievementsButton = ach;
+            if (ui.SettingsButton != null) ach.transform.SetSiblingIndex(ui.SettingsButton.transform.GetSiblingIndex() + 1);
+
+            // Navigation: Spielen ↕ Einstellungen ↔ Erfolge ↕ Beenden
+            if (ui.PlayButton != null && ui.SettingsButton != null && ui.QuitButton != null)
+            {
+                SetVerticalNav(ui.PlayButton, ui.SettingsButton, ui.QuitButton);
+                var nav = ui.SettingsButton.navigation;
+                nav.selectOnRight = ach;
+                ui.SettingsButton.navigation = nav;
+                ach.navigation = new Navigation
+                {
+                    mode = Navigation.Mode.Explicit,
+                    selectOnLeft = ui.SettingsButton,
+                    selectOnUp = ui.PlayButton,
+                    selectOnDown = ui.QuitButton,
+                };
+            }
+
+            // Schloss über dem Porträt gesperrter Champions
+            foreach (var card in ui.Cards)
+            {
+                if (card == null || card.PortraitBg == null) continue;
+                var lockRt = Rect("Lock", card.PortraitBg.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -2f), new Vector2(76f, 76f));
+                card.Lock = Img(lockRt, Icon("icon_lock"), Color.white, false);
+                card.Lock.preserveAspect = true;
+                lockRt.gameObject.SetActive(false);
+            }
+
+            // Hinweiszeile über "Spielen"
+            var hint = Text(root, "PlayLockHint", "Gesperrt", _fBold, 25f, new Color(1f, 0.74f, 0.56f), TextAlignmentOptions.BottomLeft, _mBoldOutline);
+            Place(hint.rectTransform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(84f, 406f), new Vector2(1000f, 40f));
+            hint.textWrappingMode = TextWrappingModes.NoWrap;
+            hint.gameObject.SetActive(false);
+            ui.PlayLockHint = hint;
+            if (ui.PlayButton != null) hint.transform.SetSiblingIndex(ui.PlayButton.transform.GetSiblingIndex());
+
+            BuildAchievementsPanel(root, ui);
+            if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
+        }
+
+        // ---------------- Schwierigkeit ----------------
+
+        // Ergänzt die bestehende Menü-Szene um die Schwierigkeitsauswahl (Segment-Knöpfe zwischen Karten und "Spielen"),
+        // ohne den Rest neu zu bauen (ersetzt nur frühere Versionen dieser Objekte).
+        public static void AddDifficultyUIToScene()
+        {
+            if (EditorApplication.isPlaying) { Debug.LogWarning("MainMenuBuilder: nur im Edit-Modus."); return; }
+            if (!System.IO.File.Exists(ScenePath)) { Debug.LogWarning("MainMenuBuilder: " + ScenePath + " fehlt – erst \"Alles einrichten\"."); return; }
+            LoadFonts();
+            ImportMenuSprites();
+
+            Scene prevActive = SceneManager.GetActiveScene();
+            Scene menu = SceneManager.GetSceneByPath(ScenePath);
+            bool wasLoaded = menu.IsValid() && menu.isLoaded;
+            if (!wasLoaded) menu = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                MainMenuUI ui = null;
+                foreach (var go in menu.GetRootGameObjects())
+                {
+                    ui = go.GetComponentInChildren<MainMenuUI>(true);
+                    if (ui != null) break;
+                }
+                if (ui == null) { Debug.LogWarning("MainMenuBuilder: kein MainMenuUI in " + ScenePath); return; }
+
+                var root = ui.transform;
+                foreach (var n in new[] { "DifficultySelect", "DifficultyDescription" })
+                {
+                    var old = root.Find(n);
+                    if (old != null) Object.DestroyImmediate(old.gameObject);
+                }
+
+                BuildDifficultyExtras(root, ui);
+                if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
+                EditorUtility.SetDirty(ui);
+                EditorSceneManager.MarkSceneDirty(menu);
+                EditorSceneManager.SaveScene(menu, ScenePath);
+                Debug.Log("MainMenuBuilder: Schwierigkeitsauswahl in " + ScenePath + " eingebaut.");
+            }
+            finally
+            {
+                if (prevActive.IsValid() && prevActive.isLoaded && prevActive != menu) SceneManager.SetActiveScene(prevActive);
+                if (!wasLoaded && prevActive != menu) EditorSceneManager.CloseScene(menu, true);
+            }
+        }
+
+        // Drei Segment-Knöpfe (Leicht/Normal/Schwer) unter den Champion-Karten, darunter die Faktor-Zeile
+        // im Platz der Sperr-Hinweiszeile (MainMenuUI blendet je nach Sperre eine der beiden ein)
+        private static void BuildDifficultyExtras(Transform root, MainMenuUI ui)
+        {
+            const float rowY = 462f, rowH = 52f, gap = 12f, totalW = 540f;
+            int count = Mathf.Max(1, DifficultySO.All.Count);
+            float w = (totalW - gap * (count - 1)) / count;
+
+            var row = Rect("DifficultySelect", root, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(80f, rowY), new Vector2(totalW, rowH));
+            var buttons = new Button[count];
+            for (int i = 0; i < count; i++)
+            {
+                var d = i < DifficultySO.All.Count ? DifficultySO.All[i] : null;
+                string label = d != null ? d.DisplayName : "Normal";
+                var b = MakeButton(row, "Difficulty_" + (d != null ? d.Id : "normal"), label, false, 28f, new Vector2(i * (w + gap), 0f), new Vector2(w, rowH));
+                b.GetComponentInChildren<TextMeshProUGUI>().font = _fBold;
+                b.navigation = new Navigation { mode = Navigation.Mode.None };
+                b.image.raycastTarget = true;
+                buttons[i] = b;
+            }
+            ui.DifficultyButtons = buttons;
+            ui.DifficultySelectedSprite = UISprite("button_wood");
+            ui.DifficultySelectedHoverSprite = UISprite("button_wood_hover");
+            ui.DifficultyNormalSprite = UISprite("button_parchment");
+            ui.DifficultyNormalHoverSprite = UISprite("button_parchment_hover");
+            ui.DifficultySelectedTextColor = Cream;
+            ui.DifficultyNormalTextColor = Ink;
+
+            var desc = Text(root, "DifficultyDescription", "Normal – Das vorgesehene Spielerlebnis.", _fBold, 22f,
+                new Color(1f, 0.9f, 0.76f), TextAlignmentOptions.MidlineLeft, _mBoldOutline);
+            Place(desc.rectTransform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(84f, 404f), new Vector2(560f, 54f));
+            desc.enableAutoSizing = true;
+            desc.fontSizeMin = 16f;
+            desc.fontSizeMax = 22f;
+            desc.lineSpacing = -8f;
+            ui.DifficultyDescription = desc;
+
+            // Reihenfolge: hinter den Karten, vor "Spielen" (Sperr-Hinweis bleibt im selben Platz darüber)
+            if (ui.PlayButton != null)
+            {
+                int idx = ui.PlayButton.transform.GetSiblingIndex();
+                row.SetSiblingIndex(idx);
+                desc.transform.SetSiblingIndex(idx + 1);
+            }
+
+            // Tasten-Hinweis um Q/E ergänzen
+            var keyHint = root.Find("KeyHint");
+            var kt = keyHint != null ? keyHint.GetComponent<TextMeshProUGUI>() : null;
+            if (kt != null) kt.text = KeyHintText;
+            if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
+        }
+
+        private const string KeyHintText = "←/→ oder 1–3: Champion wechseln   ·   Q/E: Schwierigkeit   ·   Enter: Spielen   ·   Esc: zurück";
+
+        private static void BuildAchievementsPanel(Transform root, MainMenuUI ui)
+        {
+            // Kräftige Abdunklung, damit Detail-Panel und Bühne nicht durchscheinen
+            var overlay = Rect("AchievementsPanel", root, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            Img(overlay, null, new Color(0.04f, 0.025f, 0.02f, 0.9f), false).raycastTarget = true;
+            ui.AchievementsPanel = overlay.gameObject;
+
+            var box = Rect("Box", overlay, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -14f), new Vector2(1640f, 1180f));
+            Img(box, UISprite("panel_parchment"), Color.white, true);
+            var ribbon = Rect("Ribbon", box, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(560f, 110f));
+            Img(ribbon, UISprite("ribbon_banner"), Color.white, true);
+            var t = Text(ribbon, "Title", "Erfolge", _fHead, 54f, Cream, TextAlignmentOptions.Center, null);
+            Stretch(t.rectTransform, new Vector2(0f, 6f), new Vector2(0f, -12f));
+
+            // Zähler oben rechts
+            var cIcon = Rect("CounterIcon", box, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(-300f, -34f), new Vector2(64f, 64f));
+            Img(cIcon, Icon("icon_trophy"), Color.white, false).preserveAspect = true;
+            ui.AchievementsCounter = Text(box, "Counter", "0 / 13", _fHead, 44f, Ink, TextAlignmentOptions.MidlineLeft, null);
+            Place(ui.AchievementsCounter.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(-228f, -36f), new Vector2(180f, 60f));
+            ui.AchievementsCounter.textWrappingMode = TextWrappingModes.NoWrap;
+
+            var info = Text(box, "Info", "Freischaltungen gelten ab dem nächsten Spiel.", _fReg, 24f, InkLight, TextAlignmentOptions.MidlineLeft, null);
+            Place(info.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(72f, -36f), new Vector2(480f, 60f));
+            info.fontStyle = FontStyles.Italic;
+
+            // Scroll-Liste
+            var scroll = Rect("Scroll", box, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(0f, 14f), new Vector2(-120f, -248f));
+            var viewport = Rect("Viewport", scroll, Vector2.zero, Vector2.one, new Vector2(0f, 1f), Vector2.zero, new Vector2(-40f, 0f));
+            Img(viewport, null, new Color(1f, 1f, 1f, 0f), false).raycastTarget = true; // Fläche zum Ziehen/Scrollen
+            viewport.gameObject.AddComponent<RectMask2D>();
+            var content = Rect("Content", viewport, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, Vector2.zero);
+            var vlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            vlg.spacing = 12f;
+            vlg.padding = new RectOffset(4, 4, 4, 8);
+            vlg.childControlHeight = true;
+            vlg.childControlWidth = true;
+            vlg.childForceExpandHeight = false;
+            vlg.childForceExpandWidth = true;
+            var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            ui.AchievementsContent = content;
+
+            var sbRt = Rect("Scrollbar", scroll, new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f), Vector2.zero, new Vector2(22f, 0f));
+            var track = Img(sbRt, null, new Color(0.24f, 0.15f, 0.08f, 0.18f), false);
+            track.raycastTarget = true;
+            var slide = Rect("Sliding Area", sbRt, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            var handle = Rect("Handle", slide, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            var hImg = Img(handle, null, new Color(0.45f, 0.29f, 0.14f, 0.85f), false);
+            hImg.raycastTarget = true;
+            var bar = sbRt.gameObject.AddComponent<Scrollbar>();
+            bar.handleRect = handle;
+            bar.targetGraphic = hImg;
+            bar.direction = Scrollbar.Direction.BottomToTop;
+            bar.navigation = new Navigation { mode = Navigation.Mode.None };
+
+            var sr = scroll.gameObject.AddComponent<ScrollRect>();
+            sr.content = content;
+            sr.viewport = viewport;
+            sr.horizontal = false;
+            sr.vertical = true;
+            sr.movementType = ScrollRect.MovementType.Clamped;
+            sr.scrollSensitivity = 45f;
+            sr.verticalScrollbar = bar;
+            sr.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            ui.AchievementsScroll = sr;
+
+            BuildAchievementRowTemplate(content, ui);
+
+            var back = MakeButton(box, "BackButton", "Zurück", true, 34f, Vector2.zero, new Vector2(320f, 84f));
+            Place((RectTransform)back.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(320f, 84f));
+            ui.AchievementsBackButton = back;
+            overlay.gameObject.SetActive(false);
+        }
+
+        // Vorlage einer Erfolgs-Zeile: Medaille | Titel, Bedingung, Fortschritt | Belohnung
+        private static void BuildAchievementRowTemplate(Transform content, MainMenuUI ui)
+        {
+            const float h = 152f;
+            var row = Rect("AchievementRowTemplate", content, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, h));
+            Img(row, UISprite("slot_card"), Color.white, true);
+            var le = row.gameObject.AddComponent<LayoutElement>();
+            le.preferredHeight = h;
+            le.minHeight = h;
+
+            var medal = Rect("Medal", row, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(88f, 0f), new Vector2(124f, 124f));
+            var disc = Rect("Disc", medal, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(84f, 84f));
+            Img(disc, MenuSprite("menu_disc"), new Color(0.36f, 0.25f, 0.16f), false);
+            var icon = Rect("MedalIcon", medal, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(84f, 84f));
+            Img(icon, null, Color.white, false).preserveAspect = true;
+            var frame = Rect("MedalFrame", medal, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            Img(frame, Icon("achievement_frame_locked"), Color.white, false).preserveAspect = true;
+
+            var title = Text(row, "Title", "Erfolg", _fHead, 36f, Ink, TextAlignmentOptions.TopLeft, null);
+            Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(166f, -20f), new Vector2(640f, 48f));
+            title.textWrappingMode = TextWrappingModes.NoWrap;
+            title.overflowMode = TextOverflowModes.Ellipsis;
+            var desc = Text(row, "Desc", "Bedingung", _fReg, 25f, new Color(0.33f, 0.21f, 0.11f), TextAlignmentOptions.TopLeft, null);
+            Place(desc.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(168f, -68f), new Vector2(680f, 34f));
+            desc.textWrappingMode = TextWrappingModes.NoWrap;
+            desc.enableAutoSizing = true;
+            desc.fontSizeMin = 18f;
+            desc.fontSizeMax = 25f;
+
+            var barRt = Rect("Bar", row, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(168f, 18f), new Vector2(360f, 30f));
+            Img(barRt, UISprite("bar_bg"), Color.white, true);
+            var fill = Rect("BarFill", barRt, Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), new Vector2(5f, 0f), new Vector2(-10f, -6f));
+            Img(fill, UISprite("bar_fill"), BarFill, true);
+            var prog = Text(row, "Progress", "0 / 1", _fBold, 25f, InkLight, TextAlignmentOptions.MidlineLeft, null);
+            Place(prog.rectTransform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(544f, 16f), new Vector2(220f, 34f));
+            prog.textWrappingMode = TextWrappingModes.NoWrap;
+
+            var div = Rect("Divider", row, new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(-480f, 0f), new Vector2(2f, -40f));
+            Img(div, null, LineCol, false);
+            var rIcon = Rect("RewardIcon", row, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-414f, 0f), new Vector2(96f, 96f));
+            Img(rIcon, null, Color.white, false).preserveAspect = true;
+            var rLabel = Text(row, "RewardLabel", "Schaltet frei:", _fReg, 22f, InkLight, TextAlignmentOptions.BottomLeft, null);
+            Place(rLabel.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 0f), new Vector2(-350f, 14f), new Vector2(330f, 44f));
+            rLabel.enableAutoSizing = true;
+            rLabel.fontSizeMin = 16f;
+            rLabel.fontSizeMax = 22f;
+            rLabel.lineSpacing = -10f;
+            var rName = Text(row, "RewardName", "Belohnung", _fBold, 28f, Ink, TextAlignmentOptions.TopLeft, null);
+            Place(rName.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 1f), new Vector2(-350f, 12f), new Vector2(330f, 62f));
+            rName.enableAutoSizing = true;
+            rName.fontSizeMin = 18f;
+            rName.fontSizeMax = 28f;
+            rName.lineSpacing = -8f;
+
+            row.gameObject.SetActive(false);
+            ui.AchievementRowTemplate = row.gameObject;
         }
 
         private static Slider SliderRow(Transform parent, string name, string label, out TextMeshProUGUI value)

@@ -38,6 +38,40 @@ namespace ElementalBuddies
             }
         }
 
+        // ---------------- Schwierigkeit ----------------
+
+        private const string DifficultyPrefKey = "difficulty";
+        private static bool _difficultyLoaded;
+        private static string _difficultyId = DifficultySO.DefaultId;
+
+        // Id der gewählten Stufe (leicht/normal/schwer), Vorbelegung aus PlayerPrefs, Default Normal
+        public static string DifficultyId
+        {
+            get
+            {
+                if (!_difficultyLoaded)
+                {
+                    _difficultyLoaded = true;
+                    _difficultyId = PlayerPrefs.GetString(DifficultyPrefKey, DifficultySO.DefaultId);
+                }
+                return _difficultyId;
+            }
+            set
+            {
+                _difficultyLoaded = true;
+                _difficultyId = string.IsNullOrEmpty(value) ? DifficultySO.DefaultId : value;
+                PlayerPrefs.SetString(DifficultyPrefKey, _difficultyId);
+                PlayerPrefs.Save();
+            }
+        }
+
+        // Gewählte Stufe (nie null; unbekannte Id → Normal). Setzen speichert die Wahl in PlayerPrefs.
+        public static DifficultySO Difficulty
+        {
+            get => DifficultySO.Get(DifficultyId);
+            set => DifficultyId = value != null ? value.Id : DifficultySO.DefaultId;
+        }
+
         // Name der Spielszene und des Hauptmenüs
         public const string GameScene = "test";
         public const string MenuScene = "MainMenu";

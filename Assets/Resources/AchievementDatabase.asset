@@ -1,0 +1,169 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d47618ec156d147c08c4f9f320299124, type: 3}
+  m_Name: AchievementDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.AchievementDatabaseSO
+  Achievements:
+  - Id: defender
+    Title: Verteidiger
+    Description: 
+    Icon: {fileID: 21300000, guid: 83d99f0930ffa4e5aa046e41ac367958, type: 3}
+    Condition: 0
+    Threshold: 6
+    Level: 0
+    Element: -1
+    Unlock: 1
+  - Id: bulwark
+    Title: Bollwerk
+    Description: 
+    Icon: {fileID: 21300000, guid: 83d99f0930ffa4e5aa046e41ac367958, type: 3}
+    Condition: 0
+    Threshold: 10
+    Level: 0
+    Element: -1
+    Unlock: 2
+  - Id: twin_power
+    Title: Zwillingskraft
+    Description: 
+    Icon: {fileID: 21300000, guid: f5583604daad84973980cdab95d89493, type: 3}
+    Condition: 1
+    Threshold: 2
+    Level: 2
+    Element: -1
+    Unlock: 3
+  - Id: master_fire
+    Title: Feuermeister
+    Description: 
+    Icon: {fileID: 21300000, guid: 4c8bcc57e0a514b2fad99f2140c95145, type: 3}
+    Condition: 1
+    Threshold: 2
+    Level: 3
+    Element: 0
+    Unlock: 4
+  - Id: master_ice
+    Title: Eismeister
+    Description: 
+    Icon: {fileID: 21300000, guid: beba4124e6dce4fbfa481bc08e069c9e, type: 3}
+    Condition: 1
+    Threshold: 2
+    Level: 3
+    Element: 1
+    Unlock: 5
+  - Id: master_earth
+    Title: Erdmeister
+    Description: 
+    Icon: {fileID: 21300000, guid: a3ce55bbc1f8d4d6b8963d1b927da900, type: 3}
+    Condition: 1
+    Threshold: 2
+    Level: 3
+    Element: 2
+    Unlock: 6
+  - Id: master_light
+    Title: Lichtmeister
+    Description: 
+    Icon: {fileID: 21300000, guid: e11572ba349c64d51ab54a8ca5bbac44, type: 3}
+    Condition: 1
+    Threshold: 2
+    Level: 3
+    Element: 3
+    Unlock: 7
+  - Id: fusionist
+    Title: Fusionist
+    Description: 
+    Icon: {fileID: 21300000, guid: c52bc2e2cdf7d450fa2bc470e3128885, type: 3}
+    Condition: 2
+    Threshold: 2
+    Level: 0
+    Element: -1
+    Unlock: 8
+  - Id: unshakable
+    Title: "Unersch\xFCtterlich"
+    Description: 
+    Icon: {fileID: 21300000, guid: 83d99f0930ffa4e5aa046e41ac367958, type: 3}
+    Condition: 0
+    Threshold: 25
+    Level: 0
+    Element: -1
+    Unlock: 8
+  - Id: bonebreaker
+    Title: Knochenbrecher
+    Description: 
+    Icon: {fileID: 21300000, guid: 149075f3e206843c79f16f7d73748e37, type: 3}
+    Condition: 3
+    Threshold: 1
+    Level: 0
+    Element: -1
+    Unlock: 0
+  - Id: boss_slayer
+    Title: "Bosst\xF6ter"
+    Description: 
+    Icon: {fileID: 21300000, guid: 24e5d976761834599be107041f8ce1f5, type: 3}
+    Condition: 4
+    Threshold: 3
+    Level: 0
+    Element: -1
+    Unlock: 0
+  - Id: soul_collector
+    Title: Seelensammler
+    Description: 
+    Icon: {fileID: 21300000, guid: 295fba34ac42846f6a9362abb7ea46a2, type: 3}
+    Condition: 5
+    Threshold: 1000
+    Level: 0
+    Element: -1
+    Unlock: 0
+  - Id: primal_force
+    Title: Urgewalt
+    Description: 
+    Icon: {fileID: 21300000, guid: 5ac48075a25174c3299319f7064a272e, type: 3}
+    Condition: 6
+    Threshold: 1
+    Level: 0
+    Element: -1
+    Unlock: 0
+  Unlocks:
+  - Id: 1
+    Name: "Schwertk\xE4mpfer"
+    Icon: {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
+  - Id: 2
+    Name: "Bogensch\xFCtze"
+    Icon: {fileID: 21300000, guid: 21a989a888e3f462691b04f407000f2d, type: 3}
+  - Id: 3
+    Name: Zweier-Fusionen
+    Icon: {fileID: 21300000, guid: f5583604daad84973980cdab95d89493, type: 3}
+  - Id: 4
+    Name: "Feuer Stufe 4 \u2013 Flammenkaiser"
+    Icon: {fileID: 21300000, guid: 4c8bcc57e0a514b2fad99f2140c95145, type: 3}
+  - Id: 5
+    Name: "Eis Stufe 4 \u2013 Frostk\xF6nig"
+    Icon: {fileID: 21300000, guid: beba4124e6dce4fbfa481bc08e069c9e, type: 3}
+  - Id: 6
+    Name: "Erde Stufe 4 \u2013 Bergk\xF6nig"
+    Icon: {fileID: 21300000, guid: a3ce55bbc1f8d4d6b8963d1b927da900, type: 3}
+  - Id: 7
+    Name: "Licht Stufe 4 \u2013 Sonnenerzengel"
+    Icon: {fileID: 21300000, guid: e11572ba349c64d51ab54a8ca5bbac44, type: 3}
+  - Id: 8
+    Name: Super-Elementare
+    Icon: {fileID: 21300000, guid: 5ac48075a25174c3299319f7064a272e, type: 3}
+  BossKinds:
+  - BossBoneLord
+  - BossNecromancer
+  - BossDeathHunter
+  BossKindNames:
+  - "Knochenf\xFCrst"
+  - Nekromant
+  - "Totenj\xE4ger"
+  MedalFrame: {fileID: 21300000, guid: f9368c7f65ed14300af529d0daca08d4, type: 3}
+  MedalFrameLocked: {fileID: 21300000, guid: 3dccca0dadfdf4388813f6a6f782c5f9, type: 3}
+  LockIcon: {fileID: 21300000, guid: 8330970d45b9f4cb287e274dd2f00c62, type: 3}
+  TrophyIcon: {fileID: 21300000, guid: 31f85bef35d2e4aa7b2c3c27ea82406f, type: 3}

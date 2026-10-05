@@ -91,7 +91,14 @@ namespace ElementalBuddies
             _kits.Clear();
             GetComponents(_kits);
             if (_stats != null) _stats.DamageModifier = ModifyIncomingDamage;
-            ApplyChampion(ForceChampion ? ForcedChampion : GameSession.SelectedChampion, false);
+            var cls = ForceChampion ? ForcedChampion : GameSession.SelectedChampion;
+            // Meta-Freischaltung: gesperrter Champion (Stand dieses Spiels) → Magier; Inspector-Override/DevTools.UnlockAllContent ausgenommen
+            if (!ForceChampion && !Progression.IsChampionUnlocked(cls, true))
+            {
+                Debug.Log($"PlayerAbilities: Champion {cls} ist noch gesperrt ({Progression.RequirementText(Progression.ChampionUnlock(cls))}) – Magier wird gespielt.");
+                cls = ChampionClass.Mage;
+            }
+            ApplyChampion(cls, false);
         }
 
         // ---------------- Champion ----------------

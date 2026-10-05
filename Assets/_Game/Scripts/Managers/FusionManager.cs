@@ -103,6 +103,24 @@ namespace ElementalBuddies
 
         public bool CanFuseNow => ElementalBuddy.IsUpgradePhase;
 
+        // Meta-Freischaltungen (Progression, Stand dieses Spiels): 2er-Fusionen bzw. Super-Elementare per Erfolg gesperrt
+        public static bool IsFusion2Locked => !Progression.IsUnlocked(UnlockId.Fusion2);
+        public static bool IsTriLocked => !Progression.IsUnlocked(UnlockId.TriFusion);
+        // z. B. "2er-Fusionen gesperrt – Erfolg „Zwillingskraft“: 2 Buddies gleichzeitig auf Stufe 2"
+        public static string Fusion2LockText => Progression.LockText(UnlockId.Fusion2);
+        public static string TriLockText => Progression.LockText(UnlockId.TriFusion);
+
+        // Sperrhinweis für diesen Buddy (null = Rezept-Art frei bzw. Buddy kommt dafür nicht in Frage)
+        public string GetLockReason(ElementalBuddy buddy)
+        {
+            if (buddy == null || buddy.IsSuper) return null;
+            if (!buddy.IsFusion && buddy.Level >= MinLevel && buddy.Level <= MaxFusionLevel)
+                return IsFusion2Locked ? Fusion2LockText : null;
+            if (buddy.IsFusion || buddy.Level == TriFusionLevel)
+                return IsTriLocked ? TriLockText : null;
+            return null;
+        }
+
         private readonly List<FusionOption> _options = new List<FusionOption>();
 
         // Link-Hervorhebung (Laufzeit-Objekte)
@@ -223,6 +241,7 @@ namespace ElementalBuddies
 
             if (IsFusable(buddy))
             {
+                if (IsFusion2Locked) return _options; // gesperrt: keine Optionen (Grund über GetBlockReason)
                 foreach (var other in ElementalBuddy.Active)
                 {
                     if (other == buddy || !IsFusable(other) || other.ElementIndex == buddy.ElementIndex) continue;
@@ -242,7 +261,7 @@ namespace ElementalBuddies
                     });
                 }
             }
-            else if (IsTriFusion(buddy) || IsTriBase(buddy))
+            else if ((IsTriFusion(buddy) || IsTriBase(buddy)) && !IsTriLocked)
             {
                 CollectTriOptions(buddy, eco);
             }
@@ -324,6 +343,8 @@ namespace ElementalBuddies
                 if (buddy.Level > TriFusionLevel) return $"Stufe {buddy.Level}: voll entwickelt – keine Fusion mehr (nur genau Stufe {MaxFusionLevel} oder {TriFusionLevel})";
                 if (buddy.Level > MaxFusionLevel && buddy.Level < TriFusionLevel) return $"Nur genau Stufe {MaxFusionLevel} oder {TriFusionLevel}";
             }
+            string locked = GetLockReason(buddy);
+            if (locked != null) return locked;
             if (GetOptions(buddy).Count == 0)
             {
                 if (!buddy.IsFusion && buddy.Level <= MaxFusionLevel)
@@ -410,6 +431,7 @@ namespace ElementalBuddies
         public FusionBuddy TryFuse(ElementalBuddy a, ElementalBuddy b)
         {
             if (!CanFuseNow || !IsFusable(a) || !IsFusable(b) || a == b) return null;
+            if (IsFusion2Locked) return null;
             int ea = a.ElementIndex, eb = b.ElementIndex;
             if (ea == eb || HorizontalDistance(a, b) > FusionRange) return null;
 
@@ -455,6 +477,7 @@ namespace ElementalBuddies
         public SuperBuddy TryFuseTri(ElementalBuddy a, ElementalBuddy b, ElementalBuddy c = null)
         {
             if (!CanFuseNow || a == null || b == null || a == b || c == a || c == b) return null;
+            if (IsTriLocked) return null;
 
             int mask;
             if (c == null)

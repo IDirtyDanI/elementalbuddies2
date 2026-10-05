@@ -168,6 +168,46 @@ namespace ElementalBuddies
             if (instant) ApplyCamera();
         }
 
+        // Gesperrte Champions abgedunkelt zeigen (MaterialPropertyBlock auf _BaseColor/_Color, Materialien bleiben unverändert)
+        public void SetLocked(ChampionClass c, bool locked, float brightness = 0.28f)
+        {
+            foreach (var p in Pedestals)
+            {
+                if (p == null || p.Class != c || p.Instance == null) continue;
+                var block = new MaterialPropertyBlock();
+                foreach (var r in p.Instance.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (r is ParticleSystemRenderer) continue;
+                    var mats = r.sharedMaterials;
+                    for (int m = 0; m < mats.Length; m++)
+                    {
+                        if (!locked || mats[m] == null)
+                        {
+                            r.SetPropertyBlock(null, m);
+                            continue;
+                        }
+                        block.Clear();
+                        if (mats[m].HasProperty("_BaseColor"))
+                            block.SetColor("_BaseColor", Dim(mats[m].GetColor("_BaseColor"), brightness));
+                        if (mats[m].HasProperty("_Color"))
+                            block.SetColor("_Color", Dim(mats[m].GetColor("_Color"), brightness));
+                        if (mats[m].HasProperty("_EmissionColor"))
+                            block.SetColor("_EmissionColor", Color.black);
+                        r.SetPropertyBlock(block, m);
+                    }
+                }
+            }
+        }
+
+        // Abdunkeln und entsättigen
+        private static Color Dim(Color c, float brightness)
+        {
+            float grey = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+            Color d = Color.Lerp(c, new Color(grey, grey, grey), 0.6f) * brightness;
+            d.a = c.a;
+            return d;
+        }
+
         private void SetCarousel(float yaw)
         {
             _carouselYaw = yaw;

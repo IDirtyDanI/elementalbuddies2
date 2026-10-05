@@ -10,6 +10,7 @@ namespace ElementalBuddies
         public const float TickInterval = 0.5f;
         private const float FadeTime = 0.5f;
 
+        private float _bossMultiplier = 1f;
         private float _radius, _dps, _slow, _slowDuration, _lifetime, _age, _tickTimer;
         private Vector3 _baseScale;
         private ParticleSystem[] _particles;
@@ -41,8 +42,9 @@ namespace ElementalBuddies
         }
 
         // Pfütze erzeugen: Prefab (Einheitsradius 1, wird auf radius skaliert) oder Laufzeit-Scheibe
+        // bossMultiplier: Schadensfaktor gegen Bosse (Magma-Fusion, FusionBuddy.BossDamageMultiplier)
         public static LavaPuddle Spawn(Vector3 groundPos, float radius, float lifetime, float dps, float slow, float slowDuration,
-            GameObject prefab = null)
+            GameObject prefab = null, float bossMultiplier = 1f)
         {
             GameObject go;
             if (prefab != null)
@@ -66,6 +68,7 @@ namespace ElementalBuddies
 
             var puddle = go.AddComponent<LavaPuddle>();
             puddle._radius = radius;
+            puddle._bossMultiplier = bossMultiplier > 0f ? bossMultiplier : 1f;
             puddle._lifetime = Mathf.Max(0.1f, lifetime);
             puddle._dps = dps;
             puddle._slow = slow;
@@ -117,7 +120,7 @@ namespace ElementalBuddies
             {
                 if (e == null || e.CurrentHP <= 0f) continue;
                 if (_slow > 0f) e.ApplySlow(_slow, _slowDuration);
-                if (damage > 0f) e.TakeDamage(damage);
+                if (damage > 0f) e.TakeDamage(e.IsBoss ? damage * _bossMultiplier : damage);
             }
         }
 

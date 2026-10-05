@@ -95,7 +95,7 @@ namespace ElementalBuddies
             _targets.Clear();
             _targets.AddRange(FindEnemies(center, EffectiveRange));
             foreach (var e in _targets)
-                if (e != null && e.CurrentHP > 0f) e.TakeDamage(damage);
+                if (e != null && e.CurrentHP > 0f) e.TakeDamage(DamageAgainst(e, damage));
 
             if (ShardBurstVfxPrefab != null) SpawnVfx(ShardBurstVfxPrefab, center + Vector3.up * 0.5f, 2f);
             else FusionLineFx.SpawnRing(center + Vector3.up * 0.1f, 0.5f, EffectiveRange, RingMaterial, CrystalColor,

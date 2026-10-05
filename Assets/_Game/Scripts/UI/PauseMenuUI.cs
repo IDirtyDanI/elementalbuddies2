@@ -318,7 +318,8 @@ namespace ElementalBuddies
             }
             if (card.IsPercentage)
             {
-                float total = (Mathf.Pow(1f + card.Value / 100f, n) - 1f) * 100f;
+                // Prozentkarten stapeln additiv gegen den Basiswert (UpgradeManager.ModifyValue)
+                float total = n * card.Value;
                 return $"Gesamt: {Signed(total, "0.#")} % {stat}";
             }
             // Flacher Spieler-Schaden / Mobilität zählt als ganze Prozentpunkte (siehe UpgradeManager)
@@ -584,6 +585,9 @@ namespace ElementalBuddies
             else if (wm.IsWaveActive) wave = $"Welle {wm.CurrentWaveIndex + 1} läuft";
             else if (wm.CurrentWaveIndex > 0) wave = $"Welle {wm.CurrentWaveIndex} geschafft";
             else wave = "Vor Welle 1";
+
+            if (wm != null && wm.Difficulty != null)
+                wave = string.IsNullOrEmpty(wave) ? wm.Difficulty.DisplayName : $"{wave} · {wm.Difficulty.DisplayName}";
 
             int best = GameManager.Instance != null ? GameManager.Instance.BestWave : 0;
             if (best <= 0) return wave;

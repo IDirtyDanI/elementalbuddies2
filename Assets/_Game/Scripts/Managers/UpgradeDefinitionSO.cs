@@ -15,6 +15,10 @@ namespace ElementalBuddies
         public UpgradeTarget Target;
         public StatType StatToBuff;
         public float Value; 
-        public bool IsPercentage; // If true, Value 10 means +10% (whole percent). If false, Value 5 means +5 flat.
+        public bool IsPercentage; // true: Value 10 = +10 % des Basiswerts (additiv: n Karten = +n·10 %). false: Value 5 = +5 flach.
+
+        [Header("Draft")]
+        [Tooltip("Höchstens so oft pro Run wählbar (0 = unbegrenzt), z. B. Beschwörerband 6.")]
+        public int MaxPicks = 0;
     }
 }

@@ -208,7 +208,7 @@ namespace ElementalBuddies
                     CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up * HitHeight, Quaternion.LookRotation(dir), 1.5f);
                 if (finisher && FinisherKnockback > 0f)
                     enemy.Knockback(CombatUtil.FlatDirection(origin, enemy.transform.position, dir), FinisherKnockback, 0.25f);
-                enemy.TakeDamage(damage);
+                EnemyBrain.DealPlayerDamage(enemy, damage); // Quelle Spieler (Telemetrie)
             }
 
             // Bogen: Schlag 1 von rechts, 2 von links, 3 breiter + golden

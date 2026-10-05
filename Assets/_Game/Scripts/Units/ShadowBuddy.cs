@@ -43,7 +43,7 @@ namespace ElementalBuddies
             for (int i = 0; i < count; i++)
             {
                 var e = _candidates[i];
-                e.ApplyCurse(dps, CurseDuration, DamageTakenBonus, CurseVfxPrefab);
+                e.ApplyCurse(DamageAgainst(e, dps), CurseDuration, DamageTakenBonus, CurseVfxPrefab);
                 FusionLineFx.Spawn(new[] { origin, BodyPoint(e) }, BeamMaterial, BeamColor, new Color(0.25f, 0.05f, 0.4f),
                     BeamWidth, BeamWidth * 0.5f, BeamLifetime, "CurseBeam");
             }

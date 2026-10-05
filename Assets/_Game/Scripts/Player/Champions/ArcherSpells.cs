@@ -264,7 +264,7 @@ namespace ElementalBuddies
                     enemy.ApplySlow(BlindSlow, BlindDuration);
                     BlindEffect.Apply(enemy.gameObject, BlindDuration, BlindVfxPrefab);
                 }
-                enemy.TakeDamage(Damage * ctx.DamageMultiplier);
+                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
             }
 
             BeamFx.Spawn(BeamPrefab, from, from + dir * length);

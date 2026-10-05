@@ -106,6 +106,15 @@ namespace ElementalBuddies
         void LateUpdate()
         {
             if (_targetObject == null) { Destroy(gameObject); return; }
+            // Hot-Reload im Play-Mode: Unity stellt _targetObject wieder her, die Interface-Felder nicht → neu ableiten
+            if (_target == null)
+            {
+                _target = _targetObject as IHealthBarTarget;
+                _shielded = _targetObject as IShieldedTarget;
+                if (_target == null) { Destroy(gameObject); return; }
+                if (_renderers == null) _renderers = _target.transform.GetComponentsInChildren<Renderer>(true);
+                if (_canvas == null) _canvas = GetComponent<Canvas>();
+            }
 
             float hp01 = _target.MaxHP > 0f ? Mathf.Clamp01(_target.CurrentHP / _target.MaxHP) : 1f;
             float shield01 = _shielded != null && _target.MaxHP > 0f ? Mathf.Clamp01(_shielded.ShieldAmount / _target.MaxHP) : 0f;

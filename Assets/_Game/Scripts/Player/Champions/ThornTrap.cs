@@ -86,7 +86,7 @@ namespace ElementalBuddies
                     var vfx = Instantiate(_spell.RootVfxPrefab, enemy.transform.position, Quaternion.identity, enemy.transform);
                     Destroy(vfx, _spell.RootDuration);
                 }
-                enemy.TakeDamage(_spell.Damage * _dm);
+                EnemyBrain.DealPlayerDamage(enemy, _spell.Damage * _dm); // Quelle Spieler (Telemetrie)
             }
 
             if (ArmedIndicator != null) ArmedIndicator.SetActive(false);

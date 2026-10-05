@@ -16,6 +16,7 @@ MonoBehaviour:
   CostOutCombat: 90
   Range: 6
   FireRate: 0.6
-  Damage: 26
+  Damage: 39
   Prefab: {fileID: 8981606202083858833, guid: b816934ec203b43658a4bb235a4fc17e, type: 3}
   BuddyMaxHP: 120
+  BossDamageMultiplier: 2

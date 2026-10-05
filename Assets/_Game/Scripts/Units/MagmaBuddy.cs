@@ -43,7 +43,7 @@ namespace ElementalBuddies
         private struct ImpactData
         {
             public MagmaBuddy Owner;
-            public float Damage, Radius, BurnDps, BurnDuration;
+            public float Damage, Radius, BurnDps, BurnDuration, BossMultiplier;
             public float PuddleRadius, PuddleLifetime, PuddleDps, PuddleSlow, PuddleSlowDuration;
             public GameObject PuddlePrefab, ImpactVfx, BurnVfx;
         }
@@ -86,6 +86,7 @@ namespace ElementalBuddies
                 Radius = ImpactRadius,
                 BurnDps = BurnDps,
                 BurnDuration = BurnDuration,
+                BossMultiplier = BossDamageMultiplier,
                 PuddleRadius = PuddleRadius,
                 PuddleLifetime = PuddleLifetime,
                 PuddleDps = PuddleDps,
@@ -110,12 +111,13 @@ namespace ElementalBuddies
             foreach (var e in _impactBuffer)
             {
                 if (e == null || e.CurrentHP <= 0f) continue;
-                BurnEffect.Apply(e.gameObject, data.BurnDps, data.BurnDuration, data.BurnVfx);
-                e.TakeDamage(data.Damage);
+                float boss = e.IsBoss ? data.BossMultiplier : 1f;
+                BurnEffect.Apply(e.gameObject, data.BurnDps * boss, data.BurnDuration, data.BurnVfx);
+                e.TakeDamage(data.Damage * boss);
             }
 
             var puddle = LavaPuddle.Spawn(GroundPoint(point), data.PuddleRadius, data.PuddleLifetime, data.PuddleDps,
-                data.PuddleSlow, data.PuddleSlowDuration, data.PuddlePrefab);
+                data.PuddleSlow, data.PuddleSlowDuration, data.PuddlePrefab, data.BossMultiplier);
             if (data.Owner != null) data.Owner.RegisterPuddle(puddle);
         }
 

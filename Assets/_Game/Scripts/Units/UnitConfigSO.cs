@@ -38,6 +38,11 @@ namespace ElementalBuddies
         [Tooltip("Basis-Leben des Buddys auf Stufe 1 (0 = Standard der Buddy-Klasse).")]
         public float BuddyMaxHP = 0f;
 
+        [Header("Fusion")]
+        [Tooltip("Schadensfaktor gegen Bosse (nur Fusions-Buddies werten ihn aus; 1 = kein Bonus). 2er-Fusionen sind auf viele " +
+                 "Ziele ausgelegt und gegen einzelne Bosse mit viel Leben sonst zu schwach (Balancing-Modell, Strategie „fusion“).")]
+        public float BossDamageMultiplier = 1f;
+
         // Reference to global settings for surcharge calculation
         private GlobalSettingsSO _globalSettings;
         public GlobalSettingsSO GlobalSettings

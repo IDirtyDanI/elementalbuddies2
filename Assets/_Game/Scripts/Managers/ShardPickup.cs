@@ -15,6 +15,7 @@ namespace ElementalBuddies
         public const float MergeRadius = 0.6f;
         private const float HoverHeight = 0.45f;
         private const float PopDuration = 0.4f;
+        private const float RecallSpeedFactor = 2.2f; // Rückruf am Wellenende: schneller als der normale Magnet
 
         private static readonly List<ShardPickup> _all = new List<ShardPickup>();
         public static IReadOnlyList<ShardPickup> All => _all;
@@ -30,6 +31,7 @@ namespace ElementalBuddies
         private Vector3 _from, _land, _origin;
         private float _popT;
         private bool _magnet;
+        private bool _recall;
         private float _speed;
         private float _bobPhase;
         private int _tier = -1;
@@ -41,6 +43,17 @@ namespace ElementalBuddies
             _all.Clear();
             _player = null;
             _nextPlayerSearch = 0f;
+        }
+
+        // Alle liegenden Drops fliegen zum Spieler (z. B. am Wellenende); läuft wie der Magnet, sobald die Zeit weiterläuft
+        public static void RecallAll()
+        {
+            foreach (var p in _all)
+            {
+                if (p == null) continue;
+                p._magnet = true;
+                p._recall = true;
+            }
         }
 
         // Drop am Todesort erzeugen (bzw. in einen nahen Drop einrechnen)
@@ -211,6 +224,7 @@ namespace ElementalBuddies
                 if (_magnet)
                 {
                     float maxSpeed = _settings != null ? _settings.ShardMagnetSpeed : 14f;
+                    if (_recall) maxSpeed *= RecallSpeedFactor;
                     _speed = Mathf.MoveTowards(_speed, maxSpeed, maxSpeed * 2.5f * dt);
                     transform.position = Vector3.MoveTowards(transform.position, chest, _speed * dt);
                     transform.Rotate(0f, 720f * dt, 0f, Space.World);
@@ -231,7 +245,7 @@ namespace ElementalBuddies
             if (Value <= 0f) return;
             float v = Value;
             Value = 0f;
-            if (EconomyManager.Instance != null) EconomyManager.Instance.AddShards(v);
+            if (EconomyManager.Instance != null) EconomyManager.Instance.EarnShards(v);
             GameAudio.Play(SfxId.ShardPickup, transform.position);
             if (_settings != null && _settings.ShardCollectEffect != null)
                 Destroy(Instantiate(_settings.ShardCollectEffect, transform.position, Quaternion.identity), 3f);
