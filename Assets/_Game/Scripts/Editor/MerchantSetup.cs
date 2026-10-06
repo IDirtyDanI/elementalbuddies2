@@ -498,20 +498,12 @@ namespace ElementalBuddies.EditorTools
             Transform cover = Child(root, "Abdeckung");
             ReplaceModel(cover, $"{StandModelFolder}/Stand_Abdeckung.fbx", "Modell", Vector3.zero, 1f);
 
-            // Figur (Merchant_<Typ>.fbx, Humanoid, Skalierung 0,76) hinter der Theke, Blick +Z
+            // Figur hinter der Theke, Blick +Z: Heroes2-Modell Merchant2_<Typ>.fbx (1,80 m, Skalierung 1) mit Requisite in der Hand,
+            // sonst das alte Merchant_<Typ>.fbx (Skalierung 0,76) – siehe MerchantFigures
             Transform fig = Child(root, "Figur");
             fig.localPosition = new Vector3(0f, 0f, -0.4f);
             fig.localRotation = Quaternion.identity;
-            var figModel = ReplaceModel(fig, $"{FigureModelFolder}/Merchant_{key}.fbx", "Modell", Vector3.zero, 0.76f);
-            Animator anim = figModel != null ? figModel.GetComponent<Animator>() : null;
-            if (figModel != null)
-            {
-                if (anim == null) anim = figModel.AddComponent<Animator>();
-                anim.runtimeAnimatorController = EnsureFigureController();
-                anim.applyRootMotion = false;
-                anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
-                anim.updateMode = AnimatorUpdateMode.UnscaledTime; // jubelt auch, während die Kartenauswahl das Spiel pausiert
-            }
+            Animator anim = MerchantFigures.Build(fig, def.Kind, log);
             IgnoreInNavMesh(fig.gameObject);
 
             // Kreis (Einnahme-Kreis + Leuchtsäule über dem Stand), Mitte = Merchant.Center

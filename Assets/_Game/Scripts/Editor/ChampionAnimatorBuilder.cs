@@ -21,6 +21,7 @@ namespace ElementalBuddies.EditorTools
         {
             BuildKnight();
             BuildArcher();
+            ApplyHolds();
             AssetDatabase.SaveAssets();
             Debug.Log("ChampionAnimatorBuilder: KnightVisual.controller und ArcherVisual.controller gebaut.");
         }
@@ -84,6 +85,22 @@ namespace ElementalBuddies.EditorTools
             EditorUtility.SetDirty(ac);
         }
 
+        // ---------------- Hände/Arme (Heroes2) ----------------
+
+        // Hands-/HoldArm-Layer für alle Champions mit Heroes2-Modell (Finger-Rig) setzen, bei Alt-Modellen entfernen.
+        // Ändert nur die Layer, nicht die Aktions-States (GUIDs der Controller bleiben).
+        public static void ApplyHolds()
+        {
+            foreach (var spec in ChampionPlayerSetup.Specs)
+            {
+                var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(spec.Controller);
+                if (ac == null) continue;
+                if (spec.UseHeroes2) ChampionGrip.ApplyHoldLayers(ac, spec.Hold, spec.ClipPrefix);
+                else ChampionGrip.RemoveHoldLayers(ac);
+            }
+            AssetDatabase.SaveAssets();
+        }
+
         // ---------------- Helfer ----------------
 
         // Kopie von PlayerVisual.controller (Base Layer + UpperBody-Maske), ohne den Magier-Cast
@@ -93,6 +110,7 @@ namespace ElementalBuddies.EditorTools
             AssetDatabase.DeleteAsset(path);
             AssetDatabase.CopyAsset(AnimDir + "PlayerVisual.controller", path);
             var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+            ChampionGrip.RemoveHoldLayers(ac); // Magier-Hände/-Arm nicht mitkopieren (ApplyHolds setzt eigene)
 
             var upper = UpperLayer(ac);
             foreach (var s in upper.states)
