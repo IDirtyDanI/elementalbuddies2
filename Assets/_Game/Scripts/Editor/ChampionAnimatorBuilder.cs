@@ -12,6 +12,7 @@ namespace ElementalBuddies.EditorTools
     {
         private const string AnimDir = "Assets/_Game/Animations/";
         private const string Mixamo = "Assets/MixamoAnimations/";
+        private const string H2Anim = "Assets/_Game/Animations/Heroes2/";
         private const string KnightFbx = "Assets/_Game/Models/Characters/KnightChampion.fbx";
         private const string ArcherFbx = "Assets/_Game/Models/Characters/ArcherChampion.fbx";
         private const string MeshyEnemy = "Assets/3D Models/Enemy/Meshy_Merged_Animations.fbx";
@@ -37,9 +38,22 @@ namespace ElementalBuddies.EditorTools
 
             var upper = UpperLayer(ac);
             var empty = upper.defaultState;
-            Action(upper, empty, "Slash1", Clip(Mixamo + "X Bot@Stable Sword Inward Slash (1).fbx", null), "Slash1", 1.9f, 0.55f);
-            Action(upper, empty, "Slash2", Clip(Mixamo + "X Bot@Stable Sword Outward Slash (1).fbx", null), "Slash2", 1.9f, 0.55f);
-            Action(upper, empty, "Slash3", Clip(Mixamo + "X Bot@Thrust Slash (1).fbx", null), "Slash3", 2.4f, 0.5f);
+            // Schwerthiebe: eigene Blender-Clips (art-src/heroes2/17_knight_slash_anims.py, Echtzeit 30 fps, Treffer passend zu
+            // KnightKit.SlashHitDelay/FinisherHitDelay); Mixamo-Clips nur noch als Rückfall, falls die FBX fehlen
+            var s1 = Clip(H2Anim + "Knight2_Slash1.fbx", "Knight2_Slash1");
+            var s2 = Clip(H2Anim + "Knight2_Slash2.fbx", "Knight2_Slash2");
+            var s3 = Clip(H2Anim + "Knight2_Slash3.fbx", "Knight2_Slash3");
+            if (s1 != null) Action(upper, empty, "Slash1", s1, "Slash1", 1f, 0.7f);
+            else Action(upper, empty, "Slash1", Clip(Mixamo + "X Bot@Stable Sword Inward Slash (1).fbx", null), "Slash1", 1.9f, 0.55f);
+            if (s2 != null) Action(upper, empty, "Slash2", s2, "Slash2", 1f, 0.7f);
+            else Action(upper, empty, "Slash2", Clip(Mixamo + "X Bot@Stable Sword Outward Slash (1).fbx", null), "Slash2", 1.9f, 0.55f);
+            if (s3 != null) Action(upper, empty, "Slash3", s3, "Slash3", 1f, 0.72f);
+            else Action(upper, empty, "Slash3", Clip(Mixamo + "X Bot@Thrust Slash (1).fbx", null), "Slash3", 2.4f, 0.5f);
+            // Kombo: der nächste Hieb darf das Ausblenden nach Empty unterbrechen (sonst wartet der Trigger bis zum Ende
+            // der Überblendung und die Klinge hinkt Treffer/Bogen-VFX hinterher)
+            foreach (var cs in upper.states)
+                if (cs.state.name.StartsWith("Slash"))
+                    foreach (var t in cs.state.transitions) t.interruptionSource = TransitionInterruptionSource.Destination;
             Action(upper, empty, "FrostStrike", Clip(KnightFbx, "Knight_FrostStrike"), "FrostStrike", 1.2f, 0.85f);
             Action(upper, empty, "LightOath", Clip(KnightFbx, "Knight_LightOath"), "LightOath", 1.1f, 0.85f);
 

@@ -311,16 +311,12 @@ namespace ElementalBuddies.EditorTools
                         WeaponTop = 0.42f, WeaponBottom = 0.45f, WeaponRadius = 0.03f, GroundClearance = -1f,
                         Segments = ShieldSegments(),
                         Clearances = KnightClearances(false),
+                        // Schwerthiebe Slash1/2/3 (eigene Clips Knight2_Slash*): nicht gelistet = die Animation führt auch den Schild
+                        // (beim Vorhand-Nachschwingen nach links außen gezogen, beim Rückhand-Ausholen tief) – die Tragehaltung
+                        // stünde der Klinge im Weg
                         States = new[]
                         {
-                            Keep("Slash1"), Keep("Slash2"),
-                            // Stoß quer vor dem Körper: Schild weiter nach außen/hinten, Front zur Seite
-                            new ChampionWeaponHold.StateTarget
-                            {
-                                State = "Slash3", UseCarry = false,
-                                GripOffset = new Vector3(0.3f, 1.05f, 0.1f), WeaponAxis = new Vector3(0.15f, 1f, 0f), WeaponForward = new Vector3(-1f, 0f, -0.15f),
-                                ElbowHint = new Vector3(0.4f, -0.5f, -0.3f),
-                            }, Keep("FrostStrike"), Keep("LightOath"), Keep("FlameWhirl"), Keep("Earthquake"),
+                            Keep("FrostStrike"), Keep("LightOath"), Keep("FlameWhirl"), Keep("Earthquake"),
                             new ChampionWeaponHold.StateTarget
                             {
                                 State = "Block", UseCarry = false,

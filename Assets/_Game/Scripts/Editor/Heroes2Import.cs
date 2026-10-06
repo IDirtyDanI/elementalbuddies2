@@ -16,8 +16,18 @@ namespace ElementalBuddies.EditorTools
         public const string Dir = "Assets/_Game/Models/Characters/Heroes2/";
         public const string MaterialDir = Dir + "Materials/";
 
+        // Eigene Blender-Clips (nur Armature, eine Take je Datei, z. B. Knight2_Slash1.fbx aus art-src/heroes2/18_export_anims.py)
+        public const string AnimDir = "Assets/_Game/Animations/Heroes2/";
+        public const string AvatarSource = Dir + "KnightChampion2.fbx";
+
         void OnPreprocessModel()
         {
+            if (assetPath.StartsWith(AnimDir))
+            {
+                var ai = (ModelImporter)assetImporter;
+                if (ai.importSettingsMissing) ConfigureAnim(ai);
+                return;
+            }
             if (!assetPath.StartsWith(Dir)) return;
             var mi = (ModelImporter)assetImporter;
             if (!mi.importSettingsMissing) return; // nur Erstimport – spätere Handanpassungen bleiben erhalten
@@ -50,6 +60,63 @@ namespace ElementalBuddies.EditorTools
                 mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
                 mi.optimizeGameObjects = false; // Waffen hängen zur Laufzeit an Hand-Knochen
             }
+        }
+
+        // Animations-FBX: Humanoid mit dem Avatar von KnightChampion2 (identisches Hero2_Rig), keine Materialien/Meshes
+        public static void ConfigureAnim(ModelImporter mi)
+        {
+            mi.importCameras = false;
+            mi.importLights = false;
+            mi.importBlendShapes = false;
+            mi.useFileScale = true;
+            mi.globalScale = 1f;
+            mi.materialImportMode = ModelImporterMaterialImportMode.None;
+            mi.importAnimation = true;
+            mi.animationType = ModelImporterAnimationType.Human;
+            var avatar = AssetDatabase.LoadAssetAtPath<Avatar>(AvatarSource);
+            if (avatar != null)
+            {
+                mi.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
+                mi.sourceAvatar = avatar;
+            }
+            mi.resampleCurves = true;
+            mi.animationCompression = ModelImporterAnimationCompression.Optimal;
+        }
+
+        // Clip je Datei: Name = Dateiname, kein Loop, Wurzel (Hüfte) fest – die Clips bewegen nur den Oberkörper
+        public static void ConfigureAnimClips(ModelImporter mi, string path)
+        {
+            var defs = mi.defaultClipAnimations;
+            if (defs == null || defs.Length == 0) return;
+            var c = defs[0];
+            c.name = Path.GetFileNameWithoutExtension(path);
+            c.loopTime = false;
+            c.loopPose = false;
+            c.lockRootRotation = true;
+            c.lockRootHeightY = true;
+            c.lockRootPositionXZ = true;
+            c.keepOriginalOrientation = true;
+            c.keepOriginalPositionY = true;
+            c.keepOriginalPositionXZ = true;
+            mi.clipAnimations = new[] { c };
+        }
+
+        [MenuItem("BuddyTD/Champions/Heroes2-Animationen importieren")]
+        public static void ImportAnims()
+        {
+            int n = 0;
+            foreach (var guid in AssetDatabase.FindAssets("t:Model", new[] { AnimDir.TrimEnd('/') }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase)) continue;
+                var mi = (ModelImporter)AssetImporter.GetAtPath(path);
+                ConfigureAnim(mi);
+                mi.SaveAndReimport();
+                ConfigureAnimClips(mi, path);
+                mi.SaveAndReimport();
+                n++;
+            }
+            Debug.Log("Heroes2Import: " + n + " Animations-FBX eingerichtet.");
         }
 
         [MenuItem("BuddyTD/Champions/Heroes2 importieren")]

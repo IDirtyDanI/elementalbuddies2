@@ -294,6 +294,8 @@ MonoBehaviour:
   FinisherRecovery: 0.8
   ComboWindow: 1
   FinisherKnockback: 2.5
+  SlashHitDelay: 0.13
+  FinisherHitDelay: 0.27
   HitHeight: 1
   SlashFxPrefab: {fileID: 4163798145252318048, guid: 35e6c994712dd45c0b1eefe69f384fcf, type: 3}
   HitFxPrefab: {fileID: 3052360932140851688, guid: c4c7665d054f6448e90ecb140d08b759, type: 3}
@@ -1353,33 +1355,6 @@ MonoBehaviour:
   - FullBody
   FadeSpeed: 8
   States:
-  - State: Slash1
-    UseCarry: 1
-    GripOffset: {x: 0, y: 0, z: 0}
-    WeaponAxis: {x: 0, y: 1, z: 0}
-    WeaponForward: {x: 0, y: 0, z: 0}
-    ElbowHint: {x: 0.3, y: -0.3, z: -0.25}
-    FullFollow: 0
-    Window: {x: 0, y: 1}
-    WindowBlend: 0.08
-  - State: Slash2
-    UseCarry: 1
-    GripOffset: {x: 0, y: 0, z: 0}
-    WeaponAxis: {x: 0, y: 1, z: 0}
-    WeaponForward: {x: 0, y: 0, z: 0}
-    ElbowHint: {x: 0.3, y: -0.3, z: -0.25}
-    FullFollow: 0
-    Window: {x: 0, y: 1}
-    WindowBlend: 0.08
-  - State: Slash3
-    UseCarry: 0
-    GripOffset: {x: 0.3, y: 1.05, z: 0.1}
-    WeaponAxis: {x: 0.15, y: 1, z: 0}
-    WeaponForward: {x: -1, y: 0, z: -0.15}
-    ElbowHint: {x: 0.4, y: -0.5, z: -0.3}
-    FullFollow: 0
-    Window: {x: 0, y: 1}
-    WindowBlend: 0.08
   - State: FrostStrike
     UseCarry: 1
     GripOffset: {x: 0, y: 0, z: 0}

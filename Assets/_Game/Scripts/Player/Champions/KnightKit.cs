@@ -21,6 +21,10 @@ namespace ElementalBuddies
         [Tooltip("So lange nach einem Schlag geht die Kombo weiter.")]
         public float ComboWindow = 1.0f;
         public float FinisherKnockback = 2.5f;
+        [Tooltip("Ausholen bis zum Treffer (Schlag 1/2): Schaden, Bogen-VFX und Sound kommen, wenn die Klinge im Clip Knight2_Slash1/2 losschlägt.")]
+        public float SlashHitDelay = 0.13f;
+        [Tooltip("Ausholen bis zum Treffer beim dritten Schlag (Überkopf-Hieb Knight2_Slash3).")]
+        public float FinisherHitDelay = 0.27f;
         [Tooltip("Höhe des Schlagbogens / Treffer-Mittelpunkts über dem Boden.")]
         public float HitHeight = 1.0f;
         [Tooltip("SlashArcFx-Prefab (Schwert-Bogen).")]
@@ -193,6 +197,23 @@ namespace ElementalBuddies
             bool finisher = step == 3;
             _comboExpires = Time.time + ComboWindow;
             if (finisher) Owner.StartCooldown(AbilityId.SwordSlash, FinisherRecoveryEff * Owner.GetCooldownFactor(AbilityId.SwordSlash));
+            // Animation startet sofort (Trigger), der Treffer folgt nach dem Ausholen
+            float delay = finisher ? FinisherHitDelay : SlashHitDelay;
+            if (delay > 0f && isActiveAndEnabled) StartCoroutine(SlashAfter(delay, step, ctx));
+            else SlashHit(step, ctx);
+        }
+
+        private IEnumerator SlashAfter(float delay, int step, SpellCastContext ctx)
+        {
+            yield return new WaitForSeconds(delay);
+            // Champion gewechselt / Block begonnen / Sprung: Hieb verfällt
+            if (Owner == null || Owner.ActiveKit != this || IsBlocking || IsLeaping) yield break;
+            SlashHit(step, ctx);
+        }
+
+        private void SlashHit(int step, SpellCastContext ctx)
+        {
+            bool finisher = step == 3;
             float range = SlashRangeEff;
             float arcDeg = SlashArcEff;
 
@@ -211,10 +232,11 @@ namespace ElementalBuddies
                 EnemyBrain.DealPlayerDamage(enemy, damage); // Quelle Spieler (Telemetrie)
             }
 
-            // Bogen: Schlag 1 von rechts, 2 von links, 3 breiter + golden
+            // Bogen wie die Klinge in Knight2_Slash*: Schlag 1 von rechts oben nach links unten (gegen den Uhrzeigersinn, rechte
+            // Seite gehoben), 2 Rückhand von links nach rechts (leicht flacher), 3 breiter + golden
             Vector3 fxPos = Ground(origin) + Vector3.up * HitHeight;
             var arc = SlashArcFx.Spawn(SlashFxPrefab, fxPos, dir, range, finisher ? Mathf.Min(360f, arcDeg + 30f) : arcDeg,
-                finisher ? FinisherColor : SlashColor, step != 2, step == 1 ? -12f : (step == 2 ? 12f : 0f));
+                finisher ? FinisherColor : SlashColor, step != 1, step == 1 ? 14f : (step == 2 ? -6f : 0f));
             if (arc != null && finisher) arc.Width = 1.2f;
 
             (finisher ? FinisherSfx : SwingSfx).Play(origin);
