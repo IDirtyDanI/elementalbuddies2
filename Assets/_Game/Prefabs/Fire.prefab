@@ -15818,6 +15818,8 @@ GameObject:
   - component: {fileID: 866694249540451077}
   - component: {fileID: 2041589280047496616}
   - component: {fileID: 3103286317907650601}
+  - component: {fileID: 2955393813383382092}
+  - component: {fileID: 1514957264771738763}
   m_Layer: 7
   m_Name: Fire
   m_TagString: Buddy
@@ -15941,6 +15943,46 @@ MonoBehaviour:
   PopDuration: 0.35
   PopStartScale: 0.6
   PopPeakScale: 1.1
+--- !u!114 &2955393813383382092
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7618270889732694772}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &1514957264771738763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7618270889732694772}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1efa17a3944748aea50d8086dc0f169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddyNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &7751939558893235665
 GameObject:
   m_ObjectHideFlags: 0

@@ -62,6 +62,7 @@ namespace ElementalBuddies
                 }
             }
 
+            if (Net.IsServer) // Schaden/Brand nur auf dem Server; der Regen selbst (Optik) läuft überall
             foreach (var enemy in CombatUtil.FindEnemies(c, _spell.Radius))
             {
                 if (enemy == null) continue;

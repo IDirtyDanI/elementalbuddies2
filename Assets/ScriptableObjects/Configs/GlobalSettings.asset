@@ -49,3 +49,6 @@ MonoBehaviour:
   BuddyDeathEffectPrefab: {fileID: 1821139266253955050, guid: aae9d8cd7e5c94e0e821a62a75b74155, type: 3}
   BuddyHitEffectPrefab: {fileID: 7775074343575362573, guid: 6d49e4e92496741b4bd1af1a5054fcba, type: 3}
   BuddyStunEffectPrefab: {fileID: 7651933627681563699, guid: e8dcdc109ff9c4c4f978531732e0bfd3, type: 3}
+  StartGold: 0
+  GoldPerWave: 15
+  MerchantCaptureGoldBonus: 60

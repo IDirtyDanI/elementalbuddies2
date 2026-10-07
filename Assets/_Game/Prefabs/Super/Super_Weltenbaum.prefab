@@ -29758,6 +29758,8 @@ GameObject:
   - component: {fileID: 3247119981708538635}
   - component: {fileID: 1733347853556868544}
   - component: {fileID: 5115954535399944564}
+  - component: {fileID: 7407085981750928267}
+  - component: {fileID: 5042809667877588908}
   m_Layer: 7
   m_Name: Super_Weltenbaum
   m_TagString: Buddy
@@ -29843,6 +29845,46 @@ MonoBehaviour:
   RootEffectPrefab: {fileID: 5687705188689638705, guid: 36418c64fe1864e409f41fbea2bcb68e, type: 3}
   HealSparklePrefab: {fileID: 3005212241309055778, guid: 2025512b4a17140999d61ad816972a0a, type: 3}
   HealPulsePrefab: {fileID: 3838462793424861970, guid: 375710e01039a48b7ad9b173c4ae952d, type: 3}
+--- !u!114 &7407085981750928267
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4404277760045352093}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &5042809667877588908
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4404277760045352093}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1efa17a3944748aea50d8086dc0f169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddyNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &4859883552220944919
 GameObject:
   m_ObjectHideFlags: 0

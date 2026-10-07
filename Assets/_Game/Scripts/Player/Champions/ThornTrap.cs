@@ -73,6 +73,12 @@ namespace ElementalBuddies
             {
                 if (enemy == null) continue;
                 CaughtCount++;
+                if (_spell.RootVfxPrefab != null)
+                {
+                    var vfx = Instantiate(_spell.RootVfxPrefab, enemy.transform.position, Quaternion.identity, enemy.transform);
+                    Destroy(vfx, _spell.RootDuration);
+                }
+                if (!Net.IsServer) continue; // Festhalten + Schaden nur auf dem Server, Dornen-Optik überall
                 // Festhalten = 100 % Verlangsamung (Angriffe bleiben möglich)
                 enemy.ApplySlow(1f, _spell.RootDuration);
                 var agent = enemy.GetComponent<UnityEngine.AI.NavMeshAgent>();
@@ -80,11 +86,6 @@ namespace ElementalBuddies
                 {
                     agent.speed = 0f;
                     agent.velocity = Vector3.zero; // sofort stehen bleiben statt auszurollen
-                }
-                if (_spell.RootVfxPrefab != null)
-                {
-                    var vfx = Instantiate(_spell.RootVfxPrefab, enemy.transform.position, Quaternion.identity, enemy.transform);
-                    Destroy(vfx, _spell.RootDuration);
                 }
                 EnemyBrain.DealPlayerDamage(enemy, _spell.Damage * _dm); // Quelle Spieler (Telemetrie)
             }

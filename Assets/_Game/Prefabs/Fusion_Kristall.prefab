@@ -16203,6 +16203,8 @@ GameObject:
   - component: {fileID: 3284771323637222167}
   - component: {fileID: 1266496586246082558}
   - component: {fileID: 6861009043061037661}
+  - component: {fileID: 3639841147143206705}
+  - component: {fileID: 1241618026618785890}
   m_Layer: 7
   m_Name: Fusion_Kristall
   m_TagString: Buddy
@@ -16266,7 +16268,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.CrystalBuddy
   Config: {fileID: 11400000, guid: eb5fed16989554851a158c21e08d2615, type: 2}
   PaidCost: 0
-  MaxHP: 300
+  BaseMaxHP: 300
   Element: 5
   FirePoint: {fileID: 4663473279485983855}
   ParentElementA: -1
@@ -16282,6 +16284,46 @@ MonoBehaviour:
   TauntVfxPrefab: {fileID: 0}
   RingMaterial: {fileID: 0}
   CrystalColor: {r: 0.6, g: 0.9, b: 1, a: 1}
+--- !u!114 &3639841147143206705
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7133516709528763694}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &1241618026618785890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7133516709528763694}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1efa17a3944748aea50d8086dc0f169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddyNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &7179041409350753307
 GameObject:
   m_ObjectHideFlags: 0

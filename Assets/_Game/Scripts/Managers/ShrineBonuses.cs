@@ -4,6 +4,7 @@ namespace ElementalBuddies
 {
     // Passive Boni aus gereinigten Schreinen (pro Element 0 Feuer, 1 Eis, 2 Erde, 3 Licht).
     // Statisch, damit ElementalBuddy.GetDamageAtLevel ohne Manager-Referenz darauf zugreifen kann.
+    // Team-Bonus: der Server erhöht ihn (Shrine.Complete), Clients übernehmen den Wert mit dem Schrein-Zustand.
     // Reset bei Spielstart/Neustart durch ShrineManager.Awake (Szene wird beim Restart neu geladen, Statics nicht).
     public static class ShrineBonuses
     {
@@ -25,10 +26,27 @@ namespace ElementalBuddies
             return 1f + _damageBonus[elementIndex];
         }
 
+        // Server: Bonus erhöhen (Clients bekommen den Gesamtwert mit dem Schrein-Zustand, siehe SetDamageBonus)
         public static void AddDamageBonus(int elementIndex, float bonus)
         {
             if (elementIndex < 0 || elementIndex >= ElementCount) return;
             _damageBonus[elementIndex] += bonus;
+            OnBonusesChanged?.Invoke();
+        }
+
+        // Aktueller Zusatz-Bonus eines Elements (0.1 = +10 %)
+        public static float GetDamageBonus(int elementIndex)
+        {
+            if (elementIndex < 0 || elementIndex >= ElementCount) return 0f;
+            return _damageBonus[elementIndex];
+        }
+
+        // Client: Gesamtwert vom Server übernehmen
+        public static void SetDamageBonus(int elementIndex, float total)
+        {
+            if (elementIndex < 0 || elementIndex >= ElementCount) return;
+            if (Mathf.Approximately(_damageBonus[elementIndex], total)) return;
+            _damageBonus[elementIndex] = total;
             OnBonusesChanged?.Invoke();
         }
     }

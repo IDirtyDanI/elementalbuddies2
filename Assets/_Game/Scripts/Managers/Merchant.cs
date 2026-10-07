@@ -68,6 +68,10 @@ namespace ElementalBuddies
     // Angreifer erst beim ersten Betreten, Gegner im Kreis = umkämpft (40 % Tempo), draußen Verfall.
     // Erfolg → Eingenommen, der MerchantManager öffnet die Kartenauswahl; zum Wellenende schließt der Stand wieder.
     // Endet die Welle vorher → Fehlschlag (Händler kommt zurück in den Beutel).
+    // Mehrspieler: Nur der Server entscheidet (Einnahme, Angreifer, Aura). Im Kreis zählt jede lebende Figur
+    // (PlayerAvatar.InRadius). Einnehmende = wer beim Abschluss im Kreis steht oder insgesamt mindestens
+    // MerchantManager.MinCaptureContributionSeconds drin war (GoldRules.IsCaptureContributor). Zustand und Fortschritt
+    // gehen per NetGame.SendMerchantState / SendCaptureProgress an die Clients (Optik, Objective-UI, Toasts).
     //
     // Optik-Vertrag (Kinder, vom Editor-Setup angelegt, Modelle austauschbar):
     //   Stand      – Marktstand (Front = lokales +Z, Richtung Kreis)
@@ -142,7 +146,11 @@ namespace ElementalBuddies
         public Vector3 CenterPosition => (Center != null ? Center : transform).position;
         public Transform CenterTransform => Center != null ? Center : transform;
 
-        private Transform _player;
+        private readonly List<PlayerAvatar> _inside = new List<PlayerAvatar>();
+        // Server: Sekunden im Kreis pro Client-Id während der aktuellen Einnahme
+        private readonly Dictionary<ulong, float> _presence = new Dictionary<ulong, float>();
+        private readonly HashSet<ulong> _insideAtEnd = new HashSet<ulong>();
+        private float _syncTimer;
         private readonly List<EnemyBrain> _attackers = new List<EnemyBrain>();
         private readonly Collider[] _overlap = new Collider[64];
         private readonly HashSet<IDamageable> _auraHits = new HashSet<IDamageable>();
@@ -185,7 +193,6 @@ namespace ElementalBuddies
 
         void Start()
         {
-            _player = GameObject.FindGameObjectWithTag("Player")?.transform;
             if (WaveManager.Instance != null) WaveManager.Instance.OnWaveEnd += HandleWaveEnd;
         }
 
@@ -196,12 +203,22 @@ namespace ElementalBuddies
 
         private static bool IsGameOver => GameManager.Instance != null && GameManager.Instance.IsGameOver;
 
-        // ---------------- Zustände ----------------
+        // Händler einer Art in der Szene (Netz-Id = MerchantKind)
+        public static Merchant Find(MerchantKind kind)
+        {
+            foreach (var m in _all)
+                if (m != null && m.Kind == kind) return m;
+            return null;
+        }
+
+        // ---------------- Zustände (Server) ----------------
 
         public bool Activate()
         {
-            if (State != MerchantState.Geschlossen || IsGameOver) return false;
+            if (!Net.IsServer || State != MerchantState.Geschlossen || IsGameOver) return false;
 
+            _presence.Clear();
+            _insideAtEnd.Clear();
             ProgressSeconds = 0f;
             PlayerInside = false;
             Contested = false;
@@ -221,8 +238,10 @@ namespace ElementalBuddies
         // Öffentlich für DevTools/Tests: Einnahme sofort abschließen
         public void Complete()
         {
-            if (State != MerchantState.Aktiv) return;
+            if (!Net.IsServer || State != MerchantState.Aktiv) return;
             ProgressSeconds = RequiredTime;
+            _insideAtEnd.Clear();
+            foreach (var a in _inside) if (a != null) _insideAtEnd.Add(a.OwnerClientId);
             StopSpawning();
             ReleaseAttackers();
             SetState(MerchantState.Eingenommen);
@@ -233,7 +252,7 @@ namespace ElementalBuddies
 
         public void Fail()
         {
-            if (State != MerchantState.Aktiv) return;
+            if (!Net.IsServer || State != MerchantState.Aktiv) return;
             StopSpawning();
             ReleaseAttackers();
             ProgressSeconds = 0f;
@@ -247,6 +266,7 @@ namespace ElementalBuddies
         // Nach dem Kauf: zum Wellenende schließen
         public void Close()
         {
+            if (!Net.IsServer) return;
             if (State == MerchantState.Aktiv) { Fail(); return; }
             if (State == MerchantState.Geschlossen) return;
             SetState(MerchantState.Geschlossen);
@@ -254,6 +274,7 @@ namespace ElementalBuddies
 
         private void HandleWaveEnd()
         {
+            if (!Net.IsServer) return;
             if (State == MerchantState.Aktiv) Fail();
             else if (State == MerchantState.Eingenommen) Close();
         }
@@ -262,7 +283,61 @@ namespace ElementalBuddies
         {
             State = s;
             ApplyVisuals();
+            if (Net.IsServer) NetGame.SendMerchantState((int)Kind, (int)s);
             OnStateChanged?.Invoke(this);
+        }
+
+        // Server: Client-Ids der Einnehmenden der letzten Einnahme (gültig ab Complete)
+        public void GetCapturers(List<ulong> result, float minSeconds)
+        {
+            result.Clear();
+            foreach (var kv in _presence)
+                if (GoldRules.IsCaptureContributor(kv.Value, _insideAtEnd.Contains(kv.Key), minSeconds)) result.Add(kv.Key);
+            foreach (ulong id in _insideAtEnd)
+                if (!result.Contains(id)) result.Add(id);
+        }
+
+        // ---------------- Netz-Abbild (Clients) ----------------
+
+        // Client: Zustandswechsel vom Server nachspielen (Optik + dieselben Ereignisse wie auf dem Server)
+        public void NetApplyState(MerchantState s)
+        {
+            if (Net.IsServer || s == State) return;
+            var old = State;
+            if (s == MerchantState.Aktiv)
+            {
+                ProgressSeconds = 0f;
+                PlayerInside = false;
+                Contested = false;
+                _waveTimer = 0f;
+                SetState(s);
+                Animate(WaveTrigger);
+                OnAnyMerchantActivated?.Invoke(this);
+            }
+            else if (s == MerchantState.Eingenommen)
+            {
+                ProgressSeconds = RequiredTime;
+                SetState(s);
+                Animate(CheerTrigger);
+                OnAnyMerchantCaptured?.Invoke(this);
+            }
+            else
+            {
+                ProgressSeconds = 0f;
+                PlayerInside = false;
+                Contested = false;
+                SetState(s);
+                if (old == MerchantState.Aktiv) OnAnyMerchantFailed?.Invoke(this);
+            }
+        }
+
+        // Client: Fortschritt vom Server
+        public void NetApplyProgress(float progressSeconds, bool inside, bool contested)
+        {
+            if (Net.IsServer || State != MerchantState.Aktiv) return;
+            ProgressSeconds = progressSeconds;
+            PlayerInside = inside;
+            Contested = contested;
         }
 
         public void ApplyVisuals()
@@ -300,13 +375,6 @@ namespace ElementalBuddies
         {
             if (State != MerchantState.Aktiv || IsGameOver) return;
 
-            if (_player == null) _player = GameObject.FindGameObjectWithTag("Player")?.transform;
-
-            Vector3 c = CenterPosition;
-            PlayerInside = _player != null && XZDistance(_player.position, c) <= CaptureRadius;
-            Contested = CheckContested(c);
-            DamageEnemiesInCircle(c);
-
             if (WaveInterval > 0f)
             {
                 _waveTimer += Time.deltaTime;
@@ -316,6 +384,20 @@ namespace ElementalBuddies
                     Animate(WaveTrigger);
                 }
             }
+
+            // Ab hier entscheidet nur der Server
+            if (!Net.IsServer) return;
+
+            Vector3 c = CenterPosition;
+            PlayerInside = FindPlayersInside(c);
+            foreach (var a in _inside)
+            {
+                if (a == null) continue;
+                _presence.TryGetValue(a.OwnerClientId, out float t);
+                _presence[a.OwnerClientId] = t + Time.deltaTime;
+            }
+            Contested = CheckContested(c);
+            DamageEnemiesInCircle(c);
 
             // Erst beim ersten Betreten rücken die Angreifer an
             if (PlayerInside && !_engaged)
@@ -335,6 +417,13 @@ namespace ElementalBuddies
                 return;
             }
 
+            _syncTimer -= Time.unscaledDeltaTime;
+            if (_syncTimer <= 0f)
+            {
+                _syncTimer = 0.1f;
+                NetGame.SendCaptureProgress(false, (int)Kind, ProgressSeconds, PlayerInside, Contested);
+            }
+
             if (_engaged && ReinforceInterval > 0f && ReinforceCount > 0)
             {
                 _reinforceTimer += Time.deltaTime;
@@ -345,6 +434,25 @@ namespace ElementalBuddies
                     _spawnRoutine = StartCoroutine(SpawnAttackersRoutine(ReinforceCount, 1.5f, 0f));
                 }
             }
+        }
+
+        // Lebende Spielfiguren im Kreis (ohne Netzwerk-Figuren: Fallback auf das Player-Tag, lokaler Spieler)
+        private bool FindPlayersInside(Vector3 c)
+        {
+            if (PlayerAvatar.All.Count > 0)
+            {
+                PlayerAvatar.InRadius(c, CaptureRadius, _inside);
+                return _inside.Count > 0;
+            }
+            _inside.Clear();
+            var p = GameObject.FindGameObjectWithTag("Player");
+            bool inside = p != null && XZDistance(p.transform.position, c) <= CaptureRadius;
+            if (inside)
+            {
+                _presence.TryGetValue(Net.LocalClientId, out float t);
+                _presence[Net.LocalClientId] = t + Time.deltaTime;
+            }
+            return inside;
         }
 
         private static float XZDistance(Vector3 a, Vector3 b)

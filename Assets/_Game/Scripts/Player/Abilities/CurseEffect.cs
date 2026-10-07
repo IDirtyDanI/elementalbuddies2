@@ -4,6 +4,7 @@ namespace ElementalBuddies
 {
     // Verflucht: Schaden über Zeit + der Gegner nimmt mehr Schaden und seine Rüstung zählt nicht (siehe EnemyBrain.TakeDamage).
     // Optik: violette Aura am Körper + violette Färbung. Lebt auf dem Gegner.
+    // Mehrspieler: Apply darf überall laufen (Optik); der DoT-Schaden tickt nur auf dem Server.
     public class CurseEffect : MonoBehaviour
     {
         public const float TickInterval = 0.5f;
@@ -69,7 +70,8 @@ namespace ElementalBuddies
             {
                 float damage = _dps * _tickTimer;
                 _tickTimer = 0f;
-                _target.TakeDamage(damage); // Fluch-Bonus gilt auch für den eigenen DoT; kann den Gegner zerstören
+                // Schaden nur auf dem Server (auf Clients ist der Fluch reine Optik)
+                if (Net.IsServer) _target.TakeDamage(damage); // Fluch-Bonus gilt auch für den eigenen DoT; kann den Gegner zerstören
             }
 
             if (_remaining <= 0f) enabled = false;

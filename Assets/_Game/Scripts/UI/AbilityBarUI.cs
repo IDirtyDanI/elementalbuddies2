@@ -101,7 +101,9 @@ namespace ElementalBuddies
 
         private void TryBind()
         {
-            var a = Abilities != null ? Abilities : PlayerAbilities.Instance;
+            // Eigene Figur (spawnt über das Netz); explizite Referenz nur ohne Netz-Figur
+            var local = PlayerAvatar.Local;
+            var a = local != null && local.Abilities != null ? local.Abilities : (Abilities != null ? Abilities : PlayerAbilities.Instance);
             if (a == null || a == _bound) return;
             Unbind();
             _bound = a;
@@ -157,10 +159,10 @@ namespace ElementalBuddies
 
         void Update()
         {
-            if (_bound == null) TryBind();
+            if (_bound == null || (PlayerAvatar.Local != null && PlayerAvatar.Local.Abilities != _bound)) TryBind();
             if (_bound == null) return;
 
-            float mana = EconomyManager.Instance != null ? EconomyManager.Instance.CurrentMana : 0f;
+            float mana = PlayerMana.Local != null ? PlayerMana.Local.CurrentMana : 0f;
             float dt = Time.unscaledDeltaTime;
             var kit = _bound.ActiveKit;
 

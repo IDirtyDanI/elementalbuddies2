@@ -26635,6 +26635,8 @@ GameObject:
   - component: {fileID: 7529620986968594506}
   - component: {fileID: 4194602159718106582}
   - component: {fileID: 2613469897094279500}
+  - component: {fileID: 2532320801667440594}
+  - component: {fileID: 7412027598502651861}
   m_Layer: 7
   m_Name: Fusion_Schatten
   m_TagString: Buddy
@@ -26698,7 +26700,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShadowBuddy
   Config: {fileID: 11400000, guid: 568158805b6af4eef85519c9351cd7fd, type: 2}
   PaidCost: 0
-  MaxHP: 120
+  BaseMaxHP: 120
   Element: 3
   FirePoint: {fileID: 1826092387460587530}
   ParentElementA: -1
@@ -26711,6 +26713,46 @@ MonoBehaviour:
   BeamColor: {r: 0.55, g: 0.25, b: 0.85, a: 1}
   BeamWidth: 0.12
   BeamLifetime: 0.2
+--- !u!114 &2532320801667440594
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8296365764046934891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &7412027598502651861
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8296365764046934891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1efa17a3944748aea50d8086dc0f169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddyNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &8556913051849422667
 GameObject:
   m_ObjectHideFlags: 0

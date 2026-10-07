@@ -10,6 +10,9 @@ namespace ElementalBuddies
     // (b) drei Basis-Buddies genau auf TriFusionLevel mit drei verschiedenen Elementen. Nähe: alle Zutaten paarweise <= FusionRange
     // (damit ist die Option symmetrisch – egal, welche Zutat ausgewählt ist). Ergebnis im Schwerpunkt auf dem Boden.
     // Liegt auf dem Managers-Objekt. Achtung: Die Rezept-Listen in der Szene überschreiben die Code-Defaults.
+    // Mehrspieler: Das Info-Panel ruft RequestFuse (lokale Vorprüfung mit den eigenen Meta-Freischaltungen) -> NetGame.RequestFuse
+    // -> Server: ServerFuse prüft erneut, zahlt aus der Teamkasse, despawnt die Zutaten, spawnt das Ergebnis (Prefab, auch
+    // Super-Elementare). Optik/Ton + OnFused auf allen Rechnern, Auswahl des Ergebnisses nur beim Anfragenden.
     public class FusionManager : MonoBehaviour
     {
         [Serializable]
@@ -421,17 +424,51 @@ namespace ElementalBuddies
 
         // ---------------- Fusion ----------------
 
-        // Option aus GetOptions ausführen (2er oder Tri)
+        // Lokaler Spieler: Option aus GetOptions anfragen (2er oder Tri). Prüft lokal Phase, Sperren (eigene Freischaltungen)
+        // und Kosten; true = Anfrage gesendet (das Ergebnis wird danach beim Anfragenden ausgewählt)
+        public bool RequestFuse(ElementalBuddy buddy, FusionOption option)
+        {
+            if (buddy == null || option.Partner == null || !CanFuseNow || InteractionManager.LocalInputBlocked) return false;
+            if (option.IsTri ? IsTriLocked : IsFusion2Locked) return false;
+            var eco = EconomyManager.Instance;
+            if (eco != null && option.Cost > 0f && !eco.CanAfford(option.Cost))
+            {
+                ToastUI.Show("Nicht genug Seelensplitter.");
+                return false;
+            }
+            HideLink();
+            NetGame.RequestFuse(buddy, option.Partner, option.IsTri ? option.Partner2 : null);
+            return true;
+        }
+
+        // Nur Server: Fusions-Anfrage ausführen. c != null = Tri aus drei Basis-Buddies; sonst Tri (a), wenn eine Zutat eine
+        // 2er-Fusion ist, sonst 2er-Fusion. Meta-Sperren prüft der anfragende Client. null = Erfolg, sonst Hinweis-Text
+        public string ServerFuse(ElementalBuddy a, ElementalBuddy b, ElementalBuddy c, ulong requester)
+        {
+            if (!Net.IsServer) return null;
+            if (a == null || b == null || a.IsDead || b.IsDead || (c != null && c.IsDead)) return "Fusion nicht mehr möglich.";
+            if (!CanFuseNow) return "Verschmelzen nur zwischen den Wellen.";
+            ElementalBuddy result = c != null || IsTriFusion(a) || IsTriFusion(b)
+                ? TryFuseTri(a, b, c, true, requester)
+                : TryFuse(a, b, true, requester);
+            return result != null ? null : "Fusion nicht möglich (Partner, Abstand oder Seelensplitter prüfen).";
+        }
+
+        // Nur Server: Option aus GetOptions ausführen (2er oder Tri)
         public FusionBuddy TryFuse(ElementalBuddy buddy, FusionOption option)
         {
             if (option.IsTri) return TryFuseTri(buddy, option.Partner, option.Partner2);
             return TryFuse(buddy, option.Partner);
         }
 
-        public FusionBuddy TryFuse(ElementalBuddy a, ElementalBuddy b)
+        public FusionBuddy TryFuse(ElementalBuddy a, ElementalBuddy b) => TryFuse(a, b, false, Net.LocalClientId);
+
+        // Nur Server. ignoreLocks: Meta-Sperre nicht prüfen (hat der Anfragende geprüft); requester: wählt das Ergebnis aus
+        public FusionBuddy TryFuse(ElementalBuddy a, ElementalBuddy b, bool ignoreLocks, ulong requester)
         {
+            if (!Net.IsServer) return null;
             if (!CanFuseNow || !IsFusable(a) || !IsFusable(b) || a == b) return null;
-            if (IsFusion2Locked) return null;
+            if (!ignoreLocks && IsFusion2Locked) return null;
             int ea = a.ElementIndex, eb = b.ElementIndex;
             if (ea == eb || HorizontalDistance(a, b) > FusionRange) return null;
 
@@ -448,6 +485,7 @@ namespace ElementalBuddies
 
             Vector3 pos = GroundCentroid(a.transform.position, b.transform.position);
             float paid = ParentPaid(a) + ParentPaid(b) + cost;
+            ulong builder = a.BuilderClientId;
 
             RemoveIngredients(a, b, null);
 
@@ -457,7 +495,12 @@ namespace ElementalBuddies
             {
                 Debug.LogError($"FusionManager: Prefab '{recipe.ResultConfig.Prefab.name}' hat keinen FusionBuddy.");
                 var plain = go.GetComponentInChildren<ElementalBuddy>();
-                if (plain != null) plain.PaidCost = paid;
+                if (plain != null)
+                {
+                    plain.PaidCost = paid;
+                    BuddyNet.ServerSpawn(plain, builder);
+                }
+                else Destroy(go);
                 return null;
             }
 
@@ -468,16 +511,22 @@ namespace ElementalBuddies
             fusion.ParentElementA = ordered ? ea : eb;
             fusion.ParentElementB = ordered ? eb : ea;
             fusion.PaidCost = paid;
+            BuddyNet.ServerSpawn(fusion, builder);
 
-            FinishFusion(fusion, pos);
+            FinishFusion(fusion, pos, requester);
             return fusion;
         }
 
         // Tri-Fusion: (a) c == null: eine 2er-Fusion + ein Stufe-3-Basis-Buddy; (b) drei Stufe-3-Basis-Buddies verschiedener Elemente
-        public SuperBuddy TryFuseTri(ElementalBuddy a, ElementalBuddy b, ElementalBuddy c = null)
+        public SuperBuddy TryFuseTri(ElementalBuddy a, ElementalBuddy b, ElementalBuddy c = null) =>
+            TryFuseTri(a, b, c, false, Net.LocalClientId);
+
+        // Nur Server. ignoreLocks/requester wie bei TryFuse
+        public SuperBuddy TryFuseTri(ElementalBuddy a, ElementalBuddy b, ElementalBuddy c, bool ignoreLocks, ulong requester)
         {
+            if (!Net.IsServer) return null;
             if (!CanFuseNow || a == null || b == null || a == b || c == a || c == b) return null;
-            if (IsTriLocked) return null;
+            if (!ignoreLocks && IsTriLocked) return null;
 
             int mask;
             if (c == null)
@@ -503,6 +552,12 @@ namespace ElementalBuddies
                 Debug.LogWarning($"FusionManager: Kein Tri-Rezept/Config für Element-Maske {mask}.");
                 return null;
             }
+            // Laufzeit-Platzhalter existieren nur lokal -> im Netzbetrieb ist das Super-Prefab Pflicht (vor dem Bezahlen prüfen)
+            if (recipe.ResultConfig.Prefab == null && Net.IsRunning)
+            {
+                Debug.LogError($"FusionManager: Super-Elementar {recipe.Result} hat kein Prefab – im Netzbetrieb nicht baubar.");
+                return null;
+            }
 
             float cost = GetCost(recipe);
             var eco = EconomyManager.Instance;
@@ -512,6 +567,7 @@ namespace ElementalBuddies
                 ? GroundCentroid(a.transform.position, b.transform.position, c.transform.position)
                 : GroundCentroid(a.transform.position, b.transform.position);
             float paid = ParentPaid(a) + ParentPaid(b) + (c != null ? ParentPaid(c) : 0f) + cost;
+            ulong builder = a.BuilderClientId;
 
             RemoveIngredients(a, b, c);
 
@@ -524,6 +580,7 @@ namespace ElementalBuddies
                 {
                     Debug.LogError($"FusionManager: Prefab '{recipe.ResultConfig.Prefab.name}' hat keinen SuperBuddy – Platzhalter wird genutzt.");
                     Destroy(go);
+                    if (Net.IsRunning) return null;
                 }
             }
             bool runtime = super == null;
@@ -536,8 +593,9 @@ namespace ElementalBuddies
             super.ParentElementC = recipe.ElementC;
             super.PaidCost = paid;
             if (runtime) super.gameObject.SetActive(true);
+            else BuddyNet.ServerSpawn(super, builder);
 
-            FinishFusion(super, pos);
+            FinishFusion(super, pos, requester);
             return super;
         }
 
@@ -547,22 +605,30 @@ namespace ElementalBuddies
             var im = InteractionManager.Instance;
             if (im != null && (im.SelectedBuddy == a || im.SelectedBuddy == b || (c != null && im.SelectedBuddy == c))) im.DeselectBuddy();
 
-            // Zutaten sofort deaktivieren (Slots werden frei, bevor der neue Buddy sich registriert), dann zerstören
+            // Zutaten sofort aus der Registry (Slots werden frei, bevor der neue Buddy sich registriert), dann im Netz entfernen
             foreach (var x in new[] { a, b, c })
             {
                 if (x == null) continue;
-                x.gameObject.SetActive(false);
-                Destroy(x.gameObject);
+                BuddyNet.DespawnOrDestroy(x.gameObject);
             }
         }
 
-        private void FinishFusion(FusionBuddy fusion, Vector3 pos)
+        // Server: Optik/Ton/Ereignis lokal, Clients per NetGame.Build; Auswahl nur beim Anfragenden
+        private void FinishFusion(FusionBuddy fusion, Vector3 pos, ulong requester)
+        {
+            ClientFusionDone(fusion, pos, requester == Net.LocalClientId);
+            if (NetGame.Ready) NetGame.Instance.ServerFusionDone(fusion, pos, requester);
+        }
+
+        // Alle Rechner: Fusions-Optik + OnFused; select = dieser Spieler hat die Fusion angefragt
+        public void ClientFusionDone(FusionBuddy fusion, Vector3 pos, bool select)
         {
             if (FusionBurstPrefab != null) Destroy(Instantiate(FusionBurstPrefab, pos, Quaternion.identity), 4f);
             GameAudio.Play(SfxId.Fusion, pos);
+            if (fusion == null) return;
 
             var im = InteractionManager.Instance;
-            if (im != null) im.SelectBuddy(fusion);
+            if (select && im != null) im.SelectBuddy(fusion);
             OnFused?.Invoke(fusion);
         }
 

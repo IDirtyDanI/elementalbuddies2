@@ -69,8 +69,11 @@ namespace ElementalBuddies
         private void HandlePauseChanged(bool paused)
         {
             SetConfirm(false);
+            ResetMenuConfirm();
             if (paused)
             {
+                // Neustart nur beim Host (Clients warten auf ihn)
+                if (RestartButton != null) RestartButton.gameObject.SetActive(PauseManager.CanRestart);
                 if (Root != null) Root.SetActive(true);
                 ShowPage(true); // inkl. Refresh()
                 SyncSettings();
@@ -78,17 +81,58 @@ namespace ElementalBuddies
             else if (Root != null) Root.SetActive(false);
         }
 
-        // Zeit und Audio freigeben, dann das Hauptmenü laden
+        // Verbindung beenden und das Hauptmenü laden. Host im Koop: erst nachfragen (Raum wird für alle geschlossen).
         public void LoadMainMenu()
         {
-            Time.timeScale = 1f;
-            AudioListener.pause = false;
             if (!Application.CanStreamedLevelBeLoaded(GameSession.MenuScene))
             {
                 Debug.LogWarning($"PauseMenuUI: Szene '{GameSession.MenuScene}' ist nicht in den Build Settings.");
                 return;
             }
-            SceneManager.LoadScene(GameSession.MenuScene);
+            if (Net.IsMultiplayer && Net.IsServer && Time.unscaledTime > _menuConfirmUntil)
+            {
+                _menuConfirmUntil = Time.unscaledTime + 4f;
+                var label = MainMenuButton != null ? MainMenuButton.GetComponentInChildren<TextMeshProUGUI>(true) : null;
+                if (label != null)
+                {
+                    if (_menuLabelText == null) _menuLabelText = label.text;
+                    label.text = "Raum wird für alle geschlossen – nochmal klicken";
+                    label.enableAutoSizing = true;
+                }
+                return;
+            }
+            if (_pause != null) _pause.LeaveToMenu();
+            else
+            {
+                if (Net.CanPauseTime) Time.timeScale = 1f;
+                AudioListener.pause = false;
+                if (Net.IsRunning) NetSession.Instance.LeaveToMenu();
+                else SceneManager.LoadScene(GameSession.MenuScene);
+            }
+        }
+
+        private float _menuConfirmUntil = -1f;
+        private string _menuLabelText;
+
+        void Update()
+        {
+            if (_menuLabelText != null && Time.unscaledTime > _menuConfirmUntil) ResetMenuConfirm();
+        }
+
+        private void ResetMenuConfirm()
+        {
+            _menuConfirmUntil = -1f;
+            if (_menuLabelText == null || MainMenuButton == null) return;
+            var label = MainMenuButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (label != null) label.text = _menuLabelText;
+            _menuLabelText = null;
+        }
+
+        // Eigene Spielfigur (über das Netz gespawnt)
+        private static PlayerAbilities LocalAbilities()
+        {
+            var av = PlayerAvatar.Local;
+            return av != null && av.Abilities != null ? av.Abilities : PlayerAbilities.Instance;
         }
 
         private void SetConfirm(bool show)
@@ -289,7 +333,7 @@ namespace ElementalBuddies
             // Vorschau rückwärts: Wert ohne diese Karten → jetziger Wert
             if (MerchantManager.TryPreview(card, -card.Value * n, out string label, out float now, out float without, out string unit))
             {
-                var pa = PlayerAbilities.Instance;
+                var pa = LocalAbilities();
                 string ability = pa != null && pa.ActiveKit != null ? pa.ActiveKit.GetName(card.Ability) : card.Ability.ToString();
                 total += $" · {ability} – {label}: {MerchantManager.FormatNumber(without)}{unit} → {MerchantManager.FormatNumber(now)}{unit}";
             }
@@ -380,7 +424,7 @@ namespace ElementalBuddies
             var um = UpgradeManager.Instance;
 
             // Champion + Fähigkeiten (exakte Live-Werte wie im Tooltip)
-            var abilities = PlayerAbilities.Instance;
+            var abilities = LocalAbilities();
             if (abilities != null && abilities.ActiveKit != null)
             {
                 AppendChampion(sb, abilities);
@@ -405,17 +449,21 @@ namespace ElementalBuddies
                     sb.Append("Mobilität: ").Append(Colored(Num(abilities.MobilityMultiplier * 100f, "0") + " %", abilities.MobilityMultiplier > mobBase)).Append($" ({Signed((abilities.MobilityMultiplier - mobBase) * 100f, "0")} %)").Append('\n');
             }
 
-            var controller = um != null && um.PlayerControllerRef != null ? um.PlayerControllerRef : FindFirstObjectByType<PlayerController>();
+            var local = PlayerAvatar.Local;
+            var controller = local != null && local.Controller != null ? local.Controller
+                : (um != null && um.PlayerControllerRef != null ? um.PlayerControllerRef : FindFirstObjectByType<PlayerController>());
             if (controller != null)
                 sb.Append(StatLine("Lauftempo", controller.MoveSpeed, um != null && um.BasePlayerSpeed > 0f ? um.BasePlayerSpeed : controller.MoveSpeed, "0.#", " m/s")).Append('\n');
 
-            var stats = um != null && um.PlayerStatsRef != null ? um.PlayerStatsRef : FindFirstObjectByType<PlayerStats>();
+            var stats = local != null && local.Stats != null ? local.Stats
+                : (um != null && um.PlayerStatsRef != null ? um.PlayerStatsRef : FindFirstObjectByType<PlayerStats>());
             if (stats != null)
                 sb.Append(StatLine("Max. Leben", stats.MaxHP, um != null && um.BasePlayerMaxHP > 0f ? um.BasePlayerMaxHP : stats.MaxHP, "0", "")).Append('\n');
 
-            var eco = EconomyManager.Instance;
-            if (eco != null)
+            var mana = PlayerMana.Local;
+            if (mana != null)
             {
+                var eco = mana;
                 float baseCap = eco.BaseManaCap > 0f ? eco.BaseManaCap : eco.MaxMana;
                 sb.Append(StatLine("Max. Mana", eco.MaxMana, baseCap, "0", "")).Append('\n');
 
@@ -429,9 +477,10 @@ namespace ElementalBuddies
                 }
                 sb.Append("Mana-Regeneration: ").Append(regen).Append('\n');
 
-                if (eco.ShardGainPercent > 0.0001f)
-                    sb.Append("Splitter-Ausbeute: ").Append(Colored($"{Signed(eco.ShardGainPercent, "0.#")} %", true)).Append('\n');
             }
+            var economy = EconomyManager.Instance;
+            if (economy != null && economy.ShardGainPercent > 0.0001f)
+                sb.Append("Splitter-Ausbeute: ").Append(Colored($"{Signed(economy.ShardGainPercent, "0.#")} %", true)).Append('\n');
 
             // Buddies
             var im = InteractionManager.Instance;
@@ -588,6 +637,10 @@ namespace ElementalBuddies
 
             if (wm != null && wm.Difficulty != null)
                 wave = string.IsNullOrEmpty(wave) ? wm.Difficulty.DisplayName : $"{wave} · {wm.Difficulty.DisplayName}";
+
+            // Koop: Raumcode zum Weitergeben (Beitritt nach Spielstart ist gesperrt, aber zur Orientierung)
+            if (Net.IsMultiplayer && NetSession.Exists && !string.IsNullOrEmpty(NetSession.Instance.RoomCode))
+                wave = (string.IsNullOrEmpty(wave) ? "" : wave + " · ") + $"Raum {NetSession.Instance.RoomCode} · {Net.PlayerCount} Spieler";
 
             int best = GameManager.Instance != null ? GameManager.Instance.BestWave : 0;
             if (best <= 0) return wave;

@@ -165,7 +165,8 @@ namespace ElementalBuddies
             if (s.AbilityUnlocked)
             {
                 // Name der Element-Fähigkeit des aktiven Champions (Magier: Flammenwelle, Ritter: Flammenwirbel …)
-                var pa = PlayerAbilities.Instance;
+                var av = PlayerAvatar.Local;
+                var pa = av != null && av.Abilities != null ? av.Abilities : PlayerAbilities.Instance;
                 string ability = pa != null ? pa.GetElementAbilityName(i) : ElementInfo.AbilityName(i);
                 Show($"{ability} erlernt! (Taste {ElementInfo.AbilityKey(i)})", ElementIcon(i));
             }

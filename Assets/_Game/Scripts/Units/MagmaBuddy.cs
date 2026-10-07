@@ -110,7 +110,7 @@ namespace ElementalBuddies
             LavaPuddle.CollectEnemies(point, data.Radius, _impactBuffer);
             foreach (var e in _impactBuffer)
             {
-                if (e == null || e.CurrentHP <= 0f) continue;
+                if (!Net.IsServer || e == null || e.CurrentHP <= 0f) continue; // Wirkung nur auf dem Server
                 float boss = e.IsBoss ? data.BossMultiplier : 1f;
                 BurnEffect.Apply(e.gameObject, data.BurnDps * boss, data.BurnDuration, data.BurnVfx);
                 e.TakeDamage(data.Damage * boss);

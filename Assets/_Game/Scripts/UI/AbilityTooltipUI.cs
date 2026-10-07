@@ -102,7 +102,8 @@ namespace ElementalBuddies
 
         private void Fill(AbilityId id)
         {
-            var a = PlayerAbilities.Instance;
+            var av = PlayerAvatar.Local;
+            var a = av != null && av.Abilities != null ? av.Abilities : PlayerAbilities.Instance;
             if (a == null || a.ActiveKit == null) return;
             var kit = a.ActiveKit;
 

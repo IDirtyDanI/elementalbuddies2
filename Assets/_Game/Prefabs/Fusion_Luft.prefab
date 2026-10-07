@@ -1256,6 +1256,8 @@ GameObject:
   - component: {fileID: 3477341046441476745}
   - component: {fileID: 5269286438865309733}
   - component: {fileID: 1683714606901365291}
+  - component: {fileID: 950838202122618758}
+  - component: {fileID: 573212915191354340}
   m_Layer: 7
   m_Name: Fusion_Luft
   m_TagString: Buddy
@@ -1319,7 +1321,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.AirBuddy
   Config: {fileID: 11400000, guid: 242eb40231c9846d7b6149987f9ae045, type: 2}
   PaidCost: 0
-  MaxHP: 120
+  BaseMaxHP: 120
   Element: 2
   FirePoint: {fileID: 3268076728475555508}
   ParentElementA: -1
@@ -1334,6 +1336,46 @@ MonoBehaviour:
   GustVfxPrefab: {fileID: 7979744861488899803, guid: 1fdf9da0c37da44f08eaed9cbe3a7e94, type: 3}
   GustMaterial: {fileID: 0}
   GustColor: {r: 0.75, g: 0.95, b: 0.85, a: 1}
+--- !u!114 &950838202122618758
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4399750435501911517}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &573212915191354340
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4399750435501911517}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1efa17a3944748aea50d8086dc0f169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddyNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &4498353976773048908
 GameObject:
   m_ObjectHideFlags: 0

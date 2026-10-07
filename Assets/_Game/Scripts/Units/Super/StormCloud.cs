@@ -89,6 +89,7 @@ namespace ElementalBuddies
             if (_wetTimer >= _wetInterval)
             {
                 _wetTimer -= _wetInterval;
+                if (Net.IsServer) // Nässe nur auf dem Server
                 foreach (var e in _under)
                     if (e != null && !e.IsDead) e.ApplyWet(_wetDuration, _wetVfx);
             }
@@ -141,7 +142,8 @@ namespace ElementalBuddies
             if (_strikeVfx != null) Destroy(Instantiate(_strikeVfx, SuperBuddy.GroundPoint(target.transform.position), Quaternion.identity), 1f);
 
             Vector3 origin = target.transform.position;
-            target.TakeDamage(_damage * (target.IsWet ? _wetMult : 1f));
+            // Überall simulieren (Zufallsziel nur Optik auf Clients), Schaden nur auf dem Server
+            if (Net.IsServer) target.TakeDamage(_damage * (target.IsWet ? _wetMult : 1f));
 
             // 1 Kettensprung zum nächsten anderen Gegner
             EnemyBrain next = null;
@@ -159,7 +161,7 @@ namespace ElementalBuddies
             if (next != null)
             {
                 SpawnBolt(to, next.transform.position + Vector3.up * 0.9f);
-                next.TakeDamage(_damage * _chainFactor * (next.IsWet ? _wetMult : 1f));
+                if (Net.IsServer) next.TakeDamage(_damage * _chainFactor * (next.IsWet ? _wetMult : 1f));
             }
             GameAudio.Play(SfxId.ArcaneBallHit, origin);
         }

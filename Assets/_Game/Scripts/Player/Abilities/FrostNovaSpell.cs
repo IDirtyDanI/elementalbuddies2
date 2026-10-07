@@ -40,6 +40,7 @@ namespace ElementalBuddies
         public override void Cast(SpellCastContext ctx)
         {
             SpawnEffect(ctx.Origin, Quaternion.identity, Radius);
+            if (!Net.IsServer) return; // Einfrieren/Schaden nur auf dem Server
 
             foreach (var enemy in FindEnemies(ctx.Origin, Radius))
             {

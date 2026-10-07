@@ -54,7 +54,7 @@ namespace ElementalBuddies
             if (_hit) return;
             _hit = true;
             var damageable = other.GetComponentInParent<IDamageable>(); // Kollider kann am Kind (Visual) hängen
-            if (damageable != null)
+            if (damageable != null && Net.IsServer) // Schaden nur auf dem Server, Clients zeigen den Einschlag
             {
                 EnemyBrain.DealPlayerDamage(damageable, Damage); // Quelle Spieler (Telemetrie)
             }

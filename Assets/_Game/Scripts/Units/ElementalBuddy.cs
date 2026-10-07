@@ -4,10 +4,35 @@ using System.Collections.Generic;
 
 namespace ElementalBuddies
 {
+    // Mehrspieler: Die Buddy-Logik (Zielwahl, Feuern, Optik) läuft auf allen Rechnern, aber jede zustandsändernde Stelle
+    // (Schaden, Heilung, Schild, Betäubung, Tod, Aufwertung) nur auf dem Server (Net.IsServer). HP/Schild/Stufe/Betäubung
+    // kommen über BuddyNet (NetworkVariables) auf die Clients und werden hier über die NetApply*-Methoden eingespielt.
     public abstract class ElementalBuddy : MonoBehaviour, IDamageable, IHealthBarTarget, IShieldedTarget
     {
         public UnitConfigSO Config; // Public for setup if needed
         [HideInInspector] public float PaidCost; // Tatsächlich bezahlte Seelensplitter inkl. Aufwertungen (für Refund beim Verkauf)
+
+        // Netzwerk-Anker (NetworkObject + BuddyNet am Prefab-Root); null ohne Netzwerk-Setup
+        private BuddyNet _net;
+        private bool _netSearched;
+        public BuddyNet NetState
+        {
+            get
+            {
+                if (_net == null && !_netSearched)
+                {
+                    _netSearched = true;
+                    _net = GetComponentInParent<BuddyNet>();
+                }
+                return _net;
+            }
+        }
+        // Im Netz gespawnt (sonst lokales Objekt, z. B. EditMode-Test oder Bau-Ghost)
+        public bool IsNetSpawned => NetState != null && NetState.IsSpawned;
+        // Netzwerk-Id für Server-RPCs (Aufwerten/Verkaufen/Fusion); ulong.MaxValue ohne Netz
+        public ulong NetId => IsNetSpawned ? NetState.NetworkObjectId : ulong.MaxValue;
+        // Wer den Buddy gebaut hat (nur Anzeige/Telemetrie); ohne Netz 0
+        public ulong BuilderClientId => NetState != null ? NetState.BuilderClientId.Value : 0;
 
         // Registry aller aktiven Buddies (für Slot-Limit)
         private static readonly List<ElementalBuddy> _active = new List<ElementalBuddy>();
@@ -91,7 +116,8 @@ namespace ElementalBuddies
 
         protected virtual void Start()
         {
-            CurrentHP = MaxHP * Mathf.Clamp(_startHPFraction, 0.01f, 1f);
+            // Clients: Leben kommt vom Server (BuddyNet), nicht aus dem Startwert
+            if (!_hpFromNet) CurrentHP = MaxHP * Mathf.Clamp(_startHPFraction, 0.01f, 1f);
             RefreshVisual();
 
             // Ghosts sind deaktiviert -> Start läuft nur bei platzierten Buddies
@@ -117,7 +143,7 @@ namespace ElementalBuddies
         // Wellenende: einen Teil des Lebens zurück
         private void HandleWaveEnd()
         {
-            if (_isDead || !isActiveAndEnabled) return;
+            if (!Net.IsServer || _isDead || !isActiveAndEnabled) return;
             float pct = Settings != null ? Settings.BuddyWaveEndHealPercent : 0.5f;
             Heal(MaxHP * pct);
         }
@@ -132,10 +158,12 @@ namespace ElementalBuddies
         private float _stunUntil;
         public bool IsStunned => Time.time < _stunUntil;
 
+        // Nur Server; Clients bekommen die Betäubung über BuddyNet (NetApplyStun)
         public void Stun(float duration, GameObject vfxPrefab = null)
         {
-            if (_isDead || duration <= 0f) return;
+            if (!Net.IsServer || _isDead || duration <= 0f) return;
             _stunUntil = Mathf.Max(_stunUntil, Time.time + duration);
+            if (NetState != null) NetState.ServerSetStun(_stunUntil - Time.time);
             if (vfxPrefab == null && Settings != null) vfxPrefab = Settings.BuddyStunEffectPrefab;
             if (vfxPrefab != null) BlindEffect.Apply(gameObject, duration, vfxPrefab);
         }
@@ -159,9 +187,10 @@ namespace ElementalBuddies
         // Returns true if action was performed (and CD should reset)
         protected abstract bool TryPerformAction();
 
+        // Nur Server (Clients: HP über BuddyNet, Treffer-Optik in NetApplyHP)
         public virtual void TakeDamage(float amount)
         {
-            if (_isDead || amount <= 0f) return;
+            if (!Net.IsServer || _isDead || amount <= 0f) return;
             // Steinhaut eines Stufe-4-Erd-Buddys in der Nähe (nach den eigenen Reduktionen der Subklassen)
             amount *= TankBuddy.GetDamageTakenMultiplier(this);
             // Schild fängt zuerst ab
@@ -178,7 +207,12 @@ namespace ElementalBuddies
                 Die();
                 return;
             }
+            PlayDamagedFx();
+        }
 
+        // Treffer-Effekt + Warnung (Server direkt, Clients beim Sinken der gespiegelten HP)
+        private void PlayDamagedFx()
+        {
             var s = Settings;
             if (s != null && s.BuddyHitEffectPrefab != null && Time.time >= _nextHitFxTime)
             {
@@ -203,10 +237,10 @@ namespace ElementalBuddies
         private float _shield, _shieldUntil;
         public float ShieldAmount => Time.time < _shieldUntil ? _shield : 0f;
 
-        // Schild, der Schaden zuerst abfängt; stapelt nicht (stärkerer Wert bleibt, Dauer wird erneuert)
+        // Schild, der Schaden zuerst abfängt; stapelt nicht (stärkerer Wert bleibt, Dauer wird erneuert). Nur Server.
         public void AddShield(float amount, float duration)
         {
-            if (_isDead || amount <= 0f || duration <= 0f) return;
+            if (!Net.IsServer || _isDead || amount <= 0f || duration <= 0f) return;
             _shield = Mathf.Max(ShieldAmount, amount);
             _shieldUntil = Time.time + duration;
         }
@@ -229,24 +263,47 @@ namespace ElementalBuddies
 
         // Vor Start() aufrufen: mit diesem Anteil des Max-Lebens starten
         public void SetStartHealthFraction(float fraction) => _startHPFraction = Mathf.Clamp01(fraction);
+        public float StartHealthFraction => _startHPFraction;
 
-        // Heilung (z. B. durch den Segen des Licht-Buddys); gibt die tatsächlich geheilte Menge zurück
+        // Heilung (z. B. durch den Segen des Licht-Buddys); gibt die tatsächlich geheilte Menge zurück. Nur Server (Clients: 0).
         public float Heal(float amount)
         {
-            if (_isDead || amount <= 0f || CurrentHP >= MaxHP) return 0f;
+            if (!Net.IsServer || _isDead || amount <= 0f || CurrentHP >= MaxHP) return 0f;
             float before = CurrentHP;
             CurrentHP = Mathf.Min(MaxHP, CurrentHP + amount);
             if (CurrentHP >= MaxHP * 0.6f) _lowHPWarned = false;
             return CurrentHP - before;
         }
 
+        // Nur Server: Tod-Optik überall (Clients per BuddyNet-RPC), dann Despawn
         protected virtual void Die()
+        {
+            if (!Net.IsServer || _isDead) return;
+            _isDead = true;
+            CurrentHP = 0f;
+
+            if (IsNetSpawned) NetState.ServerNotifyDeath(); // Clients: NetClientDie (Optik, Abwahl, Ereignis)
+            PlayDeathFx();
+
+            OnBuddyDestroyed?.Invoke(this);
+            // Sofort aus der Registry (Slots, Gegner-Ziele, Auren), dann im Netz entfernen
+            BuddyNet.DespawnOrDestroy(gameObject);
+        }
+
+        // Clients: Server meldet den Tod (vor dem Despawn) -> Optik + Ereignis, Objekt verschwindet mit dem Despawn
+        internal void NetClientDie()
         {
             if (_isDead) return;
             _isDead = true;
             CurrentHP = 0f;
-            Vector3 pos = transform.position;
+            PlayDeathFx();
+            OnBuddyDestroyed?.Invoke(this);
+            gameObject.SetActive(false);
+        }
 
+        private void PlayDeathFx()
+        {
+            Vector3 pos = transform.position;
             var s = Settings;
             if (s != null && s.BuddyDeathEffectPrefab != null)
                 Destroy(Instantiate(s.BuddyDeathEffectPrefab, pos, Quaternion.identity), 3f);
@@ -256,11 +313,57 @@ namespace ElementalBuddies
             var im = InteractionManager.Instance;
             if (im != null && im.SelectedBuddy == this) im.DeselectBuddy();
             if (_healthBar != null) Destroy(_healthBar.gameObject);
+        }
 
-            OnBuddyDestroyed?.Invoke(this);
-            // Sofort deaktivieren: verlässt die Registry (Slots, Gegner-Ziele, Auren) noch in diesem Frame
-            gameObject.SetActive(false);
-            Destroy(gameObject);
+        // Optik-Ereignis vom Server (BuddyNet.ServerFx), z. B. Splitter-Nova des Kristalls; Subklassen werten id aus
+        public virtual void OnNetFx(int id, Vector3 position, float value) { }
+
+        // ---------------- Netzwerk-Spiegelung (nur Clients, aufgerufen von BuddyNet) ----------------
+
+        private bool _hpFromNet;
+
+        internal void NetApplyHP(float hp)
+        {
+            float before = CurrentHP;
+            bool initial = !_hpFromNet;
+            _hpFromNet = true;
+            CurrentHP = hp;
+            if (_healthBar != null) _healthBar.MarkDirty();
+            if (initial || _isDead) return;
+            if (hp < before - 0.001f) PlayDamagedFx();
+            else if (hp >= MaxHP * 0.6f) _lowHPWarned = false;
+        }
+
+        internal void NetApplyShield(float amount)
+        {
+            _shield = Mathf.Max(0f, amount);
+            _shieldUntil = amount > 0f ? float.MaxValue : 0f; // Ablauf entscheidet der Server
+        }
+
+        internal void NetApplyStun(float remaining, bool showFx)
+        {
+            if (remaining <= 0f)
+            {
+                _stunUntil = 0f;
+                return;
+            }
+            _stunUntil = Time.time + remaining;
+            if (showFx && Settings != null && Settings.BuddyStunEffectPrefab != null)
+                BlindEffect.Apply(gameObject, remaining, Settings.BuddyStunEffectPrefab);
+        }
+
+        // Stufe vom Server: bei Erst-Synchronisation still (wie Wiedergeburt), sonst mit Level-Up-Effekten
+        internal void NetApplyLevel(int level, bool silent)
+        {
+            level = Mathf.Max(1, level);
+            if (level == _level) return;
+            float oldMaxHP = MaxHP;
+            _level = level;
+            if (!_hpFromNet) CurrentHP += MaxHP - oldMaxHP;
+            if (_healthBar != null) _healthBar.MarkDirty();
+            SuppressLevelFx = silent;
+            try { OnLevelChanged?.Invoke(); }
+            finally { SuppressLevelFx = false; }
         }
 
         // Nächster Punkt auf dem Collider (große Buddies wie der Kristall), sonst Pivot
@@ -288,19 +391,22 @@ namespace ElementalBuddies
         {
             get
             {
-                int max = Settings != null ? Mathf.Max(1, Settings.BuddyMaxLevel) : 3;
+                int max = AbsoluteMaxLevel;
                 if (max >= PerkLevel && IsStage4Locked) max = PerkLevel - 1;
                 return max;
             }
         }
+        // Höchststufe ohne Meta-Sperren (Server prüft Aufwertungen von Mitspielern damit; die Sperre prüft der anfragende Client)
+        public virtual int AbsoluteMaxLevel => Settings != null ? Mathf.Max(1, Settings.BuddyMaxLevel) : 3;
         // Stufe 4 per Erfolg gesperrt (nur Basis-Buddies); Hinweistext über Stage4LockText
         public bool IsStage4Locked => !IsFusion && Progression.IsStage4Locked(ElementIndex);
         public string Stage4LockText => Progression.LockText(Progression.Stage4Unlock(ElementIndex));
         public bool CanUpgrade => Config != null && _level < MaxLevel;
 
-        // Aufwerten nur in der Bauphase (nicht im Kampf, nicht bei Game Over / Pause / Upgrade-Screen)
+        // Aufwerten nur in der Bauphase (nicht im Kampf, nicht bei Game Over). Spielzustand, kein Time.timeScale mehr:
+        // lokale Sperren (Pause, Kartenfenster) prüft InteractionManager.LocalInputBlocked vor dem Senden.
         public static bool IsUpgradePhase =>
-            (GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.Building) && Time.timeScale > 0f;
+            GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.Building;
 
         // Kosten für die nächste Stufe in Seelensplittern; -1 bei Maximalstufe
         public float NextUpgradeCost => CanUpgrade ? GetUpgradeCost(_level + 1) : -1f;
@@ -338,13 +444,16 @@ namespace ElementalBuddies
         public float EffectiveFireRate => GetFireRateAtLevel(_level) * AirBuddy.GetFireRateMultiplier(this);
         public float EffectiveRange => GetRangeAtLevel(_level);
 
-        public bool TryUpgrade()
+        // Nur Server (Clients: InteractionManager.UpgradeSelected -> NetGame.RequestUpgrade).
+        // ignoreLocks: Meta-Sperre "Stufe 4" nicht prüfen (hat der anfragende Client bereits mit seinen Freischaltungen geprüft)
+        public bool TryUpgrade(bool ignoreLocks = false)
         {
-            if (!CanUpgrade || !IsUpgradePhase) return false;
+            if (!Net.IsServer || Config == null || !IsUpgradePhase) return false;
+            if (_level >= (ignoreLocks ? AbsoluteMaxLevel : MaxLevel)) return false;
             var eco = EconomyManager.Instance;
             if (eco == null) return false;
 
-            float cost = NextUpgradeCost;
+            float cost = GetUpgradeCost(_level + 1);
             if (cost < 0f || !eco.TrySpendShards(cost)) return false;
 
             // Vorplatzierte Buddies ohne PaidCost: Basis-Kosten als Grundlage (wie beim Verkauf)

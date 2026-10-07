@@ -111,8 +111,10 @@ namespace ElementalBuddies
             if (_age >= _lifetime) Destroy(gameObject);
         }
 
+        // Nur Server: Schaden/Verlangsamung (Clients zeigen die Pfütze nur)
         private void Tick(float interval)
         {
+            if (!Net.IsServer) return;
             float damage = _dps * interval;
             _buffer.Clear();
             CollectEnemies(transform.position, _radius, _buffer);
@@ -133,7 +135,7 @@ namespace ElementalBuddies
             {
                 if (!hit.CompareTag("Enemy")) continue;
                 var e = hit.GetComponentInParent<EnemyBrain>();
-                if (e == null || !e.isActiveAndEnabled || result.Contains(e)) continue;
+                if (e == null || !FusionBuddy.IsTargetable(e) || result.Contains(e)) continue;
                 Vector3 d = e.transform.position - center;
                 d.y = 0f;
                 if (d.sqrMagnitude <= r2) result.Add(e);

@@ -49713,6 +49713,8 @@ GameObject:
   - component: {fileID: 4865875454569240552}
   - component: {fileID: 7472193220368741564}
   - component: {fileID: 8838969527696167006}
+  - component: {fileID: 2750886177504217351}
+  - component: {fileID: 6757571665782706217}
   m_Layer: 7
   m_Name: Super_Vulkan
   m_TagString: Buddy
@@ -49802,6 +49804,46 @@ MonoBehaviour:
   StunVfxPrefab: {fileID: 7651933627681563699, guid: e8dcdc109ff9c4c4f978531732e0bfd3, type: 3}
   RuntimeMeteorSize: 1.1
   TelegraphColor: {r: 1, g: 0.4, b: 0.1, a: 0.9}
+--- !u!114 &2750886177504217351
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7417702234799244602}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &6757571665782706217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7417702234799244602}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1efa17a3944748aea50d8086dc0f169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddyNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &8366737254667694501
 GameObject:
   m_ObjectHideFlags: 0

@@ -88,6 +88,7 @@ namespace ElementalBuddies
 
         public override bool IsFusion => true;
         public override int MaxLevel => 1;
+        public override int AbsoluteMaxLevel => 1;
 
         public int ParentA => ParentElementA >= 0 ? ParentElementA : FusionInfo.GetDefaultParents(Element).x;
         public int ParentB => ParentElementB >= 0 ? ParentElementB : FusionInfo.GetDefaultParents(Element).y;
@@ -136,10 +137,14 @@ namespace ElementalBuddies
             {
                 if (!hit.CompareTag("Enemy")) continue;
                 var e = hit.GetComponentInParent<EnemyBrain>();
-                if (e != null && e.isActiveAndEnabled && !_enemyBuffer.Contains(e)) _enemyBuffer.Add(e);
+                if (e != null && IsTargetable(e) && !_enemyBuffer.Contains(e)) _enemyBuffer.Add(e);
             }
             return _enemyBuffer;
         }
+
+        // Gegner als Ziel nutzbar. Clients: Gegner-Logik läuft nur auf dem Server (EnemyBrain evtl. deaktiviert) -> aktives Objekt genügt
+        internal static bool IsTargetable(EnemyBrain e) =>
+            e != null && (e.isActiveAndEnabled || (Net.IsClientOnly && e.gameObject.activeInHierarchy));
 
         // Nächster Gegner im Radius, optional ohne bereits getroffene
         protected static EnemyBrain FindNearestEnemy(Vector3 center, float radius, ICollection<EnemyBrain> exclude = null)

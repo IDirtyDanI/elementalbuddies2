@@ -73,7 +73,7 @@ namespace ElementalBuddies
         // Festhalten wie die Dornenfalle des Bogenschützen: 100 % Verlangsamung, Agent sofort gestoppt, Angriffe bleiben möglich
         public static void Root(EnemyBrain enemy, float duration)
         {
-            if (enemy == null || enemy.IsDead || duration <= 0f) return;
+            if (!Net.IsServer || enemy == null || enemy.IsDead || duration <= 0f) return; // nur Server
             enemy.ApplySlow(1f, duration);
             var agent = enemy.GetComponent<NavMeshAgent>();
             if (agent != null && agent.isOnNavMesh)
@@ -142,7 +142,9 @@ namespace ElementalBuddies
 
         // ---------------- Platzhalter-Buddy (Config ohne Prefab) ----------------
 
-        // Baut einen spielbaren Super-Buddy ohne Art: Root (Layer/Tag "Buddy", BoxCollider) + Kind "Visual" (Primitive in Element-Farbe)
+        // Baut einen spielbaren Super-Buddy ohne Art: Root (Layer/Tag "Buddy", BoxCollider) + Kind "Visual" (Primitive in Element-Farbe).
+        // Achtung Mehrspieler: Platzhalter haben kein NetworkObject und existieren nur lokal -> nur ohne laufendes Netz verwenden
+        // (FusionManager/PhoenixRebirth verweigern ihn im Netzbetrieb; die Super-Prefabs unter Prefabs/Super sind Pflicht).
         public static SuperBuddy CreateRuntime(FusionElement element, Vector3 position)
         {
             var go = new GameObject("Super_" + element + " (Platzhalter)");

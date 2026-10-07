@@ -5,7 +5,8 @@ namespace ElementalBuddies
 {
     // Weltenbaum (Eis + Erde + Licht): Bollwerk + Heiler. Viel Leben, nimmt weniger Schaden.
     // Wurzeln alle ~4 s: bis zu MaxRootTargets Gegner in Reichweite (dem Nexus am nächsten zuerst) werden festgehalten
-    // (wie die Dornenfalle: greifen weiter an) und nehmen EffectiveDamage. Heil-Aura jede Sekunde für Buddies (+ gedrosselt Nexus).
+    // (wie die Dornenfalle: greifen weiter an) und nehmen EffectiveDamage. Heil-Aura jede Sekunde für Buddies, alle Spielfiguren im
+    // Heil-Radius (+ gedrosselt Nexus). Mehrspieler: Heilung/Schaden nur auf dem Server, Clients zeigen dieselbe Optik.
     // Dornen: ein Anteil des erlittenen Schadens geht an den nächsten Gegner im Nahkampf-Abstand zurück (Näherung, siehe TakeDamage).
     public class WorldTreeBuddy : SuperBuddy
     {
@@ -34,6 +35,7 @@ namespace ElementalBuddies
 
         private float _healTimer;
         private readonly List<EnemyBrain> _candidates = new List<EnemyBrain>();
+        private static readonly List<PlayerAvatar> _avatarBuffer = new List<PlayerAvatar>();
 
         public int LastRooted { get; private set; }
         public float LastThornsDamage { get; private set; }
@@ -66,6 +68,7 @@ namespace ElementalBuddies
             float radius = EffectiveHealRadius;
             Vector3 pos = transform.position;
             bool any = false;
+            bool server = Net.IsServer;
             foreach (var b in Active)
             {
                 if (b == null || b.IsDead || b.CurrentHP >= b.MaxHP) continue;
@@ -74,16 +77,27 @@ namespace ElementalBuddies
                 if (d.sqrMagnitude > radius * radius) continue;
                 float amount = b.MaxHP * HealPercent + HealFlat;
                 if (b == this) amount *= SelfHealFactor;
-                if (b.Heal(amount) > 0f)
+                if (!server || b.Heal(amount) > 0f)
                 {
                     any = true;
                     SpawnVfx(HealSparklePrefab, b.transform.position + Vector3.up * 0.8f, 2f);
                 }
             }
 
+            // Spielfiguren im Heil-Radius (gleiche Formel wie für Buddies)
+            PlayerAvatar.InRadius(pos, radius, _avatarBuffer);
+            foreach (var avatar in _avatarBuffer)
+            {
+                var stats = avatar != null ? avatar.Stats : null;
+                if (stats == null || stats.CurrentHP >= stats.MaxHP) continue;
+                if (server) stats.Heal(stats.MaxHP * HealPercent + HealFlat);
+                any = true;
+                SpawnVfx(HealSparklePrefab, stats.transform.position + Vector3.up * 0.8f, 2f);
+            }
+
             var nexus = Nexus.Instance;
             if (nexus != null && nexus.CurrentHP < nexus.MaxHP && nexus.GetDistanceFrom(pos) <= radius)
-                if (nexus.Heal(nexus.MaxHP * NexusHealPercentPerSecond * interval) > 0f) any = true;
+                if (!server || nexus.Heal(nexus.MaxHP * NexusHealPercentPerSecond * interval) > 0f) any = true;
 
             if (any && HealPulsePrefab != null)
             {
@@ -113,7 +127,7 @@ namespace ElementalBuddies
                 var e = _candidates[i];
                 Root(e, RootDuration);
                 SpawnRootVisual(e);
-                e.TakeDamage(damage);
+                if (Net.IsServer) e.TakeDamage(damage);
                 LastRooted++;
             }
             CurrentTarget = _candidates[0] != null ? _candidates[0].transform : null;
@@ -155,7 +169,7 @@ namespace ElementalBuddies
         // Fernkämpfer weiter weg bleiben verschont; steht zufällig ein anderer Gegner näher, trifft es diesen.
         public override void TakeDamage(float amount)
         {
-            if (amount <= 0f || IsDead) return;
+            if (!Net.IsServer || amount <= 0f || IsDead) return;
             LastThornsDamage = 0f;
             if (ThornsFactor > 0f)
             {

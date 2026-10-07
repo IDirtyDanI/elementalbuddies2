@@ -61,6 +61,9 @@ namespace ElementalBuddies.EditorTools
         [MenuItem("BuddyTD/Hauptmenü/Erfolge: Stufen-Marker in bestehende Szene einbauen")]
         public static void AddAchievementTierUIMenu() { AddAchievementTierUIToScene(); }
 
+        [MenuItem("BuddyTD/Hauptmenü/Mehrspieler-UI (Hosten, Beitreten, Lobby) in bestehende Szene einbauen")]
+        public static void AddMultiplayerUIMenu() { AddMultiplayerUIToScene(); }
+
         // ---------------- Build Settings ----------------
 
         // MainMenu = Index 0, Spielszene danach. SampleScene (Unity-Vorlage, nicht referenziert) fliegt raus.
@@ -489,6 +492,7 @@ namespace ElementalBuddies.EditorTools
             BuildSettings(root, ui);
             BuildAchievementExtras(root, ui);
             BuildDifficultyExtras(root, ui);
+            BuildMultiplayerExtras(root, ui);
 
             // Überblender (zuletzt = oben)
             var fader = Rect("Fader", root, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -1059,6 +1063,306 @@ namespace ElementalBuddies.EditorTools
                 if (prevActive.IsValid() && prevActive.isLoaded && prevActive != menu) SceneManager.SetActiveScene(prevActive);
                 if (!wasLoaded && prevActive != menu) EditorSceneManager.CloseScene(menu, true);
             }
+        }
+
+        // ---------------- Mehrspieler ----------------
+
+        // Ergänzt die bestehende Menü-Szene um Hosten/Beitreten, das Beitreten-Panel und die Lobby,
+        // ohne den Rest neu zu bauen (ersetzt nur frühere Versionen dieser Objekte). Idempotent.
+        // Auch als Netzwerk-Einrichtungsschritt (NetSetupUI.SetupMainMenuMultiplayer).
+        public static void AddMultiplayerUIToScene()
+        {
+            if (EditorApplication.isPlaying) { Debug.LogWarning("MainMenuBuilder: nur im Edit-Modus."); return; }
+            if (!System.IO.File.Exists(ScenePath)) { Debug.LogWarning("MainMenuBuilder: " + ScenePath + " fehlt – erst \"Alles einrichten\"."); return; }
+            LoadFonts();
+            ImportMenuSprites();
+
+            Scene prevActive = SceneManager.GetActiveScene();
+            Scene menu = SceneManager.GetSceneByPath(ScenePath);
+            bool wasLoaded = menu.IsValid() && menu.isLoaded;
+            if (!wasLoaded) menu = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                MainMenuUI ui = null;
+                foreach (var go in menu.GetRootGameObjects())
+                {
+                    ui = go.GetComponentInChildren<MainMenuUI>(true);
+                    if (ui != null) break;
+                }
+                if (ui == null) { Debug.LogWarning("MainMenuBuilder: kein MainMenuUI in " + ScenePath); return; }
+
+                var root = ui.transform;
+                foreach (var n in new[] { "HostButton", "JoinButton", "NetMessage", "JoinPanel", "LobbyPanel" })
+                {
+                    var old = root.Find(n);
+                    if (old != null) Object.DestroyImmediate(old.gameObject);
+                }
+
+                BuildMultiplayerExtras(root, ui);
+                if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
+                EditorUtility.SetDirty(ui);
+                EditorSceneManager.MarkSceneDirty(menu);
+                EditorSceneManager.SaveScene(menu, ScenePath);
+                Debug.Log("MainMenuBuilder: Mehrspieler-UI in " + ScenePath + " eingebaut.");
+            }
+            finally
+            {
+                if (prevActive.IsValid() && prevActive.isLoaded && prevActive != menu) SceneManager.SetActiveScene(prevActive);
+                if (!wasLoaded && prevActive != menu) EditorSceneManager.CloseScene(menu, true);
+            }
+        }
+
+        // Spalte unten links neu aufteilen (Spielen | Hosten+Beitreten | Einstellungen+Erfolge | Beenden),
+        // Hinweiszeile, Beitreten-Panel (modal) und Lobby (an der Stelle des Detail-Panels)
+        private static void BuildMultiplayerExtras(Transform root, MainMenuUI ui)
+        {
+            const float x = 80f, w = 540f, half = 264f, gap = 12f;
+
+            // --- Spalte neu anordnen (Karten oben und Schwierigkeitszeile y=462 bleiben frei) ---
+            if (ui.PlayButton != null) Place((RectTransform)ui.PlayButton.transform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(x, 286f), new Vector2(w, 100f));
+            if (ui.SettingsButton != null) Place((RectTransform)ui.SettingsButton.transform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(x, 122f), new Vector2(half, 70f));
+            if (ui.AchievementsButton != null) Place((RectTransform)ui.AchievementsButton.transform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(x + half + gap, 122f), new Vector2(half, 70f));
+            if (ui.QuitButton != null) Place((RectTransform)ui.QuitButton.transform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(x, 40f), new Vector2(w, 70f));
+            if (ui.DifficultyDescription != null) Place(ui.DifficultyDescription.rectTransform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(84f, 396f), new Vector2(560f, 54f));
+            if (ui.PlayLockHint != null) Place(ui.PlayLockHint.rectTransform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(84f, 400f), new Vector2(1000f, 40f));
+
+            var host = MakeButton(root, "HostButton", "Spiel hosten", true, 32f, new Vector2(x, 204f), new Vector2(half, 70f));
+            var join = MakeButton(root, "JoinButton", "Beitreten", true, 32f, new Vector2(x + half + gap, 204f), new Vector2(half, 70f));
+            ui.HostButton = host;
+            ui.JoinButton = join;
+            if (ui.PlayButton != null)
+            {
+                int idx = ui.PlayButton.transform.GetSiblingIndex() + 1;
+                host.transform.SetSiblingIndex(idx);
+                join.transform.SetSiblingIndex(idx + 1);
+            }
+
+            // Navigation: Spielen ↕ Hosten↔Beitreten ↕ Einstellungen↔Erfolge ↕ Beenden
+            if (ui.PlayButton != null && ui.SettingsButton != null && ui.QuitButton != null)
+            {
+                SetVerticalNav(ui.PlayButton, host, ui.SettingsButton, ui.QuitButton);
+                var nav = host.navigation; nav.selectOnRight = join; host.navigation = nav;
+                join.navigation = new Navigation
+                {
+                    mode = Navigation.Mode.Explicit,
+                    selectOnLeft = host,
+                    selectOnUp = ui.PlayButton,
+                    selectOnDown = ui.AchievementsButton != null ? ui.AchievementsButton : ui.SettingsButton,
+                };
+                if (ui.AchievementsButton != null)
+                {
+                    var sn = ui.SettingsButton.navigation; sn.selectOnRight = ui.AchievementsButton; ui.SettingsButton.navigation = sn;
+                    var an = ui.AchievementsButton.navigation;
+                    an.mode = Navigation.Mode.Explicit;
+                    an.selectOnLeft = ui.SettingsButton;
+                    an.selectOnUp = join;
+                    an.selectOnDown = ui.QuitButton;
+                    ui.AchievementsButton.navigation = an;
+                }
+            }
+
+            // Hinweiszeile (Trennungsgrund, Fehler) unten mittig über dem Tasten-Hinweis
+            var msg = Text(root, "NetMessage", "Verbindung zum Host verloren.", _fBold, 26f, new Color(1f, 0.74f, 0.56f), TextAlignmentOptions.Bottom, _mBoldOutline);
+            Place(msg.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-120f, 72f), new Vector2(1100f, 40f));
+            msg.textWrappingMode = TextWrappingModes.NoWrap;
+            msg.gameObject.SetActive(false);
+            ui.NetMessage = msg;
+
+            var detail = root.Find("DetailPanel");
+            if (detail != null) ui.DetailPanel = detail.gameObject;
+
+            BuildJoinPanel(root, ui);
+            BuildLobbyPanel(root, ui);
+            if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
+        }
+
+        private static void BuildJoinPanel(Transform root, MainMenuUI ui)
+        {
+            var overlay = Rect("JoinPanel", root, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            Img(overlay, null, new Color(0.08f, 0.04f, 0.03f, 0.78f), false).raycastTarget = true;
+            ui.JoinPanel = overlay.gameObject;
+
+            var box = Rect("Box", overlay, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), new Vector2(1000f, 600f));
+            Img(box, UISprite("panel_parchment"), Color.white, true);
+            var ribbon = Rect("Ribbon", box, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(560f, 110f));
+            Img(ribbon, UISprite("ribbon_banner"), Color.white, true);
+            var t = Text(ribbon, "Title", "Spiel beitreten", _fHead, 54f, Cream, TextAlignmentOptions.Center, null);
+            Stretch(t.rectTransform, new Vector2(0f, 6f), new Vector2(0f, -12f));
+
+            var lbl = Text(box, "Label", "Raumcode", _fBold, 30f, InkLight, TextAlignmentOptions.Bottom, null);
+            Place(lbl.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -96f), new Vector2(640f, 44f));
+
+            ui.JoinCodeInput = InputField(box, "CodeInput", new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(640f, 112f),
+                64f, _fHead, "CODE", TextAlignmentOptions.Center);
+
+            ui.JoinStatus = Text(box, "Status", "Gib den Raumcode deines Mitspielers ein.", _fBold, 26f, InkLight, TextAlignmentOptions.Top, null);
+            Place(ui.JoinStatus.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -282f), new Vector2(-140f, 90f));
+            ui.JoinStatus.enableAutoSizing = true;
+            ui.JoinStatus.fontSizeMin = 18f;
+            ui.JoinStatus.fontSizeMax = 26f;
+
+            var ok = MakeButton(box, "JoinConfirmButton", "Beitreten", true, 36f, Vector2.zero, new Vector2(320f, 88f));
+            Place((RectTransform)ok.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-170f, 50f), new Vector2(320f, 88f));
+            var back = MakeButton(box, "JoinBackButton", "Zurück", false, 32f, Vector2.zero, new Vector2(300f, 88f));
+            Place((RectTransform)back.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(170f, 50f), new Vector2(300f, 88f));
+            ok.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnRight = back };
+            back.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnLeft = ok };
+            ui.JoinConfirmButton = ok;
+            ui.JoinBackButton = back;
+
+            // Verdeckter Test-Weg (LAN/direkte IP): klein unten rechts außerhalb der Box
+            var lan = MakeButton(overlay, "LanHostButton", "LAN hosten", false, 20f, Vector2.zero, new Vector2(170f, 46f));
+            Place((RectTransform)lan.transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-30f, 24f), new Vector2(170f, 46f));
+            lan.navigation = new Navigation { mode = Navigation.Mode.None };
+            var lanImg = lan.GetComponent<Image>();
+            if (lanImg != null) lanImg.color = new Color(1f, 1f, 1f, 0.55f);
+            ui.LanHostButton = lan;
+
+            overlay.gameObject.SetActive(false);
+        }
+
+        private static void BuildLobbyPanel(Transform root, MainMenuUI ui)
+        {
+            // Gleicher Platz wie das Detail-Panel (wird in der Lobby ausgeblendet)
+            var box = Rect("LobbyPanel", root, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-50f, -30f), new Vector2(700f, 1150f));
+            Img(box, UISprite("panel_parchment"), Color.white, true).raycastTarget = true;
+            ui.LobbyPanel = box.gameObject;
+
+            var ribbon = Rect("Ribbon", box, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(600f, 110f));
+            Img(ribbon, UISprite("ribbon_banner"), Color.white, true);
+            var title = Text(ribbon, "Title", "Mehrspieler", _fHead, 54f, Cream, TextAlignmentOptions.Center, null);
+            Stretch(title.rectTransform, new Vector2(0f, 6f), new Vector2(0f, -12f));
+
+            // Raumcode
+            ui.LobbyCodeLabel = Text(box, "CodeLabel", "Raumcode", _fBold, 28f, InkLight, TextAlignmentOptions.Bottom, null);
+            Place(ui.LobbyCodeLabel.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(-110f, 40f));
+            ui.LobbyCodeText = Text(box, "Code", "· · ·", _fHead, 76f, Ink, TextAlignmentOptions.Center, null);
+            Place(ui.LobbyCodeText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -124f), new Vector2(-110f, 96f));
+            ui.LobbyCodeText.textWrappingMode = TextWrappingModes.NoWrap;
+            ui.LobbyCodeText.characterSpacing = 8f;
+
+            var copy = MakeButton(box, "CopyCodeButton", "Code kopieren", false, 26f, Vector2.zero, new Vector2(300f, 62f));
+            Place((RectTransform)copy.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -226f), new Vector2(300f, 62f));
+            copy.navigation = new Navigation { mode = Navigation.Mode.None };
+            ui.CopyCodeButton = copy;
+
+            ui.LobbyStatus = Text(box, "Status", "Verbinde …", _fBold, 25f, InkLight, TextAlignmentOptions.Center, null);
+            Place(ui.LobbyStatus.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -298f), new Vector2(-110f, 64f));
+            ui.LobbyStatus.enableAutoSizing = true;
+            ui.LobbyStatus.fontSizeMin = 18f;
+            ui.LobbyStatus.fontSizeMax = 25f;
+            ui.LobbyStatus.fontStyle = FontStyles.Italic;
+
+            // Spielerliste
+            var hdr = Text(box, "PlayersHeader", "Spieler", _fHead, 36f, Ink, TextAlignmentOptions.BottomLeft, null);
+            Place(hdr.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -370f), new Vector2(-110f, 50f));
+            var line = Rect("Line", box, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -424f), new Vector2(-110f, 2f));
+            Img(line, null, LineCol, false);
+
+            var rows = new List<MainMenuUI.LobbyRow>();
+            for (int i = 0; i < NetSession.MaxPlayers; i++)
+                rows.Add(BuildLobbyRow(box, i, -438f - i * 108f));
+            ui.LobbyRows = rows.ToArray();
+
+            // Eigener Name
+            var nameLbl = Text(box, "NameLabel", "Dein Name", _fBold, 28f, Ink, TextAlignmentOptions.MidlineLeft, null);
+            Place(nameLbl.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(58f, -884f), new Vector2(180f, 58f));
+            ui.LobbyNameInput = InputField(box, "NameInput", new Vector2(0f, 1f), new Vector2(0f, -884f), new Vector2(390f, 58f),
+                28f, _fBold, "Name", TextAlignmentOptions.MidlineLeft);
+            var nrt = (RectTransform)ui.LobbyNameInput.transform;
+            Place(nrt, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(250f, -884f), new Vector2(390f, 58f));
+
+            // Schwierigkeit (wählt der Host über die Knöpfe links)
+            ui.LobbyDifficultyText = Text(box, "Difficulty", "Schwierigkeit: Normal", _fBold, 26f, InkLight, TextAlignmentOptions.MidlineLeft, null);
+            Place(ui.LobbyDifficultyText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -952f), new Vector2(-116f, 40f));
+            ui.LobbyDifficultyText.textWrappingMode = TextWrappingModes.NoWrap;
+
+            // Knöpfe: Bereit (Client) bzw. Spiel starten (Host) | Verlassen
+            var ready = MakeButton(box, "ReadyButton", "Bereit", true, 34f, Vector2.zero, new Vector2(330f, 84f));
+            Place((RectTransform)ready.transform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(55f, 44f), new Vector2(330f, 84f));
+            var start = MakeButton(box, "StartButton", "Spiel starten", true, 34f, Vector2.zero, new Vector2(330f, 84f));
+            Place((RectTransform)start.transform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(55f, 44f), new Vector2(330f, 84f));
+            var leave = MakeButton(box, "LeaveButton", "Verlassen", false, 30f, Vector2.zero, new Vector2(230f, 84f));
+            Place((RectTransform)leave.transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-55f, 44f), new Vector2(230f, 84f));
+            ui.ReadyButton = ready;
+            ui.StartButton = start;
+            ui.LeaveButton = leave;
+
+            box.gameObject.SetActive(false);
+        }
+
+        private static MainMenuUI.LobbyRow BuildLobbyRow(Transform box, int index, float y)
+        {
+            var r = new MainMenuUI.LobbyRow();
+            var rt = Rect("Player" + (index + 1), box, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(-100f, 100f));
+            r.Root = rt.gameObject;
+            r.Background = Img(rt, UISprite("slot_card"), Color.white, true);
+
+            var med = Rect("Medallion", rt, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(60f, 0f), new Vector2(76f, 76f));
+            r.PortraitBg = Img(med, MenuSprite("menu_disc"), Color.gray, false);
+            var por = Rect("Portrait", med, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-10f, -10f));
+            r.Portrait = Img(por, null, Color.white, false);
+            r.Portrait.preserveAspect = true;
+            r.Initial = Text(med, "Initial", "?", _fHead, 42f, Cream, TextAlignmentOptions.Center, _mHeadOutline);
+            Stretch(r.Initial.rectTransform, new Vector2(0f, 3f));
+            var ring = Rect("Ring", med, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6f, 6f));
+            Img(ring, MenuSprite("menu_ring"), Color.white, false);
+
+            r.Name = Text(rt, "Name", "Spieler", _fHead, 32f, Ink, TextAlignmentOptions.BottomLeft, null);
+            Place(r.Name.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 0f), new Vector2(114f, -4f), new Vector2(-280f, 44f));
+            r.Name.textWrappingMode = TextWrappingModes.NoWrap;
+            r.Name.overflowMode = TextOverflowModes.Ellipsis;
+            r.Champion = Text(rt, "Champion", "Magier", _fReg, 24f, InkLight, TextAlignmentOptions.TopLeft, null);
+            Place(r.Champion.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 1f), new Vector2(116f, -4f), new Vector2(-280f, 36f));
+
+            r.State = Text(rt, "State", "wählt …", _fBold, 26f, InkLight, TextAlignmentOptions.MidlineRight, null);
+            Place(r.State.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0.5f), new Vector2(1f, 0f), new Vector2(-28f, 10f), new Vector2(170f, 0f));
+            r.State.textWrappingMode = TextWrappingModes.NoWrap;
+
+            var badge = Rect("HostBadge", rt, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-24f, -10f), new Vector2(96f, 36f));
+            Img(badge, UISprite("button_wood"), Color.white, true);
+            var bt = Text(badge, "Text", "Host", _fBold, 22f, Cream, TextAlignmentOptions.Center, null);
+            Stretch(bt.rectTransform, Vector2.zero);
+            r.HostBadge = badge.gameObject;
+            badge.gameObject.SetActive(false);
+            return r;
+        }
+
+        // Einzeiliges Eingabefeld (dunkle Leiste, helle Schrift), Anker oben (anchorTop = (0.5,1) mittig bzw. (0,1) links)
+        private static TMP_InputField InputField(Transform parent, string name, Vector2 anchorTop, Vector2 pos, Vector2 size,
+            float fontSize, TMP_FontAsset font, string placeholder, TextAlignmentOptions align)
+        {
+            var rt = Rect(name, parent, anchorTop, anchorTop, new Vector2(anchorTop.x, 1f), pos, size);
+            var bg = Img(rt, UISprite("bar_bg"), Color.white, true);
+            bg.raycastTarget = true;
+
+            var area = Rect("Text Area", rt, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-48f, -12f));
+            area.gameObject.AddComponent<RectMask2D>();
+
+            var ph = Text(area, "Placeholder", placeholder, font, fontSize, new Color(Cream.r, Cream.g, Cream.b, 0.35f), align, null);
+            Stretch(ph.rectTransform, Vector2.zero);
+            ph.fontStyle = FontStyles.Italic;
+            ph.textWrappingMode = TextWrappingModes.NoWrap;
+            var txt = Text(area, "Text", "", font, fontSize, Cream, align, null);
+            Stretch(txt.rectTransform, Vector2.zero);
+            txt.textWrappingMode = TextWrappingModes.NoWrap;
+            txt.richText = false;
+
+            var input = rt.gameObject.AddComponent<TMP_InputField>();
+            input.textViewport = area;
+            input.textComponent = txt;
+            input.placeholder = ph;
+            input.targetGraphic = bg;
+            input.fontAsset = font;
+            input.pointSize = fontSize;
+            input.lineType = TMP_InputField.LineType.SingleLine;
+            input.richText = false;
+            input.customCaretColor = true;
+            input.caretColor = Cream;
+            input.caretWidth = 3;
+            input.selectionColor = new Color(0.85f, 0.62f, 0.28f, 0.5f);
+            input.navigation = new Navigation { mode = Navigation.Mode.None };
+            return input;
         }
 
         private static Slider SliderRow(Transform parent, string name, string label, out TextMeshProUGUI value)

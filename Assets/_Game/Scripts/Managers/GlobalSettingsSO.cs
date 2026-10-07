@@ -74,5 +74,13 @@ namespace ElementalBuddies
         public GameObject BuddyHitEffectPrefab;
         [Tooltip("Optional: Betäubungs-Optik am Buddy (z. B. Sterne wie VFX_Blinded), wenn die Boss-Fähigkeit keine eigene mitbringt.")]
         public GameObject BuddyStunEffectPrefab;
+
+        [Header("Gold (persönliche Händlerwährung)")]
+        [Tooltip("Gold jedes Spielers zu Beginn des Runs.")]
+        public float StartGold = 0f;
+        [Tooltip("Gold, das jeder Spieler am Ende jeder Welle bekommt.")]
+        public float GoldPerWave = 15f;
+        [Tooltip("Bonus für das Einnehmen eines Händlers – geteilt durch die Anzahl der Einnehmenden.")]
+        public float MerchantCaptureGoldBonus = 60f;
     }
 }

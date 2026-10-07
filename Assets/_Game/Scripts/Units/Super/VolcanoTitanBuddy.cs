@@ -78,7 +78,7 @@ namespace ElementalBuddies
                 LavaPuddle.CollectEnemies(point, radius, _impactBuffer);
                 foreach (var e in _impactBuffer)
                 {
-                    if (e == null || e.IsDead) continue;
+                    if (!Net.IsServer || e == null || e.IsDead) continue; // Wirkung nur auf dem Server
                     Vector3 away = e.transform.position - point;
                     e.Stun(stun, stunVfx);
                     if (knock > 0f) e.Knockback(away.sqrMagnitude > 0.01f ? away : e.PathBackDirection, knock, 0.2f);

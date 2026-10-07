@@ -31,6 +31,7 @@ namespace ElementalBuddies
         [Tooltip("World-Space-HP-Bar (mit EnemyHealthBar), erscheint erst nach dem ersten Treffer.")]
         public EnemyHealthBar HealthBarPrefab;
 
+        // Clients: aus den synchronisierten Werten (EnemyNet → ApplyRemoteHealth)
         public float CurrentHP => _currentHP;
         public float MaxHP => _maxHP;
         bool IHealthBarTarget.HealthBarVisible => true;
@@ -41,6 +42,7 @@ namespace ElementalBuddies
         {
             get
             {
+                if (IsRemote) return HasRemoteStatus(EnemyNet.StatusWet);
                 if (_wet == null) _wet = GetComponent<WetEffect>();
                 return _wet != null && _wet.IsActive;
             }
@@ -49,6 +51,7 @@ namespace ElementalBuddies
         {
             get
             {
+                if (IsRemote) return HasRemoteStatus(EnemyNet.StatusCursed);
                 if (_curse == null) _curse = GetComponent<CurseEffect>();
                 return _curse != null && _curse.IsActive;
             }
@@ -57,6 +60,7 @@ namespace ElementalBuddies
         {
             get
             {
+                if (IsRemote) return HasRemoteStatus(EnemyNet.StatusBurning);
                 if (_burn == null) _burn = GetComponent<BurnEffect>();
                 return _burn != null && _burn.IsActive;
             }
@@ -75,7 +79,6 @@ namespace ElementalBuddies
         private BurnEffect _burn;
         private Coroutine _knockbackRoutine;
         private bool _knockedBack;
-        private Transform _player;
         private Transform _tauntTarget;
         private float _currentHP;
         private float _baseSpeed;
@@ -120,6 +123,14 @@ namespace ElementalBuddies
         private Animator _animator;
         private bool _hasAttackTrigger, _hasSpeedFloat, _hasMovingBool;
 
+        // Mehrspieler: Netzwerk-Anker; IsRemote = reiner Client (nur Abbild, keine KI, kein Zustand ändern)
+        private EnemyNet _net;
+        private Vector3 _prefabScale = Vector3.one;
+        private bool IsRemote => Net.IsClientOnly;
+        private bool HasRemoteStatus(byte flag) => _net != null && _net.IsSpawned && _net.HasStatus(flag);
+        private bool _remoteFrozenAnim;
+        private float _remoteAnimSpeed = 1f;
+
         private bool IsRanged => Config != null && Config.ProjectilePrefab != null;
         // Reichweite gegen Einheiten (Spieler, Buddies, Spott-Ziel)
         private float UnitAttackRange => Config != null && Config.AttackRange > 0f ? Config.AttackRange : AttackRange;
@@ -145,7 +156,7 @@ namespace ElementalBuddies
         private static int _playerSourceDepth;
         public static void DealPlayerDamage(IDamageable target, float amount)
         {
-            if (target == null) return;
+            if (target == null || !Net.IsServer) return; // Treffer entscheidet nur der Server
             _playerSourceDepth++;
             try { target.TakeDamage(amount); }
             finally { _playerSourceDepth--; }
@@ -164,7 +175,7 @@ namespace ElementalBuddies
 
         // Zauber-Sperre (BossBrain): steht still, kein Grundangriff
         private float _castUntil;
-        public bool IsCasting => !_isDead && Time.time < _castUntil;
+        public bool IsCasting => !_isDead && (IsRemote ? HasRemoteStatus(EnemyNet.StatusCasting) : Time.time < _castUntil);
 
         // Aktuelles Ziel (Taunt > Buddy-Jäger > Spieler > Buddy > ForcedTarget > Nexus), pro Frame gecacht
         private Transform _cachedTarget;
@@ -194,11 +205,17 @@ namespace ElementalBuddies
             _activeBosses.Clear();
         }
 
+        void Awake()
+        {
+            _net = GetComponent<EnemyNet>();
+            // Prefab-Größe merken: VisualScale wird absolut gesetzt (Clients bekommen evtl. schon skalierte Werte)
+            _prefabScale = transform.localScale;
+        }
+
         void Start()
         {
             _agent = GetComponent<NavMeshAgent>();
-            _player = GameObject.FindGameObjectWithTag("Player")?.transform;
-            
+
             if (Config != null)
             {
                 if (_currentHP <= 0) _currentHP = Config.BaseHP;
@@ -207,15 +224,16 @@ namespace ElementalBuddies
             }
             else
             {
-                _currentHP = 60f;
+                if (_currentHP <= 0) _currentHP = 60f;
                 _agent.speed = 3.5f;
                 _baseSpeed = 3.5f;
             }
             if (_maxHP <= 0f) _maxHP = _currentHP;
+            if (IsRemote && _agent.enabled) _agent.enabled = false; // Clients: Position kommt vom Server
 
-            // Gegnertyp-Größe (vor der HP-Bar, die ihre Höhe beim Binden misst)
+            // Gegnertyp-Größe (vor der HP-Bar, die ihre Höhe beim Binden misst); Skalierung wird nicht synchronisiert
             if (Config != null && Config.VisualScale > 0f && !Mathf.Approximately(Config.VisualScale, 1f))
-                transform.localScale *= Config.VisualScale;
+                transform.localScale = _prefabScale * Config.VisualScale;
 
             if (HealthBarPrefab != null)
                 Instantiate(HealthBarPrefab).Bind(this);
@@ -251,9 +269,120 @@ namespace ElementalBuddies
              _currentHP = Mathf.Max(1f, baseHp * Mathf.Max(0f, hpMultiplier));
              _maxHP = _currentHP;
              DamageMultiplier = Mathf.Max(0f, damageMultiplier);
+             SyncHealth();
         }
 
+        // ---------------- Mehrspieler ----------------
+
+        // Server: HP an die Clients
+        private void SyncHealth()
+        {
+            if (_net != null && Net.IsServer) _net.ServerSetHealth(_currentHP, _maxHP);
+        }
+
+        // Client: synchronisierte HP übernehmen (EnemyNet)
+        public void ApplyRemoteHealth(float current, float max)
+        {
+            if (!IsRemote) return;
+            _currentHP = current;
+            if (max > 0f) _maxHP = max;
+        }
+
+        // Client: Server meldet den Tod (vor dem Despawn) → Ereignisse lokal feuern (HUD, Erfolge, Boss-Leiste)
+        public void HandleRemoteKilled()
+        {
+            if (!IsRemote || _isDead) return;
+            _isDead = true;
+            _currentHP = 0f;
+            _activeBosses.Remove(this);
+            OnEnemyDeath?.Invoke();
+            OnEnemyKilled?.Invoke(this);
+            GameAudio.Play(SfxId.EnemyDeath, transform.position);
+        }
+
+        // Client: Angriffs-Animation (Server-Takt)
+        public void PlayAttackTrigger()
+        {
+            if (_animator == null || !_hasAttackTrigger || !_animator.isActiveAndEnabled) return;
+            _animator.SetTrigger(AttackHash);
+        }
+
+        // Client: beliebiger Animator-Trigger (Boss-Zauber); unbekannte Parameter werden ignoriert
+        public void PlayAnimTrigger(int hash)
+        {
+            if (_animator == null || !_animator.isActiveAndEnabled) return;
+            foreach (var p in _animator.parameters)
+            {
+                if (p.nameHash != hash || p.type != AnimatorControllerParameterType.Trigger) continue;
+                _animator.SetTrigger(hash);
+                return;
+            }
+        }
+
+        // Server: Status-Flags für die Clients (Anzeige)
+        private void SyncStatus()
+        {
+            if (_net == null || !_net.IsSpawned) return;
+            byte f = 0;
+            if (IsFrozen) f |= EnemyNet.StatusFrozen;
+            if (IsStunned) f |= EnemyNet.StatusStunned;
+            if (Time.time < _slowUntil && _slowPercent > 0f) f |= EnemyNet.StatusSlowed;
+            if (IsWet) f |= EnemyNet.StatusWet;
+            if (IsCursed) f |= EnemyNet.StatusCursed;
+            if (IsBurning) f |= EnemyNet.StatusBurning;
+            if (IsCasting) f |= EnemyNet.StatusCasting;
+            _net.ServerSetStatus(f);
+        }
+
+        // Client: Animation aus den synchronisierten Werten (Laufgeschwindigkeit, eingefroren, verlangsamt)
+        private void RemoteUpdate()
+        {
+            if (_isDead) return;
+            bool frozen = IsFrozen;
+            float speed = frozen || IsStunned ? 0f : (_net != null && _net.IsSpawned ? _net.MoveSpeed.Value : 0f);
+            UpdateAnimator(speed);
+            if (_animator == null) return;
+            // Eingefroren: Animation steht; verlangsamt: etwas träger
+            float animSpeed = frozen ? 0f : (HasRemoteStatus(EnemyNet.StatusSlowed) ? 0.7f : 1f);
+            if (!Mathf.Approximately(animSpeed, _remoteAnimSpeed) || frozen != _remoteFrozenAnim)
+            {
+                _remoteAnimSpeed = animSpeed;
+                _remoteFrozenAnim = frozen;
+                _animator.speed = animSpeed;
+            }
+        }
+
+        // Nächste lebende Spielfigur (Mehrspieler); ohne Netz-Figuren Fallback auf das Player-Tag
+        private Transform NearestPlayer()
+        {
+            if (PlayerAvatar.All.Count > 0)
+            {
+                var a = PlayerAvatar.Nearest(transform.position);
+                return a != null ? a.transform : null;
+            }
+            if (_fallbackPlayer == null && Time.time >= _nextFallbackPlayerLookup)
+            {
+                _nextFallbackPlayerLookup = Time.time + 1f;
+                var go = GameObject.FindGameObjectWithTag("Player");
+                if (go != null) _fallbackPlayer = go.transform;
+            }
+            return _fallbackPlayer;
+        }
+        private Transform _fallbackPlayer;
+        private float _nextFallbackPlayerLookup;
+
         void Update()
+        {
+            if (IsRemote)
+            {
+                RemoteUpdate();
+                return;
+            }
+            ServerUpdate();
+            SyncStatus();
+        }
+
+        private void ServerUpdate()
         {
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver)
             {
@@ -310,6 +439,7 @@ namespace ElementalBuddies
 
         private void UpdateAnimator(float speed)
         {
+            if (_net != null && !IsRemote) _net.ServerSetMoveSpeed(speed);
             if (_animator == null || !_animator.isActiveAndEnabled) return;
             if (_hasSpeedFloat) _animator.SetFloat(SpeedHash, speed);
             if (_hasMovingBool) _animator.SetBool(MovingHash, speed > 0.1f);
@@ -352,11 +482,13 @@ namespace ElementalBuddies
             bool hunter = Config != null && Config.HuntsBuddies;
             if (hunter && buddy != null) return buddy.transform;
 
-            if (_player != null)
+            // Mehrspieler: nächste lebende Spielfigur
+            Transform player = NearestPlayer();
+            if (player != null)
             {
                 float aggro = ForcedTarget != null ? Mathf.Max(PlayerAggroRadius, ForcedTargetPlayerAggroRadius) : PlayerAggroRadius;
-                float playerDist = Vector3.Distance(transform.position, _player.position);
-                if (playerDist <= aggro) return _player;
+                float playerDist = Vector3.Distance(transform.position, player.position);
+                if (playerDist <= aggro) return player;
             }
 
             if (buddy != null) return buddy.transform;
@@ -365,7 +497,7 @@ namespace ElementalBuddies
 
             if (Nexus.Instance != null) return Nexus.Instance.transform;
 
-            return _player;
+            return player;
         }
 
         private bool IsNexus(Transform target)
@@ -561,7 +693,7 @@ namespace ElementalBuddies
                 return;
             }
 
-            if (_agent.velocity.magnitude < 0.1f && !_agent.pathPending && (_agent.hasPath || _player != null || Nexus.Instance != null))
+            if (_agent.velocity.magnitude < 0.1f && !_agent.pathPending && (_agent.hasPath || NearestPlayer() != null || Nexus.Instance != null))
             {
                 _stuckTimer += Time.deltaTime;
             }
@@ -609,6 +741,7 @@ namespace ElementalBuddies
                  {
                      _nextAttackTime = Time.time + AttackInterval;
                      _animator.SetTrigger(AttackHash);
+                     if (_net != null) _net.ServerAttackTrigger();
                  }
                  // Spieler bekommt die Angriffsrichtung mit (Schildblock blockt nur frontal)
                  var directional = target.GetComponent<IDirectionalDamageable>();
@@ -647,7 +780,11 @@ namespace ElementalBuddies
             if (Time.time < _nextAttackTime) return;
 
             _nextAttackTime = Time.time + AttackInterval;
-            if (_hasAttackTrigger && _animator.isActiveAndEnabled) _animator.SetTrigger(AttackHash);
+            if (_hasAttackTrigger && _animator.isActiveAndEnabled)
+            {
+                _animator.SetTrigger(AttackHash);
+                if (_net != null) _net.ServerAttackTrigger();
+            }
             _shotTarget = target;
             _shotPending = true;
             _shotFireTime = Time.time + Mathf.Max(0f, Config.AttackWindup);
@@ -671,6 +808,8 @@ namespace ElementalBuddies
             float damage = Config.AttackDamage * DamageMultiplier;
             if (BuddyOf(_shotTarget) != null) damage *= BuddyDamageMultiplier;
             proj.Init(_shotTarget, aimOffset, damage, Config.ProjectileSpeed, transform.position);
+            // Clients: kosmetische Kopie (kein Schaden)
+            if (_net != null) _net.ServerShot(spawn, go.transform.rotation, _shotTarget, aimOffset, nexus, aim);
         }
 
         // Weich zum Ziel drehen (Agent dreht im Stand nicht selbst)
@@ -686,7 +825,7 @@ namespace ElementalBuddies
         // Schadens-Pipeline: verflucht → Bonus-Schaden, Rüstung ignoriert; sonst Rüstung reduziert
         public void TakeDamage(float amount)
         {
-            if (_isDead || amount <= 0f) return;
+            if (!Net.IsServer || _isDead || amount <= 0f) return;
             if (IsCursed) amount *= 1f + _curse.DamageTakenBonus;
             else amount *= 1f - Armor;
             TakeTrueDamage(amount);
@@ -695,24 +834,37 @@ namespace ElementalBuddies
         // Schaden ohne Rüstung/Fluch-Modifikatoren
         public void TakeTrueDamage(float amount)
         {
-            if (_isDead) return;
+            if (!Net.IsServer || _isDead) return;
             if (amount > 0f && OnDamageDealt != null) OnDamageDealt(this, Mathf.Min(amount, Mathf.Max(0f, _currentHP)), _playerSourceDepth > 0);
             _currentHP -= amount;
             if (_currentHP <= 0)
             {
                 // Guard: several hits in one frame must not report the death twice (bounty / wave count)
                 _isDead = true;
+                _currentHP = 0f;
                 _activeBosses.Remove(this);
+                // Clients zuerst informieren (RPC kommt zuverlässig vor der Despawn-Nachricht an)
+                if (_net != null) _net.ServerKilled();
                 OnEnemyDeath?.Invoke();
                 OnEnemyKilled?.Invoke(this);
                 GameAudio.Play(SfxId.EnemyDeath, transform.position);
-                Destroy(gameObject);
+                Despawn();
             }
+            else SyncHealth();
+        }
+
+        // Server: Gegner entfernen (im Netz Despawn, sonst Destroy)
+        private void Despawn()
+        {
+            var no = _net != null ? _net.NetworkObject : null;
+            if (no != null && no.IsSpawned) no.Despawn(true);
+            else Destroy(gameObject);
         }
 
         // Mehrere Slows überschreiben sich nicht mehr: es gilt der stärkste noch laufende
         public void ApplySlow(float percentage, float duration)
         {
+            if (!Net.IsServer || _isDead) return;
             percentage = Mathf.Clamp01(percentage);
             duration *= ControlFactor;
             bool active = Time.time < _slowUntil;
@@ -731,7 +883,7 @@ namespace ElementalBuddies
         // Komplett einfrieren (Frostnova): steht still, greift nicht an, Animation pausiert
         public void Freeze(float duration, GameObject vfxPrefab = null)
         {
-            if (_isDead || duration <= 0f) return;
+            if (!Net.IsServer || _isDead || duration <= 0f) return;
             if (IsWet) duration *= 2f; // Nass + Frost: friert doppelt so lange ein
             duration *= ControlFactor;
             _freeze = FreezeEffect.Apply(gameObject, duration, vfxPrefab);
@@ -742,12 +894,12 @@ namespace ElementalBuddies
             }
         }
 
-        public bool IsFrozen => _freeze != null && _freeze.IsActive;
+        public bool IsFrozen => IsRemote ? HasRemoteStatus(EnemyNet.StatusFrozen) : _freeze != null && _freeze.IsActive;
 
         // Betäubt (Erdbeben): steht still und greift nicht an, Animation läuft weiter. Optik: kreisende Sterne (BlindEffect).
         public void Stun(float duration, GameObject vfxPrefab = null)
         {
-            if (_isDead || duration <= 0f) return;
+            if (!Net.IsServer || _isDead || duration <= 0f) return;
             duration *= ControlFactor;
             _stunUntil = Mathf.Max(_stunUntil, Time.time + duration);
             if (vfxPrefab != null) BlindEffect.Apply(gameObject, duration, vfxPrefab);
@@ -759,13 +911,13 @@ namespace ElementalBuddies
             }
         }
 
-        public bool IsStunned => Time.time < _stunUntil;
+        public bool IsStunned => IsRemote ? HasRemoteStatus(EnemyNet.StatusStunned) : Time.time < _stunUntil;
         private float _stunUntil;
 
         // Nass machen (löscht einen laufenden Brand, siehe WetEffect.Apply)
         public void ApplyWet(float duration, GameObject vfxPrefab = null)
         {
-            if (_isDead || duration <= 0f) return;
+            if (!Net.IsServer || _isDead || duration <= 0f) return;
             var wet = WetEffect.Apply(gameObject, duration, vfxPrefab);
             if (wet != null) _wet = wet;
         }
@@ -773,7 +925,7 @@ namespace ElementalBuddies
         // Verfluchen: DoT + mehr erlittener Schaden, Rüstung ignoriert
         public void ApplyCurse(float dps, float duration, float damageTakenBonus, GameObject vfxPrefab = null)
         {
-            if (_isDead || duration <= 0f) return;
+            if (!Net.IsServer || _isDead || duration <= 0f) return;
             var curse = CurseEffect.Apply(gameObject, dps, duration, damageTakenBonus, vfxPrefab);
             if (curse != null) _curse = curse;
         }
@@ -781,6 +933,7 @@ namespace ElementalBuddies
         // Rückstoß entlang des NavMesh (agent.Move, verlässt das NavMesh nicht); unterbricht kurz die Bewegung
         public void Knockback(Vector3 direction, float distance, float duration = 0.25f)
         {
+            if (!Net.IsServer) return;
             distance *= ControlFactor;
             if (_isDead || distance <= 0f) return;
             direction.y = 0f;
@@ -849,23 +1002,24 @@ namespace ElementalBuddies
 
         public void Taunt(Transform target, float duration)
         {
-            if (_isDead) return;
+            if (!Net.IsServer || _isDead || !isActiveAndEnabled) return;
             StartCoroutine(TauntRoutine(target, duration * ControlFactor));
         }
 
         // Heilung (z. B. Totenkreis des Nekromanten), auf MaxHP begrenzt; gibt die geheilte Menge zurück
         public float Heal(float amount)
         {
-            if (_isDead || amount <= 0f || _currentHP >= _maxHP) return 0f;
+            if (!Net.IsServer || _isDead || amount <= 0f || _currentHP >= _maxHP) return 0f;
             float before = _currentHP;
             _currentHP = Mathf.Min(_maxHP, _currentHP + amount);
+            SyncHealth();
             return _currentHP - before;
         }
 
         // Steht für duration s still und greift nicht an (Boss-Fähigkeit: Ausholen + Erholung)
         public void LockForCast(float duration)
         {
-            if (_isDead) return;
+            if (!Net.IsServer || _isDead) return;
             _castUntil = Mathf.Max(_castUntil, Time.time + Mathf.Max(0f, duration));
             _shotPending = false;
             if (_agent == null) _agent = GetComponent<NavMeshAgent>();

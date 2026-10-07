@@ -41,7 +41,26 @@ namespace ElementalBuddies
         public abstract string Describe(AbilityId id, float dm);
 
         // Fähigkeit ausführen. Kosten und Abklingzeit hat PlayerAbilities schon verbucht.
+        // Mehrspieler: läuft auf ALLEN Rechnern (Besitzer sofort, andere per Cast-RPC, ctx.IsRemote = true).
+        // Schaden/Status/Heilung nur mit Net.IsServer, Bewegung der Figur nur mit IsLocalControl.
         public abstract void Cast(AbilityId id, SpellCastContext ctx);
+
+        // Nach dem lokalen Cast: Kit-Zustand, den andere Rechner zum Nachspielen brauchen (SpellCastContext.Variant),
+        // z. B. Kombo-Schritt des Schwerthiebs. 0 = nichts.
+        public virtual int GetCastVariant(AbilityId id, SpellCastContext ctx) => 0;
+
+        // Eigene Figur (bzw. offline): darf die Figur bewegen / teleportieren
+        protected bool IsLocalControl => Owner == null || Owner.IsLocalControl;
+
+        // Server-Ereignis für alle anderen Rechner (PlayerAvatar.SendKitEvent → KitEventRpc), z. B. Schildbruch
+        public virtual void OnNetEvent(int evt, Vector3 point) { }
+
+        // Server: Ereignis an alle anderen Rechner schicken (ohne Netz: nichts)
+        protected void SendKitEvent(int evt, Vector3 point)
+        {
+            var av = Owner != null ? Owner.Avatar : null;
+            if (av != null && av.IsSpawned && Net.IsServer) av.SendKitEvent(evt, point);
+        }
 
         // Element-Fähigkeit (R/F/C/V) als Konfigurations-Objekt (null für LMB/RMB)
         public virtual ElementSpell GetSpell(AbilityId id) => null;

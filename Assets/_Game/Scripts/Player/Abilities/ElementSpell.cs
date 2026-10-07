@@ -12,6 +12,10 @@ namespace ElementalBuddies
         public float DamageMultiplier;
         public Vector3 AimPoint;      // Mauspunkt auf dem Boden (Fallback: 5 m vor dem Spieler)
         public bool HasAimPoint;
+        // Mehrspieler: Daten, die der Besitzer beim Wirken festlegt und per Cast-RPC an alle Rechner schickt
+        public Vector3 MoveDirection; // Laufeingabe (WASD) zum Zeitpunkt des Wirkens, horizontal (Rolle); zero = keine
+        public int Variant;           // Kit-spezifisch, z. B. Kombo-Schritt des Schwerthiebs (0 = selbst bestimmen)
+        public bool IsRemote;         // true = Abbild eines fremden Casts (Besitzer hat ihn schon ausgeführt)
     }
 
     // Common config for the unlockable element abilities of all champions

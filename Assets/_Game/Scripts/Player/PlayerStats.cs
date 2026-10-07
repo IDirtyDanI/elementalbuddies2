@@ -23,21 +23,24 @@ namespace ElementalBuddies
 
         public event Action OnHealthChanged;
         public event Action OnPlayerDeath;
+        // Wiederbelebt (Mehrspieler: nach PlayerAvatar.RespawnDelay)
+        public event Action OnPlayerRevived;
 
         private bool _isDead;
+        public bool IsDead => _isDead;
 
         void Awake()
         {
             CurrentHP = MaxHP;
         }
 
-        // Schaden ohne Richtung (wird nicht geblockt, nur allgemeine Reduktionen greifen)
+        // Schaden ohne Richtung (wird nicht geblockt, nur allgemeine Reduktionen greifen). Nur auf dem Server.
         public void TakeDamage(float amount)
         {
             ApplyDamage(amount, transform.position, false);
         }
 
-        // Schaden mit Herkunft (z. B. Nahkampf-Gegner) – frontal geblockt, wenn der Schwertkämpfer den Schild hebt
+        // Schaden mit Herkunft (z. B. Nahkampf-Gegner) – frontal geblockt, wenn der Schwertkämpfer den Schild hebt. Nur auf dem Server.
         public void TakeDamage(float amount, Vector3 sourcePosition)
         {
             ApplyDamage(amount, sourcePosition, true);
@@ -45,13 +48,15 @@ namespace ElementalBuddies
 
         private void ApplyDamage(float amount, Vector3 sourcePosition, bool hasSource)
         {
+            // Treffer entscheidet nur der Server; Clients bekommen die LP über PlayerAvatar
+            if (!Net.IsServer) return;
             if (IsInvulnerable || GodMode || _isDead) return;
             if (amount > 0f && DamageModifier != null) amount = DamageModifier(amount, sourcePosition, hasSource);
             if (amount <= 0f) return;
 
             CurrentHP -= amount;
             if (CurrentHP < 0) CurrentHP = 0;
-            GameAudio.Play(SfxId.PlayerHurt);
+            PlayHurtSound();
 
             OnHealthChanged?.Invoke();
 
@@ -61,8 +66,10 @@ namespace ElementalBuddies
             }
         }
 
+        // Heilung nur auf dem Server (Clients: No-Op, der Wert kommt über das Netz)
         public void Heal(float amount)
         {
+            if (!Net.IsServer || _isDead) return;
             CurrentHP += amount;
             if (CurrentHP > MaxHP) CurrentHP = MaxHP;
 
@@ -74,12 +81,56 @@ namespace ElementalBuddies
             if (_isDead) return;
             _isDead = true;
 
-            Debug.Log("Player Died!");
+            Debug.Log($"[Player] {DeathMessage()}");
             OnPlayerDeath?.Invoke();
-            GameManager.Instance?.TriggerGameOver(DeathMessage());
+            // Kein Game Over mehr hier: Die Figur fällt aus und wird wiederbelebt (PlayerAvatar);
+            // Game Over entscheidet der Server, wenn niemand mehr lebt (PlayerAvatar.AnyAlive).
         }
 
-        private string DeathMessage()
+        // Server: mit vollen LP zurückholen
+        public void Revive()
+        {
+            if (!Net.IsServer) return;
+            CurrentHP = MaxHP;
+            bool wasDead = _isDead;
+            _isDead = false;
+            OnHealthChanged?.Invoke();
+            if (wasDead) OnPlayerRevived?.Invoke();
+        }
+
+        // ---------------- Netz (PlayerAvatar) ----------------
+
+        // Clients: LP/Max/Tod vom Server übernehmen und dieselben Events feuern wie auf dem Server
+        internal void ApplyNetworkHealth(float hp, float maxHp, bool dead)
+        {
+            if (Net.IsServer) return;
+            bool changed = !Mathf.Approximately(hp, CurrentHP) || !Mathf.Approximately(maxHp, MaxHP);
+            bool hurt = hp < CurrentHP - 0.01f;
+            MaxHP = maxHp;
+            CurrentHP = hp;
+            if (hurt && !dead) PlayHurtSound();
+            if (changed) OnHealthChanged?.Invoke();
+            if (dead && !_isDead)
+            {
+                _isDead = true;
+                OnPlayerDeath?.Invoke();
+            }
+            else if (!dead && _isDead)
+            {
+                _isDead = false;
+                OnPlayerRevived?.Invoke();
+            }
+        }
+
+        // Treffer-Laut nur für die eigene Figur (sonst hört man jeden Mitspieler)
+        private void PlayHurtSound()
+        {
+            var av = GetComponent<PlayerAvatar>();
+            if (av == null || av.IsLocalControl) GameAudio.Play(SfxId.PlayerHurt);
+        }
+
+        // Text für Game Over / Meldungen ("Der Zauberer ist gefallen")
+        public string DeathMessage()
         {
             var pa = GetComponent<PlayerAbilities>();
             switch (pa != null ? pa.ActiveClass : ChampionClass.Mage)

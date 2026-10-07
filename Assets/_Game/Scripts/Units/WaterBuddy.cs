@@ -51,7 +51,7 @@ namespace ElementalBuddies
 
             foreach (var e in FindEnemies(start + dir * (range * 0.5f), range * 0.5f + JetWidth + 0.5f).ToArray())
             {
-                if (e == null || HorizontalDistanceToSegment(e.transform.position, start, end) > JetWidth) continue;
+                if (!Net.IsServer || e == null || HorizontalDistanceToSegment(e.transform.position, start, end) > JetWidth) continue;
                 e.ApplyWet(WetDuration, WetVfxPrefab);
                 e.ApplySlow(JetSlow, JetSlowDuration);
                 e.TakeDamage(DamageAgainst(e, damage));
@@ -72,7 +72,7 @@ namespace ElementalBuddies
         {
             foreach (var e in FindEnemies(center, WhirlpoolRadius).ToArray())
             {
-                if (e == null) continue;
+                if (!Net.IsServer || e == null) continue;
                 e.ApplyWet(WetDuration, WetVfxPrefab);
                 e.ApplySlow(1f, WhirlpoolRootDuration); // festhalten
                 e.TakeDamage(DamageAgainst(e, damage));

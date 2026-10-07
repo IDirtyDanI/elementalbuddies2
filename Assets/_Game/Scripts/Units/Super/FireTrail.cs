@@ -51,7 +51,7 @@ namespace ElementalBuddies
             float dt = Time.deltaTime;
             _age += dt;
             _tick += dt;
-            if (_tick >= TickInterval && _age < _lifetime)
+            if (_tick >= TickInterval && _age < _lifetime && Net.IsServer) // Schaden nur auf dem Server
             {
                 _tick -= TickInterval;
                 float dmg = _dps * TickInterval;

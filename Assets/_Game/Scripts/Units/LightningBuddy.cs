@@ -47,7 +47,7 @@ namespace ElementalBuddies
 
                 float dmg = damage * Mathf.Pow(Falloff, i) * (current.IsWet ? WetMultiplier : 1f);
                 Vector3 jumpOrigin = current.transform.position; // vor dem Schaden merken (Tod zerstört am Frame-Ende)
-                current.TakeDamage(DamageAgainst(current, dmg));
+                if (Net.IsServer) current.TakeDamage(DamageAgainst(current, dmg));
 
                 from = to;
                 current = i < jumps ? FindNearestEnemy(jumpOrigin, JumpRange, _hit) : null;

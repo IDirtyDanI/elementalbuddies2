@@ -53,7 +53,7 @@ namespace ElementalBuddies
         void Start()
         {
             WaveManager.OnPortalOpened += HandlePortalOpened;
-            _player = GameObject.FindGameObjectWithTag("Player")?.transform;
+            _player = PlayerAvatar.Local != null ? PlayerAvatar.Local.transform : null;
             SetVisible(false);
         }
 
@@ -182,7 +182,7 @@ namespace ElementalBuddies
             Vector2 labelPos = pos - localDir * LabelOffset;
             if (ch.DistanceText != null)
             {
-                if (_player == null) _player = GameObject.FindGameObjectWithTag("Player")?.transform;
+                if (_player == null && PlayerAvatar.Local != null) _player = PlayerAvatar.Local.transform;
                 if (_player != null)
                 {
                     Vector3 d = targetPos - _player.position;

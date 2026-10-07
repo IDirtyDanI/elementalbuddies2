@@ -107,13 +107,31 @@ namespace ElementalBuddies
         public float AreaSize => Kind == BossAbilityKind.Cone || Kind == BossAbilityKind.Beam ? Length : Radius;
     }
 
-    // Treffer-Helfer der Boss-Fähigkeiten: Spieler, Buddies, optional Nexus – nie andere Gegner
+    // Treffer-Helfer der Boss-Fähigkeiten: alle Spielfiguren, Buddies, optional Nexus – nie andere Gegner. Nur auf dem Server.
     public static class BossCombat
     {
         private const float PlayerRadius = 0.4f;
         private static readonly List<ElementalBuddy> _buddies = new List<ElementalBuddy>();
+        private static readonly List<PlayerStats> _players = new List<PlayerStats>();
+
+        // Alle Spielfiguren (Mehrspieler: PlayerAvatar.All; ohne Netz-Figuren Fallback auf das Player-Tag)
+        public static List<PlayerStats> CollectPlayers(List<PlayerStats> result)
+        {
+            result.Clear();
+            var all = PlayerAvatar.All;
+            if (all.Count > 0)
+            {
+                for (int i = 0; i < all.Count; i++)
+                    if (all[i] != null && all[i].Stats != null) result.Add(all[i].Stats);
+            }
+            else if (Player != null) result.Add(Player);
+            return result;
+        }
+
+        public static bool IsAlive(PlayerStats p) => p != null && p.isActiveAndEnabled && p.CurrentHP > 0f && !p.IsDead;
 
         private static PlayerStats _player;
+        // Veraltet (Einzelspieler-Fallback): erste Figur mit Player-Tag. Spiellogik nutzt CollectPlayers.
         public static PlayerStats Player
         {
             get
@@ -130,22 +148,23 @@ namespace ElementalBuddies
         // Schaden + Effekte in der Fläche. source = Herkunft für den Schildblock (Boss bzw. Einschlag)
         public static void Apply(AoeShape shape, BossAbility a, Vector3 source, float damage)
         {
-            var player = Player;
-            if (player != null && player.isActiveAndEnabled && player.CurrentHP > 0f && shape.Contains(player.transform.position, PlayerRadius))
+            if (!Net.IsServer) return;
+
+            // Alle Spielfiguren in der Fläche (Slow/Rückstoß leitet PlayerController an den Besitzer weiter)
+            CollectPlayers(_players);
+            foreach (var player in _players)
             {
+                if (!IsAlive(player) || !shape.Contains(player.transform.position, PlayerRadius)) continue;
                 bool immune = player.IsInvulnerable;
                 if (damage > 0f) player.TakeDamage(damage, source);
-                if (!immune)
-                {
-                    var pc = player.GetComponent<PlayerController>();
-                    if (pc != null)
-                    {
-                        if (a.PlayerSlow > 0f && a.PlayerSlowDuration > 0f) pc.ApplySlow(a.PlayerSlow, a.PlayerSlowDuration);
-                        if (a.PlayerKnockback > 0f)
-                            pc.ApplyKnockback(CombatUtil.FlatDirection(source, player.transform.position, shape.Forward), a.PlayerKnockback, 0.25f);
-                    }
-                }
+                if (immune) continue;
+                var pc = player.GetComponent<PlayerController>();
+                if (pc == null) continue;
+                if (a.PlayerSlow > 0f && a.PlayerSlowDuration > 0f) pc.ApplySlow(a.PlayerSlow, a.PlayerSlowDuration);
+                if (a.PlayerKnockback > 0f)
+                    pc.ApplyKnockback(CombatUtil.FlatDirection(source, player.transform.position, shape.Forward), a.PlayerKnockback, 0.25f);
             }
+            _players.Clear();
 
             // Kopie: sterbende Buddies verlassen die Registry sofort
             _buddies.Clear();
@@ -179,6 +198,7 @@ namespace ElementalBuddies
 
     // Laufzeit-Objekt des Pfeilhagels: Schadens-Pulse über PulseDuration, fallende Pfeile (Optik), Warnfläche bleibt
     // bis zum Ende stehen. Läuft unabhängig vom Boss weiter (auch wenn er stirbt).
+    // Mehrspieler: Server mit Schaden; Clients spielen eine reine Optik-Kopie (visualOnly, Warnfläche endet per Server-RPC).
     public class BossRainArea : MonoBehaviour
     {
         private AoeShape _shape;
@@ -187,6 +207,13 @@ namespace ElementalBuddies
         private float _damageMultiplier = 1f;
         private float _t;
         private int _done;
+        private bool _visualOnly;
+
+        public void SetupVisual(AoeShape shape, BossAbility ability)
+        {
+            Setup(shape, ability, null, 0f);
+            _visualOnly = true;
+        }
 
         public void Setup(AoeShape shape, BossAbility ability, AoeTelegraph telegraph, float damageMultiplier = 1f)
         {
@@ -235,7 +262,7 @@ namespace ElementalBuddies
                 else if (_ability.PulseEffectPrefab != null)
                     CombatUtil.SpawnFx(_ability.PulseEffectPrefab, land, Quaternion.identity, 1.5f);
             }
-            BossCombat.Apply(_shape, _ability, c, _ability.Damage * _damageMultiplier);
+            if (!_visualOnly && Net.IsServer) BossCombat.Apply(_shape, _ability, c, _ability.Damage * _damageMultiplier);
             if (_ability.PlaySfx && (_done == 1 || _done % 2 == 0)) GameAudio.Play(_ability.ImpactSfx, c);
         }
     }

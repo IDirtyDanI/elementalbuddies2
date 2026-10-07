@@ -46,6 +46,7 @@ namespace ElementalBuddies
             Quaternion rot = Quaternion.LookRotation(ctx.AimDirection);
             SpawnEffect(ctx.Origin, rot, Range);
 
+            if (!Net.IsServer) return; // Treffer/Brand nur auf dem Server, Optik (Effekt oben) überall
             float halfAngle = ConeAngle * 0.5f;
             foreach (var enemy in FindEnemies(ctx.Origin, Range))
             {

@@ -68,6 +68,15 @@ namespace ElementalBuddies
         private Camera _mainCamera;
         private Vector3 _playerVelocity; // To store velocity for jumping/gravity
 
+        // Mehrspieler: Eingabe/Bewegung nur auf der eigenen Figur (PlayerAvatar = Besitzer). Ohne Avatar (offline) immer.
+        private PlayerAvatar _avatar;
+        private PlayerStats _stats;
+        private bool _inputActive;
+        public bool IsLocalControl => _avatar == null || _avatar.IsLocalControl;
+
+        // Aktuelle Laufeingabe (x = rechts, y = vorne), zero ohne Eingabe / auf fremden Figuren
+        public Vector2 MoveInput => IsLocalControl && MoveAction != null && _inputActive ? MoveAction.ReadValue<Vector2>() : Vector2.zero;
+
         [Header("Jump Settings")]
         public float JumpForce = 8.0f;
         public float Gravity = -9.81f;
@@ -79,7 +88,11 @@ namespace ElementalBuddies
         void Awake()
         {
             _characterController = GetComponent<CharacterController>();
+            _avatar = GetComponent<PlayerAvatar>();
+            _stats = GetComponent<PlayerStats>();
             _mainCamera = Camera.main;
+            // Absicherung: ohne gesetzte Boden-Ebene träfe der Maus-Raycast nichts (Zielen tot)
+            if (FloorLayer.value == 0) FloorLayer = LayerMask.GetMask("Floor");
 
             if (inputAsset != null)
             {
@@ -106,27 +119,89 @@ namespace ElementalBuddies
 
         void OnEnable()
         {
-            if (inputAsset != null) inputAsset.Enable();
+            // Das Input-Asset ist geteilt: nur die eigene Figur schaltet es ein (fremde Figuren nie)
+            if (IsLocalControl) SetInputActive(true);
         }
 
         void OnDisable()
         {
-            if (inputAsset != null) inputAsset.Disable();
+            SetInputActive(false);
+        }
+
+        // Von PlayerAvatar nach der Besitzer-Erkennung (Netz-Spawn) aufgerufen
+        public void SetInputActive(bool on)
+        {
+            if (inputAsset == null || _inputActive == on) return;
+            _inputActive = on;
+            if (on) inputAsset.Enable();
+            else inputAsset.Disable();
         }
 
         void Update()
         {
+            // Fremde Figur: Position/Drehung kommen per NetworkTransform vom Besitzer
+            if (!IsLocalControl) return;
+            // Ausgefallen (tot) -> keine Steuerung bis zur Wiederbelebung
+            if (_stats != null && _stats.IsDead) return;
             // Pause-Menü offen -> kein Laufen/Drehen/Springen
             if (PauseManager.IsPaused) return;
 
             HandleMovement();
             if (!RotationLocked) HandleRotation();
             else UpdateAimPoint();
+            GuardFallingThroughMap();
+        }
+
+        // ---------------- Sicherheitsnetz: durch die Map gefallen ----------------
+
+        [Header("Sicherheitsnetz")]
+        [Tooltip("Fällt die Figur so viele Meter unter die letzte sichere Bodenposition, wird sie dorthin zurückgesetzt.")]
+        public float FallRecoverDepth = 8f;
+
+        private Vector3 _lastSafePos;
+        private bool _hasSafePos;
+        private float _safeSampleAt;
+
+        private void GuardFallingThroughMap()
+        {
+            if (_characterController == null || !_characterController.enabled) return;
+
+            if (_characterController.isGrounded)
+            {
+                // Sichere Position höchstens 4× pro Sekunde merken, nur auf dem NavMesh (begehbarer Boden)
+                if (Time.time >= _safeSampleAt)
+                {
+                    _safeSampleAt = Time.time + 0.25f;
+                    if (UnityEngine.AI.NavMesh.SamplePosition(transform.position, out _, 2.5f, UnityEngine.AI.NavMesh.AllAreas))
+                    {
+                        _lastSafePos = transform.position;
+                        _hasSafePos = true;
+                    }
+                }
+                return;
+            }
+
+            float floorY = _hasSafePos ? _lastSafePos.y : 0f;
+            if (transform.position.y > floorY - FallRecoverDepth) return;
+
+            Vector3 target = _hasSafePos ? _lastSafePos : transform.position;
+            if (!_hasSafePos && UnityEngine.AI.NavMesh.SamplePosition(new Vector3(target.x, 0f, target.z), out var hit, 50f, UnityEngine.AI.NavMesh.AllAreas))
+                target = hit.position + Vector3.up * (_characterController.height * 0.5f);
+            Debug.LogWarning($"[Player] Durch die Map gefallen ({transform.position.y:0.0}) – zurück auf {target}");
+            _playerVelocity = Vector3.zero;
+            _pushRemaining = 0f;
+            if (_avatar != null && _avatar.IsSpawned) _avatar.TeleportLocal(target, transform.rotation);
+            else
+            {
+                _characterController.enabled = false;
+                transform.position = target;
+                _characterController.enabled = true;
+            }
         }
 
         private void HandleMovement()
         {
-            if (MoveAction == null) return;
+            if (MoveAction == null || _characterController == null || !_characterController.enabled) return;
 
             Vector2 input = MovementLocked ? Vector2.zero : MoveAction.ReadValue<Vector2>();
             Vector3 moveInput = new Vector3(input.x, 0, input.y);
@@ -164,9 +239,23 @@ namespace ElementalBuddies
             _characterController.Move(delta);
         }
 
+        // Fremde Figur: Server leitet Slow/Rückstoß an den Besitzer weiter (der bewegt die Figur)
+        private bool ForwardToOwner => !IsLocalControl && _avatar != null && _avatar.IsSpawned;
+
+        // Von PlayerAvatar ausgelöst: Mitspieler ist gesprungen (Animation)
+        public void RaiseRemoteJump()
+        {
+            Jumped?.Invoke();
+        }
+
         // Wie EnemyBrain.ApplySlow: percent 0..1 (0.4 = 40 % langsamer), der stärkste laufende Slow gewinnt
         public void ApplySlow(float percent, float duration)
         {
+            if (ForwardToOwner)
+            {
+                if (Net.IsServer) _avatar.SendSlowToOwner(percent, duration);
+                return;
+            }
             percent = Mathf.Clamp01(percent);
             if (percent <= 0f || duration <= 0f) return;
             bool active = Time.time < _slowUntil;
@@ -184,6 +273,11 @@ namespace ElementalBuddies
         // Horizontaler Rückstoß (z. B. Blutwirbel des Knochenfürsten)
         public void ApplyKnockback(Vector3 direction, float distance, float duration = 0.25f)
         {
+            if (ForwardToOwner)
+            {
+                if (Net.IsServer) _avatar.SendKnockbackToOwner(direction, distance, duration);
+                return;
+            }
             direction.y = 0f;
             if (distance <= 0f || direction.sqrMagnitude < 0.0001f) return;
             _pushDir = direction.normalized;

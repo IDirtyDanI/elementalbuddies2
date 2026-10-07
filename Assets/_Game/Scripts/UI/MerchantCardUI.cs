@@ -7,7 +7,9 @@ namespace ElementalBuddies
 {
     // Eine Händlerkarte auf BuffCard.prefab-Basis: Fähigkeits-Icon + optionale Plakette, Titel, Wert und der
     // konkrete neue Wert („Schwerthieb – Reichweite: 2,6 m → 3,1 m“). Kinder werden über Namen gefunden.
-    // Laden: Preisschild („Gratis“ / „60 ✦“, rot wenn zu teuer), „Gekauft“-Stempel, Abdunkeln nach dem Kauf.
+    // Laden: Preisschild („Gratis“ / „60 Gold“, rot wenn zu teuer), „Gekauft“-Stempel, Abdunkeln nach dem Kauf.
+    // Bezahlt wird mit dem persönlichen Gold des lokalen Spielers (NetPlayer.Gold); das alte Splitter-Symbol
+    // (PriceIcon) bleibt ausgeblendet, der Preis steht als Text „60 Gold“.
     // Alle Laden-Refs sind optional (Fallback: Text auf dem Knopf).
     public class MerchantCardUI : MonoBehaviour
     {
@@ -102,8 +104,8 @@ namespace ElementalBuddies
             var mgr = MerchantManager.Instance;
             bool bought = mgr != null && Slot >= 0 && mgr.IsBought(Slot);
             int price = mgr != null ? mgr.NextCardPrice : 0;
-            float shards = EconomyManager.Instance != null ? EconomyManager.Instance.CurrentShards : 0f;
-            bool affordable = price <= 0 || shards >= price;
+            float gold = MerchantManager.LocalGold;
+            bool affordable = price <= 0 || gold + 0.001f >= price;
 
             if (BoughtOverlay != null) BoughtOverlay.SetActive(bought);
             if (PriceTag != null) PriceTag.SetActive(!bought);
@@ -112,11 +114,10 @@ namespace ElementalBuddies
             if (PriceText != null)
             {
                 if (PriceTag == null) PriceText.gameObject.SetActive(!bought);
-                bool icon = PriceIcon != null && price > 0;
-                PriceText.text = price <= 0 ? "Gratis" : icon ? price.ToString() : $"{price} {ShardGlyph(PriceText)}";
+                PriceText.text = price <= 0 ? "Gratis" : $"{price} {CurrencyLabel}";
                 PriceText.color = affordable ? _priceColor : UnaffordableColor;
             }
-            if (PriceIcon != null) PriceIcon.gameObject.SetActive(!bought && price > 0);
+            if (PriceIcon != null) PriceIcon.gameObject.SetActive(false); // Splitter-Symbol passt nicht zu Gold
 
             if (SelectButton != null)
             {
@@ -125,7 +126,7 @@ namespace ElementalBuddies
                 if (label != null)
                 {
                     // Ohne Preisschild steht der Preis auf dem Knopf
-                    string buy = PriceText != null ? "Kaufen" : $"Kaufen ({price} {ShardGlyph(label)})";
+                    string buy = PriceText != null ? "Kaufen" : $"Kaufen ({price} {CurrencyLabel})";
                     label.text = bought ? "Gekauft" : price <= 0 ? (PriceText != null ? "Nehmen" : "Nehmen (gratis)") : buy;
                     if (!_labelColorRead)
                     {
@@ -137,14 +138,10 @@ namespace ElementalBuddies
             }
         }
 
-        // „✦“, falls die Schrift das Zeichen hat, sonst Wort
-        private static string ShardGlyph(TMP_Text text)
-        {
-            var font = text.font;
-            return font != null && font.HasCharacter('\u2726', true) ? "\u2726" : "Splitter";
-        }
+        // Währung im Laden
+        public const string CurrencyLabel = "Gold";
 
-        // Zu wenig Splitter: kurz wackeln (unskalierte Zeit, Spiel steht)
+        // Zu wenig Gold: kurz wackeln (unskalierte Zeit, Spiel steht)
         public void Shake()
         {
             if (!isActiveAndEnabled) return;

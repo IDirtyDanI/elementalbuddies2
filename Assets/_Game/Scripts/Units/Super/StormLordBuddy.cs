@@ -49,7 +49,7 @@ namespace ElementalBuddies
             base.Update();
             if (IsStunned) return;
             _auraTimer += Time.deltaTime;
-            if (_auraTimer >= AuraTickInterval)
+            if (Net.IsServer && _auraTimer >= AuraTickInterval) // Verlangsamung nur auf dem Server
             {
                 _auraTimer = 0f;
                 if (AuraSlow > 0f)

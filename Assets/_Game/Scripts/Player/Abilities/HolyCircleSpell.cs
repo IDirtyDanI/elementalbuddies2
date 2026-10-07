@@ -17,6 +17,8 @@ namespace ElementalBuddies
         [Tooltip("Kreisende Sterne über dem Kopf geblendeter Gegner.")]
         public GameObject BlindVfxPrefab;
 
+        private static readonly System.Collections.Generic.List<PlayerAvatar> _players = new System.Collections.Generic.List<PlayerAvatar>();
+
         public HolyCircleSpell()
         {
             ManaCost = 45f;
@@ -46,12 +48,23 @@ namespace ElementalBuddies
         public override void Cast(SpellCastContext ctx)
         {
             SpawnEffect(ctx.Origin, Quaternion.identity, Radius);
+            // Heilung, Blenden: nur der Server (Optik oben läuft auf allen Rechnern)
+            if (!Net.IsServer) return;
 
-            // Player
-            if (ctx.Caster != null && PlayerHeal > 0f)
+            // Spieler: alle (lebenden) Figuren im Kreis, der Wirkende immer
+            if (PlayerHeal > 0f)
             {
-                var stats = ctx.Caster.GetComponent<PlayerStats>();
-                if (stats != null) stats.Heal(PlayerHeal);
+                _players.Clear();
+                PlayerAvatar.InRadius(ctx.Origin, Radius, _players);
+                var casterStats = ctx.Caster != null ? ctx.Caster.GetComponent<PlayerStats>() : null;
+                bool casterHealed = false;
+                foreach (var p in _players)
+                {
+                    if (p == null || p.Stats == null) continue;
+                    p.Stats.Heal(PlayerHeal);
+                    if (p.Stats == casterStats) casterHealed = true;
+                }
+                if (casterStats != null && !casterHealed) casterStats.Heal(PlayerHeal);
             }
 
             // Buddies

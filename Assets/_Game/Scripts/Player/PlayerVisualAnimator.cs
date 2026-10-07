@@ -26,6 +26,11 @@ namespace ElementalBuddies
         private float _ungroundedTime;
         private float _airLockUntil;
 
+        // Fremde Figuren (Mehrspieler): Tempo/Bodenkontakt aus der Positionsänderung (NetworkTransform) statt CharacterController
+        private Vector3 _lastPos;
+        private Vector3 _remoteVelocity;
+        private bool _hasLastPos;
+
         // Parameter-Cache pro Animator (Controller können sich unterscheiden)
         private static readonly Dictionary<int, HashSet<int>> _paramCache = new Dictionary<int, HashSet<int>>();
 
@@ -83,25 +88,75 @@ namespace ElementalBuddies
 
         void Update()
         {
+            // Modell versteckt (ausgefallene Figur) → nichts zu animieren
+            if (_abilities != null && _abilities.ActiveVisual != null && !_abilities.ActiveVisual.gameObject.activeInHierarchy) return;
             if (_animator == null || !_animator.isActiveAndEnabled || (_abilities != null && _abilities.ActiveVisual != _visual))
             {
                 ResolveAnimator();
                 if (_animator == null) return;
             }
 
+            bool local = _playerController == null || _playerController.IsLocalControl;
+            Vector3 v;
+            bool isGrounded;
+            if (local && _controller.enabled)
+            {
+                v = _controller.velocity;
+                isGrounded = _controller.isGrounded;
+                _hasLastPos = false;
+            }
+            else
+            {
+                v = RemoteVelocity();
+                isGrounded = RemoteGrounded(v);
+            }
+
             // Horizontal speed only
-            Vector3 v = _controller.velocity;
             v.y = 0f;
             _animator.SetFloat(SpeedParam, v.magnitude, speedDampTime, Time.deltaTime);
 
             // Grounded debounce
-            if (_controller.isGrounded) _ungroundedTime = 0f;
+            if (isGrounded) _ungroundedTime = 0f;
             else _ungroundedTime += Time.deltaTime;
 
             bool grounded = Time.time >= _airLockUntil && _ungroundedTime < groundedGrace;
             _animator.SetBool(GroundedParam, grounded);
 
             if (_abilities != null && _abilities.ActiveKit != null) _abilities.ActiveKit.UpdateAnimator(_animator, _visual);
+        }
+
+        // Geschwindigkeit aus der Positionsänderung (geglättet; Teleports/Blinks werden ignoriert)
+        private Vector3 RemoteVelocity()
+        {
+            Vector3 pos = transform.position;
+            float dt = Time.deltaTime;
+            if (!_hasLastPos || dt <= 0f)
+            {
+                _lastPos = pos;
+                _hasLastPos = true;
+                return _remoteVelocity;
+            }
+            Vector3 raw = (pos - _lastPos) / dt;
+            _lastPos = pos;
+            if (raw.sqrMagnitude > 30f * 30f) raw = Vector3.zero; // Teleport
+            _remoteVelocity = Vector3.Lerp(_remoteVelocity, raw, 1f - Mathf.Exp(-15f * dt));
+            return _remoteVelocity;
+        }
+
+        // Bodenkontakt: kurzer Strahl nach unten (Boden-Layer des PlayerControllers), sonst über die Fallgeschwindigkeit
+        private bool RemoteGrounded(Vector3 velocity)
+        {
+            int mask = _playerController != null ? _playerController.FloorLayer.value : 0;
+            if (mask != 0)
+            {
+                // Vom Fußpunkt aus prüfen: der Drehpunkt der Figur liegt in der Kapselmitte (~1,1 m über dem Boden)
+                float foot = 0f;
+                if (_controller != null)
+                    foot = (_controller.center.y - _controller.height * 0.5f) * transform.lossyScale.y;
+                Vector3 from = transform.position + Vector3.up * (foot + 0.3f);
+                return Physics.Raycast(from, Vector3.down, 0.6f, mask, QueryTriggerInteraction.Ignore);
+            }
+            return Mathf.Abs(velocity.y) < 1f;
         }
 
         private void OnJumped()

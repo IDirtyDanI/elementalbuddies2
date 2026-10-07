@@ -8,6 +8,8 @@ namespace ElementalBuddies
     public class FadeOccluder : MonoBehaviour
     {
         [Range(0f, 1f)] public float FadedAlpha = 0.28f;
+        [Tooltip("Trigger-Collider (z. B. Baumkronen auf Layer Ignore Raycast) zählen als Sichtblocker für den OcclusionFader.")]
+        public bool TriggerVolumes;
 
         private Renderer[] _renderers;
         private Material[][] _opaque;

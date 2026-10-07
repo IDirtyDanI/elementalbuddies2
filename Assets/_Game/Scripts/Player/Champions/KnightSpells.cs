@@ -49,6 +49,8 @@ namespace ElementalBuddies
             var arc = SlashArcFx.Spawn(ArcFxPrefab, ctx.Origin + Vector3.up * 0.9f, ctx.AimDirection, Radius, 360f, ArcColor, true);
             if (arc != null) { arc.SweepTime = 0.22f; arc.FadeTime = 0.3f; arc.TailLength = 0.6f; arc.Width = 1.3f; }
 
+            // Treffer, Brand und Rückstoß entscheidet nur der Server
+            if (Net.IsServer)
             foreach (var enemy in FindEnemies(ctx.Origin, Radius))
             {
                 if (enemy == null) continue;
@@ -103,6 +105,7 @@ namespace ElementalBuddies
         public override void Cast(SpellCastContext ctx)
         {
             SpawnEffect(ctx.Origin, Quaternion.LookRotation(ctx.AimDirection), Range);
+            if (Net.IsServer) // Treffer/Einfrieren nur auf dem Server
             foreach (var enemy in CombatUtil.FindEnemiesInCone(ctx.Origin, ctx.AimDirection, Range, ConeAngle))
             {
                 if (enemy == null) continue;
@@ -164,7 +167,9 @@ namespace ElementalBuddies
                 to.y = 0f;
                 dist = Mathf.Min(LeapDistance, to.magnitude);
             }
-            if (kit != null) kit.Leap(ctx.AimDirection * dist, LeapDuration, LeapHeight, () => Slam(ctx));
+            // Abbild (fremder Rechner): Figur-Position hinkt per NetworkTransform nach → Landepunkt vorhersagen
+            Vector3 landing = ctx.Origin + ctx.AimDirection * dist;
+            if (kit != null) kit.Leap(ctx.AimDirection * dist, LeapDuration, LeapHeight, () => { if (ctx.IsRemote) SlamAt(ctx, landing); else Slam(ctx); });
             else Slam(ctx);
         }
 
@@ -172,9 +177,15 @@ namespace ElementalBuddies
         public void Slam(SpellCastContext ctx)
         {
             Vector3 center = ctx.Caster != null ? ctx.Caster.transform.position : ctx.Origin;
+            SlamAt(ctx, center);
+        }
+
+        private void SlamAt(SpellCastContext ctx, Vector3 center)
+        {
             if (ctx.Caster != null) center.y = ctx.Caster.GetGroundHeight(center, center.y);
             SpawnEffect(center, Quaternion.LookRotation(ctx.AimDirection), Radius);
 
+            if (Net.IsServer) // Betäubung, Rückstoß, Schaden nur auf dem Server
             foreach (var enemy in FindEnemies(center, Radius))
             {
                 if (enemy == null) continue;
@@ -231,13 +242,14 @@ namespace ElementalBuddies
             SpawnEffect(ctx.Origin, Quaternion.identity, Radius);
             Transform caster = ctx.Caster != null ? ctx.Caster.transform : null;
 
-            if (caster != null && PlayerHeal > 0f)
+            // Heilung und Spott entscheidet der Server; Schwur-Aura/Schadensreduktion laufen überall (Reduktion wirkt auf dem Server)
+            if (Net.IsServer && caster != null && PlayerHeal > 0f)
             {
                 var stats = caster.GetComponent<PlayerStats>();
                 if (stats != null) stats.Heal(PlayerHeal);
             }
 
-            if (BuddyHeal > 0f)
+            if (Net.IsServer && BuddyHeal > 0f)
             {
                 var buddies = ElementalBuddy.Active;
                 for (int i = buddies.Count - 1; i >= 0; i--)
@@ -248,7 +260,7 @@ namespace ElementalBuddies
                 }
             }
 
-            if (caster != null && TauntDuration > 0f)
+            if (Net.IsServer && caster != null && TauntDuration > 0f)
             {
                 foreach (var enemy in FindEnemies(ctx.Origin, Radius))
                     if (enemy != null) enemy.Taunt(caster, TauntDuration);

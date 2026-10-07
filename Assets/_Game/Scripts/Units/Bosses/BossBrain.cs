@@ -9,6 +9,8 @@ namespace ElementalBuddies
     // wählt die erste bereite mit erfüllter Bedingung, sperrt den EnemyBrain (LockForCast), zeigt eine Warnfläche
     // (AoeTelegraph, Farbe = Config.ThemeColor) und löst nach der Ausholzeit den Effekt aus.
     // Betäubung / Einfrieren / Tod während des Ausholens bricht ab (kürzere Abklingzeit).
+    // Mehrspieler: läuft nur auf dem Server. Clients bekommen Warnflächen (AoeTelegraph → NetGame), Animator-Trigger und
+    // die Optik der Wirkung (EnemyNet.BossFxRpc → PlayRemoteFx) gespiegelt.
     [RequireComponent(typeof(EnemyBrain))]
     public class BossBrain : MonoBehaviour
     {
@@ -31,7 +33,9 @@ namespace ElementalBuddies
         public BossAbility CurrentAbility { get; private set; }
 
         private EnemyBrain _brain;
+        private EnemyNet _net;
         private NavMeshAgent _agent;
+        private readonly List<PlayerStats> _players = new List<PlayerStats>();
         private Animator _animator;
         private readonly HashSet<string> _triggers = new HashSet<string>();
         private float _nextCheck, _nextCastTime;
@@ -50,12 +54,14 @@ namespace ElementalBuddies
         void Start()
         {
             _brain = GetComponent<EnemyBrain>();
+            _net = GetComponent<EnemyNet>();
             _agent = GetComponent<NavMeshAgent>();
             _animator = GetComponentInChildren<Animator>();
             if (_animator != null)
                 foreach (var p in _animator.parameters)
                     if (p.type == AnimatorControllerParameterType.Trigger) _triggers.Add(p.name);
 
+            if (!Net.IsServer) return; // Clients: keine Boss-KI
             float now = Time.time;
             foreach (var a in Abilities)
                 if (a != null) a.ReadyTime = now + a.Cooldown * Random.Range(InitialCooldownFactor.x, InitialCooldownFactor.y);
@@ -71,6 +77,7 @@ namespace ElementalBuddies
 
         void Update()
         {
+            if (!Net.IsServer) return;
             if (_brain == null || _brain.IsDead || _casting != null) return;
             if (Time.time < _nextCheck || Time.time < _nextCastTime) return;
             _nextCheck = Time.time + CheckInterval;
@@ -132,12 +139,15 @@ namespace ElementalBuddies
 
             float best = float.MaxValue;
             bool found = false;
-            var player = BossCombat.Player;
-            if (player != null && player.isActiveAndEnabled && player.CurrentHP > 0f)
+            // Alle lebenden Spielfiguren
+            BossCombat.CollectPlayers(_players);
+            foreach (var player in _players)
             {
+                if (!BossCombat.IsAlive(player)) continue;
                 float d = CombatUtil.HorizontalDistance(me, player.transform.position);
-                if (d <= range) { best = d; pos = player.transform.position; found = true; }
+                if (d <= range && d < best) { best = d; pos = player.transform.position; found = true; }
             }
+            _players.Clear();
             var buddies = ElementalBuddy.Active;
             for (int i = 0; i < buddies.Count; i++)
             {
@@ -152,7 +162,8 @@ namespace ElementalBuddies
 
         private static bool IsUnit(Transform t)
         {
-            if (t.GetComponent<PlayerStats>() != null) return true;
+            var ps = t.GetComponent<PlayerStats>();
+            if (ps != null) return BossCombat.IsAlive(ps);
             var b = t.GetComponent<ElementalBuddy>();
             return b != null && !b.IsDead;
         }
@@ -188,6 +199,7 @@ namespace ElementalBuddies
             _telegraph = AoeTelegraph.Spawn(shape, ThemeColor, windup + leap);
             if (!string.IsNullOrEmpty(a.AnimatorTrigger) && _triggers.Contains(a.AnimatorTrigger) && _animator.isActiveAndEnabled)
                 _animator.SetTrigger(a.AnimatorTrigger);
+            if (!string.IsNullOrEmpty(a.AnimatorTrigger) && _net != null) _net.ServerAnimTrigger(Animator.StringToHash(a.AnimatorTrigger));
 
             // Ausholen (Blickrichtung bleibt fest)
             float t = 0f;
@@ -300,7 +312,14 @@ namespace ElementalBuddies
             Vector3 me = transform.position;
             var telegraph = _telegraph;
             _telegraph = null;
+            if (a.Kind == BossAbilityKind.Slam) shape.Origin = me; // tatsächlicher Landepunkt
 
+            // Optik lokal und auf den Clients
+            var fx = new BossFxData { Shape = shape, Me = me, Dir = dir, Theme = ThemeColor, ScaleY = transform.lossyScale.y };
+            PlayFx(a, fx, false);
+            if (_net != null) _net.ServerBossFx(Abilities.IndexOf(a), fx);
+
+            // Wirkung (nur Server)
             switch (a.Kind)
             {
                 case BossAbilityKind.Rain:
@@ -308,40 +327,59 @@ namespace ElementalBuddies
                     // Pulse laufen im eigenen Objekt; Warnfläche bleibt bis zum letzten Puls
                     var go = new GameObject("BossRain");
                     go.AddComponent<BossRainArea>().Setup(shape, a, telegraph, DamageMultiplier);
-                    BossCombat.SpawnEffect(a, a.ImpactEffectPrefab, shape.Origin, Quaternion.identity);
                     return;
                 }
                 case BossAbilityKind.AllyHeal:
                     HealAllies(a);
                     break;
-                case BossAbilityKind.Slam:
-                    shape.Origin = me; // tatsächlicher Landepunkt
+                default:
                     BossCombat.Apply(shape, a, me, a.Damage * DamageMultiplier);
                     break;
+            }
+            if (telegraph != null) telegraph.Finish();
+        }
+
+        // Optik einer ausgelösten Fähigkeit (Strahl, Bogen, Einschlag, Ton). remote = Client-Kopie: Pfeilhagel als reine Optik.
+        private void PlayFx(BossAbility a, BossFxData fx, bool remote)
+        {
+            AoeShape shape = fx.Shape;
+            Vector3 me = fx.Me;
+            switch (a.Kind)
+            {
+                case BossAbilityKind.Rain:
+                    if (remote)
+                    {
+                        var go = new GameObject("BossRain (Optik)");
+                        go.AddComponent<BossRainArea>().SetupVisual(shape, a);
+                    }
+                    BossCombat.SpawnEffect(a, a.ImpactEffectPrefab, shape.Origin, Quaternion.identity);
+                    return;
                 case BossAbilityKind.Beam:
                 {
                     Vector3 from = me + Vector3.up * BeamHeight;
                     var beam = BeamFx.Spawn(a.BeamPrefab, from, from + shape.Forward * shape.Length);
-                    if (beam != null) beam.Color = ThemeColor;
-                    BossCombat.Apply(shape, a, me, a.Damage * DamageMultiplier);
+                    if (beam != null) beam.Color = fx.Theme;
                     break;
                 }
                 case BossAbilityKind.Whirl:
                 {
-                    var arc = SlashArcFx.Spawn(a.ArcFxPrefab, new Vector3(me.x, AoeTelegraph.GroundY(me), me.z) + Vector3.up * (0.6f * transform.lossyScale.y), dir, a.Radius, 360f, ThemeColor, true);
+                    var arc = SlashArcFx.Spawn(a.ArcFxPrefab, new Vector3(me.x, AoeTelegraph.GroundY(me), me.z) + Vector3.up * (0.6f * fx.ScaleY), fx.Dir, a.Radius, 360f, fx.Theme, true);
                     if (arc != null) { arc.SweepTime = 0.22f; arc.FadeTime = 0.3f; arc.TailLength = 0.6f; arc.Width = 1.3f; }
-                    BossCombat.Apply(shape, a, me, a.Damage * DamageMultiplier);
                     break;
                 }
-                default:
-                    BossCombat.Apply(shape, a, me, a.Damage * DamageMultiplier);
-                    break;
             }
 
             Quaternion rot = Quaternion.LookRotation(shape.Forward);
             BossCombat.SpawnEffect(a, a.ImpactEffectPrefab, a.Kind == BossAbilityKind.Slam ? me : shape.Origin, rot);
             if (a.PlaySfx) GameAudio.Play(a.ImpactSfx, shape.Origin);
-            if (telegraph != null) telegraph.Finish();
+        }
+
+        // Client: Optik einer vom Server ausgelösten Fähigkeit (EnemyNet)
+        public void PlayRemoteFx(int abilityIndex, BossFxData fx)
+        {
+            if (Net.IsServer || Abilities == null || abilityIndex < 0 || abilityIndex >= Abilities.Count) return;
+            var a = Abilities[abilityIndex];
+            if (a != null) PlayFx(a, fx, true);
         }
 
         private void HealAllies(BossAbility a)

@@ -63,7 +63,7 @@ namespace ElementalBuddies
                 _burningSources.Add(e);
                 _burningPositions.Add(e.transform.position);
             }
-            for (int i = 0; i < _burningPositions.Count; i++)
+            for (int i = 0; Net.IsServer && i < _burningPositions.Count; i++)
             {
                 foreach (var other in FindEnemies(_burningPositions[i], SpreadRadius))
                 {
@@ -84,6 +84,7 @@ namespace ElementalBuddies
                     nearestDist = d;
                     nearest = e;
                 }
+                if (!Net.IsServer) continue; // Rückstoß/Schaden nur auf dem Server
                 e.Knockback(e.PathBackDirection, KnockbackDistance, KnockbackDuration);
                 e.TakeDamage(DamageAgainst(e, damage));
             }

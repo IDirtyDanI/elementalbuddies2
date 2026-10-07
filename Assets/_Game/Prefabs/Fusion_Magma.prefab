@@ -22071,6 +22071,8 @@ GameObject:
   - component: {fileID: 3990470628013014590}
   - component: {fileID: 1851898428937861817}
   - component: {fileID: 62694825421015863}
+  - component: {fileID: 7343382118703450290}
+  - component: {fileID: 2986478286259241701}
   m_Layer: 7
   m_Name: Fusion_Magma
   m_TagString: Buddy
@@ -22134,7 +22136,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.MagmaBuddy
   Config: {fileID: 11400000, guid: 0b8b151252957483285e5dd25c84fa2f, type: 2}
   PaidCost: 0
-  MaxHP: 120
+  BaseMaxHP: 120
   Element: 4
   FirePoint: {fileID: 3032541267018515215}
   ParentElementA: -1
@@ -22155,6 +22157,46 @@ MonoBehaviour:
   ImpactVfxPrefab: {fileID: 6483337357637775784, guid: 20bf6063fc46b40c3a30db884c60bc7a, type: 3}
   BurnVfxPrefab: {fileID: 4481895208120942333, guid: 9b2f858c065484439a8507ccf83cb5c5, type: 3}
   RuntimeBallSize: 0.45
+--- !u!114 &7343382118703450290
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8981606202083858833}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &2986478286259241701
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8981606202083858833}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1efa17a3944748aea50d8086dc0f169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddyNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &9030431333499716502
 GameObject:
   m_ObjectHideFlags: 0

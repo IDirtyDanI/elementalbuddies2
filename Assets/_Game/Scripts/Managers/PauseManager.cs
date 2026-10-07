@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace ElementalBuddies
 {
-    // Pause per ESC (Zeit + Audio anhalten). Liegt auf dem Managers-Objekt; UI hängt an OnPauseChanged.
+    // Pause per ESC (Solo: Zeit + Audio anhalten; Koop: nur lokales Overlay). Liegt auf dem Managers-Objekt; UI hängt an OnPauseChanged.
     public class PauseManager : MonoBehaviour
     {
         public static PauseManager Instance { get; private set; }
@@ -12,6 +12,7 @@ namespace ElementalBuddies
         public event System.Action<bool> OnPauseChanged;
 
         private float _prevTimeScale = 1f;
+        private bool _frozeTime; // Pause hat Time.timeScale angehalten (nur Solo)
 
         void Awake()
         {
@@ -48,13 +49,19 @@ namespace ElementalBuddies
             else Pause();
         }
 
+        // Solo: Zeit + Audio anhalten. Koop (!Net.CanPauseTime): nur lokales Overlay – das Spiel läuft weiter,
+        // die eigene Eingabe ist über IsPaused gesperrt.
         public void Pause()
         {
             if (IsPaused) return;
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
-            _prevTimeScale = Time.timeScale;
-            Time.timeScale = 0f;
-            AudioListener.pause = true;
+            _frozeTime = Net.CanPauseTime;
+            if (_frozeTime)
+            {
+                _prevTimeScale = Time.timeScale;
+                Time.timeScale = 0f;
+                AudioListener.pause = true;
+            }
             IsPaused = true;
             OnPauseChanged?.Invoke(true);
         }
@@ -62,18 +69,38 @@ namespace ElementalBuddies
         public void Resume()
         {
             if (!IsPaused) return;
-            // War vorher 0 (Upgrade-Screen offen), bleibt es 0
-            Time.timeScale = _prevTimeScale;
-            AudioListener.pause = false;
+            if (_frozeTime)
+            {
+                // War vorher 0 (Upgrade-Screen offen), bleibt es 0
+                Time.timeScale = _prevTimeScale;
+                AudioListener.pause = false;
+            }
+            _frozeTime = false;
             IsPaused = false;
             OnPauseChanged?.Invoke(false);
         }
 
+        // Neustart darf nur der Host (lädt die Spielszene für alle neu)
+        public static bool CanRestart => Net.IsServer;
+
         public void RestartGame()
         {
+            if (!CanRestart) return;
             IsPaused = false;
             AudioListener.pause = false;
+            _frozeTime = false;
             if (GameManager.Instance != null) GameManager.Instance.Restart();
+        }
+
+        // Verbindung beenden und zurück ins Hauptmenü (Host schließt damit den Raum für alle)
+        public void LeaveToMenu()
+        {
+            if (_frozeTime || Net.CanPauseTime) Time.timeScale = 1f;
+            AudioListener.pause = false;
+            IsPaused = false;
+            _frozeTime = false;
+            if (Net.IsRunning) NetSession.Instance.LeaveToMenu();
+            else UnityEngine.SceneManagement.SceneManager.LoadScene(GameSession.MenuScene);
         }
 
         public void QuitGame()

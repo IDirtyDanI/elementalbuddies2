@@ -21179,6 +21179,8 @@ GameObject:
   - component: {fileID: 5573579277954177870}
   - component: {fileID: 5952970076497610621}
   - component: {fileID: 1716907671839646321}
+  - component: {fileID: 5191038932223646544}
+  - component: {fileID: 5946951127181353285}
   m_Layer: 7
   m_Name: Fusion_Wasser
   m_TagString: Buddy
@@ -21242,7 +21244,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.WaterBuddy
   Config: {fileID: 11400000, guid: 4ab5b29718cd34a0bad6fa655a9494d4, type: 2}
   PaidCost: 0
-  MaxHP: 120
+  BaseMaxHP: 120
   Element: 1
   FirePoint: {fileID: 5502966187246033188}
   ParentElementA: -1
@@ -21261,6 +21263,46 @@ MonoBehaviour:
   JetColor: {r: 0.3, g: 0.65, b: 1, a: 1}
   JetVisualWidth: 0.22
   JetLifetime: 0.18
+--- !u!114 &5191038932223646544
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5693696920194519899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &5946951127181353285
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5693696920194519899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1efa17a3944748aea50d8086dc0f169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddyNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &5733873201571301943
 GameObject:
   m_ObjectHideFlags: 0

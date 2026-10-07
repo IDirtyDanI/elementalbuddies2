@@ -65,21 +65,22 @@ namespace ElementalBuddies
             Vector3 travel = _target != null ? _target.position - transform.position : transform.forward;
             Vector3 hitPos = other.transform.position;
 
-            if (_burnDps > 0f) BurnEffect.Apply(other.gameObject, _burnDps, _burnDuration, _burnVfx);
-            if (_freezeDuration > 0f && enemy != null)
+            // Wirkung nur auf dem Server; Clients zeigen nur Flug, Treffer und Durchschlag
+            if (Net.IsServer)
             {
-                enemy.Freeze(_freezeDuration, _freezeVfx);
-                _freezeDuration = 0f;
-            }
+                if (_burnDps > 0f) BurnEffect.Apply(other.gameObject, _burnDps, _burnDuration, _burnVfx);
+                if (_freezeDuration > 0f && enemy != null) enemy.Freeze(_freezeDuration, _freezeVfx);
 
-            var dmg = other.GetComponent<IDamageable>();
-            if (dmg != null) dmg.TakeDamage(_damage);
+                var dmg = other.GetComponent<IDamageable>();
+                if (dmg != null) dmg.TakeDamage(_damage);
 
-            if (_type == UnitType.Ice)
-            {
-                var slowable = other.GetComponent<ISlowable>();
-                if (slowable != null) slowable.ApplySlow(0.25f, 2.5f);
+                if (_type == UnitType.Ice)
+                {
+                    var slowable = other.GetComponent<ISlowable>();
+                    if (slowable != null) slowable.ApplySlow(0.25f, 2.5f);
+                }
             }
+            if (enemy != null) _freezeDuration = 0f;
 
             if (enemy != null) _hit.Add(enemy);
             if (_pierceLeft > 0)

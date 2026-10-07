@@ -87,6 +87,7 @@ namespace ElementalBuddies
             HitCount++;
             if (HitFxPrefab != null) CombatUtil.SpawnFx(HitFxPrefab, point, Quaternion.LookRotation(-transform.forward), 1.5f);
             if (HitSfx != null) HitSfx.Play(point);
+            if (!Net.IsServer) return; // Clients: nur Optik (Funken, Laut, Pfeil bleibt stecken)
             if (OnHitEnemy != null) OnHitEnemy(enemy);
             if (enemy != null) EnemyBrain.DealPlayerDamage(enemy, Damage); // Quelle Spieler (Telemetrie)
         }

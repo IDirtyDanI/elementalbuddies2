@@ -1,9 +1,11 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace ElementalBuddies
 {
-    // Licht-Buddy: Lichtstrahl gegen Gegner + regelmäßiger Segen, der Player, Buddies und (gedrosselt) den Nexus heilt.
+    // Licht-Buddy: Lichtstrahl gegen Gegner + regelmäßiger Segen, der alle Spielfiguren, Buddies und (gedrosselt) den Nexus
+    // im Wirkbereich heilt. Heilung/Schaden nur auf dem Server; Clients zeigen Strahl und Funkeln.
     public class HealerBuddy : ElementalBuddy
     {
         [Header("Lichtstrahl")]
@@ -26,15 +28,13 @@ namespace ElementalBuddies
         public float Stage4ShieldAmount = 20f;
         public float Stage4ShieldDuration = 4f;
 
-        private PlayerStats _playerStats;
         private float _nextBlessTime;
+        private static readonly List<PlayerAvatar> _avatarBuffer = new List<PlayerAvatar>();
         private LineRenderer _beam;
 
         protected override void Start()
         {
             base.Start();
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null) _playerStats = player.GetComponent<PlayerStats>();
             _nextBlessTime = Time.time + BlessInterval * 0.5f;
             CreateBeam();
         }
@@ -73,7 +73,7 @@ namespace ElementalBuddies
             CurrentTarget = bestTarget;
             var damageable = bestTarget.GetComponent<IDamageable>();
             Vector3 hitPoint = bestTarget.position + Vector3.up * 0.9f;
-            if (damageable != null) damageable.TakeDamage(EffectiveDamage);
+            if (damageable != null && Net.IsServer) damageable.TakeDamage(EffectiveDamage);
 
             StopCoroutine(nameof(ShowBeam));
             StartCoroutine(ShowBeam(hitPoint));
@@ -129,13 +129,17 @@ namespace ElementalBuddies
             float range = EffectiveRange;
             float heal = EffectiveBlessHeal;
             bool healedAny = false;
+            // Überall simulieren, Server entscheidet: Clients heilen nicht, zeigen aber dieselbe Optik (gespiegelte HP)
+            bool server = Net.IsServer;
 
-            // Player
-            if (_playerStats != null && _playerStats.CurrentHP < _playerStats.MaxHP
-                && Vector3.Distance(transform.position, _playerStats.transform.position) <= range)
+            // Alle Spielfiguren im Wirkbereich
+            PlayerAvatar.InRadius(transform.position, range, _avatarBuffer);
+            foreach (var avatar in _avatarBuffer)
             {
-                _playerStats.Heal(heal);
-                Sparkle(_playerStats.transform.position);
+                var stats = avatar != null ? avatar.Stats : null;
+                if (stats == null || stats.CurrentHP >= stats.MaxHP) continue;
+                if (server) stats.Heal(heal);
+                Sparkle(stats.transform.position);
                 healedAny = true;
             }
 
@@ -144,9 +148,9 @@ namespace ElementalBuddies
             {
                 if (buddy == null || buddy.CurrentHP >= buddy.MaxHP) continue;
                 if (Vector3.Distance(transform.position, buddy.transform.position) > range) continue;
-                if (buddy.Heal(heal) > 0f)
+                if (!server || buddy.Heal(heal) > 0f)
                 {
-                    if (HasPerk) buddy.AddShield(Stage4ShieldAmount, Stage4ShieldDuration);
+                    if (server && HasPerk) buddy.AddShield(Stage4ShieldAmount, Stage4ShieldDuration);
                     Sparkle(buddy.transform.position);
                     healedAny = true;
                 }
@@ -157,7 +161,7 @@ namespace ElementalBuddies
             if (nexus != null && nexus.CurrentHP < nexus.MaxHP && nexus.GetDistanceFrom(transform.position) <= range)
             {
                 float capped = Mathf.Min(heal, nexus.MaxHP * NexusHealCapPercent);
-                if (nexus.Heal(capped) > 0f)
+                if (!server || nexus.Heal(capped) > 0f)
                 {
                     Sparkle(nexus.GetClosestPoint(transform.position));
                     healedAny = true;

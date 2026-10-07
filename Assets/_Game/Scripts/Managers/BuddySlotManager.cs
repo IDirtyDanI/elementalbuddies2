@@ -3,7 +3,9 @@ using System;
 
 namespace ElementalBuddies
 {
-    // Begrenzt die Anzahl gleichzeitig platzierter Buddies; Slots wachsen mit abgeschlossenen Wellen
+    // Begrenzt die Anzahl gleichzeitig platzierter Buddies; Slots wachsen mit abgeschlossenen Wellen.
+    // Mehrspieler: Bauplätze sind geteilt. MaxSlots/Unlimited ändert nur der Server (AddSlot, SetUnlimited, Wellenende);
+    // NetGame.Build spiegelt sie auf die Clients. UsedSlots zählt das auf allen Rechnern synchrone Buddy-Register.
     public class BuddySlotManager : MonoBehaviour
     {
         public static BuddySlotManager Instance { get; private set; }
@@ -13,17 +15,19 @@ namespace ElementalBuddies
 
         public int MaxSlots { get; private set; } = 4;
         // Wartende Phönix-Wiedergeburten reservieren ihren Slot
-        public int UsedSlots => ElementalBuddy.ActiveCount + PhoenixRebirth.PendingCount;
+        public int UsedSlots => ElementalBuddy.ActiveCount + (Net.IsServer ? PhoenixRebirth.PendingCount : PhoenixRebirth.RemotePendingCount);
         public bool HasFreeSlot => Unlimited || UsedSlots < MaxSlots;
         public bool Unlimited { get; private set; } // Dev-Modus: kein Buddy-Limit
         public int Cap => settings != null ? settings.MaxBuddySlots : 30;
         // Obergrenze erreicht → keine Slot-Karten mehr im Wellen-Draft
         public bool IsAtCap => MaxSlots >= Cap;
 
+        // Nur Server (Dev-Modus des Hosts)
         public void SetUnlimited(bool value)
         {
-            if (Unlimited == value) return;
+            if (!Net.IsServer || Unlimited == value) return;
             Unlimited = value;
+            PushToNet();
             OnSlotsChanged?.Invoke();
         }
 
@@ -69,6 +73,8 @@ namespace ElementalBuddies
             _waveManager = WaveManager.Instance;
             if (_waveManager != null) _waveManager.OnWaveEnd += HandleWaveEnd;
 
+            if (Net.IsServer) PushToNet();
+            else if (NetGame.Ready) NetGame.Instance.ClientPullSlots();
             NotifyChanged();
         }
 
@@ -80,17 +86,34 @@ namespace ElementalBuddies
 
         private void HandleWaveEnd()
         {
+            if (!Net.IsServer) return; // Wellenende feuert auch auf Clients; Plätze vergibt der Server
             _wavesCompleted++;
             int every = settings != null ? settings.SlotEveryNWaves : 3;
             if (every > 0 && _wavesCompleted % every == 0) AddSlot();
         }
 
+        // Nur Server (Wellen-Draft, Händler, Dev-Tools); auf Clients wirkungslos
         public void AddSlot(int n = 1)
         {
+            if (!Net.IsServer) return;
             int cap = Cap;
             int newMax = Mathf.Clamp(MaxSlots + n, 0, Mathf.Max(cap, MaxSlots));
             if (newMax == MaxSlots) return;
             MaxSlots = newMax;
+            PushToNet();
+            NotifyChanged();
+        }
+
+        private void PushToNet()
+        {
+            if (Net.IsServer && NetGame.Ready) NetGame.Instance.ServerSetSlots(MaxSlots, Unlimited);
+        }
+
+        // Clients: Stand vom Server (NetGame.Build)
+        internal void NetApply(int maxSlots, bool unlimited)
+        {
+            MaxSlots = Mathf.Max(0, maxSlots);
+            Unlimited = unlimited;
             NotifyChanged();
         }
 

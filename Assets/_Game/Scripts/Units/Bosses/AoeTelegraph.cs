@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -7,7 +9,7 @@ namespace ElementalBuddies
 
     // Horizontale Trefferfläche einer Boss-Fähigkeit (gleiche Form für Warnfläche und Treffertest)
     [System.Serializable]
-    public struct AoeShape
+    public struct AoeShape : INetworkSerializable
     {
         public AoeShapeKind Kind;
         public Vector3 Origin;   // Kreis: Mitte, Kegel: Spitze, Linie: Startpunkt
@@ -30,6 +32,18 @@ namespace ElementalBuddies
         {
             v.y = 0f;
             return v.sqrMagnitude > 0.0001f ? v.normalized : Vector3.forward;
+        }
+
+        // Netzwerk: Form an Clients schicken (Warnflächen, Boss-Optik)
+        public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+        {
+            serializer.SerializeValue(ref Kind);
+            serializer.SerializeValue(ref Origin);
+            serializer.SerializeValue(ref Forward);
+            serializer.SerializeValue(ref Radius);
+            serializer.SerializeValue(ref Angle);
+            serializer.SerializeValue(ref Length);
+            serializer.SerializeValue(ref Width);
         }
 
         // Liegt p (horizontal) in der Fläche? pad = Radius des Ziels
@@ -74,6 +88,22 @@ namespace ElementalBuddies
 
         public float Progress => _duration > 0f ? Mathf.Clamp01(_t / _duration) : 1f;
 
+        // Mehrspieler: Der Server vergibt jeder Warnfläche eine Id und spiegelt Spawn/Finish/Cancel an die Clients
+        // (NetGame.Waves). Clients registrieren ihre Kopie unter derselben Id.
+        public int NetId { get; private set; }
+        private static int _nextNetId;
+        private static readonly Dictionary<int, AoeTelegraph> _byNetId = new Dictionary<int, AoeTelegraph>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            _nextNetId = 0;
+            _byNetId.Clear();
+        }
+
+        public static AoeTelegraph FindByNetId(int id) =>
+            id != 0 && _byNetId.TryGetValue(id, out var t) && t != null ? t : null;
+
         private static Material SharedMaterial
         {
             get
@@ -93,6 +123,24 @@ namespace ElementalBuddies
             var go = new GameObject("AoeTelegraph");
             var t = go.AddComponent<AoeTelegraph>();
             t.Init(shape, color, fillDuration);
+            // Server: an die Clients spiegeln
+            if (Net.IsServer && NetGame.HasRemoteClients)
+            {
+                t.NetId = ++_nextNetId;
+                _byNetId[t.NetId] = t;
+                NetGame.Instance.ServerTelegraphSpawn(t.NetId, shape, color, fillDuration);
+            }
+            return t;
+        }
+
+        // Client: Kopie einer Server-Warnfläche
+        public static AoeTelegraph SpawnRemote(int netId, AoeShape shape, Color color, float fillDuration)
+        {
+            var go = new GameObject("AoeTelegraph (Netz)");
+            var t = go.AddComponent<AoeTelegraph>();
+            t.Init(shape, color, fillDuration);
+            t.NetId = netId;
+            if (netId != 0) _byNetId[netId] = t;
             return t;
         }
 
@@ -185,6 +233,7 @@ namespace ElementalBuddies
         public void Finish(float flashTime = 0.3f)
         {
             if (_ending) return;
+            SendEnd(true, flashTime);
             ApplyFill(1f);
             _ending = true;
             _flash = true;
@@ -195,13 +244,21 @@ namespace ElementalBuddies
         public void Cancel()
         {
             if (_ending) return;
+            SendEnd(false, 0.15f);
             _ending = true;
             _flash = false;
             _endDuration = 0.15f;
         }
 
+        private void SendEnd(bool finish, float flashTime)
+        {
+            if (NetId == 0 || !Net.IsServer || !NetGame.HasRemoteClients) return;
+            NetGame.Instance.ServerTelegraphEnd(NetId, finish, flashTime);
+        }
+
         void OnDestroy()
         {
+            if (NetId != 0 && _byNetId.TryGetValue(NetId, out var t) && t == this) _byNetId.Remove(NetId);
             if (_meshes == null) return;
             foreach (var m in _meshes) if (m != null) Destroy(m);
         }

@@ -207,17 +207,19 @@ namespace ElementalBuddies
             {
                 if (e == null || e.IsDead || !_diveHit.Add(e)) continue;
                 LastDiveHits++;
-                BurnEffect.Apply(e.gameObject, DiveBurnDps, DiveBurnDuration, BurnVfxPrefab);
                 SpawnVfx(DiveHitVfxPrefab, e.transform.position + Vector3.up * 0.9f, 1f);
+                if (!Net.IsServer) continue; // Brand/Schaden nur auf dem Server
+                BurnEffect.Apply(e.gameObject, DiveBurnDps, DiveBurnDuration, BurnVfxPrefab);
                 e.TakeDamage(damage);
             }
         }
 
         // ---------------- Wiedergeburt ----------------
 
+        // Nur Server: entscheidet über die Wiedergeburt (Clients bekommen die Wartezeit-Optik per BuddyNet-Fx)
         private void HandleBuddyDestroyed(ElementalBuddy dead)
         {
-            if (dead == null || _rebirthUsed || _lastClaimed == dead) return;
+            if (!Net.IsServer || dead == null || _rebirthUsed || _lastClaimed == dead) return;
             bool self = dead == this;
             if (!self)
             {
@@ -232,7 +234,17 @@ namespace ElementalBuddies
             if (self) snap.MarkPhoenixUsed = true; // eigene Wiedergeburt verbraucht die Welle auch für den neuen Phönix
             _rebirthUsed = true;
             _lastClaimed = dead;
-            PhoenixRebirth.Schedule(snap, self ? SelfRebirthDelay : RebirthDelay, RebirthHealthFraction, RebirthEffectPrefab, RebirthWaitPrefab);
+            float delay = self ? SelfRebirthDelay : RebirthDelay;
+            PhoenixRebirth.Schedule(snap, delay, RebirthHealthFraction, RebirthEffectPrefab, RebirthWaitPrefab);
+            if (IsNetSpawned) NetState.ServerFx(FxRebirthWait, snap.Position, delay);
+        }
+
+        private const int FxRebirthWait = 1;
+
+        // Clients: Wartezeit-Optik (Glut/Ei) ohne Spiellogik
+        public override void OnNetFx(int id, Vector3 position, float value)
+        {
+            if (id == FxRebirthWait) PhoenixRebirth.ScheduleVisual(position, value, RebirthEffectPrefab, RebirthWaitPrefab);
         }
     }
 
@@ -249,6 +261,7 @@ namespace ElementalBuddies
         public FusionElement Element;
         public int ParentA = -1, ParentB = -1, ParentC = -1;
         public bool MarkPhoenixUsed;
+        public ulong Builder; // wer den Buddy ursprünglich gebaut hat (nur Anzeige)
 
         public static BuddySnapshot Capture(ElementalBuddy b)
         {
@@ -261,6 +274,7 @@ namespace ElementalBuddies
                 PaidCost = b.PaidCost,
                 Position = b.transform.position,
                 Rotation = b.transform.rotation,
+                Builder = b.BuilderClientId,
             };
             if (b is FusionBuddy f)
             {
@@ -276,7 +290,8 @@ namespace ElementalBuddies
             return s;
         }
 
-        public ElementalBuddy Spawn()
+        // Nur Server. hpFraction: Startleben (Anteil); der Buddy wird danach im Netz gespawnt (BuddyNet.ServerSpawn)
+        public ElementalBuddy Spawn(float hpFraction = 1f)
         {
             ElementalBuddy buddy;
             GameObject go;
@@ -287,6 +302,12 @@ namespace ElementalBuddies
             }
             else
             {
+                // Laufzeit-Platzhalter existieren nur lokal -> im Netzbetrieb nicht möglich
+                if (Net.IsRunning)
+                {
+                    Debug.LogError($"PhoenixRebirth: {Element} hat kein Prefab – Wiedergeburt im Netzbetrieb nicht möglich.");
+                    return null;
+                }
                 var sb = SuperBuddy.CreateRuntime(Element, Position);
                 go = sb.gameObject;
                 buddy = sb;
@@ -306,8 +327,10 @@ namespace ElementalBuddies
                 if (f is SuperBuddy sb2) sb2.ParentElementC = ParentC;
             }
             if (MarkPhoenixUsed && buddy is PhoenixBuddy p) p.MarkRebirthUsed();
+            buddy.SetStartHealthFraction(hpFraction);
             if (!go.activeSelf) go.SetActive(true);
             buddy.RestoreLevel(Level);
+            BuddyNet.ServerSpawn(buddy, Builder, reborn: true);
             return buddy;
         }
     }
@@ -356,7 +379,43 @@ namespace ElementalBuddies
 
         void OnDestroy() => Release();
 
+        // ---------------- Mehrspieler ----------------
+
+        // Wartende Wiedergeburten laut Server (Clients: über NetGame.Build gespiegelt, für die Slot-Anzeige)
+        public static int RemotePendingCount;
+        private static GameObject _lastRemoteEffect;
+
+        // Clients: nur die Wartezeit-Optik (Glut/Ei), ohne Snapshot und ohne Slot-Reservierung; verschwindet nach delay
+        public static void ScheduleVisual(Vector3 position, float delay, GameObject effectPrefab, GameObject waitPrefab)
+        {
+            var snap = new BuddySnapshot { Position = position };
+            var r = Create(snap, delay, 1f, effectPrefab, waitPrefab);
+            r._visualOnly = true;
+            _lastRemoteEffect = effectPrefab;
+        }
+
+        // Clients: ein wiedergeborener Buddy ist erschienen (BuddyNet, Flag "Reborn") -> Effekt, Ton, Hinweis, Ereignis
+        public static void NotifyRebornRemote(ElementalBuddy buddy)
+        {
+            if (buddy == null) return;
+            Vector3 pos = buddy.transform.position;
+            if (_lastRemoteEffect != null) Destroy(Instantiate(_lastRemoteEffect, pos, Quaternion.identity), 3f);
+            GameAudio.Play(SfxId.Fusion, pos);
+            ToastUI.Show($"{buddy.StageName} ist wiedergeboren!");
+            OnReborn?.Invoke(buddy);
+        }
+
+        private bool _visualOnly;
+
+        // Nur Server: Wiedergeburt einplanen (Slot bleibt bis zum Wiedererscheinen reserviert)
         public static PhoenixRebirth Schedule(BuddySnapshot snap, float delay, float hpFraction, GameObject effectPrefab, GameObject waitPrefab)
+        {
+            var r = Create(snap, delay, hpFraction, effectPrefab, waitPrefab);
+            r.Reserve();
+            return r;
+        }
+
+        private static PhoenixRebirth Create(BuddySnapshot snap, float delay, float hpFraction, GameObject effectPrefab, GameObject waitPrefab)
         {
             GameObject go;
             if (waitPrefab != null) go = Instantiate(waitPrefab, snap.Position, Quaternion.identity);
@@ -374,7 +433,6 @@ namespace ElementalBuddies
             r._hpFraction = hpFraction;
             r._effect = effectPrefab;
             r._pulse = pulse;
-            r.Reserve();
             return r;
         }
 
@@ -384,12 +442,11 @@ namespace ElementalBuddies
             if (_pulse) transform.localScale = Vector3.one * (0.4f + 0.15f * Mathf.Sin(_t * 8f)); // Laufzeit-Glut pulsiert
             if (_t < _delay) return;
             Release();
-            if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.GameOver)
+            if (!_visualOnly && Net.IsServer && (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.GameOver))
             {
-                var buddy = _snap.Spawn();
+                var buddy = _snap.Spawn(_hpFraction);
                 if (buddy != null)
                 {
-                    buddy.SetStartHealthFraction(_hpFraction);
                     if (_effect != null) Destroy(Instantiate(_effect, _snap.Position, Quaternion.identity), 3f);
                     GameAudio.Play(SfxId.Fusion, _snap.Position);
                     ToastUI.Show($"{buddy.StageName} ist wiedergeboren!");

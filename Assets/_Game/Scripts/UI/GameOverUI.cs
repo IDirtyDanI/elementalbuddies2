@@ -35,8 +35,11 @@ namespace ElementalBuddies
                 RestartButton.onClick.RemoveAllListeners();
                 RestartButton.onClick.AddListener(() =>
                 {
-                    if (GameManager.Instance != null) GameManager.Instance.Restart();
+                    // Neustart nur beim Host (lädt die Spielszene für alle neu)
+                    if (Net.IsServer && GameManager.Instance != null) GameManager.Instance.Restart();
                 });
+                _restartLabel = RestartButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (_restartLabel != null) _restartText = _restartLabel.text;
             }
 
             SetupMainMenuButton();
@@ -64,9 +67,10 @@ namespace ElementalBuddies
                 MainMenuButton.onClick.RemoveAllListeners();
                 MainMenuButton.onClick.AddListener(() =>
                 {
-                    Time.timeScale = 1f;
+                    if (Net.CanPauseTime) Time.timeScale = 1f;
                     AudioListener.pause = false;
-                    SceneManager.LoadScene(GameSession.MenuScene);
+                    if (Net.IsRunning) NetSession.Instance.LeaveToMenu();
+                    else SceneManager.LoadScene(GameSession.MenuScene);
                 });
             }
         }
@@ -79,9 +83,24 @@ namespace ElementalBuddies
             }
         }
 
+        private TextMeshProUGUI _restartLabel;
+        private string _restartText;
+
         private void ShowGameOver(string reason)
         {
             if (Panel != null) Panel.SetActive(true);
+
+            // Clients: Neustart entscheidet der Host
+            if (RestartButton != null)
+            {
+                bool host = Net.IsServer;
+                RestartButton.interactable = host;
+                if (_restartLabel != null)
+                {
+                    _restartLabel.text = host ? _restartText : "Warte auf Host …";
+                    _restartLabel.enableAutoSizing = !host || _restartLabel.enableAutoSizing;
+                }
+            }
 
             int wave = GameManager.Instance != null ? GameManager.Instance.LastWaveReached : 0;
             int best = GameManager.Instance != null ? GameManager.Instance.BestWave : 0;

@@ -27,6 +27,10 @@ namespace ElementalBuddies
         }
     }
 
+    // Mehrspieler: Wellen-Logik (Spawns, Zählung, Wellenende, Bonus) läuft nur auf dem Server. Clients spiegeln
+    // CurrentWaveIndex/IsWaveActive/EnemiesRemaining über NetGame.Waves und feuern OnWaveStart/OnWaveEnd/OnPortalOpened lokal.
+    // Wellenstart per Bereit-Abstimmung: RequestStartWave() auf jedem Rechner; der Server startet, wenn alle bereit sind
+    // und kein WaveGate blockiert (Einzelspieler: sofort).
     public class WaveManager : MonoBehaviour
     {
         public static WaveManager Instance { get; private set; }
@@ -69,6 +73,17 @@ namespace ElementalBuddies
         [Tooltip("Gegnerschaden × (1 + DamageGrowthPerWave·(w−1)) – Nahkampf, Fernkampf, Kontakt und Boss-Fähigkeiten.")]
         public float DamageGrowthPerWave = 0.04f;
 
+        [Header("Mehrspieler – Skalierung nach Spielerzahl n")]
+        [Tooltip("Gegner-Anzahl × (1 + CountPerExtraPlayer·(n−1)). Geht über CountMultiplier auch in die Kopfgeld-Division ein (Teamkasse wächst nicht mit n).")]
+        public float CountPerExtraPlayer = 0.5f;
+        [Tooltip("HP der Normalgegner × (1 + HpPerExtraPlayer·(n−1)).")]
+        public float HpPerExtraPlayer = 0.25f;
+        [Tooltip("Boss-HP × (1 + BossHpPerExtraPlayer·(n−1)).")]
+        public float BossHpPerExtraPlayer = 0.6f;
+
+        // Spielerzahl-Faktor: 1 + perPlayer·(n−1)
+        private static float PlayerFactor(float perPlayer) => 1f + Mathf.Max(0f, perPlayer) * Mathf.Max(0, Net.PlayerCount - 1);
+
         public int CurrentWaveIndex { get; private set; } = 0;
         public bool IsWaveActive { get; private set; } = false;
         public int EnemiesRemaining { get; private set; }
@@ -97,7 +112,7 @@ namespace ElementalBuddies
         public float CountMultiplier(int wave)
         {
             float m = Mathf.Pow(1f + CountGrowth * Mathf.Max(0, wave - 1), CountExponent);
-            return m * (Difficulty != null ? Difficulty.CountMultiplier : 1f);
+            return m * (Difficulty != null ? Difficulty.CountMultiplier : 1f) * PlayerFactor(CountPerExtraPlayer);
         }
 
         // HP-Multiplikator der Normalgegner inkl. Schwierigkeit
@@ -105,7 +120,7 @@ namespace ElementalBuddies
         {
             int n = Mathf.Max(0, wave - 1);
             float m = (1f + HpLinearPerWave * n) * Mathf.Pow(HpGrowthPerWave, n);
-            return m * (Difficulty != null ? Difficulty.HpMultiplier : 1f);
+            return m * (Difficulty != null ? Difficulty.HpMultiplier : 1f) * PlayerFactor(HpPerExtraPlayer);
         }
 
         // HP-Multiplikator der Bosse: w · min(1, w/BossRampWave)² inkl. Schwierigkeit
@@ -113,7 +128,7 @@ namespace ElementalBuddies
         {
             float w = Mathf.Max(1, wave);
             float ramp = BossRampWave > 0f ? Mathf.Min(1f, w / BossRampWave) : 1f;
-            return w * ramp * ramp * (Difficulty != null ? Difficulty.BossHpMultiplier : 1f);
+            return w * ramp * ramp * (Difficulty != null ? Difficulty.BossHpMultiplier : 1f) * PlayerFactor(BossHpPerExtraPlayer);
         }
 
         // HP-Multiplikator für einen Gegnertyp (Boss-Zweig über Config.IsBoss)
@@ -174,6 +189,9 @@ namespace ElementalBuddies
             EnemyBrain.OnEnemyDeath += HandleEnemyDeath;
             EnemyBrain.OnBossSpawned += HandleBossSpawned;
             if (GameManager.Instance != null) GameManager.Instance.OnGameOver += HandleGameOver;
+            NetGame.OnReadyChanged += RaiseReadyChanged;
+            NetPlayer.OnPlayerJoined += HandlePlayerListChanged;
+            NetPlayer.OnPlayerLeft += HandlePlayerListChanged;
 
             // Portale für die erste Welle schon beim Spielstart sichtbar öffnen (ohne Meldung)
             UpdatePortals(false);
@@ -184,6 +202,10 @@ namespace ElementalBuddies
             EnemyBrain.OnEnemyDeath -= HandleEnemyDeath;
             EnemyBrain.OnBossSpawned -= HandleBossSpawned;
             if (GameManager.Instance != null) GameManager.Instance.OnGameOver -= HandleGameOver;
+            NetGame.OnReadyChanged -= RaiseReadyChanged;
+            NetPlayer.OnPlayerJoined -= HandlePlayerListChanged;
+            NetPlayer.OnPlayerLeft -= HandlePlayerListChanged;
+            if (Instance == this) Instance = null;
         }
 
         // Boss-Ankündigung
@@ -201,14 +223,16 @@ namespace ElementalBuddies
         // Springt (nur zwischen den Wellen) direkt zu einer Welle; Portale werden entsprechend geöffnet
         public void DevSetStartWave(int waveNumber)
         {
-            if (IsWaveActive || waveNumber < 1) return;
+            if (!Net.IsServer || IsWaveActive || waveNumber < 1) return;
             CurrentWaveIndex = waveNumber - 1;
+            SyncNet();
             UpdatePortals(false);
         }
 
         // Tötet alle lebenden Gegner (zählt normal als Kill → Welle endet regulär)
         public void DevKillAllEnemies()
         {
+            if (!Net.IsServer) return;
             foreach (var e in FindObjectsByType<EnemyBrain>(FindObjectsSortMode.None))
                 if (e != null) e.TakeDamage(999999f);
         }
@@ -219,9 +243,63 @@ namespace ElementalBuddies
             StopAllCoroutines();
         }
 
+        // ---------------- Wellenstart: Bereit-Abstimmung ----------------
+
+        // Anzahl Bereit-Stimmen (verbundene Spieler) / benötigte Stimmen (alle verbundenen Spieler, lebend oder tot)
+        public int ReadyCount => NetGame.Ready ? NetGame.Instance.ReadyVotes : 0;
+        public int ReadyNeeded => Mathf.Max(1, NetPlayer.All.Count);
+        public bool IsLocalReady => NetGame.Ready && NetGame.Instance.IsClientReady(Net.LocalClientId);
+        // Warum die nächste Welle (trotz Stimmen) noch wartet, z. B. "Warte auf Kartenwahl …"; leer = frei
+        public string WaitReason
+        {
+            get
+            {
+                if (Net.IsServer) return WaveGate.IsBlocked(out string reason) ? reason ?? "" : "";
+                return NetGame.WaitReason;
+            }
+        }
+        // Stimmen oder Spielerliste geändert
+        public event System.Action OnReadyChanged;
+
+        private void RaiseReadyChanged() => OnReadyChanged?.Invoke();
+        private void HandlePlayerListChanged(NetPlayer p) => OnReadyChanged?.Invoke();
+
+        // Auf jedem Rechner aufrufbar (HUD-Button): Einzelspieler startet sofort, im Koop setzt bzw. zieht der lokale
+        // Spieler seine Bereit-Stimme (nochmal drücken = zurückziehen). Der Server startet, wenn alle bereit sind.
+        public void RequestStartWave()
+        {
+            if (IsWaveActive || IsGameOver) return;
+            if (!Net.IsMultiplayer || !NetGame.Ready)
+            {
+                if (!Net.IsServer) return;
+                if (WaveGate.IsBlocked(out string reason))
+                {
+                    if (!string.IsNullOrEmpty(reason)) ToastUI.Show(reason);
+                    return;
+                }
+                StartNextWave();
+                return;
+            }
+            NetGame.Instance.RequestReady(!IsLocalReady);
+        }
+
+        // Server: alle bereit und nichts blockiert → Welle starten
+        private void ServerTickReady()
+        {
+            if (!NetGame.Ready) return;
+            var ng = NetGame.Instance;
+            ng.ServerSetWaitReason(WaitReason);
+            if (IsWaveActive || IsGameOver) return;
+            int needed = ReadyNeeded;
+            if (needed <= 1 || ReadyCount < needed || WaveGate.IsBlocked()) return;
+            StartNextWave();
+        }
+
+        // Server: Welle starten (Solo-Button, Bereit-Abstimmung, Tests). Clients: ohne Wirkung.
         public void StartNextWave()
         {
-            if (IsWaveActive || IsGameOver || PauseManager.IsPaused) return;
+            if (!Net.IsServer) return;
+            if (IsWaveActive || IsGameOver || (Net.CanPauseTime && PauseManager.IsPaused)) return;
 
             WaveConfigSO waveToSpawn;
 
@@ -248,6 +326,7 @@ namespace ElementalBuddies
             waveToSpawn = AddExtraGroups(waveToSpawn, UpcomingWaveNumber);
             waveToSpawn = ScaleWave(waveToSpawn, UpcomingWaveNumber);
 
+            if (NetGame.Ready) NetGame.Instance.ServerClearReady();
             UpdatePortals(true);
             StartCoroutine(SpawnWaveRoutine(waveToSpawn));
         }
@@ -269,6 +348,7 @@ namespace ElementalBuddies
             {
                 p.SetOpen(true);
                 Debug.Log($"WaveManager: Portal '{p.DisplayName}' opened (wave {UpcomingWaveNumber}).");
+                if (NetGame.Ready) NetGame.Instance.ServerPortalOpened(p.transform.position, fireEvents);
                 if (fireEvents) OnPortalOpened?.Invoke(p);
             }
         }
@@ -304,6 +384,7 @@ namespace ElementalBuddies
                     Debug.LogWarning("WaveManager: No open SpawnPortal – opening the first one.");
                     portal = SpawnPortal.All[0];
                     portal.SetOpen(true);
+                    if (NetGame.Ready) NetGame.Instance.ServerPortalOpened(portal.transform.position, true);
                     OnPortalOpened?.Invoke(portal);
                 }
                 pos = portal.GetSpawnPosition();
@@ -507,6 +588,7 @@ namespace ElementalBuddies
             foreach (var group in wave.EnemiesToSpawn) EnemiesRemaining += group.Count;
             Debug.Log($"WaveManager: Expecting {EnemiesRemaining} enemies.");
 
+            if (NetGame.Ready) NetGame.Instance.ServerWaveStarted(CurrentWaveIndex, EnemiesRemaining);
             OnWaveStart?.Invoke();
             wave = ExtendForShrine(wave); // Schrein erwacht erst in OnWaveStart
             if (GameManager.Instance != null) GameManager.Instance.StartCombat();
@@ -544,6 +626,10 @@ namespace ElementalBuddies
 
         void Update()
         {
+            if (!Net.IsServer) return;
+            SyncNet();
+            ServerTickReady();
+
             // Sicherheitsnetz: Sind alle Gruppen gespawnt und lebt kein Gegner mehr, die Zählung aber > 0
             // (z. B. Gegner ohne Tod-Meldung zerstört), endet die Welle trotzdem.
             if (!IsWaveActive || IsGameOver || !_spawnPhaseStarted || _spawnRoutinesRunning > 0) return;
@@ -588,16 +674,21 @@ namespace ElementalBuddies
         }
 
         // Gemeinsamer Spawn-Pfad: HP × hpMultiplier, Schaden × Multiplikator der laufenden (bzw. nächsten) Welle
+        // Mehrspieler: nur auf dem Server; Initialize vor dem Netz-Spawn (HP gehen mit der Spawn-Nachricht raus)
         private EnemyBrain InstantiateEnemy(EnemyConfigSO config, Vector3 pos, Quaternion rot, float hpMultiplier)
         {
+            if (!Net.IsServer) return null;
             GameObject go = Instantiate(config.Prefab, pos, rot);
             var brain = go.GetComponent<EnemyBrain>();
             if (brain != null)
             {
                 brain.Config = config;
                 brain.Initialize(hpMultiplier, DamageMultiplier(UpcomingWaveNumber));
-                OnEnemySpawned?.Invoke(brain);
             }
+            // HP-NetworkVariables setzt EnemyNet.OnNetworkSpawn (vor dem Spawn geschrieben warnt Netcode)
+            var no = go.GetComponent<Unity.Netcode.NetworkObject>();
+            if (no != null && Net.IsRunning) no.Spawn(true);
+            if (brain != null) OnEnemySpawned?.Invoke(brain);
             return brain;
         }
 
@@ -605,9 +696,10 @@ namespace ElementalBuddies
         // Wellengegner (Config + Initialize). countTowardWave: während einer aktiven Welle wird EnemiesRemaining erhöht,
         // d. h. die Welle endet erst, wenn auch diese Gegner tot sind. hpMultiplier < 0 → Kurve der aktuellen Welle
         // (Bosse: Boss-Kurve).
+        // Mehrspieler: nur auf dem Server (Clients: null)
         public EnemyBrain SpawnEnemyAt(EnemyConfigSO config, Vector3 position, float hpMultiplier = -1f, bool countTowardWave = true)
         {
-            if (IsGameOver) return null;
+            if (!Net.IsServer || IsGameOver) return null;
             if (config == null || config.Prefab == null)
             {
                 Debug.LogError("WaveManager.SpawnEnemyAt: Config or Prefab missing!");
@@ -640,7 +732,7 @@ namespace ElementalBuddies
 
         private void HandleEnemyDeath()
         {
-            if (!IsWaveActive || IsGameOver) return;
+            if (!Net.IsServer || !IsWaveActive || IsGameOver) return;
 
             EnemiesRemaining--;
             Debug.Log($"WaveManager: Enemy died. Remaining: {EnemiesRemaining}");
@@ -681,6 +773,11 @@ namespace ElementalBuddies
             }
 
             CurrentWaveIndex++;
+            if (NetGame.Ready)
+            {
+                NetGame.Instance.ServerClearReady();
+                NetGame.Instance.ServerWaveEnded(CurrentWaveIndex);
+            }
             OnWaveEnd?.Invoke();
             
             // Trigger Upgrade Phase
@@ -690,6 +787,62 @@ namespace ElementalBuddies
             }
             
             // No Victory - Infinite War!
+        }
+    
+        // ---------------- Mehrspieler: Spiegel auf Clients ----------------
+
+        // Server: Zustand an NetGame (schreibt nur bei Änderung)
+        private void SyncNet()
+        {
+            if (NetGame.Ready) NetGame.Instance.ServerSyncWaveState(CurrentWaveIndex, IsWaveActive, EnemiesRemaining);
+        }
+
+        // Client: Werte aus NetGame übernehmen (ohne Ereignisse)
+        public void ApplyRemoteWaveState(int waveIndex, bool waveActive, int enemiesRemaining)
+        {
+            if (Net.IsServer) return;
+            CurrentWaveIndex = waveIndex;
+            IsWaveActive = waveActive;
+            EnemiesRemaining = enemiesRemaining;
+        }
+
+        // Client: Server hat eine Welle gestartet
+        public void HandleRemoteWaveStart(int waveIndex, int enemiesRemaining)
+        {
+            if (Net.IsServer) return;
+            CurrentWaveIndex = waveIndex;
+            IsWaveActive = true;
+            EnemiesRemaining = enemiesRemaining;
+            if (GameManager.Instance != null) GameManager.Instance.ApplyRemoteState(GameState.Combat);
+            OnWaveStart?.Invoke();
+        }
+
+        // Client: Server hat die Welle beendet (CurrentWaveIndex bereits erhöht – wie auf dem Server vor OnWaveEnd)
+        public void HandleRemoteWaveEnd(int newWaveIndex)
+        {
+            if (Net.IsServer) return;
+            CurrentWaveIndex = newWaveIndex;
+            IsWaveActive = false;
+            EnemiesRemaining = 0;
+            if (GameManager.Instance != null) GameManager.Instance.ApplyRemoteState(GameState.Building);
+            OnWaveEnd?.Invoke();
+        }
+
+        // Client: Portal geöffnet (Zuordnung über die Position – Registry-Reihenfolge kann abweichen)
+        public void HandleRemotePortalOpened(Vector3 position, bool fireEvents)
+        {
+            if (Net.IsServer) return;
+            SpawnPortal best = null;
+            float bestSqr = float.MaxValue;
+            foreach (var p in SpawnPortal.All)
+            {
+                if (p == null) continue;
+                float d = (p.transform.position - position).sqrMagnitude;
+                if (d < bestSqr) { bestSqr = d; best = p; }
+            }
+            if (best == null) return;
+            best.SetOpen(true);
+            if (fireEvents) OnPortalOpened?.Invoke(best);
         }
     }
 }

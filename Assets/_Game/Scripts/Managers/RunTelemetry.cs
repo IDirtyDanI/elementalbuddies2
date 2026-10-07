@@ -64,6 +64,12 @@ namespace ElementalBuddies
         void Awake()
         {
             Instance = this;
+            // Mehrspieler: nur der Server zeichnet auf (Clients sehen nicht alle Ereignisse)
+            if (!Net.IsServer)
+            {
+                Enabled = false;
+                enabled = false;
+            }
         }
 
         void OnEnable()

@@ -111,6 +111,7 @@ namespace ElementalBuddies
 
         void Update()
         {
+            if (_abilities == null && PlayerAvatar.Local != null) BindAbilities();
             if (_music == null) return;
             float target = MusicVolume * MusicLevel * MasterVolume;
             if (PauseManager.IsPaused) target *= PauseMusicDuck;
@@ -140,13 +141,28 @@ namespace ElementalBuddies
         void OnDisable()
         {
             Shrine.OnAnyShrineCompleted -= OnShrineCompleted;
+            PlayerAvatar.OnLocalAvatarSpawned -= HandleLocalAvatarSpawned;
             if (_abilities != null) _abilities.OnAbilityCast -= OnAbilityCast;
+            _abilities = null;
         }
 
         void Start()
         {
             StartMusic();
-            _abilities = PlayerAbilities.Instance;
+            PlayerAvatar.OnLocalAvatarSpawned += HandleLocalAvatarSpawned;
+            BindAbilities();
+        }
+
+        // Zauber-Sounds der eigenen Figur (spawnt erst über das Netz → verzögert binden)
+        private void HandleLocalAvatarSpawned(PlayerAvatar avatar) => BindAbilities();
+
+        private void BindAbilities()
+        {
+            var av = PlayerAvatar.Local;
+            var a = av != null ? av.Abilities : null;
+            if (a == _abilities) return;
+            if (_abilities != null) _abilities.OnAbilityCast -= OnAbilityCast;
+            _abilities = a;
             if (_abilities != null) _abilities.OnAbilityCast += OnAbilityCast;
         }
 

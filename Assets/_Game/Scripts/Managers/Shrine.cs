@@ -17,6 +17,9 @@ namespace ElementalBuddies
     // Gegner im Kreis → umkämpft (Fortschritt pausiert). Player draußen → Fortschritt verfällt langsam.
     // Erfolg: neuer Element-Zauber (PlayerAbilities.UnlockElementAbility) + passiver Schadensbonus für Buddies des Elements.
     // Endet die Welle vorher → gescheitert, zurück auf Dormant (ShrineManager plant ihn 2 Wellen später neu ein).
+    // Mehrspieler: Nur der Server entscheidet (Einnahme, Angreifer, Aura, Bonus). Im Kreis zählt jede lebende Figur.
+    // Belohnung: der Element-Zauber für ALLE Spielfiguren (auf jedem Rechner, ApplyUnlockForTeam) + Team-Bonus
+    // (ShrineBonuses, Wert wird mit dem Zustand synchronisiert). Zustand/Fortschritt per NetGame an die Clients.
     public class Shrine : MonoBehaviour
     {
         private static readonly List<Shrine> _all = new List<Shrine>();
@@ -95,7 +98,8 @@ namespace ElementalBuddies
         public Vector3 CenterPosition => (Center != null ? Center : transform).position;
         public Transform CenterTransform => Center != null ? Center : transform;
 
-        private Transform _player;
+        private readonly List<PlayerAvatar> _inside = new List<PlayerAvatar>();
+        private float _syncTimer;
         private readonly List<EnemyBrain> _attackers = new List<EnemyBrain>();
         private readonly Collider[] _overlap = new Collider[64];
         private float _reinforceTimer;
@@ -162,7 +166,6 @@ namespace ElementalBuddies
 
         void Start()
         {
-            _player = GameObject.FindGameObjectWithTag("Player")?.transform;
             if (WaveManager.Instance != null) WaveManager.Instance.OnWaveEnd += HandleWaveEnd;
         }
 
@@ -174,11 +177,19 @@ namespace ElementalBuddies
 
         private static bool IsGameOver => GameManager.Instance != null && GameManager.Instance.IsGameOver;
 
-        // ---------------- Zustände ----------------
+        // Schrein eines Elements in der Szene (Netz-Id = ElementIndex)
+        public static Shrine Find(int elementIndex)
+        {
+            foreach (var s in _all)
+                if (s != null && s.ElementIndex == elementIndex) return s;
+            return null;
+        }
+
+        // ---------------- Zustände (Server) ----------------
 
         public bool Awaken()
         {
-            if (State != ShrineState.Dormant || IsGameOver) return false;
+            if (!Net.IsServer || State != ShrineState.Dormant || IsGameOver) return false;
 
             ProgressSeconds = 0f;
             PlayerInside = false;
@@ -196,14 +207,13 @@ namespace ElementalBuddies
 
         private void Complete()
         {
-            if (State != ShrineState.Awakened) return;
+            if (!Net.IsServer || State != ShrineState.Awakened) return;
 
             ProgressSeconds = RequiredTime;
             StopSpawning();
             ReleaseAttackers();
 
-            var abilities = PlayerAbilities.Instance;
-            AbilityUnlocked = abilities != null && abilities.UnlockElementAbility(ElementIndex);
+            AbilityUnlocked = ApplyUnlockForTeam();
             ShrineBonuses.AddDamageBonus(ElementIndex, BuddyDamageBonus);
 
             SetState(ShrineState.Completed);
@@ -214,7 +224,7 @@ namespace ElementalBuddies
         // Öffentlich, damit Manager/Debug einen Fehlschlag erzwingen können
         public void Fail()
         {
-            if (State != ShrineState.Awakened) return;
+            if (!Net.IsServer || State != ShrineState.Awakened) return;
 
             StopSpawning();
             ReleaseAttackers();
@@ -229,6 +239,7 @@ namespace ElementalBuddies
 
         private void HandleWaveEnd()
         {
+            if (!Net.IsServer) return;
             if (State == ShrineState.Awakened) Fail();
         }
 
@@ -236,7 +247,68 @@ namespace ElementalBuddies
         {
             State = s;
             ApplyVisuals();
+            if (Net.IsServer) NetGame.SendShrineState(ElementIndex, (int)s, ShrineBonuses.GetDamageBonus(ElementIndex));
             OnStateChanged?.Invoke(this);
+        }
+
+        // Alle Rechner: Element-Zauber für jede Spielfigur freischalten (und für später gespawnte Figuren merken).
+        // Ergebnis: true, wenn die lokale Figur ihn neu gelernt hat (für den Toast).
+        private bool ApplyUnlockForTeam()
+        {
+            if (ShrineManager.Instance != null) ShrineManager.Instance.MarkElementUnlocked(ElementIndex);
+            bool localNew = false;
+            bool anyNew = false;
+            foreach (var a in PlayerAvatar.All)
+            {
+                if (a == null || a.Abilities == null) continue;
+                bool fresh = a.Abilities.UnlockElementAbility(ElementIndex);
+                anyNew |= fresh;
+                if (a.IsLocal) localNew = fresh;
+            }
+            if (PlayerAvatar.All.Count == 0 && PlayerAbilities.Instance != null)
+                return PlayerAbilities.Instance.UnlockElementAbility(ElementIndex); // ohne Netzwerk-Figuren
+            return PlayerAvatar.Local != null ? localNew : anyNew;
+        }
+
+        // ---------------- Netz-Abbild (Clients) ----------------
+
+        // Client: Zustandswechsel vom Server nachspielen (Optik + dieselben Ereignisse wie auf dem Server)
+        public void NetApplyState(ShrineState s)
+        {
+            if (Net.IsServer || s == State) return;
+            var old = State;
+            if (s == ShrineState.Awakened)
+            {
+                ProgressSeconds = 0f;
+                PlayerInside = false;
+                Contested = false;
+                SetState(s);
+                OnAnyShrineAwakened?.Invoke(this);
+            }
+            else if (s == ShrineState.Completed)
+            {
+                ProgressSeconds = RequiredTime;
+                AbilityUnlocked = ApplyUnlockForTeam();
+                SetState(s);
+                OnAnyShrineCompleted?.Invoke(this);
+            }
+            else
+            {
+                ProgressSeconds = 0f;
+                PlayerInside = false;
+                Contested = false;
+                SetState(s);
+                if (old == ShrineState.Awakened) OnAnyShrineFailed?.Invoke(this);
+            }
+        }
+
+        // Client: Fortschritt vom Server
+        public void NetApplyProgress(float progressSeconds, bool inside, bool contested)
+        {
+            if (Net.IsServer || State != ShrineState.Awakened) return;
+            ProgressSeconds = progressSeconds;
+            PlayerInside = inside;
+            Contested = contested;
         }
 
         private void ApplyVisuals()
@@ -254,11 +326,11 @@ namespace ElementalBuddies
         {
             if (State == ShrineState.Awakened) UpdateRunes();
             if (State != ShrineState.Awakened || IsGameOver) return;
-
-            if (_player == null) _player = GameObject.FindGameObjectWithTag("Player")?.transform;
+            // Ab hier entscheidet nur der Server
+            if (!Net.IsServer) return;
 
             Vector3 c = CenterPosition;
-            PlayerInside = _player != null && XZDistance(_player.position, c) <= CaptureRadius;
+            PlayerInside = FindPlayersInside(c);
             Contested = CheckContested(c);
             DamageEnemiesInCircle(c);
 
@@ -286,6 +358,13 @@ namespace ElementalBuddies
                 return;
             }
 
+            _syncTimer -= Time.unscaledDeltaTime;
+            if (_syncTimer <= 0f)
+            {
+                _syncTimer = 0.1f;
+                NetGame.SendCaptureProgress(true, ElementIndex, ProgressSeconds, PlayerInside, Contested);
+            }
+
             if (_engaged && ReinforceInterval > 0f && ReinforceCount > 0)
             {
                 _reinforceTimer += Time.deltaTime;
@@ -296,6 +375,18 @@ namespace ElementalBuddies
                     _spawnRoutine = StartCoroutine(SpawnAttackersRoutine(ReinforceCount, 1.5f));
                 }
             }
+        }
+
+        // Irgendeine lebende Spielfigur im Kreis? (ohne Netzwerk-Figuren: Fallback auf das Player-Tag)
+        private bool FindPlayersInside(Vector3 c)
+        {
+            if (PlayerAvatar.All.Count > 0)
+            {
+                PlayerAvatar.InRadius(c, CaptureRadius, _inside);
+                return _inside.Count > 0;
+            }
+            var p = GameObject.FindGameObjectWithTag("Player");
+            return p != null && XZDistance(p.transform.position, c) <= CaptureRadius;
         }
 
         private static float XZDistance(Vector3 a, Vector3 b)

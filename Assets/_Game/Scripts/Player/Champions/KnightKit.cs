@@ -189,10 +189,15 @@ namespace ElementalBuddies
             }
         }
 
+        // Kombo-Schritt für andere Rechner (sonst zählt jeder Rechner nach seiner eigenen Uhr)
+        public override int GetCastVariant(AbilityId id, SpellCastContext ctx) => id == AbilityId.SwordSlash ? ComboStep : 0;
+
         private void DoSlash(SpellCastContext ctx)
         {
-            // Kombo fortsetzen oder neu beginnen
-            int step = (Time.time <= _comboExpires && ComboStep < 3) ? ComboStep + 1 : 1;
+            // Kombo fortsetzen oder neu beginnen (Abbild: Schritt vom Besitzer)
+            int step = ctx.IsRemote && ctx.Variant >= 1 && ctx.Variant <= 3
+                ? ctx.Variant
+                : (Time.time <= _comboExpires && ComboStep < 3) ? ComboStep + 1 : 1;
             ComboStep = step;
             bool finisher = step == 3;
             _comboExpires = Time.time + ComboWindow;
@@ -227,6 +232,7 @@ namespace ElementalBuddies
                 if (CombatUtil.HorizontalDistance(origin, enemy.transform.position) > range + CombatUtil.EnemyRadius(enemy)) continue;
                 if (HitFxPrefab != null)
                     CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up * HitHeight, Quaternion.LookRotation(dir), 1.5f);
+                if (!Net.IsServer) continue; // Treffer entscheidet der Server, Clients zeigen nur Funken
                 if (finisher && FinisherKnockback > 0f)
                     enemy.Knockback(CombatUtil.FlatDirection(origin, enemy.transform.position, dir), FinisherKnockback, 0.25f);
                 EnemyBrain.DealPlayerDamage(enemy, damage); // Quelle Spieler (Telemetrie)
@@ -269,6 +275,22 @@ namespace ElementalBuddies
             }
         }
 
+        // Netz-Ereignisse (Server → andere Rechner)
+        public const int NetEvtBlockBreak = 1;
+        public const int NetEvtBlockSpark = 2;
+
+        public override void OnNetEvent(int evt, Vector3 point)
+        {
+            if (evt == NetEvtBlockBreak)
+            {
+                if (IsBlocking) BreakBlock();
+            }
+            else if (evt == NetEvtBlockSpark)
+            {
+                SpawnBlockSpark(point);
+            }
+        }
+
         private void BreakBlock()
         {
             SetBlocking(false);
@@ -289,42 +311,51 @@ namespace ElementalBuddies
             return Vector3.Angle(fwd, to) <= BlockAngleEff * 0.5f;
         }
 
+        // Läuft nur auf dem Server (PlayerStats.TakeDamage). Block-Zustand kommt über die Cast-/Halte-RPCs, das Mana
+        // des Besitzers über PlayerMana (gespiegelter Wert); der Abzug geht per RPC an den Besitzer.
         public override float ModifyIncomingDamage(float amount, Vector3 sourcePosition, bool hasSource)
         {
             if (IsBlocking && hasSource && IsInBlockArc(sourcePosition))
             {
                 float blocked = amount * BlockReduction;
                 float cost = blocked * ManaPerBlockedDamageEff;
-                var eco = EconomyManager.Instance;
-                float mana = eco != null ? eco.CurrentMana : 0f;
+                var pm = Owner != null ? Owner.Mana : null;
+                float mana = pm != null ? pm.CurrentMana : 0f;
                 if (cost > 0f && mana < cost)
                 {
                     // Mana reicht nur für einen Teil: Rest geht durch, Block bricht
                     float part = mana / cost;
-                    if (eco != null && mana > 0f) eco.TrySpendMana(mana);
+                    if (pm != null && mana > 0f) pm.SpendFromServer(mana);
                     blocked *= part;
                     BlockedDamageTotal += blocked;
                     amount -= blocked;
                     BreakBlock();
+                    SendKitEvent(NetEvtBlockBreak, transform.position);
                 }
                 else
                 {
-                    if (eco != null && cost > 0f) eco.TrySpendMana(cost);
+                    if (pm != null && cost > 0f) pm.SpendFromServer(cost);
                     BlockedDamageTotal += blocked;
                     amount -= blocked;
                     if (Time.time - _lastSpark >= BlockSparkInterval)
                     {
                         _lastSpark = Time.time;
-                        Vector3 shield = transform.TransformPoint(ShieldOffset);
-                        if (BlockSparkPrefab != null)
-                            CombatUtil.SpawnFx(BlockSparkPrefab, shield, Quaternion.LookRotation(CombatUtil.FlatDirection(transform.position, sourcePosition, transform.forward)), 1.5f);
-                        BlockHitSfx.Play(shield);
+                        SpawnBlockSpark(sourcePosition);
+                        SendKitEvent(NetEvtBlockSpark, sourcePosition);
                     }
                 }
             }
 
             if (OathActive && _oathReduction > 0f) amount *= 1f - _oathReduction;
             return amount;
+        }
+
+        private void SpawnBlockSpark(Vector3 sourcePosition)
+        {
+            Vector3 shield = transform.TransformPoint(ShieldOffset);
+            if (BlockSparkPrefab != null)
+                CombatUtil.SpawnFx(BlockSparkPrefab, shield, Quaternion.LookRotation(CombatUtil.FlatDirection(transform.position, sourcePosition, transform.forward)), 1.5f);
+            BlockHitSfx.Play(shield);
         }
 
         // ---------------- Erdbeben-Sprung ----------------
@@ -353,7 +384,7 @@ namespace ElementalBuddies
                 float k = t / duration;
                 float step = k - done;
                 done = k;
-                if (Character != null && Character.enabled) Character.Move(offset * step);
+                if (IsLocalControl && Character != null && Character.enabled) Character.Move(offset * step);
                 if (visual != null) visual.localPosition = visualBase + Vector3.up * (Mathf.Sin(k * Mathf.PI) * height);
                 yield return null;
             }

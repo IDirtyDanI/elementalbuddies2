@@ -3,6 +3,9 @@ using System;
 
 namespace ElementalBuddies
 {
+    // Mehrspieler: Seelensplitter sind eine Teamkasse. Nur der Server ändert CurrentShards/ShardGainPercent (AddShards, EarnShards,
+    // TrySpendShards); NetGame.Economy spiegelt beides per NetworkVariable auf die Clients, dort feuern OnShardsChanged und
+    // (per RPC) OnShardsEarned ebenfalls. Clients geben nie selbst aus, sondern fragen per Server-RPC an (NetGame.Build).
     public class EconomyManager : MonoBehaviour
     {
         public static EconomyManager Instance { get; private set; }
@@ -10,8 +13,16 @@ namespace ElementalBuddies
         [Header("Config")]
         [SerializeField] private GlobalSettingsSO settings;
 
-        public float CurrentMana { get; private set; }
-        public float MaxMana => settings != null ? settings.ManaCap : 200f;
+        // Mana ist pro Spieler (PlayerMana, Paket A). Diese Member leiten auf PlayerMana.Local weiter; ohne lokale
+        // Spielfigur (z. B. vor dem Netz-Spawn) gilt der alte lokale Wert als Fallback.
+        private float _legacyMana;
+        private const string ManaObsolete = "Mana ist pro Spieler: PlayerMana.Local verwenden.";
+
+        [Obsolete(ManaObsolete)]
+        public float CurrentMana => PlayerMana.Local != null ? PlayerMana.Local.CurrentMana : _legacyMana;
+        [Obsolete(ManaObsolete)]
+        public float MaxMana => PlayerMana.Local != null ? PlayerMana.Local.MaxMana : LegacyMaxMana;
+        private float LegacyMaxMana => settings != null ? settings.ManaCap : 200f;
         public GlobalSettingsSO Settings => settings;
 
         // Startwerte (vor Upgrade-Karten) und aktuelle Regeneration, z. B. für die Pause-Übersicht
@@ -28,11 +39,15 @@ namespace ElementalBuddies
         public float ShardGainPercent { get; private set; }
         public float ShardGainMultiplier => 1f + ShardGainPercent / 100f;
 
+        // Nur Server (Clients bekommen den Wert über NetGame.Economy; dort ignoriert, um Doppelzählung zu vermeiden)
         public void AddShardGainPercent(float percent)
         {
+            if (!Net.IsServer) return;
             ShardGainPercent = Mathf.Max(0f, ShardGainPercent + percent);
+            PushToNet();
         }
 
+        [Obsolete(ManaObsolete)]
         public event Action OnManaChanged;
         public event Action OnShardsChanged;
         // Seelensplitter verdient (eingesammelte Drops + Wellen-Bonus; nicht Verkauf/Dev-Auffüllen) – für Erfolge
@@ -67,18 +82,26 @@ namespace ElementalBuddies
         void OnEnable()
         {
             EnemyBrain.OnEnemyKilled += HandleEnemyKilled;
+            PlayerMana.OnLocalManaChanged += RaiseManaChanged;
         }
 
         void OnDisable()
         {
             EnemyBrain.OnEnemyKilled -= HandleEnemyKilled;
+            PlayerMana.OnLocalManaChanged -= RaiseManaChanged;
         }
+
+#pragma warning disable 618 // eigene, veraltete Mana-Member
+        private void RaiseManaChanged() => OnManaChanged?.Invoke();
+#pragma warning restore 618
 
         // Splitter-Kopfgeld pro Kill × Gegnertyp-Faktor × Seelenernte – fällt als Drop, der Spieler sammelt ihn ein.
         // Balancing: ÷ Anzahl-Multiplikator M(w) (mehr Gegner bringen nicht mehr Splitter pro Welle), × Drop-Abnahme
         // im Spätspiel (GlobalSettings.DropFactor) und × Einkommens-Faktor der Schwierigkeit.
         private void HandleEnemyKilled(EnemyBrain enemy)
         {
+            // Drops entscheidet nur der Server (ShardPickup repliziert sie an die Clients)
+            if (!Net.IsServer) return;
             if (enemy == null || (GameManager.Instance != null && GameManager.Instance.IsGameOver)) return;
             float bounty = GetKillBounty(enemy.Config, CurrentWaveNumber);
             if (bounty > 0f) ShardPickup.Spawn(enemy.transform.position, bounty, settings);
@@ -124,11 +147,14 @@ namespace ElementalBuddies
         void Start()
         {
             // Start immer mit vollem Mana (GlobalSettings.StartMana wird nicht mehr genutzt)
-            CurrentMana = MaxMana;
+            _legacyMana = LegacyMaxMana;
 
             CurrentShards = settings != null ? settings.StartShards : 110f;
+            // Teamkasse: Server meldet den Startwert, Clients übernehmen den Server-Stand (falls NetGame schon gespawnt ist)
+            if (Net.IsServer) PushToNet();
+            else if (NetGame.Ready) NetGame.Instance.ClientPullEconomy();
                 
-            OnManaChanged?.Invoke();
+            RaiseManaChanged();
             OnShardsChanged?.Invoke();
 
             if (WaveManager.Instance != null)
@@ -139,63 +165,99 @@ namespace ElementalBuddies
             }
         }
 
-        // Wellenende: alle noch liegenden Seelensplitter fliegen zum Spieler
+        // Wellenende: alle noch liegenden Seelensplitter fliegen zur nächsten lebenden Spielfigur (Server entscheidet)
         private void RecallShards()
         {
+            if (!Net.IsServer) return;
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
             ShardPickup.RecallAll();
         }
 
-        // Welle gestartet / geschafft -> Player-Mana komplett auffüllen
+        // Welle gestartet / geschafft -> Fallback-Mana auffüllen (PlayerMana füllt sich selbst auf)
         private void RefillMana()
         {
+            if (PlayerMana.Local != null) return;
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
-            CurrentMana = MaxMana;
-            OnManaChanged?.Invoke();
+            _legacyMana = LegacyMaxMana;
+            RaiseManaChanged();
         }
 
         void Update()
         {
-            if (settings == null) return;
+            if (settings == null || PlayerMana.Local != null) return;
 
             float regenRate = (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.Combat) 
                 ? settings.RegenInCombat 
                 : settings.RegenOutCombat;
 
-            AddMana(regenRate * Time.deltaTime);
+            _legacyMana = Mathf.Min(LegacyMaxMana, _legacyMana + regenRate * Time.deltaTime);
+            RaiseManaChanged();
         }
 
+        [Obsolete(ManaObsolete)]
         public void AddMana(float amount)
         {
-            CurrentMana += amount;
-            if (CurrentMana > MaxMana) CurrentMana = MaxMana;
-            OnManaChanged?.Invoke();
+            if (PlayerMana.Local != null)
+            {
+                PlayerMana.Local.Add(amount);
+                return;
+            }
+            _legacyMana = Mathf.Min(LegacyMaxMana, _legacyMana + amount);
+            RaiseManaChanged();
         }
 
+        [Obsolete(ManaObsolete)]
         public bool TrySpendMana(float amount)
         {
-            if (CurrentMana >= amount)
+            if (PlayerMana.Local != null) return PlayerMana.Local.TrySpend(amount);
+            if (_legacyMana >= amount)
             {
-                CurrentMana -= amount;
-                OnManaChanged?.Invoke();
+                _legacyMana -= amount;
+                RaiseManaChanged();
                 return true;
             }
             return false;
         }
 
+        // Nur Server (Teamkasse). Auf Clients wirkungslos.
         public void AddShards(float amount)
         {
-            if (amount <= 0f) return;
+            if (amount <= 0f || !Net.IsServer) return;
             CurrentShards += amount;
+            PushToNet();
             OnShardsChanged?.Invoke();
         }
 
-        // Wie AddShards, zählt aber als Einnahme (OnShardsEarned)
+        // Wie AddShards, zählt aber als Einnahme (OnShardsEarned, feuert per RPC auch auf den Clients). Nur Server.
         public void EarnShards(float amount)
         {
-            if (amount <= 0f) return;
+            if (amount <= 0f || !Net.IsServer) return;
             AddShards(amount);
             OnShardsEarned?.Invoke(amount);
+            if (NetGame.Ready) NetGame.Instance.ServerShardsEarned(amount);
+        }
+
+        // ---------------- Netzwerk (NetGame.Economy) ----------------
+
+        private void PushToNet()
+        {
+            if (Net.IsServer && NetGame.Ready) NetGame.Instance.ServerSetEconomy(CurrentShards, ShardGainPercent);
+        }
+
+        // Clients: Stand der Teamkasse vom Server
+        internal void NetApplyShards(float shards)
+        {
+            if (Mathf.Approximately(shards, CurrentShards)) return;
+            CurrentShards = shards;
+            OnShardsChanged?.Invoke();
+        }
+
+        internal void NetApplyShardGain(float percent) => ShardGainPercent = Mathf.Max(0f, percent);
+
+        // Clients: Einnahme der Teamkasse (für Erfolge, z. B. „Seelensammler“)
+        internal void NetShardsEarned(float amount)
+        {
+            if (amount > 0f) OnShardsEarned?.Invoke(amount);
         }
 
         public bool CanAfford(float shardCost)
@@ -203,11 +265,14 @@ namespace ElementalBuddies
             return CurrentShards >= shardCost;
         }
 
+        // Nur Server (Teamkasse); Clients fragen per Server-RPC an (NetGame.RequestBuild/Upgrade/Fuse) -> hier immer false
         public bool TrySpendShards(float amount)
         {
+            if (!Net.IsServer) return false;
             if (CurrentShards >= amount)
             {
                 CurrentShards -= amount;
+                PushToNet();
                 OnShardsChanged?.Invoke();
                 return true;
             }

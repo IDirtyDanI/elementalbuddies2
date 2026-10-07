@@ -98,10 +98,10 @@ namespace ElementalBuddies
             switch (id)
             {
                 case AbilityId.ArcaneBall:
-                    CastArcaneBall(ctx.DamageMultiplier);
+                    CastArcaneBall(ctx.DamageMultiplier, ctx.AimDirection);
                     break;
                 case AbilityId.Blink:
-                    StartCoroutine(PerformBlink());
+                    StartCoroutine(PerformBlink(ctx));
                     break;
                 default:
                     var spell = GetModdedSpell(id);
@@ -116,10 +116,13 @@ namespace ElementalBuddies
             return "Cast";
         }
 
-        private void CastArcaneBall(float damageMultiplier)
+        private void CastArcaneBall(float damageMultiplier, Vector3 aimDirection)
         {
-            Vector3 spawnPos = SpawnPoint != null ? SpawnPoint.position : transform.position + transform.forward + Vector3.up;
-            GameObject ball = Instantiate(ArcaneBallPrefab, spawnPos, transform.rotation);
+            // Flugrichtung aus dem Cast-Kontext (auf fremden Rechnern hinkt die Drehung der Figur etwas hinterher)
+            aimDirection.y = 0f;
+            Quaternion rot = aimDirection.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(aimDirection.normalized) : transform.rotation;
+            Vector3 spawnPos = SpawnPoint != null ? SpawnPoint.position : transform.position + rot * Vector3.forward + Vector3.up;
+            GameObject ball = Instantiate(ArcaneBallPrefab, spawnPos, rot);
             var arcane = ball.GetComponent<ArcaneBall>();
             if (arcane != null)
             {
@@ -132,17 +135,26 @@ namespace ElementalBuddies
             ArcaneBallCast?.Invoke();
         }
 
-        private IEnumerator PerformBlink()
+        private IEnumerator PerformBlink(SpellCastContext ctx)
         {
+            // I-Frames auf allen Rechnern (der Server entscheidet über Treffer)
             Stats.IsInvulnerable = true;
+            if (IsLocalControl) Teleport(BlinkTarget(ctx));
 
+            yield return new WaitForSeconds(EffectiveInvulnerability);
+            Stats.IsInvulnerable = false;
+        }
+
+        // Zielpunkt des Blinks (nur beim Besitzer berechnet, die Figur-Position kommt per NetworkTransform zu den anderen)
+        private Vector3 BlinkTarget(SpellCastContext ctx)
+        {
             // Richtung Mauszeiger (Rechtsklick); liegt der Zeiger näher als die Reichweite, landet man genau dort
             float range = EffectiveBlinkRange;
             Vector3 blinkDir = transform.forward;
             float distance = range;
-            if (Controller.HasAimPoint)
+            if (ctx.HasAimPoint)
             {
-                Vector3 to = Controller.AimPoint - transform.position;
+                Vector3 to = ctx.AimPoint - transform.position;
                 to.y = 0f;
                 if (to.sqrMagnitude > 0.04f)
                 {
@@ -159,12 +171,48 @@ namespace ElementalBuddies
                 targetPos.y = transform.position.y;
             }
 
-            Character.enabled = false;
-            transform.position = targetPos;
-            Character.enabled = true;
+            return SafeLanding(targetPos);
+        }
 
-            yield return new WaitForSeconds(EffectiveInvulnerability);
-            Stats.IsInvulnerable = false;
+        // Landepunkt auf begehbaren Boden setzen: Höhe aus dem Boden (sonst steckt die Figur nach dem Teleport z. B. in
+        // einem Schrein-Podest und fällt durch die Map) und nur auf dem NavMesh. Ohne gültigen Punkt bleibt man stehen.
+        private Vector3 SafeLanding(Vector3 target)
+        {
+            Vector3 start = transform.position;
+            // Abstand Drehpunkt → Fußpunkt der Figur (Kapselmitte)
+            float pivotAboveFeet = Character != null
+                ? (Character.height * 0.5f - Character.center.y) * transform.lossyScale.y + Character.skinWidth
+                : 1f;
+
+            for (int i = 0; i < 4; i++)
+            {
+                // vom Ziel schrittweise zurück Richtung Start, bis ein gültiger Punkt gefunden ist
+                Vector3 p = Vector3.Lerp(target, start, i / 4f);
+                if (UnityEngine.AI.NavMesh.SamplePosition(p, out UnityEngine.AI.NavMeshHit nav, 1.5f, UnityEngine.AI.NavMesh.AllAreas))
+                {
+                    Vector3 ground = nav.position;
+                    int floor = Controller != null ? Controller.FloorLayer.value : 0;
+                    if (floor != 0 && Physics.Raycast(ground + Vector3.up * 3f, Vector3.down, out RaycastHit g, 6f, floor, QueryTriggerInteraction.Ignore))
+                        ground.y = g.point.y;
+                    return new Vector3(ground.x, ground.y + pivotAboveFeet, ground.z);
+                }
+            }
+            return start;
+        }
+
+        private void Teleport(Vector3 targetPos)
+        {
+            // Netz: über PlayerAvatar (NetworkTransform.Teleport, keine Interpolation bei den anderen)
+            var av = Owner != null ? Owner.Avatar : null;
+            if (av != null && av.IsSpawned)
+            {
+                av.TeleportLocal(targetPos, transform.rotation);
+                return;
+            }
+            bool cc = Character != null && Character.enabled;
+            if (cc) Character.enabled = false;
+            transform.position = targetPos;
+            if (cc) Character.enabled = true;
         }
 
         public override void OnDeactivated()
@@ -207,7 +255,7 @@ namespace ElementalBuddies
                 case AbilityId.HolyCircle:
                 {
                     var s = Modded(HolyCircle, id);
-                    return $"Heiliges Licht im Umkreis von {Hi(s.Radius)} m. Es heilt dich um {Hi(s.PlayerHeal)}, Buddies um {Hi(s.BuddyHeal)} und den Nexus um {Hi(s.NexusHeal)} LP. Gegner werden geblendet (Sterne über dem Kopf) und sind {Hi(s.BlindDuration)} s lang um {Hi(s.BlindSlow * 100f)} % verlangsamt.";
+                    return $"Heiliges Licht im Umkreis von {Hi(s.Radius)} m. Es heilt dich und Mitspieler im Kreis um {Hi(s.PlayerHeal)}, Buddies um {Hi(s.BuddyHeal)} und den Nexus um {Hi(s.NexusHeal)} LP. Gegner werden geblendet (Sterne über dem Kopf) und sind {Hi(s.BlindDuration)} s lang um {Hi(s.BlindSlow * 100f)} % verlangsamt.";
                 }
                 default:
                     return "";

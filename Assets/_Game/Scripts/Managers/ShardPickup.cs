@@ -4,9 +4,12 @@ using System.Collections.Generic;
 
 namespace ElementalBuddies
 {
-    // Seelensplitter-Drop eines getöteten Gegners. Springt kurz heraus, schwebt dann auf der Stelle und fliegt zum
-    // Spieler, sobald er im Magnet-Radius steht. Nur der Spieler sammelt ein; Drops verschwinden nie (auch nicht in
-    // der Bauphase). Liegt beim Spawnen schon ein Drop in MergeRadius, wird der Wert dort aufaddiert.
+    // Seelensplitter-Drop eines getöteten Gegners. Springt kurz heraus, schwebt dann auf der Stelle und fliegt zur
+    // nächsten Spielfigur, sobald eine im Magnet-Radius steht. Nur Spielfiguren sammeln ein (Gutschrift in die Teamkasse);
+    // Drops verschwinden nie (auch nicht in der Bauphase). Liegt beim Spawnen schon ein Drop in MergeRadius, wird der Wert
+    // dort aufaddiert.
+    // Mehrspieler: Der Server entscheidet Spawn, Zusammenfassen, Magnet-Ziel und Einsammeln und meldet alles mit Drop-Id
+    // über NetGame.Economy. Clients halten reine Abbilder (_replica): gleiche Optik samt Magnet-Flug, aber keine Gutschrift.
     // Optik: GlobalSettings.ShardPickupSmall/Medium/Large (reine Visuals, Collider werden abgeschaltet), sonst Primitive.
     public class ShardPickup : MonoBehaviour
     {
@@ -19,6 +22,8 @@ namespace ElementalBuddies
 
         private static readonly List<ShardPickup> _all = new List<ShardPickup>();
         public static IReadOnlyList<ShardPickup> All => _all;
+        private static readonly Dictionary<int, ShardPickup> _byId = new Dictionary<int, ShardPickup>();
+        private static int _nextId;
 
         private static Transform _player;
         private static float _nextPlayerSearch;
@@ -26,6 +31,12 @@ namespace ElementalBuddies
 
         public float Value { get; private set; }
         public bool IsMagnetized => _magnet;
+        // Drop-Id (vom Server vergeben, gleich auf allen Rechnern)
+        public int Id { get; private set; }
+
+        private bool _replica;          // Client-Abbild: nur Optik
+        private Transform _target;      // Magnet-Ziel (Spielfigur)
+        private PlayerAvatar _targetAvatar;
 
         private GlobalSettingsSO _settings;
         private Vector3 _from, _land, _origin;
@@ -41,25 +52,28 @@ namespace ElementalBuddies
         private static void ResetStatics()
         {
             _all.Clear();
+            _byId.Clear();
+            _nextId = 0;
             _player = null;
             _nextPlayerSearch = 0f;
         }
 
-        // Alle liegenden Drops fliegen zum Spieler (z. B. am Wellenende); läuft wie der Magnet, sobald die Zeit weiterläuft
+        // Nur Server: Alle liegenden Drops fliegen zur jeweils nächsten lebenden Spielfigur (z. B. am Wellenende)
         public static void RecallAll()
         {
+            if (!Net.IsServer) return;
             foreach (var p in _all)
             {
-                if (p == null) continue;
+                if (p == null || p._replica) continue;
                 p._magnet = true;
                 p._recall = true;
             }
         }
 
-        // Drop am Todesort erzeugen (bzw. in einen nahen Drop einrechnen)
+        // Nur Server: Drop am Todesort erzeugen (bzw. in einen nahen Drop einrechnen); Clients bekommen ihn per RPC
         public static ShardPickup Spawn(Vector3 position, float value, GlobalSettingsSO settings)
         {
-            if (value <= 0f) return null;
+            if (value <= 0f || !Net.IsServer) return null;
             Vector3 ground = GroundPoint(position);
 
             foreach (var p in _all)
@@ -76,10 +90,61 @@ namespace ElementalBuddies
                 }
             }
 
+            // Kleiner Sprung in zufällige Richtung (0,5–1 m) – Zufall nur auf dem Server, Ergebnis geht an die Clients
+            Vector2 dir = Random.insideUnitCircle.normalized;
+            if (dir == Vector2.zero) dir = Vector2.right;
+            Vector3 offset = new Vector3(dir.x, 0f, dir.y) * Random.Range(0.5f, 1f);
+            Vector3 land = GroundPoint(ground + offset);
+            float rotY = Random.Range(0f, 360f);
+            float bob = Random.Range(0f, Mathf.PI * 2f);
+
+            var pickup = Create(++_nextId, ground, land, value, rotY, bob, settings, false);
+            if (NetGame.Ready) NetGame.Instance.ServerShardSpawned(pickup.Id, ground, land, value, rotY, bob);
+            return pickup;
+        }
+
+        private static ShardPickup Create(int id, Vector3 ground, Vector3 land, float value, float rotY, float bob,
+            GlobalSettingsSO settings, bool replica)
+        {
             var go = new GameObject("ShardPickup");
             var pickup = go.AddComponent<ShardPickup>();
-            pickup.Init(ground, value, settings);
+            pickup.Id = id;
+            pickup._replica = replica;
+            pickup.Init(ground, land, value, rotY, bob, settings);
+            _byId[id] = pickup;
             return pickup;
+        }
+
+        // ---------------- Clients (Abbilder, aufgerufen von NetGame.Economy) ----------------
+
+        private static GlobalSettingsSO ClientSettings => EconomyManager.Instance != null ? EconomyManager.Instance.Settings : null;
+
+        public static void ClientSpawn(int id, Vector3 ground, Vector3 land, float value, float rotY, float bob)
+        {
+            if (_byId.TryGetValue(id, out var existing) && existing != null) return;
+            Create(id, ground, land, value, rotY, bob, ClientSettings, true);
+        }
+
+        public static void ClientSetValue(int id, float value)
+        {
+            if (!_byId.TryGetValue(id, out var p) || p == null) return;
+            p.Value = value;
+            p.RefreshVisual();
+        }
+
+        public static void ClientMagnet(int id, Transform target, bool recall)
+        {
+            if (!_byId.TryGetValue(id, out var p) || p == null) return;
+            p._magnet = true;
+            p._recall |= recall;
+            p._target = target;
+        }
+
+        public static void ClientCollect(int id, ulong collectorClientId)
+        {
+            if (!_byId.TryGetValue(id, out var p) || p == null) return;
+            p.PlayCollectFx();
+            Destroy(p.gameObject);
         }
 
         // Boden unter dem Todesort: NavMesh, sonst Raycast nach unten (Boden-Layer des InteractionManagers)
@@ -93,29 +158,27 @@ namespace ElementalBuddies
             return pos;
         }
 
-        private void Init(Vector3 ground, float value, GlobalSettingsSO settings)
+        private void Init(Vector3 ground, Vector3 land, float value, float rotY, float bob, GlobalSettingsSO settings)
         {
             _settings = settings;
             Value = value;
-            // Kleiner Sprung in zufällige Richtung (0,5–1 m)
-            Vector2 dir = Random.insideUnitCircle.normalized;
-            if (dir == Vector2.zero) dir = Vector2.right;
-            Vector3 offset = new Vector3(dir.x, 0f, dir.y) * Random.Range(0.5f, 1f);
             _origin = ground;
             _from = ground + Vector3.up * HoverHeight;
-            _land = GroundPoint(ground + offset);
+            _land = land;
             transform.position = _from;
-            transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-            _bobPhase = Random.Range(0f, Mathf.PI * 2f);
+            transform.rotation = Quaternion.Euler(0f, rotY, 0f);
+            _bobPhase = bob;
             RefreshVisual();
             _all.Add(this);
         }
 
+        // Nur Server (Zusammenfassen); Clients bekommen den neuen Wert per RPC
         public void AddValue(float value)
         {
-            if (value <= 0f) return;
+            if (value <= 0f || _replica) return;
             Value += value;
             RefreshVisual();
+            if (NetGame.Ready) NetGame.Instance.ServerShardValue(Id, Value);
         }
 
         public static int TierOf(float value) => value < SmallBelow ? 0 : value < MediumBelow ? 1 : 2;
@@ -189,9 +252,39 @@ namespace ElementalBuddies
             }
         }
 
+        // Pause/Zeitstopp sperren nur noch im Solo (im Koop ist die Pause ein lokales Overlay)
         private static bool Blocked =>
-            PauseManager.IsPaused || Time.timeScale <= 0f ||
+            (Net.CanPauseTime && (PauseManager.IsPaused || Time.timeScale <= 0f)) ||
             (GameManager.Instance != null && GameManager.Instance.IsGameOver);
+
+        // Server: nächstes Ziel (lebende Spielfigur) innerhalb maxDist (XZ); ohne Netz-Figuren Fallback auf den Tag "Player"
+        private static Transform FindTarget(Vector3 from, float maxDist, out PlayerAvatar avatar)
+        {
+            avatar = null;
+            if (PlayerAvatar.All.Count > 0)
+            {
+                avatar = PlayerAvatar.Nearest(from);
+                if (avatar == null) return null;
+                Vector3 d = avatar.transform.position - from;
+                d.y = 0f;
+                if (d.sqrMagnitude > maxDist * maxDist) { avatar = null; return null; }
+                return avatar.transform;
+            }
+            Transform player = Player;
+            if (player == null) return null;
+            Vector3 dp = player.position - from;
+            dp.y = 0f;
+            return dp.sqrMagnitude <= maxDist * maxDist ? player : null;
+        }
+
+        private bool TargetValid => _target != null && (_targetAvatar == null || _targetAvatar.IsAlive);
+
+        private void SetTarget(Transform target, PlayerAvatar avatar)
+        {
+            _target = target;
+            _targetAvatar = avatar;
+            if (avatar != null && NetGame.Ready) NetGame.Instance.ServerShardMagnet(Id, avatar.NetworkObjectId, _recall);
+        }
 
         void Update()
         {
@@ -210,29 +303,41 @@ namespace ElementalBuddies
                 return;
             }
 
-            Transform player = Player;
-            if (player != null)
+            // Server: Magnet-Ziel wählen (nächste Spielfigur im Radius; Rückruf/verlorenes Ziel: nächste lebende überhaupt)
+            if (!_replica)
             {
-                Vector3 chest = player.position + Vector3.up * 0.8f;
                 if (!_magnet)
                 {
                     float magnet = _settings != null ? _settings.ShardMagnetRadius : 3f;
-                    Vector3 d = player.position - _land;
-                    d.y = 0f;
-                    if (d.sqrMagnitude <= magnet * magnet) _magnet = true;
+                    var t = FindTarget(_land, magnet, out var avatar);
+                    if (t != null)
+                    {
+                        _magnet = true;
+                        SetTarget(t, avatar);
+                    }
                 }
-                if (_magnet)
+                else if (!TargetValid)
                 {
-                    float maxSpeed = _settings != null ? _settings.ShardMagnetSpeed : 14f;
-                    if (_recall) maxSpeed *= RecallSpeedFactor;
-                    _speed = Mathf.MoveTowards(_speed, maxSpeed, maxSpeed * 2.5f * dt);
-                    transform.position = Vector3.MoveTowards(transform.position, chest, _speed * dt);
-                    transform.Rotate(0f, 720f * dt, 0f, Space.World);
-                    float collect = _settings != null ? _settings.ShardCollectRadius : 0.5f;
-                    if ((transform.position - chest).sqrMagnitude <= collect * collect) Collect();
-                    return;
+                    var t = FindTarget(transform.position, float.MaxValue, out var avatar);
+                    if (t != null) SetTarget(t, avatar);
+                    else _target = null;
                 }
             }
+
+            if (_magnet && _target != null)
+            {
+                Vector3 chest = _target.position + Vector3.up * 0.8f;
+                float maxSpeed = _settings != null ? _settings.ShardMagnetSpeed : 14f;
+                if (_recall) maxSpeed *= RecallSpeedFactor;
+                _speed = Mathf.MoveTowards(_speed, maxSpeed, maxSpeed * 2.5f * dt);
+                transform.position = Vector3.MoveTowards(transform.position, chest, _speed * dt);
+                transform.Rotate(0f, 720f * dt, 0f, Space.World);
+                float collect = _settings != null ? _settings.ShardCollectRadius : 0.5f;
+                // Abbilder sammeln nie selbst ein (warten am Ziel auf die Meldung des Servers)
+                if (!_replica && (transform.position - chest).sqrMagnitude <= collect * collect) Collect();
+                return;
+            }
+            if (_magnet) return; // Ziel verloren (z. B. alle Figuren tot): in der Luft warten
 
             // Schweben + Drehen
             _bobPhase += dt * 2.6f;
@@ -240,21 +345,30 @@ namespace ElementalBuddies
             transform.Rotate(0f, 90f * dt, 0f, Space.World);
         }
 
+        // Nur Server: Gutschrift in die Teamkasse, Meldung an die Clients
         private void Collect()
         {
-            if (Value <= 0f) return;
+            if (Value <= 0f || _replica) return;
             float v = Value;
             Value = 0f;
             if (EconomyManager.Instance != null) EconomyManager.Instance.EarnShards(v);
+            ulong collector = _targetAvatar != null ? _targetAvatar.OwnerClientId : Net.LocalClientId;
+            if (NetGame.Ready) NetGame.Instance.ServerShardCollected(Id, collector);
+            PlayCollectFx();
+            Destroy(gameObject);
+        }
+
+        private void PlayCollectFx()
+        {
             GameAudio.Play(SfxId.ShardPickup, transform.position);
             if (_settings != null && _settings.ShardCollectEffect != null)
                 Destroy(Instantiate(_settings.ShardCollectEffect, transform.position, Quaternion.identity), 3f);
-            Destroy(gameObject);
         }
 
         void OnDestroy()
         {
             _all.Remove(this);
+            if (_byId.TryGetValue(Id, out var p) && p == this) _byId.Remove(Id);
         }
     }
 }

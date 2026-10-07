@@ -89,7 +89,10 @@ namespace ElementalBuddies
         {
             get
             {
-                if (_dev == null || !_dev.CheatsActive || _dev.AllowAchievementsWithCheats) return true;
+                // Mehrspieler: Cheats nur beim Host – Clients übernehmen dessen Cheat-Status
+                bool cheats = Net.IsServer ? _dev != null && _dev.CheatsActive && !_dev.AllowAchievementsWithCheats
+                                           : NetGame.HostCheatsActive;
+                if (!cheats) return true;
                 if (!_cheatLogged)
                 {
                     _cheatLogged = true;

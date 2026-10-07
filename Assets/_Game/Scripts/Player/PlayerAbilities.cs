@@ -12,7 +12,19 @@ namespace ElementalBuddies
     [RequireComponent(typeof(PlayerStats))]
     public class PlayerAbilities : MonoBehaviour
     {
-        public static PlayerAbilities Instance { get; private set; }
+        // Fähigkeiten der EIGENEN Figur (Besitzer). Im Mehrspieler gibt es mehrere PlayerAbilities (eine pro Spieler);
+        // Instance ist immer die lokale (UI, Händler, Schreine, Karten). Vor dem Netz-Spawn null.
+        public static PlayerAbilities Instance
+        {
+            get
+            {
+                if (_instance != null) return _instance;
+                var local = PlayerAvatar.Local;
+                return local != null ? local.Abilities : null;
+            }
+            private set { _instance = value; }
+        }
+        private static PlayerAbilities _instance;
 
         public const int ElementCount = 4; // 0 Fire, 1 Ice, 2 Earth, 3 Light
 
@@ -58,17 +70,33 @@ namespace ElementalBuddies
 
         private PlayerController _controller;
         private PlayerStats _stats;
+        private PlayerAvatar _avatar;
+        private PlayerMana _mana;
         private readonly List<ChampionKit> _kits = new List<ChampionKit>();
         private bool _initialized;
 
+        // Eigene Figur (Besitzer) bzw. offline ohne Netz: liest Eingaben, verbucht Abklingzeiten/Mana und schickt Casts
+        public bool IsLocalControl => _avatar == null || _avatar.IsLocalControl;
+        public PlayerAvatar Avatar => _avatar;
+        public PlayerMana Mana
+        {
+            get
+            {
+                if (_mana == null) _mana = GetComponent<PlayerMana>();
+                return _mana;
+            }
+        }
+
         void Awake()
         {
-            if (Instance != null && Instance != this)
-                Debug.LogWarning("PlayerAbilities: more than one instance in the scene.");
-            Instance = this;
-
             _controller = GetComponent<PlayerController>();
             _stats = GetComponent<PlayerStats>();
+            _avatar = GetComponent<PlayerAvatar>();
+            _mana = GetComponent<PlayerMana>();
+            if (_mana == null) _mana = gameObject.AddComponent<PlayerMana>();
+
+            // Offline (ohne Netz-Avatar) ist diese Figur sofort die lokale; sonst setzt PlayerAvatar das beim Spawn
+            if (_avatar == null || !Net.IsRunning) Instance = this;
 
             if (UnlockAllOnStart)
                 for (int i = 0; i < ElementCount; i++) _elementUnlocked[i] = true;
@@ -76,9 +104,16 @@ namespace ElementalBuddies
             EnsureInitialized();
         }
 
+        // Von PlayerAvatar nach der Besitzer-Erkennung
+        public void MarkLocal(bool local)
+        {
+            if (local) Instance = this;
+            else if (_instance == this) Instance = null;
+        }
+
         void OnDestroy()
         {
-            if (Instance == this) Instance = null;
+            if (_instance == this) Instance = null;
             if (_stats != null && _stats.DamageModifier == (Func<float, Vector3, bool, float>)ModifyIncomingDamage) _stats.DamageModifier = null;
         }
 
@@ -91,14 +126,25 @@ namespace ElementalBuddies
             _kits.Clear();
             GetComponents(_kits);
             if (_stats != null) _stats.DamageModifier = ModifyIncomingDamage;
+            // Vorläufige Wahl; im Netz legt PlayerAvatar nach dem Spawn den Champion des Besitzers fest (ApplyNetworkChampion)
             var cls = ForceChampion ? ForcedChampion : GameSession.SelectedChampion;
+            bool networked = _avatar != null && Net.IsRunning;
             // Meta-Freischaltung: gesperrter Champion (Stand dieses Spiels) → Magier; Inspector-Override/DevTools.UnlockAllContent ausgenommen
-            if (!ForceChampion && !Progression.IsChampionUnlocked(cls, true))
+            if (!networked && !ForceChampion && !Progression.IsChampionUnlocked(cls, true))
             {
                 Debug.Log($"PlayerAbilities: Champion {cls} ist noch gesperrt ({Progression.RequirementText(Progression.ChampionUnlock(cls))}) – Magier wird gespielt.");
                 cls = ChampionClass.Mage;
             }
             ApplyChampion(cls, false);
+        }
+
+        // Champion aus dem Netz (NetPlayer.Champion des Besitzers). Inspector-Override (ForceChampion) gilt auf allen Rechnern.
+        public void ApplyNetworkChampion(ChampionClass cls)
+        {
+            EnsureInitialized();
+            if (ForceChampion) cls = ForcedChampion;
+            if (ActiveKit != null && ActiveKit.Class == cls) return;
+            ApplyChampion(cls, true);
         }
 
         // ---------------- Champion ----------------
@@ -149,13 +195,27 @@ namespace ElementalBuddies
             ActiveVisual = null;
             foreach (var v in GetComponentsInChildren<ChampionVisual>(true))
             {
-                bool on = v.Class == kit.Class;
+                bool match = v.Class == kit.Class;
+                bool on = match && !_downedVisual; // ausgefallen: Modell bleibt versteckt
                 if (v.gameObject.activeSelf != on) v.gameObject.SetActive(on);
-                if (on && ActiveVisual == null) ActiveVisual = v;
+                if (match && ActiveVisual == null) ActiveVisual = v;
             }
 
             kit.OnActivated();
             if (notify) OnChampionChanged?.Invoke(kit.Class);
+        }
+
+        // Ausgefallene Figur (PlayerAvatar): Modell aus-/einblenden, laufende Fähigkeiten beenden
+        private bool _downedVisual;
+        public void SetDownedVisual(bool downed)
+        {
+            _downedVisual = downed;
+            if (downed)
+            {
+                if (IsLocalControl) ReleaseAllHolds();
+                if (ActiveKit != null) ActiveKit.OnDeactivated();
+            }
+            if (ActiveVisual != null && ActiveVisual.gameObject.activeSelf == downed) ActiveVisual.gameObject.SetActive(!downed);
         }
 
         // ---------------- Update / Eingabe ----------------
@@ -164,13 +224,14 @@ namespace ElementalBuddies
         {
             UpdateCharges();
             if (_controller != null && ActiveKit != null) _controller.SpeedMultiplier = ActiveKit.MoveSpeedMultiplier;
-            HandleSkills();
+            // Eingabe nur auf der eigenen Figur; fremde Figuren wirken über Cast-RPCs (PlayerAvatar)
+            if (IsLocalControl) HandleSkills();
         }
 
         private void HandleSkills()
         {
             if (ActiveKit == null) return;
-            if (!CanCastNow())
+            if (!CanCastNow() || (_stats != null && _stats.IsDead))
             {
                 ReleaseAllHolds();
                 return;
@@ -196,7 +257,7 @@ namespace ElementalBuddies
                 if (_holding[s] && !action.IsPressed())
                 {
                     _holding[s] = false;
-                    ActiveKit.SetHeld(id, false);
+                    ReleaseHold(id);
                 }
                 else if (!_holding[s] && action.WasPressedThisFrame() && !consumed)
                 {
@@ -231,8 +292,15 @@ namespace ElementalBuddies
             {
                 if (!_holding[i]) continue;
                 _holding[i] = false;
-                ActiveKit.SetHeld(ActiveKit.GetAbility((AbilitySlot)i), false);
+                ReleaseHold(ActiveKit.GetAbility((AbilitySlot)i));
             }
+        }
+
+        // Halten beenden – lokal und auf allen anderen Rechnern (z. B. Schildblock loslassen)
+        private void ReleaseHold(AbilityId id)
+        {
+            ActiveKit.SetHeld(id, false);
+            if (_avatar != null && _avatar.IsSpawned && _avatar.IsLocalControl) _avatar.SendHeld(id, false);
         }
 
         private static bool Pressed(InputAction action) => action != null && action.WasPressedThisFrame();
@@ -357,7 +425,7 @@ namespace ElementalBuddies
             if (IsGameOver || !IsUnlocked(id) || ActiveKit == null) return false;
             if (GetCooldownRemaining(id) > 0f) return false;
             if (!ActiveKit.CanCast(id)) return false;
-            float mana = EconomyManager.Instance != null ? EconomyManager.Instance.CurrentMana : 0f;
+            float mana = Mana != null ? Mana.CurrentMana : 0f;
             return mana >= ActiveKit.GetRequiredMana(id);
         }
 
@@ -402,11 +470,14 @@ namespace ElementalBuddies
             if (GetCooldownRemaining(id) > 0f) return false;
             if (!ActiveKit.CanCast(id)) return false;
 
-            var eco = EconomyManager.Instance;
-            if (eco == null) return false;
+            if (!IsLocalControl) return false; // fremde Figuren wirken nur über Cast-RPCs
+            if (_stats != null && _stats.IsDead) return false;
+
+            var mana = Mana;
+            if (mana == null) return false;
             float cost = ActiveKit.GetManaCost(id);
-            if (eco.CurrentMana < ActiveKit.GetRequiredMana(id)) return false;
-            if (cost > 0f && !eco.TrySpendMana(cost)) return false;
+            if (mana.CurrentMana < ActiveKit.GetRequiredMana(id)) return false;
+            if (cost > 0f && !mana.TrySpend(cost)) return false;
 
             int idx = (int)id;
             int max = GetMaxCharges(id);
@@ -421,10 +492,35 @@ namespace ElementalBuddies
                 StartCooldown(id, GetCooldownDuration(id));
             }
 
-            ActiveKit.Cast(id, BuildContext(id));
+            var ctx = BuildContext(id);
+            ActiveKit.Cast(id, ctx);
+            // Mehrspieler: alle anderen Rechner führen denselben Cast aus (Server = Schaden, Clients = Optik)
+            if (_avatar != null && _avatar.IsSpawned)
+            {
+                ctx.Variant = ActiveKit.GetCastVariant(id, ctx);
+                _avatar.SendCast(id, ctx);
+            }
 
             OnAbilityCast?.Invoke(id);
             return true;
+        }
+
+        // Abbild eines Casts des Besitzers (vom Netz, PlayerAvatar.CastRpc): ohne Kosten/Abklingzeit/Freischalt-Prüfung
+        public void ExecuteRemoteCast(AbilityId id, SpellCastContext ctx)
+        {
+            EnsureInitialized();
+            if (ActiveKit == null) return;
+            ctx.Caster = this;
+            ctx.IsRemote = true;
+            ActiveKit.Cast(id, ctx);
+            OnAbilityCast?.Invoke(id);
+        }
+
+        // Abbild: gehaltene Fähigkeit losgelassen (PlayerAvatar.HeldRpc)
+        public void ExecuteRemoteHeld(AbilityId id, bool held)
+        {
+            if (ActiveKit == null) return;
+            ActiveKit.SetHeld(id, held);
         }
 
         // Kontext für eine bestimmte Fähigkeit: Schaden inkl. Händlerkarten dieser Fähigkeit
@@ -446,8 +542,17 @@ namespace ElementalBuddies
                 AimDirection = _controller.AimDirection,
                 DamageMultiplier = DamageMultiplier,
                 AimPoint = _controller.AimPoint,
-                HasAimPoint = _controller.HasAimPoint
+                HasAimPoint = _controller.HasAimPoint,
+                MoveDirection = MoveDirectionNow()
             };
+        }
+
+        // Laufrichtung aus der WASD-Eingabe (Welt-XZ), zero ohne Eingabe
+        private Vector3 MoveDirectionNow()
+        {
+            if (_controller == null) return Vector3.zero;
+            Vector2 input = _controller.MoveInput;
+            return input.sqrMagnitude > 0.04f ? new Vector3(input.x, 0f, input.y).normalized : Vector3.zero;
         }
 
         // Height of the floor below/around a point (PlayerController.FloorLayer); fallback if nothing is hit

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -107,6 +108,50 @@ namespace ElementalBuddies
         public CanvasGroup Fader;
         public float FadeTime = 0.45f;
 
+        // Eine Zeile der Lobby-Spielerliste
+        [System.Serializable]
+        public class LobbyRow
+        {
+            public GameObject Root;
+            public Image Background;
+            public Image PortraitBg;     // Plakette in Akzentfarbe
+            public Image Portrait;
+            public TextMeshProUGUI Initial;
+            public TextMeshProUGUI Name;
+            public TextMeshProUGUI Champion;
+            public TextMeshProUGUI State;     // "Bereit" / "wählt …"
+            public GameObject HostBadge;
+        }
+
+        [Header("Mehrspieler")]
+        public Button HostButton;
+        public Button JoinButton;
+        [Tooltip("Hinweiszeile im Hauptmenü (Trennungsgrund, Fehler).")]
+        public TextMeshProUGUI NetMessage;
+        [Tooltip("Wird in der Lobby ausgeblendet (die Lobby nutzt denselben Platz).")]
+        public GameObject DetailPanel;
+
+        [Tooltip("Modales Panel: Raumcode eingeben.")]
+        public GameObject JoinPanel;
+        public TMP_InputField JoinCodeInput;
+        public Button JoinConfirmButton, JoinBackButton;
+        [Tooltip("Verdeckter Test-Weg: direkter Host (LAN/IP).")]
+        public Button LanHostButton;
+        public TextMeshProUGUI JoinStatus;
+
+        [Tooltip("Lobby (anstelle des Detail-Panels).")]
+        public GameObject LobbyPanel;
+        public TextMeshProUGUI LobbyCodeLabel, LobbyCodeText;
+        public Button CopyCodeButton;
+        public TextMeshProUGUI LobbyStatus;
+        public TextMeshProUGUI LobbyDifficultyText;
+        public LobbyRow[] LobbyRows = new LobbyRow[0];
+        public TMP_InputField LobbyNameInput;
+        public Button ReadyButton, StartButton, LeaveButton;
+        public Color ReadyColor = new Color(0.24f, 0.48f, 0.15f);
+        public Color NotReadyColor = new Color(0.5f, 0.4f, 0.3f);
+        public Color EmptyRowColor = new Color(1f, 1f, 1f, 0.45f);
+
         private const string PrefFullscreen = "fullscreen";
         private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
         private static readonly string[] ElementNames = { "Feuer", "Eis", "Erde", "Licht" };
@@ -128,6 +173,7 @@ namespace ElementalBuddies
         void Start()
         {
             Init();
+            InitNetwork();
         }
 
         // Öffentlich, damit der Editor die Szene ohne Play-Mode befüllen kann (Vorschau-Renders)
@@ -205,8 +251,33 @@ namespace ElementalBuddies
 
         void Update()
         {
+            UpdateNetwork();
+
             var kb = Keyboard.current;
             if (kb == null || _loading) return;
+
+            if (_view == NetView.Join)
+            {
+                if (kb.escapeKey.wasPressedThisFrame && !_connecting) SetView(NetView.Main);
+                return; // Eingabefeld hat den Fokus (Enter = onSubmit)
+            }
+            if (_view == NetView.Lobby)
+            {
+                if (LobbyNameInput != null && LobbyNameInput.isFocused) return;
+                // Schwierigkeit wählt nur der Host
+                if (Net.IsRunning && Net.Manager.IsServer)
+                {
+                    if (kb.qKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() - 1); return; }
+                    if (kb.eKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() + 1); return; }
+                }
+                int li = IndexOf(_selected);
+                if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) Select(ClassAt(li - 1), false);
+                else if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) Select(ClassAt(li + 1), false);
+                else if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) Select(ClassAt(0), false);
+                else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) Select(ClassAt(1), false);
+                else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) Select(ClassAt(2), false);
+                return;
+            }
 
             if (SettingsPanel != null && SettingsPanel.activeSelf)
             {
@@ -330,6 +401,20 @@ namespace ElementalBuddies
 
             if (Stage != null) Stage.Focus(c, instant);
             RefreshLocks();
+
+            // Lobby: Wahl sofort an den Server melden (gesperrte Champions sind nur ansehbar)
+            if (_view == NetView.Lobby)
+            {
+                if (!IsLocked(c))
+                {
+                    GameSession.SelectedChampion = c;
+                    var np = NetPlayer.Local;
+                    if (np != null && np.ChampionClass != c) np.RequestChampion(c);
+                    _champRequestTime = Time.unscaledTime;
+                }
+                RefreshLobby();
+                return;
+            }
 
             // Tastatur-Fokus auf "Spielen", damit Enter direkt startet
             if (Application.isPlaying && PlayButton != null && EventSystem.current != null)
@@ -493,11 +578,20 @@ namespace ElementalBuddies
         {
             var all = DifficultySO.All;
             if (all.Count == 0) return;
+            // In der Lobby bestimmt der Host die Stufe
+            if (_view == NetView.Lobby && Net.IsClientOnly) return;
             index = Mathf.Clamp(index, 0, all.Count - 1);
             if (all[index] == null) return;
             GameSession.Difficulty = all[index];
             RefreshDifficulty();
             RefreshLocks();
+            if (_view == NetView.Lobby)
+            {
+                NetLobby.PushDifficulty(GameSession.DifficultyId);
+                EnsureUnlockedChampion();
+                RefreshLobby();
+                return;
+            }
             if (AchievementsPanel != null && AchievementsPanel.activeSelf)
             {
                 FillAchievements();
@@ -708,42 +802,633 @@ namespace ElementalBuddies
 
         // ---------------- Buttons ----------------
 
+        // Einzelspieler: lokaler Host ohne Mitspieler, der Host lädt die Spielszene per NGO-SceneManager
         public void Play()
         {
-            if (_loading || IsLocked(_selected)) return;
+            if (_loading || _view != NetView.Main || IsLocked(_selected)) return;
             GameSession.SelectedChampion = _selected;
             if (!Application.isPlaying) return;
             _loading = true;
             StartCoroutine(LoadGame());
         }
 
+        private IEnumerator FadeOut()
+        {
+            if (Fader == null) yield break;
+            Fader.blocksRaycasts = true;
+            for (float t = 0f; t < FadeTime; t += Time.unscaledDeltaTime)
+            {
+                Fader.alpha = t / FadeTime;
+                yield return null;
+            }
+            Fader.alpha = 1f;
+        }
+
+        private void ResetFader()
+        {
+            if (Fader == null) return;
+            Fader.alpha = 0f;
+            Fader.blocksRaycasts = false;
+        }
+
         private IEnumerator LoadGame()
         {
-            if (Fader != null)
-            {
-                Fader.blocksRaycasts = true;
-                for (float t = 0f; t < FadeTime; t += Time.unscaledDeltaTime)
-                {
-                    Fader.alpha = t / FadeTime;
-                    yield return null;
-                }
-                Fader.alpha = 1f;
-            }
+            yield return FadeOut();
 
             if (Application.CanStreamedLevelBeLoaded(GameSession.GameScene))
             {
-                SceneManager.LoadScene(GameSession.GameScene);
+                var ns = NetSession.Instance;
+                // Reste einer alten Verbindung beenden
+                if (Net.IsRunning)
+                {
+                    var t = ns.ShutdownAsync();
+                    while (!t.IsCompleted) yield return null;
+                }
+                if (ns.StartSolo()) ns.StartGame();
+                else SceneManager.LoadScene(GameSession.GameScene); // NetBootstrap startet dann selbst einen Solo-Host
             }
             else
             {
 #if UNITY_EDITOR
-                // Szene nicht in den Build Settings: im Editor trotzdem starten
+                // Szene nicht in den Build Settings: im Editor trotzdem starten (NetBootstrap startet den Solo-Host)
                 UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
                     "Assets/" + GameSession.GameScene + ".unity", new LoadSceneParameters(LoadSceneMode.Single));
 #else
                 Debug.LogError("MainMenuUI: Spielszene '" + GameSession.GameScene + "' fehlt in den Build Settings.");
                 _loading = false;
+                ResetFader();
 #endif
+            }
+        }
+
+        // ---------------- Mehrspieler: Hosten / Beitreten / Lobby ----------------
+
+        private enum NetView { Main, Join, Lobby }
+
+        private NetView _view = NetView.Main;
+        private bool _connecting;      // Hosten/Beitreten läuft (async)
+        private bool _leaving;
+        private bool _netInitialized;
+        private float _lobbyTime;
+        private float _champRequestTime = -10f;
+        private float _lobbyRefreshTimer;
+        private float _messageTimer;
+        private float _copyFeedbackTimer;
+        private string _lastStatus;
+        private string _copyLabelText;
+        private TextMeshProUGUI _copyLabel, _readyLabel, _startLabel;
+
+        private void InitNetwork()
+        {
+            if (!Application.isPlaying || _netInitialized) return;
+            _netInitialized = true;
+
+            if (HostButton != null) HostButton.onClick.AddListener(HostOnline);
+            if (JoinButton != null) JoinButton.onClick.AddListener(() => SetView(NetView.Join));
+            if (JoinConfirmButton != null) JoinConfirmButton.onClick.AddListener(ConfirmJoin);
+            if (JoinBackButton != null) JoinBackButton.onClick.AddListener(() => { if (!_connecting) SetView(NetView.Main); });
+            if (LanHostButton != null) LanHostButton.onClick.AddListener(HostLan);
+            if (JoinCodeInput != null)
+            {
+                JoinCodeInput.characterLimit = 32;
+                JoinCodeInput.onValidateInput += (text, index, ch) => char.IsWhiteSpace(ch) ? '\0' : char.ToUpperInvariant(ch);
+                JoinCodeInput.onSubmit.AddListener(_ => ConfirmJoin());
+            }
+            if (CopyCodeButton != null)
+            {
+                CopyCodeButton.onClick.AddListener(CopyCode);
+                _copyLabel = CopyCodeButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (_copyLabel != null) _copyLabelText = _copyLabel.text;
+            }
+            if (ReadyButton != null)
+            {
+                ReadyButton.onClick.AddListener(ToggleReady);
+                _readyLabel = ReadyButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            }
+            if (StartButton != null)
+            {
+                StartButton.onClick.AddListener(StartLobbyGame);
+                _startLabel = StartButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            }
+            if (LeaveButton != null) LeaveButton.onClick.AddListener(LeaveLobby);
+            if (LobbyNameInput != null)
+            {
+                LobbyNameInput.characterLimit = 20;
+                LobbyNameInput.onEndEdit.AddListener(SubmitName);
+            }
+
+            var ns = NetSession.Instance;
+            ns.OnStatus += HandleNetStatus;
+            ns.OnDisconnected += HandleNetDisconnected;
+            NetPlayer.OnLobbyChanged += RefreshLobby;
+            NetLobby.OnDifficultyChanged += HandleRoomDifficultyChanged;
+
+            // Zurück im Menü ohne Verbindung: eigene Schwierigkeit des Clients wiederherstellen
+            if (!Net.IsRunning)
+            {
+                NetLobby.RestoreLocalDifficulty();
+                RefreshDifficulty();
+                RefreshLocks();
+            }
+
+            // Grund der letzten Trennung als Hinweis
+            if (!string.IsNullOrEmpty(NetSession.LastDisconnectReason))
+            {
+                ShowNetMessage(NetSession.LastDisconnectReason);
+                NetSession.LastDisconnectReason = null;
+            }
+
+            // Kommandozeile (Testautomatisierung) oder noch laufende Verbindung → Lobby
+            bool started = NetSession.HandleCommandLine();
+            if (started) SetView(NetView.Lobby);
+            else if (Net.IsRunning)
+            {
+                if (ns.Mode == NetMode.Solo || ns.Mode == NetMode.None) _ = ns.ShutdownAsync();
+                else SetView(NetView.Lobby);
+            }
+            else SetView(NetView.Main);
+        }
+
+        void OnDestroy()
+        {
+            if (!_netInitialized) return;
+            if (NetSession.Exists)
+            {
+                NetSession.Instance.OnStatus -= HandleNetStatus;
+                NetSession.Instance.OnDisconnected -= HandleNetDisconnected;
+            }
+            NetPlayer.OnLobbyChanged -= RefreshLobby;
+            NetLobby.OnDifficultyChanged -= HandleRoomDifficultyChanged;
+        }
+
+        private void SetView(NetView view)
+        {
+            _view = view;
+            bool main = view == NetView.Main;
+            bool lobby = view == NetView.Lobby;
+
+            SetActive(PlayButton, main);
+            SetActive(HostButton, main);
+            SetActive(JoinButton, main);
+            SetActive(SettingsButton, main);
+            SetActive(AchievementsButton, main);
+            SetActive(QuitButton, main);
+            if (JoinPanel != null) JoinPanel.SetActive(view == NetView.Join);
+            if (LobbyPanel != null) LobbyPanel.SetActive(lobby);
+            if (DetailPanel != null) DetailPanel.SetActive(!lobby || LobbyPanel == null);
+            if (!main)
+            {
+                ShowSettings(false);
+                ShowAchievements(false);
+            }
+
+            if (view == NetView.Join)
+            {
+                if (JoinStatus != null) JoinStatus.text = "Gib den Raumcode deines Mitspielers ein.";
+                SetJoinInteractable(true);
+                if (JoinCodeInput != null)
+                {
+                    JoinCodeInput.text = "";
+                    JoinCodeInput.ActivateInputField();
+                    if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(JoinCodeInput.gameObject);
+                }
+            }
+            else if (lobby)
+            {
+                _lobbyTime = 0f;
+                if (LobbyNameInput != null) LobbyNameInput.SetTextWithoutNotify(NetPlayer.LocalPlayerName);
+                if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+                RefreshDifficulty();
+                RefreshLocks();
+                RefreshLobby();
+            }
+            else
+            {
+                _connecting = false;
+                // Schwierigkeit eines verlassenen Raums nicht übernehmen
+                if (!Net.IsRunning)
+                {
+                    NetLobby.RestoreLocalDifficulty();
+                    RefreshDifficulty();
+                }
+                SetDifficultyInteractable(true);
+                RefreshLocks();
+                if (EventSystem.current != null && PlayButton != null) EventSystem.current.SetSelectedGameObject(PlayButton.gameObject);
+            }
+        }
+
+        private static void SetActive(Component c, bool on)
+        {
+            if (c != null && c.gameObject.activeSelf != on) c.gameObject.SetActive(on);
+        }
+
+        private void SetDifficultyInteractable(bool on)
+        {
+            foreach (var b in DifficultyButtons)
+                if (b != null) b.interactable = on;
+        }
+
+        private void SetJoinInteractable(bool on)
+        {
+            if (JoinConfirmButton != null) JoinConfirmButton.interactable = on;
+            if (JoinBackButton != null) JoinBackButton.interactable = on;
+            if (LanHostButton != null) LanHostButton.interactable = on;
+            if (JoinCodeInput != null) JoinCodeInput.interactable = on;
+        }
+
+        // Champion für die Verbindung festlegen (NetPlayer meldet ihn beim Spawn); gesperrt → erster freier
+        private void PrepareConnect()
+        {
+            ChampionClass c = _selected;
+            if (IsLocked(c)) c = FirstUnlocked();
+            GameSession.SelectedChampion = c;
+            ShowNetMessage(null);
+        }
+
+        private ChampionClass FirstUnlocked()
+        {
+            for (int i = 0; i < Champions.Length; i++)
+                if (Champions[i] != null && !IsLocked(Champions[i].Class)) return Champions[i].Class;
+            return ChampionClass.Mage;
+        }
+
+        // Eigener Champion ist unter der Raum-Stufe gesperrt → auf einen freien wechseln
+        private void EnsureUnlockedChampion()
+        {
+            var np = NetPlayer.Local;
+            if (np == null || !IsLocked(np.ChampionClass)) return;
+            var c = FirstUnlocked();
+            if (c != np.ChampionClass)
+            {
+                np.RequestChampion(c);
+                GameSession.SelectedChampion = c;
+                Select(c, false);
+            }
+        }
+
+        private async void HostOnline()
+        {
+            if (_connecting || _loading || _view != NetView.Main) return;
+            PrepareConnect();
+            _connecting = true;
+            _lastStatus = "Erstelle Raum …";
+            SetView(NetView.Lobby);
+            string code = await NetSession.Instance.HostOnlineAsync();
+            if (this == null) return;
+            _connecting = false;
+            if (string.IsNullOrEmpty(code))
+            {
+                string err = _lastStatus;
+                if (Net.IsRunning) await NetSession.Instance.ShutdownAsync();
+                if (this == null) return;
+                SetView(NetView.Main);
+                ShowNetMessage(string.IsNullOrEmpty(err) || err == "Erstelle Raum …" ? "Raum konnte nicht erstellt werden." : err);
+                return;
+            }
+            _lastStatus = null;
+            NetLobby.PushDifficulty(GameSession.DifficultyId);
+            RefreshLobby();
+        }
+
+        private void HostLan()
+        {
+            if (_connecting) return;
+            PrepareConnect();
+            if (NetSession.Instance.HostDirect())
+            {
+                _lastStatus = null;
+                SetView(NetView.Lobby);
+            }
+            else if (JoinStatus != null) JoinStatus.text = "LAN-Host konnte nicht starten (Port " + NetSession.DefaultPort + " belegt?).";
+        }
+
+        private async void ConfirmJoin()
+        {
+            if (_connecting || _view != NetView.Join) return;
+            string code = JoinCodeInput != null ? JoinCodeInput.text.Trim() : "";
+            if (code.Length == 0)
+            {
+                if (JoinStatus != null) JoinStatus.text = "Bitte einen Raumcode eingeben.";
+                if (JoinCodeInput != null) JoinCodeInput.ActivateInputField();
+                return;
+            }
+            PrepareConnect();
+
+            // Verdeckter Test-Weg: "ip:port" oder IP-Adresse → direkte Verbindung
+            if (code.IndexOf(':') >= 0 || code.IndexOf('.') >= 0)
+            {
+                if (NetSession.Instance.JoinDirect(code.ToLowerInvariant()))
+                {
+                    _lastStatus = "Verbinde mit " + code + " …";
+                    SetView(NetView.Lobby);
+                }
+                else if (JoinStatus != null) JoinStatus.text = "Verbindung zu " + code + " fehlgeschlagen.";
+                return;
+            }
+
+            _connecting = true;
+            SetJoinInteractable(false);
+            if (JoinStatus != null) JoinStatus.text = "Verbinde …";
+            bool ok = await NetSession.Instance.JoinOnlineAsync(code);
+            if (this == null) return;
+            _connecting = false;
+            SetJoinInteractable(true);
+            if (ok)
+            {
+                _lastStatus = null;
+                SetView(NetView.Lobby);
+            }
+            else
+            {
+                if (JoinStatus != null) JoinStatus.text = string.IsNullOrEmpty(_lastStatus) ? "Beitritt fehlgeschlagen." : _lastStatus;
+                if (JoinCodeInput != null) JoinCodeInput.ActivateInputField();
+            }
+        }
+
+        private async void LeaveLobby()
+        {
+            if (_leaving) return;
+            _leaving = true;
+            try { await NetSession.Instance.ShutdownAsync(); }
+            finally { _leaving = false; }
+            if (this == null) return;
+            SetView(NetView.Main);
+        }
+
+        private void ToggleReady()
+        {
+            var np = NetPlayer.Local;
+            if (np == null || IsLocked(np.ChampionClass)) return;
+            np.RequestReady(!np.Ready.Value);
+        }
+
+        // Host: Spiel für alle starten (alle Mitspieler bereit; der Host gilt als bereit)
+        private void StartLobbyGame()
+        {
+            if (_loading || !CanStartLobbyGame()) return;
+            var np = NetPlayer.Local;
+            if (np != null) GameSession.SelectedChampion = np.ChampionClass;
+            NetLobby.PushDifficulty(GameSession.DifficultyId);
+            _loading = true;
+            StartCoroutine(StartLobbyGameRoutine());
+        }
+
+        private IEnumerator StartLobbyGameRoutine()
+        {
+            yield return FadeOut();
+            if (!Net.IsRunning || !Net.Manager.IsServer)
+            {
+                _loading = false;
+                ResetFader();
+                yield break;
+            }
+            NetSession.Instance.StartGame();
+        }
+
+        private bool CanStartLobbyGame()
+        {
+            if (!Net.IsRunning || !Net.Manager.IsServer || NetSession.Instance.IsBusy) return false;
+            for (int i = 0; i < NetPlayer.All.Count; i++)
+            {
+                var p = NetPlayer.All[i];
+                if (p == null || p.OwnerClientId == NetworkManager.ServerClientId) continue;
+                if (!p.Ready.Value) return false;
+            }
+            return true;
+        }
+
+        private void SubmitName(string value)
+        {
+            string n = NetLobby.Clip(value);
+            if (n.Length == 0)
+            {
+                if (LobbyNameInput != null) LobbyNameInput.SetTextWithoutNotify(NetPlayer.LocalPlayerName);
+                return;
+            }
+            NetPlayer.LocalPlayerName = n;
+            if (NetLobby.Local != null) NetLobby.Local.RequestName(n);
+        }
+
+        private void CopyCode()
+        {
+            string code = NetSession.Exists ? NetSession.Instance.RoomCode : null;
+            if (string.IsNullOrEmpty(code)) return;
+            GUIUtility.systemCopyBuffer = code;
+            if (_copyLabel != null) _copyLabel.text = "Kopiert!";
+            _copyFeedbackTimer = 1.5f;
+        }
+
+        private void HandleNetStatus(string status)
+        {
+            _lastStatus = status;
+            if (_view == NetView.Join && JoinStatus != null) JoinStatus.text = status;
+            else if (_view == NetView.Lobby) RefreshLobby();
+        }
+
+        private void HandleNetDisconnected(string reason)
+        {
+            NetSession.LastDisconnectReason = null; // wird hier direkt angezeigt
+            if (this == null) return;
+            _loading = false;
+            ResetFader();
+            if (_view != NetView.Main) SetView(NetView.Main);
+            ShowNetMessage(reason);
+        }
+
+        private void HandleRoomDifficultyChanged()
+        {
+            RefreshDifficulty();
+            RefreshLocks();
+            if (_view == NetView.Lobby)
+            {
+                EnsureUnlockedChampion();
+                RefreshLobby();
+            }
+        }
+
+        private void ShowNetMessage(string text, float duration = 10f)
+        {
+            if (NetMessage == null) return;
+            bool show = !string.IsNullOrEmpty(text);
+            NetMessage.gameObject.SetActive(show);
+            if (show) NetMessage.text = text;
+            _messageTimer = show ? duration : 0f;
+        }
+
+        private void UpdateNetwork()
+        {
+            if (!_netInitialized) return;
+            float dt = Time.unscaledDeltaTime;
+
+            if (_messageTimer > 0f)
+            {
+                _messageTimer -= dt;
+                if (_messageTimer <= 0f && NetMessage != null) NetMessage.gameObject.SetActive(false);
+            }
+            if (_copyFeedbackTimer > 0f)
+            {
+                _copyFeedbackTimer -= dt;
+                if (_copyFeedbackTimer <= 0f && _copyLabel != null) _copyLabel.text = _copyLabelText;
+            }
+
+            if (_view != NetView.Lobby) return;
+            _lobbyTime += dt;
+
+            // Verbindung weg (z. B. Direktverbindung gescheitert, Host hat den Raum geschlossen) → Hauptmenü
+            var ns = NetSession.Instance;
+            if (!_connecting && !_leaving && !_loading && !ns.IsBusy && !Net.IsRunning && _lobbyTime > 1f)
+            {
+                string reason = !string.IsNullOrEmpty(NetSession.LastDisconnectReason) ? NetSession.LastDisconnectReason : "Verbindung beendet.";
+                NetSession.LastDisconnectReason = null;
+                SetView(NetView.Main);
+                ShowNetMessage(reason);
+                return;
+            }
+
+            // Bereit-Status, Spielerzahl usw. regelmäßig nachziehen (Events decken nicht alles ab)
+            _lobbyRefreshTimer -= dt;
+            if (_lobbyRefreshTimer <= 0f)
+            {
+                _lobbyRefreshTimer = 0.25f;
+                RefreshLobby();
+            }
+        }
+
+        private void RefreshLobby()
+        {
+            if (_view != NetView.Lobby || !_netInitialized) return;
+            var ns = NetSession.Instance;
+            bool running = Net.IsRunning;
+            bool isHost = running && Net.Manager.IsServer;
+            var local = NetPlayer.Local;
+
+            // Raumcode
+            string code = ns.RoomCode;
+            if (LobbyCodeLabel != null) LobbyCodeLabel.text = ns.Mode == NetMode.Direct ? "Adresse (LAN)" : "Raumcode";
+            if (LobbyCodeText != null)
+            {
+                LobbyCodeText.text = string.IsNullOrEmpty(code) ? "· · ·" : code;
+                LobbyCodeText.fontSize = !string.IsNullOrEmpty(code) && code.Length > 10 ? 44f : 76f;
+            }
+            if (CopyCodeButton != null) CopyCodeButton.interactable = !string.IsNullOrEmpty(code);
+
+            // Spielerliste
+            int others = 0, ready = 0;
+            for (int i = 0; i < NetPlayer.All.Count; i++)
+            {
+                var p = NetPlayer.All[i];
+                if (p == null || p.OwnerClientId == NetworkManager.ServerClientId) continue;
+                others++;
+                if (p.Ready.Value) ready++;
+            }
+            for (int i = 0; i < LobbyRows.Length; i++)
+            {
+                var row = LobbyRows[i];
+                if (row == null) continue;
+                var p = i < NetPlayer.All.Count ? NetPlayer.All[i] : null;
+                FillLobbyRow(row, p);
+            }
+
+            // Eigene Knöpfe
+            if (ReadyButton != null)
+            {
+                ReadyButton.gameObject.SetActive(running && !isHost);
+                bool r = local != null && local.Ready.Value;
+                ReadyButton.interactable = local != null && !IsLocked(local.ChampionClass);
+                if (_readyLabel != null) _readyLabel.text = r ? "Nicht bereit" : "Bereit";
+            }
+            if (StartButton != null)
+            {
+                StartButton.gameObject.SetActive(isHost);
+                StartButton.interactable = CanStartLobbyGame() && !_loading;
+                if (_startLabel != null) _startLabel.text = "Spiel starten";
+            }
+            if (LobbyNameInput != null) LobbyNameInput.interactable = local != null && NetLobby.Local != null;
+            SetDifficultyInteractable(!running || isHost);
+
+            // Schwierigkeit
+            if (LobbyDifficultyText != null)
+            {
+                var d = GameSession.Difficulty;
+                LobbyDifficultyText.text = "Schwierigkeit: <b>" + d.DisplayName + "</b>" +
+                    (isHost ? "  <size=80%>(Q/E)</size>" : "  <size=80%>– wählt der Host</size>");
+            }
+
+            // Status
+            if (LobbyStatus != null)
+            {
+                string s;
+                if (_connecting || ns.IsBusy) s = string.IsNullOrEmpty(_lastStatus) ? "Verbinde …" : _lastStatus;
+                else if (!running || local == null) s = string.IsNullOrEmpty(_lastStatus) ? "Verbinde …" : _lastStatus;
+                else if (isHost)
+                {
+                    if (others == 0) s = "Warte auf Mitspieler – teile den Raumcode.";
+                    else if (ready < others) s = $"{ready}/{others} Mitspieler bereit";
+                    else s = "Alle bereit – starte das Spiel!";
+                }
+                else if (IsLocked(local.ChampionClass)) s = "Dein Champion ist auf dieser Stufe gesperrt – wähle einen anderen.";
+                else s = local.Ready.Value ? "Bereit – warte auf den Host …" : "Wähle deinen Champion und klicke auf „Bereit“.";
+                LobbyStatus.text = s;
+            }
+
+            // Karten-Hervorhebung folgt der eigenen (vom Server bestätigten) Wahl
+            if (local != null && local.ChampionClass != _selected && !IsLocked(local.ChampionClass) && !IsLocked(_selected)
+                && _lobbyTime > 0.5f && Time.unscaledTime - _champRequestTime > 1f)
+            {
+                _selected = local.ChampionClass;
+                GameSession.SelectedChampion = _selected;
+                foreach (var card in Cards)
+                {
+                    if (card == null) continue;
+                    bool sel = card.Class == _selected;
+                    if (card.Frame != null && CardNormalSprite != null && CardSelectedSprite != null)
+                        card.Frame.sprite = sel ? CardSelectedSprite : CardNormalSprite;
+                    if (card.Button != null) card.Button.transform.localScale = sel ? Vector3.one * 1.06f : Vector3.one;
+                }
+                if (Stage != null) Stage.Focus(_selected, false);
+                RefreshLocks();
+            }
+        }
+
+        private void FillLobbyRow(LobbyRow row, NetPlayer p)
+        {
+            if (row.Root != null && !row.Root.activeSelf) row.Root.SetActive(true);
+            bool has = p != null;
+            if (row.Background != null) row.Background.color = has ? Color.white : EmptyRowColor;
+            if (row.HostBadge != null) row.HostBadge.SetActive(has && p.OwnerClientId == NetworkManager.ServerClientId);
+
+            if (!has)
+            {
+                if (row.Name != null) row.Name.text = "<color=#7a6a5a><i>Freier Platz</i></color>";
+                if (row.Champion != null) row.Champion.text = "";
+                if (row.State != null) row.State.text = "";
+                if (row.Portrait != null) row.Portrait.gameObject.SetActive(false);
+                if (row.Initial != null) { row.Initial.gameObject.SetActive(true); row.Initial.text = "?"; }
+                if (row.PortraitBg != null) row.PortraitBg.color = new Color(0.55f, 0.5f, 0.45f, 0.6f);
+                return;
+            }
+
+            var def = Def(p.ChampionClass);
+            string name = string.IsNullOrEmpty(p.DisplayName) ? "Spieler " + (p.Slot + 1) : p.DisplayName;
+            if (row.Name != null) row.Name.text = p.IsLocal ? name + " <size=75%><color=#7a4f2a>(du)</color></size>" : name;
+            if (row.Champion != null) row.Champion.text = def != null ? def.DisplayName : p.ChampionClass.ToString();
+            bool hasPortrait = def != null && def.Portrait != null;
+            if (row.Portrait != null)
+            {
+                row.Portrait.gameObject.SetActive(hasPortrait);
+                if (hasPortrait) row.Portrait.sprite = def.Portrait;
+            }
+            if (row.Initial != null)
+            {
+                row.Initial.gameObject.SetActive(!hasPortrait);
+                row.Initial.text = def != null && !string.IsNullOrEmpty(def.DisplayName) ? def.DisplayName.Substring(0, 1) : "?";
+            }
+            if (row.PortraitBg != null) row.PortraitBg.color = def != null ? Color.Lerp(def.AccentColor, Color.white, 0.15f) : Color.gray;
+            if (row.State != null)
+            {
+                if (p.OwnerClientId == NetworkManager.ServerClientId) { row.State.text = "Bereit"; row.State.color = ReadyColor; }
+                else if (p.Ready.Value) { row.State.text = "Bereit"; row.State.color = ReadyColor; }
+                else { row.State.text = "wählt …"; row.State.color = NotReadyColor; }
             }
         }
 

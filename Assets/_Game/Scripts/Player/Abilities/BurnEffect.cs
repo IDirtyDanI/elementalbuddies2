@@ -3,6 +3,8 @@ using UnityEngine;
 namespace ElementalBuddies
 {
     // Damage over time added to an enemy by the Flammenwelle. Lives on the enemy, so it dies with it.
+    // Mehrspieler: Apply darf überall laufen (Optik, z. B. von Paket B auf Clients nachgespielt); die Spieler-Fähigkeiten
+    // rufen es nur auf dem Server auf. Der DoT-Schaden tickt nur auf dem Server.
     public class BurnEffect : MonoBehaviour
     {
         public const float TickInterval = 0.5f;
@@ -64,7 +66,8 @@ namespace ElementalBuddies
             {
                 float damage = _dps * _tickTimer;
                 _tickTimer = 0f;
-                _target.TakeDamage(damage); // may destroy the enemy (and this component) at frame end
+                // Schaden nur auf dem Server (auf Clients ist der Brand reine Optik)
+                if (Net.IsServer) _target.TakeDamage(damage); // may destroy the enemy (and this component) at frame end
             }
 
             if (_remaining <= 0f) enabled = false;

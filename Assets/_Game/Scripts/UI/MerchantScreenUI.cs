@@ -8,8 +8,9 @@ namespace ElementalBuddies
     // Kartenauswahl beim Händler (Pergament-Stil wie die Wellenkarten): Kopf mit Händlername + Porträt,
     // 3 Karten aus BuffCard.prefab (MerchantCardUI statt UpgradeCardUI). Script auf dem Panel-Objekt
     // (Kind des Canvas, bleibt aktiv); Panel wird ein-/ausgeblendet.
-    // Laden: Splitter-Anzeige im Kopf, „Neu würfeln“ mit Preis, „Fertig“ (fragt einmal nach, solange die
-    // Gratis-Karte noch nicht genommen ist). Alle Laden-Refs optional.
+    // Laden: Gold-Anzeige im Kopf (persönliches Gold des lokalen Spielers), „Neu würfeln“ mit Preis, „Fertig“ (fragt
+    // einmal nach, solange die Gratis-Karte noch nicht genommen ist). Alle Laden-Refs optional.
+    // Mehrspieler: Der Laden gehört dem lokalen Spieler (MerchantManager spiegelt den Server-Zustand); keine Pause.
     public class MerchantScreenUI : MonoBehaviour
     {
         [Tooltip("Wird ein-/ausgeblendet (Vollbild-Overlay).")]
@@ -27,13 +28,13 @@ namespace ElementalBuddies
 
         [Header("Laden (optional)")]
         public Button RerollButton;
-        [Tooltip("Preis auf dem Würfel-Knopf, z. B. „Neu würfeln (25 ✦)“.")]
+        [Tooltip("Preis auf dem Würfel-Knopf, z. B. „Neu würfeln (25 Gold)“.")]
         public TMP_Text RerollCostText;
-        [Tooltip("Optional: Splitter-Symbol hinter dem Würfel-Preis; dann steht im Text nur „Neu würfeln 25“.")]
+        [Tooltip("Altes Splitter-Symbol hinter dem Würfel-Preis – wird ausgeblendet (Preis jetzt in Gold).")]
         public Image RerollPriceIcon;
         public Button DoneButton;
         public TMP_Text DoneButtonText;
-        [Tooltip("Aktuelle Seelensplitter im Kopf (nur die Zahl, Symbol daneben im Layout).")]
+        [Tooltip("Aktuelles Gold des lokalen Spielers im Kopf („123 Gold“).")]
         public TMP_Text ShardsText;
         public Color UnaffordableColor = new Color(0.78f, 0.15f, 0.12f);
         [Tooltip("Zeitfenster für den zweiten Klick auf „Fertig“, wenn die Gratis-Karte noch offen ist.")]
@@ -43,7 +44,6 @@ namespace ElementalBuddies
         private const string ConfirmLabel = "Gratis-Karte verfallen lassen?";
 
         private MerchantManager _mgr;
-        private EconomyManager _eco;
         private readonly List<MerchantCardUI> _cards = new List<MerchantCardUI>();
         private float _confirmUntil = -1f;
         private Color _rerollColor = Color.white;
@@ -60,8 +60,7 @@ namespace ElementalBuddies
                 _mgr.OnOfferChanged += HandleOfferChanged;
                 _mgr.OnPurchaseFailed += HandlePurchaseFailed;
             }
-            _eco = EconomyManager.Instance;
-            if (_eco != null) _eco.OnShardsChanged += RefreshShop;
+            NetPlayer.OnGoldChanged += HandleGoldChanged;
             if (RerollButton != null) RerollButton.onClick.AddListener(OnRerollClicked);
             if (DoneButton != null) DoneButton.onClick.AddListener(OnDoneClicked);
             if (DoneButtonText == null && DoneButton != null) DoneButtonText = DoneButton.GetComponentInChildren<TMP_Text>(true);
@@ -78,7 +77,7 @@ namespace ElementalBuddies
                 _mgr.OnOfferChanged -= HandleOfferChanged;
                 _mgr.OnPurchaseFailed -= HandlePurchaseFailed;
             }
-            if (_eco != null) _eco.OnShardsChanged -= RefreshShop;
+            NetPlayer.OnGoldChanged -= HandleGoldChanged;
         }
 
         void Update()
@@ -160,13 +159,18 @@ namespace ElementalBuddies
             RefreshShop();
         }
 
-        // Splitter, Preise, Knöpfe aktualisieren
+        private void HandleGoldChanged(NetPlayer np, float gold)
+        {
+            if (np != null && np == NetPlayer.Local) RefreshShop();
+        }
+
+        // Gold, Preise, Knöpfe aktualisieren
         private void RefreshShop()
         {
             if (_mgr == null || Panel == null || !Panel.activeSelf) return;
-            float shards = EconomyManager.Instance != null ? EconomyManager.Instance.CurrentShards : 0f;
+            float gold = MerchantManager.LocalGold;
 
-            if (ShardsText != null) ShardsText.text = Mathf.FloorToInt(shards).ToString();
+            if (ShardsText != null) ShardsText.text = $"{Mathf.FloorToInt(gold)} {MerchantCardUI.CurrencyLabel}";
 
             foreach (var c in _cards)
                 if (c != null) c.RefreshShopState();
@@ -180,14 +184,9 @@ namespace ElementalBuddies
                     _rerollColor = RerollCostText.color;
                     _rerollColorRead = true;
                 }
-                if (RerollPriceIcon != null)
-                    RerollCostText.text = $"Neu würfeln  {rerollPrice}";
-                else
-                {
-                    string glyph = RerollCostText.font != null && RerollCostText.font.HasCharacter('\u2726', true) ? "\u2726" : "Splitter";
-                    RerollCostText.text = $"Neu würfeln ({rerollPrice} {glyph})";
-                }
-                RerollCostText.color = shards >= rerollPrice ? _rerollColor : UnaffordableColor;
+                if (RerollPriceIcon != null) RerollPriceIcon.gameObject.SetActive(false);
+                RerollCostText.text = $"Neu würfeln ({rerollPrice} {MerchantCardUI.CurrencyLabel})";
+                RerollCostText.color = gold + 0.001f >= rerollPrice ? _rerollColor : UnaffordableColor;
             }
 
             if (DoneButtonText != null)
@@ -196,7 +195,7 @@ namespace ElementalBuddies
 
         private void HandlePurchaseFailed(int slot)
         {
-            ToastUI.Show("Nicht genug Seelensplitter");
+            ToastUI.Show("Nicht genug Gold");
             if (slot >= 0)
             {
                 foreach (var c in _cards)

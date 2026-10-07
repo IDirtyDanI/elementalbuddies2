@@ -40512,6 +40512,8 @@ GameObject:
   - component: {fileID: 5299614711162108602}
   - component: {fileID: 5787537929148678797}
   - component: {fileID: 2213615897849850665}
+  - component: {fileID: 2104620108194952130}
+  - component: {fileID: 4019226282710714521}
   m_Layer: 7
   m_Name: Super_Sturm
   m_TagString: Buddy
@@ -40603,6 +40605,46 @@ MonoBehaviour:
   WetVfxPrefab: {fileID: 6604289077328329163, guid: 7bb8221c8a50b40da8838bbe32e7f08f, type: 3}
   BoltMaterial: {fileID: 2100000, guid: 2d4f737c89883400e914d2f68f1ca574, type: 2}
   BoltColor: {r: 0.75, g: 0.93, b: 1, a: 1}
+--- !u!114 &2104620108194952130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7326397342280013850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &4019226282710714521
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7326397342280013850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1efa17a3944748aea50d8086dc0f169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddyNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &7381191121852886085
 GameObject:
   m_ObjectHideFlags: 0

@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 namespace ElementalBuddies
 {
+    // Lokale Bau-/Auswahl-Eingabe (Ghost, Vorschau, Validierungsanzeige bleiben lokal). Bauen/Aufwerten/Verkaufen gehen als
+    // Anfrage an den Server (NetGame.Request*); der Server prüft erneut und führt aus (ServerBuild/ServerSell).
     public class InteractionManager : MonoBehaviour
     {
         public static InteractionManager Instance { get; private set; }
@@ -96,9 +98,18 @@ namespace ElementalBuddies
 
         private bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
 
+        // Lokale Eingabe gesperrt (nur dieser Rechner): Pause-Menü, eigenes Kartenfenster (Wellen-Draft/Händler) oder
+        // Solo-Zeitstopp. Ersetzt die frühere Prüfung auf Time.timeScale (im Koop gibt es keine globale Pause).
+        public static bool LocalInputBlocked =>
+            PauseManager.IsPaused
+            || (UpgradeManager.Instance != null && UpgradeManager.Instance.IsChoosing)
+            || (MerchantManager.Instance != null && MerchantManager.Instance.IsChoosing)
+            || (Net.CanPauseTime && Time.timeScale <= 0f);
+
         private void HandleInput()
         {
             if (inputAsset == null || _buildActions == null) return;
+            if (LocalInputBlocked) return; // Kartenfenster offen: keine Bau-/Auswahl-Eingaben
 
             // Check Build Keys
             for (int i = 0; i < _buildActions.Length; i++)
@@ -190,8 +201,8 @@ namespace ElementalBuddies
 
         private void TrySelectBuddy()
         {
-            // Auswahl in Bau- und Kampfphase, nicht bei Game Over / Pause / Upgrade-Screen
-            if (IsGameOver || Time.timeScale <= 0f) return;
+            // Auswahl in Bau- und Kampfphase, nicht bei Game Over / Pause / Kartenfenster
+            if (IsGameOver || LocalInputBlocked) return;
 
             var buddy = RaycastBuddy();
             if (buddy != null) SelectBuddy(buddy);
@@ -237,9 +248,9 @@ namespace ElementalBuddies
             _selectedRange.Show(SelectedBuddy.transform, SelectedBuddy.EffectiveRange, color);
         }
 
-        // Verkaufen nur in der Bauphase (und nicht während Pause/Upgrade-Screen)
+        // Verkaufen nur in der Bauphase (Spielzustand; lokale Sperren prüft SellSelected zusätzlich)
         public bool CanSellNow =>
-            (GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.Building) && Time.timeScale > 0f;
+            GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.Building;
 
         // Rückerstattung in Seelensplittern für einen Buddy (inkl. Aufwertungen)
         public float GetSellRefund(ElementalBuddy buddy)
@@ -251,31 +262,38 @@ namespace ElementalBuddies
             return EconomyManager.Instance != null ? EconomyManager.Instance.GetRefundAmount(paid) : paid * 0.7f;
         }
 
-        private void TrySell()
+        // Nur Server: Verkauf ausführen (Rückerstattung in die Teamkasse, Despawn). null = Erfolg, sonst Hinweis-Text
+        public string ServerSell(ElementalBuddy buddy)
         {
-            if (!CanSellNow) return;
-            SellBuddy(RaycastBuddy());
-        }
-
-        private bool SellBuddy(ElementalBuddy buddy)
-        {
-            if (buddy == null || !CanSellNow) return false;
+            if (!Net.IsServer) return null;
+            if (buddy == null || buddy.IsDead) return "Buddy existiert nicht mehr.";
+            if (!CanSellNow) return "Verkaufen nur zwischen den Wellen.";
 
             if (EconomyManager.Instance != null) EconomyManager.Instance.AddShards(GetSellRefund(buddy));
             if (buddy == SelectedBuddy) DeselectBuddy();
-            Destroy(buddy.gameObject);
-            return true;
+            BuddyNet.DespawnOrDestroy(buddy.gameObject);
+            return null;
         }
 
-        // UI-Helfer für das Buddy-Info-Panel
+        // UI-Helfer für das Buddy-Info-Panel: Anfrage an den Server
         public void SellSelected()
         {
-            SellBuddy(SelectedBuddy);
+            var buddy = SelectedBuddy;
+            if (buddy == null || !CanSellNow || LocalInputBlocked) return;
+            DeselectBuddy();
+            NetGame.RequestSell(buddy);
         }
 
+        // Aufwerten anfragen (lokale Vorprüfung inkl. eigener Meta-Freischaltungen, der Server prüft Phase/Kosten erneut).
+        // true = Anfrage gesendet; die neue Stufe kommt über BuddyNet (OnLevelChanged).
         public bool UpgradeSelected()
         {
-            return SelectedBuddy != null && SelectedBuddy.TryUpgrade();
+            var buddy = SelectedBuddy;
+            if (buddy == null || !buddy.CanUpgrade || !ElementalBuddy.IsUpgradePhase || LocalInputBlocked) return false;
+            var eco = EconomyManager.Instance;
+            if (eco != null && !eco.CanAfford(buddy.NextUpgradeCost)) return false;
+            NetGame.RequestUpgrade(buddy);
+            return true;
         }
 
         // Für UI-Buttons: gleiches Verhalten wie Hotkey (erneute Auswahl = abwählen)
@@ -397,37 +415,29 @@ namespace ElementalBuddies
             else _ghostRange.Hide();
         }
 
-        private bool ValidatePlacement(Vector3 position)
+        private bool ValidatePlacement(Vector3 position) => ValidatePlacement(_selectedUnitConfig, position, true) == null;
+
+        // Bauplatz prüfen (Ghost lokal mit Erreichbarkeits-Cache, Server ohne Cache). null = gültig, sonst Grund
+        private string ValidatePlacement(UnitConfigSO config, Vector3 position, bool useCache)
         {
             // Safety first
-            if (_selectedUnitConfig == null) return false;
-            if (EconomyManager.Instance == null) return false;
+            if (config == null || EconomyManager.Instance == null) return "Bauen nicht möglich.";
+            if (IsGameOver) return "Das Spiel ist vorbei.";
 
             // Check Buddy Slots
-            if (BuddySlotManager.Instance != null && !BuddySlotManager.Instance.HasFreeSlot) return false;
+            if (BuddySlotManager.Instance != null && !BuddySlotManager.Instance.HasFreeSlot) return "Alle Buddy-Plätze sind belegt.";
 
             // Check Overlap
-            if (Physics.CheckSphere(position, 0.45f, ObstacleLayer)) return false;
+            if (Physics.CheckSphere(position, 0.45f, ObstacleLayer)) return "Der Platz ist belegt.";
 
             // Check Cost
-            // Ensure we catch any internal errors in GetBuildingCost too, though unlikely
-            float cost = 0f;
-            try
-            {
-                 cost = EconomyManager.Instance.GetBuildingCost(_selectedUnitConfig.CostOutCombat); 
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"InteractionManager: Error calculating cost: {e.Message}");
-                return false;
-            }
-
-            if (!EconomyManager.Instance.CanAfford(cost)) return false;
+            float cost = EconomyManager.Instance.GetBuildingCost(config.CostOutCombat);
+            if (!EconomyManager.Instance.CanAfford(cost)) return "Nicht genug Seelensplitter.";
 
             // Gegner müssen den Buddy erreichen können (keine abgeschnittenen NavMesh-Inseln)
-            if (!IsReachableByEnemies(position)) return false;
+            if (!IsReachableByEnemies(position, useCache)) return "Hier können Gegner nicht hin – dort darf kein Buddy stehen.";
 
-            return true;
+            return null;
         }
 
         [Header("Erreichbarkeit")]
@@ -438,13 +448,13 @@ namespace ElementalBuddies
         private readonly Dictionary<Vector2Int, bool> _reachCache = new Dictionary<Vector2Int, bool>();
         private UnityEngine.AI.NavMeshPath _reachPath;
 
-        private bool IsReachableByEnemies(Vector3 position)
+        private bool IsReachableByEnemies(Vector3 position, bool useCache = true)
         {
             var nexus = Nexus.Instance;
             if (nexus == null) return true;
 
             var cell = new Vector2Int(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z));
-            if (_reachCache.TryGetValue(cell, out bool cached)) return cached;
+            if (useCache && _reachCache.TryGetValue(cell, out bool cached)) return cached;
 
             bool reachable = false;
             if (UnityEngine.AI.NavMesh.SamplePosition(position, out var hit, MaxReachDistance + 1f, UnityEngine.AI.NavMesh.AllAreas))
@@ -460,7 +470,7 @@ namespace ElementalBuddies
                                 && _reachPath.status == UnityEngine.AI.NavMeshPathStatus.PathComplete;
                 }
             }
-            _reachCache[cell] = reachable;
+            if (useCache) _reachCache[cell] = reachable;
             return reachable;
         }
         
@@ -478,22 +488,52 @@ namespace ElementalBuddies
              }
         }
 
+        // Lokal vorprüfen (Anzeige), dann Bau-Anfrage an den Server
         private void TryBuild()
         {
-            if (!ValidatePlacement(_currentGhost.transform.position))
+            Vector3 pos = _currentGhost.transform.position;
+            if (!ValidatePlacement(pos))
             {
-                if (!IsReachableByEnemies(_currentGhost.transform.position))
+                if (!IsReachableByEnemies(pos))
                     ToastUI.Show("Hier können Gegner nicht hin – dort darf kein Buddy stehen.");
                 return;
             }
+            NetGame.RequestBuild(_selectedIndex, pos);
+        }
 
-            float cost = EconomyManager.Instance.GetBuildingCost(_selectedUnitConfig.CostOutCombat);
-            if (EconomyManager.Instance.TrySpendShards(cost))
+        // Nur Server: Bau-Anfrage (Index in UnitConfigs, Rasterposition) erneut prüfen, aus der Teamkasse zahlen, spawnen.
+        // null = gebaut, sonst Hinweis-Text für den Anfragenden
+        public string ServerBuild(int configIndex, Vector3 position, ulong builderClientId)
+        {
+            if (!Net.IsServer) return null;
+            if (UnitConfigs == null || configIndex < 0 || configIndex >= UnitConfigs.Count) return "Unbekannter Buddy.";
+            var config = UnitConfigs[configIndex];
+            if (config == null || config.Prefab == null) return "Unbekannter Buddy.";
+
+            // Raster (1 m) und Bodenhöhe serverseitig bestimmen
+            position.x = Mathf.Round(position.x);
+            position.z = Mathf.Round(position.z);
+            if (FloorLayer.value != 0)
             {
-                var go = Instantiate(_selectedUnitConfig.Prefab, _currentGhost.transform.position, Quaternion.identity);
-                var buddy = go.GetComponentInChildren<ElementalBuddy>();
-                if (buddy != null) buddy.PaidCost = cost;
+                if (!Physics.Raycast(position + Vector3.up * 5f, Vector3.down, out RaycastHit floor, 20f, FloorLayer))
+                    return "Hier kann nicht gebaut werden.";
+                position.y = floor.point.y;
             }
+
+            string reason = ValidatePlacement(config, position, false);
+            if (reason != null) return reason;
+
+            float cost = EconomyManager.Instance.GetBuildingCost(config.CostOutCombat);
+            if (!EconomyManager.Instance.TrySpendShards(cost)) return "Nicht genug Seelensplitter.";
+
+            var go = Instantiate(config.Prefab, position, Quaternion.identity);
+            var buddy = go.GetComponentInChildren<ElementalBuddy>();
+            if (buddy != null)
+            {
+                buddy.PaidCost = cost;
+                BuddyNet.ServerSpawn(buddy, builderClientId);
+            }
+            return null;
         }
     }
 }

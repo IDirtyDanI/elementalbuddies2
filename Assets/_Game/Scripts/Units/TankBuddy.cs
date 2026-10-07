@@ -62,7 +62,7 @@ namespace ElementalBuddies
                     var tauntable = hit.GetComponent<ITauntable>();
                     if (tauntable != null)
                     {
-                        tauntable.Taunt(transform, TauntDuration);
+                        if (Net.IsServer) tauntable.Taunt(transform, TauntDuration); // Spott nur auf dem Server
                         tauntedAny = true;
                     }
                 }
@@ -75,8 +75,8 @@ namespace ElementalBuddies
             base.Update();
             if (IsStunned) return;
 
-            // Aura Logic (1 tick per second)
-            if (Time.time >= _lastAuraTime + 1f)
+            // Aura Logic (1 tick per second) – Schaden nur auf dem Server
+            if (Net.IsServer && Time.time >= _lastAuraTime + 1f)
             {
                 _lastAuraTime = Time.time;
                 Collider[] hits = Physics.OverlapSphere(transform.position, EffectiveRange);

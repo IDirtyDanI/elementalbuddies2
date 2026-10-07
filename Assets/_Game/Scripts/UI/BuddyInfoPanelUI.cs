@@ -650,8 +650,8 @@ namespace ElementalBuddies
             var fm = FusionManager.Instance;
             if (fm == null || _buddy == null || option.Partner == null) return;
             fm.HideLink();
-            // Bei Erfolg wählt der FusionManager den neuen Buddy aus -> HandleBuddySelected baut das Panel neu
-            if (fm.TryFuse(_buddy, option) == null) Refresh();
+            // Anfrage an den Server; bei Erfolg wird der neue Buddy beim Anfragenden ausgewählt -> HandleBuddySelected baut das Panel neu
+            if (!fm.RequestFuse(_buddy, option)) Refresh();
         }
 
         // Werte eines Fusions-Buddys (keine Stufen -> keine Pfeile)

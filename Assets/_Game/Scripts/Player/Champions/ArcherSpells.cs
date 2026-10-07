@@ -121,7 +121,7 @@ namespace ElementalBuddies
             {
                 float freeze = FreezeDuration;
                 GameObject vfx = FrozenVfxPrefab;
-                arrow.OnHitEnemy = e => { if (freeze > 0f) e.Freeze(freeze, vfx); };
+                arrow.OnHitEnemy = e => { if (freeze > 0f && Net.IsServer) e.Freeze(freeze, vfx); };
             }
             SpawnEffect(pos, Quaternion.LookRotation(ctx.AimDirection), 1f);
             GameAudio.Play(SfxId.FrostNova, pos);
@@ -259,6 +259,7 @@ namespace ElementalBuddies
             {
                 if (enemy == null) continue;
                 if (HitFxPrefab != null) CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up, Quaternion.LookRotation(-dir), 1.5f);
+                if (!Net.IsServer) continue; // Blenden + Schaden nur auf dem Server
                 if (BlindDuration > 0f)
                 {
                     enemy.ApplySlow(BlindSlow, BlindDuration);

@@ -46,7 +46,7 @@ namespace ElementalBuddies
 
         public override void TakeDamage(float amount)
         {
-            if (amount <= 0f || CurrentHP <= 0f) return;
+            if (!Net.IsServer || amount <= 0f || CurrentHP <= 0f) return;
             float reduced = amount * (1f - Mathf.Clamp(DamageReduction, 0f, 0.9f));
             _charge += Mathf.Min(reduced, CurrentHP); // nur tatsächlich erlittener Schaden lädt
             base.TakeDamage(reduced);
@@ -59,7 +59,7 @@ namespace ElementalBuddies
             if (IsStunned) return;
 
             _auraTimer += Time.deltaTime;
-            if (_auraTimer >= AuraTickInterval)
+            if (Net.IsServer && _auraTimer >= AuraTickInterval)
             {
                 _auraTimer = 0f;
                 if (AuraSlow > 0f)
@@ -74,7 +74,7 @@ namespace ElementalBuddies
             bool any = false;
             foreach (var e in FindEnemies(transform.position, EffectiveRange))
             {
-                ((ITauntable)e).Taunt(transform, TauntDuration);
+                if (Net.IsServer) ((ITauntable)e).Taunt(transform, TauntDuration);
                 any = true;
             }
             if (!any) return false;
@@ -97,9 +97,22 @@ namespace ElementalBuddies
             foreach (var e in _targets)
                 if (e != null && e.CurrentHP > 0f) e.TakeDamage(DamageAgainst(e, damage));
 
+            PlayShardBurstFx(center);
+            if (IsNetSpawned) NetState.ServerFx(FxShardBurst, center, 0f); // Ladung entsteht nur auf dem Server -> Optik per RPC
+        }
+
+        private const int FxShardBurst = 1;
+
+        private void PlayShardBurstFx(Vector3 center)
+        {
             if (ShardBurstVfxPrefab != null) SpawnVfx(ShardBurstVfxPrefab, center + Vector3.up * 0.5f, 2f);
             else FusionLineFx.SpawnRing(center + Vector3.up * 0.1f, 0.5f, EffectiveRange, RingMaterial, CrystalColor,
                 0.25f, 0.45f, "ShardNova");
+        }
+
+        public override void OnNetFx(int id, Vector3 position, float value)
+        {
+            if (id == FxShardBurst) PlayShardBurstFx(position);
         }
     }
 }

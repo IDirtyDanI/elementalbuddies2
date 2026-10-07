@@ -6,6 +6,7 @@ namespace ElementalBuddies
 {
     // Dev-Modus zum Testen: Startwelle überspringen, unbegrenzte Ressourcen, Unverwundbarkeit, Hotkeys.
     // Liegt auf dem Managers-Objekt; im Inspector mit "Enabled" an-/ausschalten.
+    // Mehrspieler: Cheats und Hotkeys nur beim Host (Net.IsServer); Clients erfahren über NetGame, ob Cheats aktiv sind.
     public class DevTools : MonoBehaviour
     {
         [Header("Dev-Modus")]
@@ -51,9 +52,12 @@ namespace ElementalBuddies
 #endif
         }
 
+        // Nur der Host (bzw. Einzelspieler) darf Cheats nutzen
+        private bool Active => Enabled && Net.IsServer;
+
         IEnumerator Start()
         {
-            if (!Enabled) yield break;
+            if (!Active) yield break;
             yield return null; // nach allen Manager-Starts
 
             var wm = WaveManager.Instance;
@@ -72,7 +76,7 @@ namespace ElementalBuddies
                 if (hud != null) hud.RefreshWave();
             }
 
-            if (ForceChampion && PlayerAbilities.Instance != null) PlayerAbilities.Instance.SetChampion(Champion);
+            if (ForceChampion) DevSetChampion(Champion);
 
             if (ForceMerchant && MerchantManager.Instance != null)
             {
@@ -88,8 +92,9 @@ namespace ElementalBuddies
 
         void Update()
         {
-            Progression.SessionUnlockAllOverride = Enabled && UnlockAllContent;
-            if (!Enabled) return;
+            Progression.SessionUnlockAllOverride = Active && UnlockAllContent;
+            if (!Active) return;
+            if (NetGame.Ready) NetGame.Instance.ServerSetHostCheats(CheatsActive);
 
             ApplyCheats();
 
@@ -105,7 +110,7 @@ namespace ElementalBuddies
             {
                 var pa = PlayerAbilities.Instance;
                 var next = (ChampionClass)(((int)pa.ActiveClass + 1) % 3);
-                pa.SetChampion(next);
+                DevSetChampion(next);
                 ToastUI.Show("Champion: " + PauseMenuUI.ChampionName(next));
             }
             if (kb.f7Key.wasPressedThisFrame) DevActivateMerchant(kb.shiftKey.isPressed);
@@ -151,7 +156,8 @@ namespace ElementalBuddies
             }
             if (config == null) { ToastUI.Show("DEV: Boss-Config ohne Prefab"); return null; }
 
-            Vector3 from = PlayerAbilities.Instance != null ? PlayerAbilities.Instance.transform.position : Vector3.zero;
+            Vector3 from = PlayerAvatar.Local != null ? PlayerAvatar.Local.transform.position
+                : PlayerAbilities.Instance != null ? PlayerAbilities.Instance.transform.position : Vector3.zero;
             SpawnPortal best = null;
             float bestDist = float.MaxValue;
             foreach (var p in SpawnPortal.All)
@@ -164,6 +170,14 @@ namespace ElementalBuddies
             if (best != null) pos = best.GetSpawnPosition();
             else if (!wm.TryGetRescuePosition(out pos)) { ToastUI.Show("DEV: kein Spawnpunkt"); return null; }
             return wm.SpawnEnemyAt(config, pos);
+        }
+
+        // Champion des lokalen Spielers wechseln. Im Netz über die Champion-Wahl des NetPlayers, damit alle Rechner
+        // dieselbe Figur zeigen (PlayerAvatar wendet die Wahl an); ohne Netz direkt.
+        private static void DevSetChampion(ChampionClass cls)
+        {
+            if (NetPlayer.Local != null) NetPlayer.Local.RequestChampion(cls);
+            else if (PlayerAbilities.Instance != null) PlayerAbilities.Instance.SetChampion(cls);
         }
 
         // F8: aktiven Händler sofort einnehmen (Kartenauswahl öffnet sich)
@@ -185,13 +199,22 @@ namespace ElementalBuddies
             if (Nexus.Instance != null) Nexus.Instance.Invulnerable = InvulnerableNexus;
             if (BuddySlotManager.Instance != null) BuddySlotManager.Instance.SetUnlimited(UnlimitedBuddies);
 
-            var player = PlayerAbilities.Instance != null ? PlayerAbilities.Instance.GetComponent<PlayerStats>() : null;
-            if (player != null) player.GodMode = GodMode;
+            // Alle Spielfiguren (Schaden entscheidet der Server)
+            if (PlayerAvatar.All.Count > 0)
+            {
+                foreach (var a in PlayerAvatar.All)
+                    if (a != null && a.Stats != null) a.Stats.GodMode = GodMode;
+            }
+            else
+            {
+                var player = PlayerAbilities.Instance != null ? PlayerAbilities.Instance.GetComponent<PlayerStats>() : null;
+                if (player != null) player.GodMode = GodMode;
+            }
         }
 
         void OnGUI()
         {
-            if (!Enabled) return;
+            if (!Active) return;
             if (_box == null)
             {
                 _box = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = 14, padding = new RectOffset(10, 10, 8, 8) };

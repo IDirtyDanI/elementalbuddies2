@@ -22,6 +22,7 @@ namespace ElementalBuddies
         private float _speed;
         private float _dieAt;
         private bool _initialized;
+        private bool _visualOnly; // Mehrspieler-Client: reine Optik, kein Schaden
 
         public void Init(Transform target, Vector3 aimPointOffset, float damage, float speed, Vector3 sourcePos)
         {
@@ -36,6 +37,15 @@ namespace ElementalBuddies
             _dieAt = Time.time + Lifetime;
             _lastAim = target != null ? AimPoint() : transform.position + transform.forward * 5f;
             _initialized = true;
+        }
+
+        // Client-Kopie eines Server-Schusses (EnemyNet): fliegt wie das Original, macht keinen Schaden.
+        // target null → fliegt zum Zielpunkt fallbackAim und verpufft.
+        public void InitVisual(Transform target, Vector3 aimPointOffset, float speed, Vector3 fallbackAim)
+        {
+            Init(target, aimPointOffset, 0f, speed, transform.position);
+            _visualOnly = true;
+            if (target == null) _lastAim = fallbackAim;
         }
 
         private bool TargetAlive =>
@@ -77,6 +87,11 @@ namespace ElementalBuddies
 
         private void Hit()
         {
+            if (_visualOnly || !Net.IsServer)
+            {
+                if (HitEffectPrefab != null) Destroy(Instantiate(HitEffectPrefab, transform.position, Quaternion.identity), 2f);
+                return;
+            }
             var directional = _target.GetComponent<IDirectionalDamageable>();
             if (directional != null) directional.TakeDamage(_damage, _sourcePos);
             else

@@ -177,13 +177,12 @@ namespace ElementalBuddies
 
         private void Roll(SpellCastContext ctx)
         {
-            // Richtung: Laufrichtung (WASD), sonst Richtung Mauszeiger
+            // Richtung: Laufrichtung (WASD, vom Besitzer im Cast-Kontext mitgeschickt), sonst Richtung Mauszeiger
             Vector3 dir = ctx.AimDirection;
-            if (Controller != null && Controller.MoveAction != null)
-            {
-                Vector2 input = Controller.MoveAction.ReadValue<Vector2>();
-                if (input.sqrMagnitude > 0.04f) dir = new Vector3(input.x, 0f, input.y).normalized;
-            }
+            Vector3 move = ctx.MoveDirection;
+            move.y = 0f;
+            if (move.sqrMagnitude > 0.04f) dir = move.normalized;
+            if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
             if (_roll != null) StopCoroutine(_roll);
             _roll = StartCoroutine(RollRoutine(dir, EffectiveRollDistance, Mathf.Max(0.05f, RollDuration)));
         }
@@ -208,7 +207,8 @@ namespace ElementalBuddies
             IsRolling = true;
             Controller.MovementLocked = true;
             Controller.RotationLocked = true;
-            transform.rotation = Quaternion.LookRotation(dir);
+            // Drehen nur auf der eigenen Figur (fremde: NetworkTransform)
+            if (IsLocalControl) transform.rotation = Quaternion.LookRotation(dir);
             Stats.IsInvulnerable = true;
             _invulnUntil = Time.time + RollInvulnerability;
             if (RollDustPrefab != null) CombatUtil.SpawnFx(RollDustPrefab, Ground(transform.position), Quaternion.LookRotation(dir), 2f);
@@ -219,7 +219,7 @@ namespace ElementalBuddies
         {
             // Konstantes Tempo mit leichtem Auslaufen am Ende
             float speed = distance / duration;
-            if (Character != null && Character.enabled) Character.Move(dir * speed * dt);
+            if (IsLocalControl && Character != null && Character.enabled) Character.Move(dir * speed * dt);
         }
 
         public void EndRoll()
