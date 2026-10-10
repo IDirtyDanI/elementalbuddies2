@@ -81,14 +81,26 @@ namespace ElementalBuddies
                 _lastAuraTime = Time.time;
                 Collider[] hits = Physics.OverlapSphere(transform.position, EffectiveRange);
                 float auraDps = EffectiveDamage;
-                foreach (var hit in hits)
+                float slow = CardEffects.EarthSlow; // Wellenkarte „Schwere Erde“
+                var prevSource = EnemyBrain.DamageSource;
+                EnemyBrain.DamageSource = this; // Kartensynergien und Run-Statistik
+                try
                 {
-                    if (hit.CompareTag("Enemy"))
+                    foreach (var hit in hits)
                     {
-                        var dmg = hit.GetComponent<IDamageable>();
-                        if (dmg != null) dmg.TakeDamage(auraDps);
+                        if (hit.CompareTag("Enemy"))
+                        {
+                            var dmg = hit.GetComponent<IDamageable>();
+                            if (dmg != null) dmg.TakeDamage(auraDps);
+                            if (slow > 0f)
+                            {
+                                var slowable = hit.GetComponent<ISlowable>();
+                                if (slowable != null) slowable.ApplySlow(slow, 1.3f);
+                            }
+                        }
                     }
                 }
+                finally { EnemyBrain.DamageSource = prevSource; }
             }
         }
     }

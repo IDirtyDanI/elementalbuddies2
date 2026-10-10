@@ -372,6 +372,7 @@ namespace ElementalBuddies
             Quaternion rot = Quaternion.LookRotation(shape.Forward);
             BossCombat.SpawnEffect(a, a.ImpactEffectPrefab, a.Kind == BossAbilityKind.Slam ? me : shape.Origin, rot);
             if (a.PlaySfx) GameAudio.Play(a.ImpactSfx, shape.Origin);
+            CameraFollow.AddTraumaAt(0.4f, shape.Origin, 22f);
         }
 
         // Client: Optik einer vom Server ausgelösten Fähigkeit (EnemyNet)

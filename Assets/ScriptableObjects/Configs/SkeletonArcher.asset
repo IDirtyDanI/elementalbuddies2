@@ -19,6 +19,7 @@ MonoBehaviour:
   Damage: 0
   Prefab: {fileID: 2875852259225389983, guid: 978a4e5760f28450bbfa1a6e342ac413, type: 3}
   BuddyMaxHP: 0
+  BossDamageMultiplier: 1
   BaseHP: 40
   Speed: 3
   AttackDamage: 9
@@ -34,3 +35,9 @@ MonoBehaviour:
   ProjectileSpeed: 16
   AttackWindup: 0.35
   ProjectileSpawnHeight: 1.3
+  IsBoss: 0
+  DisplayName: "Skelett-Bogensch\xFCtze"
+  ControlResistance: 0
+  ThemeColor: {r: 1, g: 1, b: 1, a: 1}
+  Icon: {fileID: 21300000, guid: 60e508ca738bf4f38ac06d13a02e2d3d, type: 3}
+  PreviewHint: "Fernkampf \u2013 beschie\xDFt Buddies"

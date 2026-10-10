@@ -9,6 +9,8 @@ namespace ElementalBuddies
         private float _damage;
         private UnitType _type;
         public float Speed = 15f;
+        // Schütze (für die Run-Statistik „bester Buddy“), gesetzt von ShooterBuddy
+        [System.NonSerialized] public ElementalBuddy Source;
 
         // Stufe-4-Perks (über ShooterBuddy gesetzt)
         [Tooltip("Schadensfaktor pro Durchschuss (Feuer Stufe 4).")]
@@ -24,6 +26,19 @@ namespace ElementalBuddies
             _damage = damage;
             _type = type;
             Destroy(gameObject, 5f);
+            PlayElementSound(true, transform.position);
+        }
+
+        // Klangsignatur je Element (Abschuss/Einschlag); Fusionen ohne eigene Sounds bleiben stumm
+        private void PlayElementSound(bool shot, Vector3 pos)
+        {
+            switch (_type)
+            {
+                case UnitType.Fire: GameAudio.Play(shot ? SfxId.FireShot : SfxId.FireHit, pos); break;
+                case UnitType.Ice: GameAudio.Play(shot ? SfxId.IceShot : SfxId.IceHit, pos); break;
+                case UnitType.Earth: GameAudio.Play(shot ? SfxId.EarthShot : SfxId.EarthHit, pos); break;
+                case UnitType.Light: GameAudio.Play(shot ? SfxId.LightShot : SfxId.LightHeal, pos); break;
+            }
         }
 
         // Durchschlag: nach einem Treffer weiter zum nächsten Gegner (bevorzugt dahinter) + Brand auf jedem Treffer
@@ -34,6 +49,15 @@ namespace ElementalBuddies
             _burnDps = burnDps;
             _burnDuration = burnDuration;
             _burnVfx = burnVfx;
+        }
+
+        // Glutgeschosse-Karte: Brand auf jedem Treffer (stärkerer Wert bleibt, auch neben dem Stufe-4-Durchschlag)
+        public void SetIgnite(float dps, float duration, GameObject vfx)
+        {
+            if (dps <= _burnDps && duration <= _burnDuration) return;
+            _burnDps = Mathf.Max(_burnDps, dps);
+            _burnDuration = Mathf.Max(_burnDuration, duration);
+            if (_burnVfx == null) _burnVfx = vfx;
         }
 
         // Einfrieren beim (ersten) Treffer
@@ -64,6 +88,7 @@ namespace ElementalBuddies
 
             Vector3 travel = _target != null ? _target.position - transform.position : transform.forward;
             Vector3 hitPos = other.transform.position;
+            PlayElementSound(false, transform.position);
 
             // Wirkung nur auf dem Server; Clients zeigen nur Flug, Treffer und Durchschlag
             if (Net.IsServer)
@@ -72,7 +97,13 @@ namespace ElementalBuddies
                 if (_freezeDuration > 0f && enemy != null) enemy.Freeze(_freezeDuration, _freezeVfx);
 
                 var dmg = other.GetComponent<IDamageable>();
-                if (dmg != null) dmg.TakeDamage(_damage);
+                if (dmg != null)
+                {
+                    var prevSource = EnemyBrain.DamageSource;
+                    EnemyBrain.DamageSource = Source;
+                    try { dmg.TakeDamage(_damage); }
+                    finally { EnemyBrain.DamageSource = prevSource; }
+                }
 
                 if (_type == UnitType.Ice)
                 {

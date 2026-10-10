@@ -58,6 +58,7 @@ namespace ElementalBuddies
             _frozeTime = Net.CanPauseTime;
             if (_frozeTime)
             {
+                TimeWarp.Cancel(); // Treffer-Stopp/Zeitlupe nicht als Pausen-Rückgabewert sichern
                 _prevTimeScale = Time.timeScale;
                 Time.timeScale = 0f;
                 AudioListener.pause = true;

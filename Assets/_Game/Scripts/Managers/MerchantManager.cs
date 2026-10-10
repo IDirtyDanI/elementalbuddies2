@@ -38,6 +38,11 @@ namespace ElementalBuddies
         [Tooltip("Aufschlag je weiterer gekaufter Karte.")]
         public int ExtraCardCostStep = 30;
         public int RerollBaseCost = 25;
+        [Header("Flüche (Plan Fesselung D7)")]
+        [Tooltip("Ab dieser Welle kann eine Karte im Laden verflucht sein (doppelte Wirkung + Nachteil).")]
+        public int CurseFromWave = 13;
+        [Tooltip("Wahrscheinlichkeit pro Ladenbesuch bzw. Neu würfeln, dass eine offene Karte verflucht ist.")]
+        [Range(0f, 1f)] public float CurseChance = 0.35f;
         public int RerollCostStep = 15;
 
         [Header("Gold")]
@@ -104,6 +109,7 @@ namespace ElementalBuddies
             public int Kind;
             public readonly List<int> Offer = new List<int>();
             public readonly List<bool> Bought = new List<bool>();
+            public readonly List<int> Curse = new List<int>(); // MerchantCurse je Slot
             public int Purchases;
             public int Rerolls;
             public bool Open;    // Laden liegt beim Spieler
@@ -364,6 +370,7 @@ namespace ElementalBuddies
 
             st.Offer.Clear();
             st.Bought.Clear();
+            st.Curse.Clear();
             var pool = PoolFor((MerchantKind)kind, ClassOf(clientId));
             int n = Mathf.Min(Mathf.Max(1, CardsOffered), pool.Count);
             for (int i = 0; i < n; i++)
@@ -371,8 +378,10 @@ namespace ElementalBuddies
                 int idx = Random.Range(0, pool.Count);
                 st.Offer.Add(pool[idx]);
                 st.Bought.Add(false);
+                st.Curse.Add(0);
                 pool.RemoveAt(idx);
             }
+            RollCurse(st);
             if (st.Offer.Count == 0)
             {
                 Debug.LogWarning($"MerchantManager: keine Karten für {ClassOf(clientId)} beim {MerchantInfo.Name((MerchantKind)kind)}.");
@@ -419,7 +428,9 @@ namespace ElementalBuddies
 
             st.Bought[slot] = true;
             st.Purchases++;
-            NetGame.BroadcastApplyMerchantCard(clientId, cardIndex);
+            int curse = slot < st.Curse.Count ? st.Curse[slot] : 0;
+            NetGame.BroadcastApplyMerchantCard(clientId, cardIndex, curse);
+            if (curse > 0) MerchantCurses.Apply((MerchantCurse)curse);
             SendShop(clientId, st);
         }
 
@@ -458,12 +469,15 @@ namespace ElementalBuddies
                 {
                     st.Offer.RemoveAt(i);
                     st.Bought.RemoveAt(i);
+                    st.Curse.RemoveAt(i);
                     continue;
                 }
                 int idx = Random.Range(0, pool.Count);
                 st.Offer[i] = pool[idx];
+                st.Curse[i] = 0;
                 pool.RemoveAt(idx);
             }
+            RollCurse(st);
             SendShop(clientId, st);
         }
 
@@ -478,7 +492,7 @@ namespace ElementalBuddies
 
         private void SendShop(ulong clientId, ShopState st)
         {
-            NetGame.SendShopState(clientId, st.Visit, st.Kind, st.Offer.ToArray(), st.Bought.ToArray(), st.Purchases, st.Rerolls, st.Open);
+            NetGame.SendShopState(clientId, st.Visit, st.Kind, st.Offer.ToArray(), st.Bought.ToArray(), st.Curse.ToArray(), st.Purchases, st.Rerolls, st.Open);
         }
 
         private ShopState GetShop(ulong clientId)
@@ -546,13 +560,30 @@ namespace ElementalBuddies
 
         public MerchantCardSO GetCard(int index) => index >= 0 && index < Cards.Count ? Cards[index] : null;
 
+        // Server: höchstens eine offene Karte verfluchen (ab CurseFromWave, Wahrscheinlichkeit CurseChance)
+        private void RollCurse(ShopState st)
+        {
+            var wm = WaveManager.Instance;
+            int wave = wm != null ? wm.UpcomingWaveNumber : 1;
+            if (wave < CurseFromWave || st.Curse.Contains(1) || st.Curse.Contains(2) || st.Curse.Contains(3)) return;
+            if (Random.value >= CurseChance) return;
+            var open = new List<int>();
+            for (int i = 0; i < st.Offer.Count; i++) if (!st.Bought[i]) open.Add(i);
+            if (open.Count == 0) return;
+            st.Curse[open[Random.Range(0, open.Count)]] = 1 + Random.Range(0, MerchantCurses.Count);
+        }
+
+        // Fluch der Karte im Slot (lokaler Laden)
+        public MerchantCurse CurseOf(int slot) => slot >= 0 && slot < _curses.Count ? (MerchantCurse)_curses[slot] : MerchantCurse.None;
+        private readonly List<int> _curses = new List<int>();
+
         // Preis der Karte nach n bisherigen Käufen in diesem Besuch: 0, 60, 90, 120 … (Gold)
         public int CardPrice(int purchasesSoFar) => GoldRules.CardPrice(purchasesSoFar, ExtraCardBaseCost, ExtraCardCostStep);
 
         // ---------------- Laden: Client (lokaler Spieler) ----------------
 
         // Ladenzustand vom Server
-        public void ClientReceiveShop(int visit, int kind, int[] offer, bool[] bought, int purchases, int rerolls, bool open)
+        public void ClientReceiveShop(int visit, int kind, int[] offer, bool[] bought, int[] curses, int purchases, int rerolls, bool open)
         {
             if (!open)
             {
@@ -563,6 +594,7 @@ namespace ElementalBuddies
 
             _offer.Clear();
             _bought.Clear();
+            _curses.Clear();
             if (offer != null)
             {
                 for (int i = 0; i < offer.Length; i++)
@@ -571,6 +603,7 @@ namespace ElementalBuddies
                     if (c == null) continue;
                     _offer.Add(c);
                     _bought.Add(bought != null && i < bought.Length && bought[i]);
+                    _curses.Add(curses != null && i < curses.Length ? curses[i] : 0);
                 }
             }
             Purchases = purchases;
@@ -669,7 +702,7 @@ namespace ElementalBuddies
         }
 
         // Alle Rechner: gekaufte Karte auf die Figur des Käufers anwenden (AbilityMods pro Figur)
-        public void ApplyBoughtCard(ulong clientId, int cardIndex)
+        public void ApplyBoughtCard(ulong clientId, int cardIndex, int curse = 0)
         {
             var card = GetCard(cardIndex);
             if (card == null) return;
@@ -677,6 +710,13 @@ namespace ElementalBuddies
             PlayerAbilities abilities = avatar != null ? avatar.Abilities : null;
             if (abilities == null && PlayerAvatar.All.Count == 0 && clientId == Net.LocalClientId) abilities = PlayerAbilities.Instance;
             card.Apply(abilities);
+            // Verfluchte Karte: doppelte Wirkung; der Nachteil wirkt teamweit (Server, MerchantCurses.Apply)
+            if (curse > 0)
+            {
+                card.Apply(abilities);
+                ToastUI.Show($"Fluch „{MerchantCurses.Name((MerchantCurse)curse)}“: {MerchantCurses.Description((MerchantCurse)curse)}");
+                GameAudio.Play(GameAudio.Has(SfxId.Curse) ? SfxId.Curse : SfxId.NexusAlarm);
+            }
             Debug.Log($"MerchantManager: Spieler {clientId} kauft '{card.Title}' ({card.Ability} {card.Stat} {card.Value}).");
 
             bool local = clientId == Net.LocalClientId;
@@ -765,9 +805,12 @@ namespace ElementalBuddies
         }
 
         // Kurzform für die Karte: "2,6 m → 3,1 m" (Name und Wert stehen schon in Titel/Beschreibung)
-        public static string PreviewValues(MerchantCardSO card)
+        public static string PreviewValues(MerchantCardSO card) => PreviewValues(card, 1f);
+
+        // times: Vielfaches des Kartenwerts (verfluchte Karte = 2)
+        public static string PreviewValues(MerchantCardSO card, float times)
         {
-            if (!TryPreview(card, card.Value, out string label, out float before, out float after, out string unit)) return "";
+            if (!TryPreview(card, card.Value * times, out string label, out float before, out float after, out string unit)) return "";
             return $"{FormatNumber(before)}{unit} → <b>{FormatNumber(after)}{unit}</b>";
         }
 

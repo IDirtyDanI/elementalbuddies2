@@ -37320,6 +37320,8 @@ MonoBehaviour:
   Panel: {fileID: 429126305}
   CardsContainer: {fileID: 353697946}
   CardPrefab: {fileID: 1971434496766266994, guid: 995c217f2103d35469c20323ad2bb46f, type: 3}
+  RerollButton: {fileID: 0}
+  SkipButton: {fileID: 0}
 --- !u!114 &429126308
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -85213,6 +85215,9 @@ MonoBehaviour:
   AutoButtonSpacing: 330
   AchievementsText: {fileID: 0}
   AutoAchievementsHeight: 80
+  RecapWidth: 720
+  RecapMinHeight: 640
+  RecapGap: 30
 --- !u!114 &1103239708
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -104566,6 +104571,8 @@ GameObject:
   - component: {fileID: 1357329340}
   - component: {fileID: 1357329341}
   - component: {fileID: 1357329342}
+  - component: {fileID: 1357329343}
+  - component: {fileID: 1357329344}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -104611,7 +104618,7 @@ MonoBehaviour:
     SpawnInterval: 2.5
     EveryNthWave: 0
   - Config: {fileID: 11400000, guid: ebd1fddd9f1d941d7b537ccdade7d9d6, type: 2}
-    StartWave: 6
+    StartWave: 7
     BaseCount: 1
     PerWave: 0.34
     SpawnInterval: 4
@@ -104645,9 +104652,34 @@ MonoBehaviour:
   MinIntervalFactor: 0.5
   BossWaveEscortFactor: 0.6
   DamageGrowthPerWave: 0.04
+  HarvestAfterBoss: 1
+  HarvestCountFactor: 0.75
+  HarvestBonusFactor: 1.5
+  EarlyCallMaxFraction: 0.3
+  EarlyCallWindow: 25
+  EliteFromWave: 12
+  EliteShareStart: 0.025
+  EliteSharePerWave: 0.003
+  EliteShareMax: 0.06
+  MaxElitesPerWave: 8
+  EliteAuraPrefab: {fileID: 4113057850483280799, guid: 43224af1bf71b4ef0aa3d1d7e145dadd, type: 3}
+  EliteIcons:
+  - {fileID: 21300000, guid: 52f33ba899dfe4519a484a0814a580dc, type: 3}
+  - {fileID: 21300000, guid: b43db57af7b3843b1b5e36b81320afaa, type: 3}
+  - {fileID: 21300000, guid: 9c822bb50897d493682abb93684c74e2, type: 3}
+  - {fileID: 21300000, guid: 324356ac14935446e864a6264ed4ce94, type: 3}
+  - {fileID: 21300000, guid: 9eb5fbfd3a7814575aed54a40f77b723, type: 3}
+  - {fileID: 21300000, guid: 015931bcaa0e0424796e82fb16aa6933, type: 3}
+  EventFromWave: 16
+  EventEvery: 3
+  BloodMoonSpeed: 1.2
+  BloodMoonBounty: 1.5
+  SoulStormBounty: 2
+  SoulStormMagnet: 0.3
   CountPerExtraPlayer: 0.5
   HpPerExtraPlayer: 0.25
   BossHpPerExtraPlayer: 0.6
+  RamConfig: {fileID: 11400000, guid: e5984443704af410ea02991db0d52f19, type: 2}
 --- !u!114 &1357329329
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -104706,6 +104738,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   AllDeadGrace: 0.5
+  WipeReviveDelay: 10
+  WipeCostFirst: 0.15
+  WipeCostStep: 0.1
 --- !u!4 &1357329332
 Transform:
   m_ObjectHideFlags: 0
@@ -104733,6 +104768,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 325c3705d137e9e4480fbf9bb26c6421, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  StartRerolls: 1
+  SkipShardsBase: 10
+  SkipShardsPerWave: 2
+  RareChanceStart: 0.22
+  RareChanceEnd: 0.33
+  EpicChanceStart: 0.03
+  EpicChanceEnd: 0.12
+  EpicFromWave: 3
+  RarityRampWave: 20
+  ComboWeight: 2.5
   AllUpgrades:
   - {fileID: 11400000, guid: 72aec16ccc5b2c9429323a04ffb235f0, type: 2}
   - {fileID: 11400000, guid: 2d3049a836ce4f64499d4a089a060a29, type: 2}
@@ -104741,6 +104786,31 @@ MonoBehaviour:
   - {fileID: 11400000, guid: edffad379e63ebd4882f8af404106e4c, type: 2}
   - {fileID: 11400000, guid: 13e850eb8b8b84751a2747004b890722, type: 2}
   - {fileID: 11400000, guid: 249e4e7e0ea7a4e7082e8184195f6c8a, type: 2}
+  - {fileID: 11400000, guid: 5ea1979d0ab0d43039a63208514c9a56, type: 2}
+  - {fileID: 11400000, guid: 29a8e686f65cd46779337878a96b419f, type: 2}
+  - {fileID: 11400000, guid: 644309eebfbc146438195516d463548a, type: 2}
+  - {fileID: 11400000, guid: 1431480634ef84317ab56eccf3e484b6, type: 2}
+  - {fileID: 11400000, guid: cb373a2210bd1409dbc6b75390c7004d, type: 2}
+  - {fileID: 11400000, guid: 43d52312290594b5eb0d8b367ae34733, type: 2}
+  - {fileID: 11400000, guid: f70c88c1eb6e7477a86945cf8219ef4a, type: 2}
+  - {fileID: 11400000, guid: 09ee8452eb48c44f59f004ee98510493, type: 2}
+  - {fileID: 11400000, guid: 0c6d9c6a4dbeb4dd38cee3e7fe097ff5, type: 2}
+  - {fileID: 11400000, guid: 323b9f27923b64918adff1ecaa8f3dd8, type: 2}
+  - {fileID: 11400000, guid: 7d56abc19a7bf40df8375c609490b1fe, type: 2}
+  - {fileID: 11400000, guid: af7f5b34f357a4a239d79e4a37e322aa, type: 2}
+  - {fileID: 11400000, guid: 8e1e0b9f3d86746eab3e7aea6f816daa, type: 2}
+  - {fileID: 11400000, guid: 985d8edde2e674d54993adf114cd37c3, type: 2}
+  - {fileID: 11400000, guid: f675cb508e3814b08b79d0597d3b1a35, type: 2}
+  - {fileID: 11400000, guid: ff9b6770d3bf2484c8ee17207e127d3d, type: 2}
+  - {fileID: 11400000, guid: bd0ad079f2ece478abb585e8ccfa677c, type: 2}
+  - {fileID: 11400000, guid: a79bb2dd1ae3e40d59c54ae981b463b5, type: 2}
+  - {fileID: 11400000, guid: 42bc513a299e74f6ebe2f6f54a285ac6, type: 2}
+  - {fileID: 11400000, guid: 4fa97fae9d84d48488e84e14698314cc, type: 2}
+  - {fileID: 11400000, guid: 6f5de571318f543bfb5668536a4e4921, type: 2}
+  - {fileID: 11400000, guid: 1b45f9407cbcb4cc6973c9ed3612e6b2, type: 2}
+  - {fileID: 11400000, guid: d8c3679686ff049beb211834d91eb98a, type: 2}
+  - {fileID: 11400000, guid: 16af1651718be40d0839c622ff57bf40, type: 2}
+  - {fileID: 11400000, guid: 642d3646718ad48839bd098ccc5c3864, type: 2}
   PlayerStatsRef: {fileID: 0}
   PlayerControllerRef: {fileID: 0}
   InteractionRef: {fileID: 1357329329}
@@ -104834,9 +104904,9 @@ MonoBehaviour:
     MinInterval: 0.05
   - Id: 2
     Clips:
-    - {fileID: 8300000, guid: 8b184d67a93f548a88484e7553cc659f, type: 3}
+    - {fileID: 8300000, guid: 8658390c748714202a19ead6f159a95e, type: 3}
     Volume: 0.6
-    Pitch: {x: 1.3, y: 1.4}
+    Pitch: {x: 0.95, y: 1.05}
     MinInterval: 0.1
   - Id: 3
     Clips:
@@ -104864,12 +104934,12 @@ MonoBehaviour:
     MinInterval: 0.1
   - Id: 7
     Clips:
-    - {fileID: 8300000, guid: a69a73a0eaa56ec42aec0c2c3dc0edb9, type: 3}
-    - {fileID: 8300000, guid: 96691288dab121a4596a15f950c8d618, type: 3}
-    - {fileID: 8300000, guid: e747476053f260944add5a4ab804c769, type: 3}
-    Volume: 0.5
+    - {fileID: 8300000, guid: 49cfcd55291394d0daccc14d5ddde31b, type: 3}
+    - {fileID: 8300000, guid: 546f14b20c4f44e3e977f9000fe52db0, type: 3}
+    - {fileID: 8300000, guid: e596ea87170154662abc7ec3aa7aafbe, type: 3}
+    Volume: 0.42
     Pitch: {x: 0.9, y: 1.1}
-    MinInterval: 0.08
+    MinInterval: 0.06
   - Id: 8
     Clips:
     - {fileID: 8300000, guid: 756099f7db9cf4e0191a08bcef562072, type: 3}
@@ -104890,10 +104960,10 @@ MonoBehaviour:
     MinInterval: 0.2
   - Id: 11
     Clips:
-    - {fileID: 8300000, guid: 2dc6394d24b2faf48afd63c874bf6a1a, type: 3}
-    Volume: 0.6
-    Pitch: {x: 0.7, y: 0.8}
-    MinInterval: 0.2
+    - {fileID: 8300000, guid: f7328f51d52f84a10b75bcd97165d4ac, type: 3}
+    Volume: 0.7
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
   - Id: 12
     Clips:
     - {fileID: 8300000, guid: 57df5e058756446a2979cbc82cfcc1e0, type: 3}
@@ -104902,11 +104972,277 @@ MonoBehaviour:
     MinInterval: 1
   - Id: 13
     Clips:
-    - {fileID: 8300000, guid: 341943186c7f948b694dfdd6b6acc333, type: 3}
+    - {fileID: 8300000, guid: b4eef90cfd3454eb1bf15657ea4cd71e, type: 3}
+    Volume: 0.38
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.035
+  - Id: 14
+    Clips:
+    - {fileID: 8300000, guid: c752b717bae4d42f0a0d78588aa8bb2b, type: 3}
+    - {fileID: 8300000, guid: 271529d85206d48a9b2eb5927c6909d6, type: 3}
+    - {fileID: 8300000, guid: d9b9b956fed1b494db63bc5010eef121, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 15
+    Clips:
+    - {fileID: 8300000, guid: ee772943cab1c4559a0fab3ad183673b, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 16
+    Clips:
+    - {fileID: 8300000, guid: 4fc99f3ef6107457a89ed5af4ee0c820, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.15
+  - Id: 17
+    Clips:
+    - {fileID: 8300000, guid: 980f5fb1fd99341fca3c301ab9653c25, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 18
+    Clips:
+    - {fileID: 8300000, guid: 1648e3aad914840ebbeaefb17232e214, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 19
+    Clips:
+    - {fileID: 8300000, guid: 595e76f13a7134fae9665d7239e3a0b6, type: 3}
     Volume: 0.45
-    Pitch: {x: 0.95, y: 1.15}
-    MinInterval: 0.06
-  MusicClip: {fileID: 8300000, guid: f877ffc5b635f0e438e6bd8d577002a5, type: 3}
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 20
+    Clips:
+    - {fileID: 8300000, guid: 48302ff98473645ac8d1fd89f8940dcb, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 21
+    Clips:
+    - {fileID: 8300000, guid: a1c843d18bd934330b7dd1077a06bbed, type: 3}
+    Volume: 0.32
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 22
+    Clips:
+    - {fileID: 8300000, guid: 0499e35dd291a48dc85018846daee1d4, type: 3}
+    Volume: 0.9
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 23
+    Clips:
+    - {fileID: 8300000, guid: 4543f686c57c54f7baf00bcb1cb5d290, type: 3}
+    Volume: 0.7
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.5
+  - Id: 24
+    Clips:
+    - {fileID: 8300000, guid: faca09ca25cce4b38887069442c45307, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.97, y: 1.03}
+    MinInterval: 0.05
+  - Id: 25
+    Clips:
+    - {fileID: 8300000, guid: d67408bc2916f4e599011d9d7bd50faa, type: 3}
+    Volume: 0.22
+    Pitch: {x: 0.97, y: 1.03}
+    MinInterval: 0.04
+  - Id: 26
+    Clips:
+    - {fileID: 8300000, guid: 4d0c112b1c44340f882b5b95b435cbde, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.2
+  - Id: 27
+    Clips:
+    - {fileID: 8300000, guid: 1a630bbb957b54c7180e98e98f39c01d, type: 3}
+    Volume: 0.65
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 28
+    Clips:
+    - {fileID: 8300000, guid: 6625583598bfb440585189224469f621, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.2
+  - Id: 29
+    Clips:
+    - {fileID: 8300000, guid: ce81ae467766b4273be70ebc8026cd5c, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 30
+    Clips:
+    - {fileID: 8300000, guid: d329fd9c68d4447cbb248d1135ab7e17, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 31
+    Clips:
+    - {fileID: 8300000, guid: 934e6beac935a4628922739a6115feb5, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 32
+    Clips:
+    - {fileID: 8300000, guid: 58f85cf912d164587b8c24ef20735a68, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.1
+  - Id: 33
+    Clips:
+    - {fileID: 8300000, guid: 56e002529bd9c4ab7b87fec188cfec1f, type: 3}
+    Volume: 0.8
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 34
+    Clips:
+    - {fileID: 8300000, guid: 97811ae4176594ad1a74c6367a926f7a, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 35
+    Clips:
+    - {fileID: 8300000, guid: ecaf384c74e6147f08307eaa26d04926, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 36
+    Clips:
+    - {fileID: 8300000, guid: e410d2ea3b1644fabbbc98d5f115f479, type: 3}
+    Volume: 0.75
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 37
+    Clips:
+    - {fileID: 8300000, guid: ca201452ea345463c8c5c93d3b61aa1a, type: 3}
+    Volume: 0.55
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.5
+  - Id: 38
+    Clips:
+    - {fileID: 8300000, guid: 44ed999c50c4149929b8b6dc8a8d92c1, type: 3}
+    Volume: 0.26
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.09
+  - Id: 39
+    Clips:
+    - {fileID: 8300000, guid: a819598cb3f214fdf842166140a8bb56, type: 3}
+    Volume: 0.28
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.07
+  - Id: 40
+    Clips:
+    - {fileID: 8300000, guid: cc1eb53e3e6614e7da306e8caf04ede2, type: 3}
+    Volume: 0.26
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.09
+  - Id: 41
+    Clips:
+    - {fileID: 8300000, guid: 2edcfb900020b4869a2168294c2e2465, type: 3}
+    Volume: 0.28
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.07
+  - Id: 42
+    Clips:
+    - {fileID: 8300000, guid: 5ca684d1146e9469b99182d711594c93, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.2
+  - Id: 43
+    Clips:
+    - {fileID: 8300000, guid: f2a7c268994dc483387f48212057e139, type: 3}
+    Volume: 0.32
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.08
+  - Id: 44
+    Clips:
+    - {fileID: 8300000, guid: 00e72301c760f474494da6a299bc2e34, type: 3}
+    Volume: 0.24
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.1
+  - Id: 45
+    Clips:
+    - {fileID: 8300000, guid: b88386fa9de9d4ecd9756e575af5daef, type: 3}
+    Volume: 0.22
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 1.2
+  - Id: 46
+    Clips:
+    - {fileID: 8300000, guid: 1c8532084579a4dbebe915b5fbdf9ae6, type: 3}
+    Volume: 0.5
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.05
+  - Id: 47
+    Clips:
+    - {fileID: 8300000, guid: 8bfd0ac3a14ef475ab83298704512270, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.05
+  - Id: 48
+    Clips:
+    - {fileID: 8300000, guid: 05ae48056f1f54ae28347ad343249a68, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.05
+  - Id: 49
+    Clips:
+    - {fileID: 8300000, guid: 7a7b90f4b5f32437e9b308e63d15383e, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.1
+  - Id: 50
+    Clips:
+    - {fileID: 8300000, guid: 498eaf0a71c4d43ffa0507926fea6275, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 5
+  - Id: 51
+    Clips:
+    - {fileID: 8300000, guid: 1678a77baec9d4896af90448f711303c, type: 3}
+    Volume: 0.75
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 52
+    Clips:
+    - {fileID: 8300000, guid: 6071a32efc7704efb96820f5d73ff3ef, type: 3}
+    Volume: 0.5
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.5
+  - Id: 53
+    Clips:
+    - {fileID: 8300000, guid: bbe59a3dd5734432f9205c64352976a4, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.15
+  - Id: 54
+    Clips:
+    - {fileID: 8300000, guid: 05d5eff2c1e1b45e5874dd5da33a6b0d, type: 3}
+    Volume: 0.4
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.25
+  - Id: 55
+    Clips:
+    - {fileID: 8300000, guid: 8b6d6ab52fe0c43c5bbfb1a17a507f18, type: 3}
+    Volume: 0.4
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.4
+  - Id: 56
+    Clips:
+    - {fileID: 8300000, guid: 51d3eedb8ef534fd9866aad0716ec684, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 57
+    Clips:
+    - {fileID: 8300000, guid: 51251da9d4f264e4495a7edfc59c2b57, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  MusicClip: {fileID: 0}
   MusicVolume: 0.2
   MusicFadeIn: 2
   MusicChangeTime: 0.25
@@ -105118,6 +105454,8 @@ MonoBehaviour:
   ExtraCardBaseCost: 60
   ExtraCardCostStep: 30
   RerollBaseCost: 25
+  CurseFromWave: 13
+  CurseChance: 0.35
   RerollCostStep: 15
   Settings: {fileID: 11400000, guid: 357a4ce6d691b494e944cd7f4c8d3032, type: 2}
   MinCaptureContributionSeconds: 2
@@ -105179,6 +105517,62 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.RunTelemetry
   Enabled: 1
   LogPath: 1
+--- !u!114 &1357329343
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1357329327}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f83d13f1b67e4c64b6cee0255666851, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.FeedbackDirector
+  EnemyDeathVfx: {fileID: 1345385291579790386, guid: e30b932676f0e4b3b80399b9081a6eb3, type: 3}
+  BossDeathVfx: {fileID: 8301344414407694689, guid: a2242213aa22747a1858ab469456afdf, type: 3}
+  HitSparkVfx: {fileID: 1874653188374554178, guid: fcc5dee607faa450ab31512c889402c9, type: 3}
+  FrostShatterVfx: {fileID: 5005148900362757932, guid: 09aa4cfcdb78d440fbc2862035df68d0, type: 3}
+  DeathVfxPerSecond: 24
+  ChampionColor: {r: 1, g: 0.92, b: 0.45, a: 1}
+  HeavyColor: {r: 1, g: 0.55, b: 0.15, a: 1}
+  TowerColor: {r: 0.93, g: 0.9, b: 0.82, a: 1}
+  ChampionSize: 34
+  HeavySize: 46
+  TowerSize: 24
+  TowerAggregate: 0.3
+  HeavyFraction: 0.25
+  NexusAlarmCooldown: 10
+  LowHealthFraction: 0.3
+  StreakWindow: 3
+  StreakTiers: 0f0000001e0000003c000000
+  StreakNames:
+  - Gemetzel!
+  - Blutbad!
+  - Vernichtung!
+  StreakCooldown: 15
+--- !u!114 &1357329344
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1357329327}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50030cbac7ffa42e9a631f318c6bfd41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.MusicDirector
+  MenuClip: {fileID: 8300000, guid: d07963838aa9f42069ea5e8bee7d87df, type: 3}
+  BuildClip: {fileID: 8300000, guid: 0a68cf86e2448485090a1ef98b566268, type: 3}
+  CombatBaseClip: {fileID: 8300000, guid: 905d9f5cd77c24aaba2368f83f459387, type: 3}
+  CombatIntenseClip: {fileID: 8300000, guid: 966a5076867704b43bddc065cb9c3b0e, type: 3}
+  BossClip: {fileID: 8300000, guid: a2c7d735697714e9d8208e7c8c6ea8e7, type: 3}
+  CrossfadeTime: 2.5
+  GameOverFade: 4
+  IntensityRate: 0.35
+  EnemiesLow: 12
+  EnemiesHigh: 45
 --- !u!1001 &1357690404
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -145330,6 +145724,7 @@ MonoBehaviour:
   OrigFogDensity: 0.01
   OrigSkybox: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   OrigSunShadows: 2
+  DawnTime: 8
 --- !u!114 &2067147420
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -147187,6 +147582,10 @@ MonoBehaviour:
   Offset: {x: 0, y: 15, z: -8}
   SmoothSpeed: 5
   LookAtTarget: 0
+  ShakeMaxOffset: 0.55
+  ShakeMaxRoll: 1.6
+  ShakeFrequency: 22
+  TraumaDecay: 1.8
 --- !u!114 &2091098173
 MonoBehaviour:
   m_ObjectHideFlags: 0

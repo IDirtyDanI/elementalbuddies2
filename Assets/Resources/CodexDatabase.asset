@@ -1,0 +1,392 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aad51c066bffe4ae78f65a6fe39b2731, type: 3}
+  m_Name: CodexDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.CodexDatabaseSO
+  Entries:
+  - Key: enemy:Runner
+    Category: 0
+    Title: "Skelett-L\xE4ufer"
+    Description: "L\xE4uft direkt zum Nexus"
+    Icon: {fileID: 21300000, guid: 109eb45b4ec384fc789d1b5e8479c972, type: 3}
+    Extra: 
+  - Key: enemy:Swarm
+    Category: 0
+    Title: Knochenschwarm
+    Description: "Viele, schnell und schwach \u2013 Fl\xE4chenschaden hilft"
+    Icon: {fileID: 21300000, guid: 36b287de8b20f4157928d9878577809f, type: 3}
+    Extra: 
+  - Key: enemy:SkeletonArcher
+    Category: 0
+    Title: "Skelett-Bogensch\xFCtze"
+    Description: "Fernkampf \u2013 beschie\xDFt Buddies"
+    Icon: {fileID: 21300000, guid: 60e508ca738bf4f38ac06d13a02e2d3d, type: 3}
+    Extra: 
+  - Key: enemy:Knight
+    Category: 0
+    Title: Skelett-Ritter
+    Description: "Gepanzert (\u2212Schaden), greift Buddies im Weg an"
+    Icon: {fileID: 21300000, guid: c99290369966647f5909db8f83a5dc36, type: 3}
+    Extra: "R\xFCstung 50 %"
+  - Key: enemy:BossBoneLord
+    Category: 1
+    Title: "Knochenf\xFCrst"
+    Description: "Nahkampf-Boss: Bodenstampfer \u2013 aus den roten Fl\xE4chen gehen"
+    Icon: {fileID: 21300000, guid: 5868d1be78f2345baae885cf4ab89a1c, type: 3}
+    Extra: Boss
+  - Key: enemy:GraveSpider
+    Category: 0
+    Title: Grabspinne
+    Description: "Jagt Buddies \u2013 Erde-Buddy lenkt sie per Spott ab"
+    Icon: {fileID: 21300000, guid: 306d96dc376264f84b486b95965413f5, type: 3}
+    Extra: 
+  - Key: enemy:BossNecromancer
+    Category: 1
+    Title: Nekromant
+    Description: "Beschw\xF6rt Diener und heilt sie \u2013 zuerst ausschalten"
+    Icon: {fileID: 21300000, guid: 43a10db6b61cf481594088d6c1a51426, type: 3}
+    Extra: Boss
+  - Key: enemy:BossDeathHunter
+    Category: 1
+    Title: "Totenj\xE4ger"
+    Description: "Fernkampf-Boss mit Pfeilhagel \u2013 in Bewegung bleiben"
+    Icon: {fileID: 21300000, guid: 61fc27d2875404de386e888be3b77af1, type: 3}
+    Extra: Boss
+  - Key: elite:Fireproof
+    Category: 2
+    Title: 'Elite: Feuerfest'
+    Description: "Nimmt kaum Feuerschaden. 2,5\xD7 Leben, 3\xD7 Splitter."
+    Icon: {fileID: 21300000, guid: 52f33ba899dfe4519a484a0814a580dc, type: 3}
+    Extra: ab Welle 12
+  - Key: elite:Frostguard
+    Category: 2
+    Title: 'Elite: Frostgepanzert'
+    Description: "L\xE4sst sich nicht verlangsamen. 2,5\xD7 Leben, 3\xD7 Splitter."
+    Icon: {fileID: 21300000, guid: b43db57af7b3843b1b5e36b81320afaa, type: 3}
+    Extra: ab Welle 12
+  - Key: elite:Swift
+    Category: 2
+    Title: 'Elite: Flink'
+    Description: "Sehr schnell. 2,5\xD7 Leben, 3\xD7 Splitter."
+    Icon: {fileID: 21300000, guid: 9c822bb50897d493682abb93684c74e2, type: 3}
+    Extra: ab Welle 12
+  - Key: elite:Shieldbearer
+    Category: 2
+    Title: "Elite: Schildtr\xE4ger"
+    Description: "Sch\xFCtzt Gegner in der N\xE4he. 2,5\xD7 Leben, 3\xD7 Splitter."
+    Icon: {fileID: 21300000, guid: 324356ac14935446e864a6264ed4ce94, type: 3}
+    Extra: ab Welle 12
+  - Key: elite:ShardThief
+    Category: 2
+    Title: 'Elite: Splitterdieb'
+    Description: "Flink, bringt viele Splitter. 2,5\xD7 Leben, 3\xD7 Splitter."
+    Icon: {fileID: 21300000, guid: 9eb5fbfd3a7814575aed54a40f77b723, type: 3}
+    Extra: ab Welle 12
+  - Key: event:BloodMoon
+    Category: 3
+    Title: Blutmond
+    Description: Gegner +20 % Tempo, +50 % Splitter
+    Icon: {fileID: 21300000, guid: 2bd4efcb16b4f4b209a5356299badbe5, type: 3}
+    Extra: ab Welle 16
+  - Key: event:SoulStorm
+    Category: 3
+    Title: Seelensturm
+    Description: "doppelte Splitter \u2013 aber der Magnet ist schwach: selbst einsammeln!"
+    Icon: {fileID: 21300000, guid: ae269016c653e4159b50c84875e47064, type: 3}
+    Extra: ab Welle 16
+  - Key: event:Ram
+    Category: 3
+    Title: Belagerungsramme
+    Description: "eine Ramme marschiert stur zum Nexus \u2013 aufhalten!"
+    Icon: {fileID: 21300000, guid: 015931bcaa0e0424796e82fb16aa6933, type: 3}
+    Extra: ab Welle 16
+  - Key: fusion:Lightning
+    Category: 4
+    Title: Blitz-Elementar
+    Description: "Kettenblitz: springt auf bis zu 3 weitere Gegner (Schaden nimmt
+      pro Sprung ab). Nasse Gegner nehmen doppelten Schaden und verl\xE4ngern die
+      Kette."
+    Icon: {fileID: 21300000, guid: f5583604daad84973980cdab95d89493, type: 3}
+    Extra: Feuer + Licht
+  - Key: fusion:Water
+    Category: 4
+    Title: Wasser-Elementar
+    Description: "Wasserstrahl \xFCber die volle Reichweite: trifft alle Gegner im
+      Strahl, macht sie nass und verlangsamt sie. Jeder 4. Strahl erzeugt einen Strudel,
+      der Gegner festh\xE4lt."
+    Icon: {fileID: 21300000, guid: 45e8416a62d1945968cdb798a448a593, type: 3}
+    Extra: Eis + Licht
+  - Key: fusion:Air
+    Category: 4
+    Title: Luft-Elementar
+    Description: "R\xFCckenwind: Buddies in Reichweite feuern 25 % schneller. B\xF6e
+      st\xF6\xDFt Gegner den Weg zur\xFCck und tr\xE4gt Br\xE4nde auf Gegner in der
+      N\xE4he weiter."
+    Icon: {fileID: 21300000, guid: e67a8b190ab994f2d82d336b2c2c57fa, type: 3}
+    Extra: Feuer + Eis
+  - Key: fusion:Shadow
+    Category: 4
+    Title: Schatten-Elementar
+    Description: "Verflucht bis zu 2 Gegner: Schaden \xFCber Zeit, und verfluchte
+      Gegner nehmen 25 % mehr Schaden aus allen Quellen."
+    Icon: {fileID: 21300000, guid: e6be4061f54af45259673602639aaad4, type: 3}
+    Extra: Erde + Licht
+  - Key: fusion:Magma
+    Category: 4
+    Title: Magma-Elementar
+    Description: "Lavakugel auf die dichteste Gegnergruppe: Fl\xE4chenschaden und
+      Brand beim Einschlag. Hinterl\xE4sst eine Lavapf\xFCtze, die 4 s lang Schaden
+      macht und leicht verlangsamt."
+    Icon: {fileID: 21300000, guid: c52bc2e2cdf7d450fa2bc470e3128885, type: 3}
+    Extra: Feuer + Erde
+  - Key: fusion:Crystal
+    Category: 4
+    Title: Kristall-Elementar
+    Description: "Super-Tank: viel Leben, 35 % weniger Schaden. Frost-Aura verlangsamt
+      Gegner in Reichweite, verspottet sie regelm\xE4\xDFig. Erlittener Schaden l\xE4dt
+      eine Splitter-Nova, die ihn an alle Gegner zur\xFCckgibt."
+    Icon: {fileID: 21300000, guid: 1263a003a346447a3bbef7fe192df3db, type: 3}
+    Extra: Eis + Erde
+  - Key: fusion:VolcanoTitan
+    Category: 5
+    Title: Vulkan-Titan
+    Description: "Meteor auf die dichteste Gegnergruppe: gro\xDFer Fl\xE4chenschaden,
+      bet\xE4ubt und st\xF6\xDFt zur\xFCck. Hinterl\xE4sst einen Krater, der verlangsamt
+      und brennt. Nimmt 20 % weniger Schaden."
+    Icon: {fileID: 21300000, guid: 5ac48075a25174c3299319f7064a272e, type: 3}
+    Extra: Feuer + Eis + Erde
+  - Key: fusion:StormLord
+    Category: 5
+    Title: "Sturmf\xFCrst"
+    Description: "Ruft eine Sturmwolke \xFCber die dichteste Gruppe: macht Gegner
+      nass und schl\xE4gt mit Kettenblitzen ein (doppelter Schaden auf Nasse). Aura:
+      Gegner in der N\xE4he sind 25 % langsamer."
+    Icon: {fileID: 21300000, guid: 497fced424a154a82ab41ab1e122b09b, type: 3}
+    Extra: Feuer + Eis + Licht
+  - Key: fusion:Phoenix
+    Category: 5
+    Title: "Ph\xF6nix"
+    Description: "Sturzflug durch die Gegnerlinie: Schaden, Brand und eine Feuerspur.
+      Aura: +30 % Schaden f\xFCr Buddies in der N\xE4he. Wiedergeburt: Einmal pro
+      Welle ersteht ein zerst\xF6rter Buddy in der N\xE4he (oder der Ph\xF6nix selbst)
+      mit halbem Leben neu."
+    Icon: {fileID: 21300000, guid: 2e0535e5fcafa4983a59d7fe3d786e38, type: 3}
+    Extra: Feuer + Erde + Licht
+  - Key: fusion:WorldTree
+    Category: 5
+    Title: Weltenbaum
+    Description: "Riesiger W\xE4chter (25 % weniger Schaden): Wurzeln halten bis
+      zu 6 Gegner fest, die dem Nexus am n\xE4chsten sind. Heilt Buddies und den
+      Nexus in der N\xE4he. Dornen werfen Nahkampf-Schaden zur\xFCck."
+    Icon: {fileID: 21300000, guid: 6854237859014449fabe03a677c5afc8, type: 3}
+    Extra: Eis + Erde + Licht
+  - Key: card:FireStat
+    Category: 6
+    Title: Flammenzorn
+    Description: Feuer-Buddies verursachen 8 % mehr Schaden.
+    Icon: {fileID: 21300000, guid: d42bc77a7d37948f08f170461ed2b8f9, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:Player speed
+    Category: 6
+    Title: Siebenmeilenstiefel
+    Description: Du bewegst dich 15 % schneller.
+    Icon: {fileID: 21300000, guid: 380d92e47b14a458190529b21094c0d5, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:PlayerManaboost
+    Category: 6
+    Title: Tiefer Manabrunnen
+    Description: Dein maximales Mana steigt um 100.
+    Icon: {fileID: 21300000, guid: 767d56866c2104b3489176ee2cdc8189, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:PlayerManaRegen
+    Category: 6
+    Title: Quell der Klarheit
+    Description: Dein Mana regeneriert 100 % schneller.
+    Icon: {fileID: 21300000, guid: 9b788dbe2e6fb4a0f8ac582c4f4f80b5, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:PlayerStat
+    Category: 6
+    Title: Kampfeswut
+    Description: "Deine Angriffe und F\xE4higkeiten verursachen 25 % mehr Schaden."
+    Icon: {fileID: 21300000, guid: 601a451740c694e42960f23b7d944fe1, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:BuddySlot
+    Category: 6
+    Title: "Beschw\xF6rerband"
+    Description: "Du kannst einen weiteren Buddy beschw\xF6ren."
+    Icon: {fileID: 21300000, guid: ca744bfe7345b4aba86fbeee1c15b4b7, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:ShardGain
+    Category: 6
+    Title: Seelenernte
+    Description: Gegner lassen 15 % mehr Seelensplitter fallen.
+    Icon: {fileID: 21300000, guid: bad396f569e77416483974cbff24bdbc, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:IceStat
+    Category: 6
+    Title: Frostbiss
+    Description: Eis-Buddies verursachen 10 % mehr Schaden.
+    Icon: {fileID: 21300000, guid: 028a4aa305aa04b6d9b33344b324a77d, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:EarthStat
+    Category: 6
+    Title: Felsenfaust
+    Description: Die Aura der Erd-Buddies verursacht 15 % mehr Schaden.
+    Icon: {fileID: 21300000, guid: 3bad6251a36d54773bbe4330ce33149d, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:LightStat
+    Category: 6
+    Title: Sonnenstrahl
+    Description: Licht-Buddies verursachen 10 % mehr Schaden.
+    Icon: {fileID: 21300000, guid: 0ac8dd173be1645769bfcdc37da7d7b0, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:AllRange
+    Category: 6
+    Title: Weitblick
+    Description: Alle Buddies haben 8 % mehr Reichweite.
+    Icon: {fileID: 21300000, guid: 296132fc29f66406ca4b6c732a427fef, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:AllFireRate
+    Category: 6
+    Title: Schnellfeuer
+    Description: Alle Buddies greifen 6 % schneller an.
+    Icon: {fileID: 21300000, guid: d63204ef949414d0d8dc78d24191360c, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:PlayerCooldown
+    Category: 6
+    Title: Kampfrhythmus
+    Description: "Deine F\xE4higkeiten laden 10 % schneller auf."
+    Icon: {fileID: 21300000, guid: ec2ac1e8b117b4f1584d155a1374f98b, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:PlayerMobility
+    Category: 6
+    Title: Ausweichkunst
+    Description: Rolle und Blink reichen 20 % weiter.
+    Icon: {fileID: 21300000, guid: fc1d522e5c4f84bb6bb2c6626061a11a, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:PlayerHealth
+    Category: 6
+    Title: "Z\xE4higkeit"
+    Description: Dein Champion hat 20 % mehr Leben.
+    Icon: {fileID: 21300000, guid: 5b177023bd3f04b84b4d5c5b51ca94b1, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:BuddyHealth
+    Category: 6
+    Title: Steinhaut
+    Description: Alle Buddies haben 15 % mehr Leben.
+    Icon: {fileID: 21300000, guid: 70c99a83d8e314490b09261af66fb51b, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:WaveHeal
+    Category: 6
+    Title: Feldscher
+    Description: "Buddies heilen am Wellenende zus\xE4tzlich 25 % ihres Lebens."
+    Icon: {fileID: 21300000, guid: 44dc55e12d23042ea8e74a4a643fd2c7, type: 3}
+    Extra: "Gew\xF6hnlich"
+  - Key: card:FireIgnite
+    Category: 6
+    Title: Glutgeschosse
+    Description: Treffer von Feuer-Buddies setzen Gegner 3 s in Brand (pro Sekunde
+      15 % des Treffers).
+    Icon: {fileID: 21300000, guid: 45a2d1a51a80243b0ae4bb3816f54636, type: 3}
+    Extra: Selten
+  - Key: card:SteamShock
+    Category: 6
+    Title: Dampfschock
+    Description: Brennende Gegner erleiden 30 % mehr Schaden von Eis-Buddies.
+    Icon: {fileID: 21300000, guid: 797d26065bbff453a882319d037f049b, type: 3}
+    Extra: Selten
+  - Key: card:IceFreeze
+    Category: 6
+    Title: Raureif
+    Description: Jeder 4. Schuss eines Eis-Buddys friert das Ziel 1 s ein.
+    Icon: {fileID: 21300000, guid: 95749d9822e1d4e8aadfa3107cdb2845, type: 3}
+    Extra: Selten
+  - Key: card:FrostShatter
+    Category: 6
+    Title: Splitterfrost
+    Description: 'Eingefrorene Gegner zerspringen beim Tod: 35 % ihres Lebens als
+      Schaden an Gegnern im Umkreis.'
+    Icon: {fileID: 21300000, guid: e3be609a12abb406d95c743977b462c2, type: 3}
+    Extra: Selten
+  - Key: card:TauntMark
+    Category: 6
+    Title: Spottmal
+    Description: Vom Erd-Buddy verspottete Gegner erleiden 20 % mehr Schaden.
+    Icon: {fileID: 21300000, guid: 4a8704061414e49539160f6351e3c161, type: 3}
+    Extra: Selten
+  - Key: card:EarthSlow
+    Category: 6
+    Title: Schwere Erde
+    Description: Die Aura der Erd-Buddies verlangsamt Gegner um 25 %.
+    Icon: {fileID: 21300000, guid: 311bbfed8716e4ac2ad59b1525dc77e1, type: 3}
+    Extra: Selten
+  - Key: card:SlowVulnerable
+    Category: 6
+    Title: "Eisesk\xE4lte"
+    Description: Verlangsamte oder eingefrorene Gegner erleiden 15 % mehr Schaden
+      von Buddies.
+    Icon: {fileID: 21300000, guid: 2f85d30609664475391da8d4b7c323dc, type: 3}
+    Extra: Selten
+  - Key: card:LightCurse
+    Category: 6
+    Title: "L\xE4uterung"
+    Description: "Der Strahl der Licht-Buddies verflucht 3 s: +15 % erlittener Schaden,
+      R\xFCstung z\xE4hlt nicht."
+    Icon: {fileID: 21300000, guid: 7cb1819085045460c91bca6f57c94f47, type: 3}
+    Extra: Selten
+  - Key: card:WetVulnerable
+    Category: 6
+    Title: "Leitf\xE4hig"
+    Description: Nasse Gegner erleiden 25 % mehr Schaden.
+    Icon: {fileID: 21300000, guid: edfe4e741eb184fcfb2708b658ff24c2, type: 3}
+    Extra: Selten
+  - Key: card:EliteBounty
+    Category: 6
+    Title: Kopfgeld
+    Description: Elite-Gegner und Bosse lassen 60 % mehr Seelensplitter fallen.
+    Icon: {fileID: 21300000, guid: a0c3a6ca329f146f0b4015c090867c3b, type: 3}
+    Extra: Selten
+  - Key: card:Interest
+    Category: 6
+    Title: Zinseszins
+    Description: "Am Wellenende bekommst du 8 % deiner Seelensplitter als Zinsen
+      (h\xF6chstens 40)."
+    Icon: {fileID: 21300000, guid: 16611c1b27c474e47b9f482479622581, type: 3}
+    Extra: Selten
+  - Key: card:GlassCannon
+    Category: 6
+    Title: Glaskanone
+    Description: 'Build-Karte: Alle Buddies verursachen 30 % mehr Schaden, haben
+      aber 30 % weniger Leben.'
+    Icon: {fileID: 21300000, guid: daf01da7f0abd489b803e78b45e57751, type: 3}
+    Extra: Episch
+  - Key: card:Loner
+    Category: 6
+    Title: "Einzelg\xE4nger"
+    Description: 'Build-Karte: Du verlierst 2 Buddy-Slots. Alle Buddies verursachen
+      35 % mehr Schaden.'
+    Icon: {fileID: 21300000, guid: ce2a39e82ef434ab8a94969ea3e55419, type: 3}
+    Extra: Episch
+  - Key: card:Purity
+    Category: 6
+    Title: Elementar-Harmonie
+    Description: 'Build-Karte: Buddies verursachen 8 % mehr Schaden je Element, das
+      du gebaut hast (bis +32 %).'
+    Icon: {fileID: 21300000, guid: ac8bda5348a844dd4a575604dc06368e, type: 3}
+    Extra: Episch
+  - Key: card:BloodPact
+    Category: 6
+    Title: Blutpakt
+    Description: Dein Champion verursacht 60 % mehr Schaden, hat aber 25 % weniger
+      Leben.
+    Icon: {fileID: 21300000, guid: b762d2fb038f04cb0bbf5d8fabb0afdc, type: 3}
+    Extra: Episch

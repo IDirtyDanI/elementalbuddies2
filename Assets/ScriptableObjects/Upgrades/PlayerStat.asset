@@ -12,11 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 232969f20748fec4d8d4d79953e45d44, type: 3}
   m_Name: PlayerStat
   m_EditorClassIdentifier: 
-  Title: Arkane Wucht
-  Description: Deine Angriffe und Fähigkeiten verursachen 25 % mehr Schaden.
-  Icon: {fileID: 21300000, guid: 2ee31fa7796b64100b8631231b889d5f, type: 3}
+  Title: Kampfeswut
+  Description: "Deine Angriffe und F\xE4higkeiten verursachen 25 % mehr Schaden."
+  Icon: {fileID: 21300000, guid: 601a451740c694e42960f23b7d944fe1, type: 3}
   Type: 0
   Target: 0
   StatToBuff: 1
   Value: 25
   IsPercentage: 1
+  Effect: 0
+  Value2: 0
+  Keywords: 
+  Rarity: 0
+  Affinity: 5
+  MaxPicks: 0

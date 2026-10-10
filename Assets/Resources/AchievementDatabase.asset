@@ -130,6 +130,24 @@ MonoBehaviour:
     Level: 0
     Element: -1
     Unlock: 0
+  - Id: first_night
+    Title: Erste Nacht
+    Description: 
+    Icon: {fileID: 21300000, guid: 83d99f0930ffa4e5aa046e41ac367958, type: 3}
+    Condition: 0
+    Threshold: 3
+    Level: 0
+    Element: -1
+    Unlock: 0
+  - Id: dawn
+    Title: Morgengrauen
+    Description: 
+    Icon: {fileID: 21300000, guid: 0ac8dd173be1645769bfcdc37da7d7b0, type: 3}
+    Condition: 7
+    Threshold: 1
+    Level: 0
+    Element: -1
+    Unlock: 9
   Unlocks:
   - Id: 1
     Name: "Schwertk\xE4mpfer"
@@ -155,6 +173,9 @@ MonoBehaviour:
   - Id: 8
     Name: Super-Elementare
     Icon: {fileID: 21300000, guid: 5ac48075a25174c3299319f7064a272e, type: 3}
+  - Id: 9
+    Name: Belagerungsstufen
+    Icon: {fileID: 21300000, guid: 015931bcaa0e0424796e82fb16aa6933, type: 3}
   BossKinds:
   - BossBoneLord
   - BossNecromancer

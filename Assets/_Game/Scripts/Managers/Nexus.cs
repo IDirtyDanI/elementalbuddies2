@@ -68,6 +68,16 @@ namespace ElementalBuddies
             }
         }
 
+        // Server: Lebensopfer für eine Wiederbelebung (GameManager, Team-Ausfall) – zerstört den Nexus nie
+        public void Sacrifice(float amount)
+        {
+            if (!Net.IsServer || _isDestroyed || amount <= 0f) return;
+            CurrentHP = Mathf.Max(1f, CurrentHP - amount);
+            SyncNet();
+            OnHealthChanged?.Invoke();
+            UpdateSlider();
+        }
+
         // Reparatur (Segen des Licht-Buddys); gibt die tatsächlich geheilte Menge zurück
         public float Heal(float amount)
         {

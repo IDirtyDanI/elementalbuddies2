@@ -151,6 +151,12 @@ namespace ElementalBuddies
             CheckAll(AchievementCondition.ReachWave, wave);
         }
 
+        // Morgengrauen erreicht (GameManager.ServerDawn bzw. Clients über NetGame) → Erfolg „Morgengrauen“
+        public void ReportDawn()
+        {
+            CheckAll(AchievementCondition.SurviveDawn, 1);
+        }
+
         private void HandleShardsEarned(float amount)
         {
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;

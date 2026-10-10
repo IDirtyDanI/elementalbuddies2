@@ -296,15 +296,25 @@ namespace ElementalBuddies
             if (_downed.Value && NetworkManager.ServerTime.Time >= _respawnAt.Value)
             {
                 bool gameOver = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
-                // Nur wiederbeleben, wenn noch jemand lebt (sonst entscheidet der Server auf Game Over)
-                if (!gameOver && AnyAlive()) ServerRevive();
+                // Nur wiederbeleben, wenn noch jemand lebt oder der Nexus den Team-Ausfall bezahlt hat (GameManager)
+                if (!gameOver && (AnyAlive() || _wipeRevive)) ServerRevive();
             }
+        }
+
+        // Server: Team-Ausfall bezahlt → nach delay wiederbeleben, auch wenn niemand lebt
+        private bool _wipeRevive;
+        public void ServerScheduleWipeRevive(float delay)
+        {
+            if (!IsServer || !_downed.Value) return;
+            _wipeRevive = true;
+            _respawnAt.Value = NetworkManager.ServerTime.Time + Mathf.Max(0f, delay);
         }
 
         // Server: sofort wiederbeleben (volle LP) und an einen Spawnpunkt setzen
         public void ServerRevive()
         {
             if (!IsServer || Stats == null) return;
+            _wipeRevive = false;
             Vector3 pos = transform.position;
             Quaternion rot = transform.rotation;
             var boot = NetBootstrap.Instance;

@@ -36,6 +36,9 @@ namespace ElementalBuddies
         // DevTools-Cheats beim Host aktiv → auch Clients vergeben keine Erfolge
         private readonly NetworkVariable<bool> _hostCheats = new NetworkVariable<bool>(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Aktueller Früh-Start-Bonus (ganze Splitter) für die Anzeige auf dem Wellen-Knopf
+        private readonly NetworkVariable<float> _earlyCallBonus = new NetworkVariable<float>(
+            0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         // Client-Ids mit Bereit-Stimme für die nächste Welle
         private readonly NetworkList<ulong> _readyClients = new NetworkList<ulong>();
 
@@ -55,6 +58,7 @@ namespace ElementalBuddies
 
         public static string WaitReason => Ready ? Instance._waitReason.Value.ToString() : "";
         public static bool HostCheatsActive => Ready && Instance._hostCheats.Value;
+        public static float EarlyCallBonus => Ready ? Instance._earlyCallBonus.Value : 0f;
 
         partial void OnSpawnWaves()
         {
@@ -243,6 +247,12 @@ namespace ElementalBuddies
         {
             if (!IsSpawned || !IsServer || _readyClients.Count == 0) return;
             _readyClients.Clear();
+        }
+
+        public void ServerSetEarlyCallBonus(float bonus)
+        {
+            if (!IsSpawned || !IsServer) return;
+            if (!Mathf.Approximately(_earlyCallBonus.Value, bonus)) _earlyCallBonus.Value = bonus;
         }
 
         public void ServerSetWaitReason(string reason)

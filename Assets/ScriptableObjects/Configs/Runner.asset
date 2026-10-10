@@ -19,6 +19,7 @@ MonoBehaviour:
   Damage: 0
   Prefab: {fileID: 405400792992039941, guid: 4c4756fad19902640808a4060a03d7d1, type: 3}
   BuddyMaxHP: 0
+  BossDamageMultiplier: 1
   BaseHP: 60
   Speed: 3.5
   AttackDamage: 10
@@ -34,3 +35,9 @@ MonoBehaviour:
   ProjectileSpeed: 14
   AttackWindup: 0.35
   ProjectileSpawnHeight: 1.3
+  IsBoss: 0
+  DisplayName: "Skelett-L\xE4ufer"
+  ControlResistance: 0
+  ThemeColor: {r: 1, g: 1, b: 1, a: 1}
+  Icon: {fileID: 21300000, guid: 109eb45b4ec384fc789d1b5e8479c972, type: 3}
+  PreviewHint: "L\xE4uft direkt zum Nexus"

@@ -24923,6 +24923,7 @@ GameObject:
   m_Component:
   - component: {fileID: 781014873}
   - component: {fileID: 781014872}
+  - component: {fileID: 781014874}
   m_Layer: 0
   m_Name: MenuAudio
   m_TagString: Untagged
@@ -24946,8 +24947,300 @@ MonoBehaviour:
   SfxVolume: 1
   SpatialBlend: 0.25
   Voices: 2
-  Entries: []
-  MusicClip: {fileID: 8300000, guid: f877ffc5b635f0e438e6bd8d577002a5, type: 3}
+  Entries:
+  - Id: 2
+    Clips:
+    - {fileID: 8300000, guid: 8658390c748714202a19ead6f159a95e, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 7
+    Clips:
+    - {fileID: 8300000, guid: 49cfcd55291394d0daccc14d5ddde31b, type: 3}
+    - {fileID: 8300000, guid: 546f14b20c4f44e3e977f9000fe52db0, type: 3}
+    - {fileID: 8300000, guid: e596ea87170154662abc7ec3aa7aafbe, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.06
+  - Id: 11
+    Clips:
+    - {fileID: 8300000, guid: f7328f51d52f84a10b75bcd97165d4ac, type: 3}
+    Volume: 0.7
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 13
+    Clips:
+    - {fileID: 8300000, guid: b4eef90cfd3454eb1bf15657ea4cd71e, type: 3}
+    Volume: 0.38
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.035
+  - Id: 14
+    Clips:
+    - {fileID: 8300000, guid: c752b717bae4d42f0a0d78588aa8bb2b, type: 3}
+    - {fileID: 8300000, guid: 271529d85206d48a9b2eb5927c6909d6, type: 3}
+    - {fileID: 8300000, guid: d9b9b956fed1b494db63bc5010eef121, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 15
+    Clips:
+    - {fileID: 8300000, guid: ee772943cab1c4559a0fab3ad183673b, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 16
+    Clips:
+    - {fileID: 8300000, guid: 4fc99f3ef6107457a89ed5af4ee0c820, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.15
+  - Id: 17
+    Clips:
+    - {fileID: 8300000, guid: 980f5fb1fd99341fca3c301ab9653c25, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 18
+    Clips:
+    - {fileID: 8300000, guid: 1648e3aad914840ebbeaefb17232e214, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 19
+    Clips:
+    - {fileID: 8300000, guid: 595e76f13a7134fae9665d7239e3a0b6, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 20
+    Clips:
+    - {fileID: 8300000, guid: 48302ff98473645ac8d1fd89f8940dcb, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 21
+    Clips:
+    - {fileID: 8300000, guid: a1c843d18bd934330b7dd1077a06bbed, type: 3}
+    Volume: 0.32
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 22
+    Clips:
+    - {fileID: 8300000, guid: 0499e35dd291a48dc85018846daee1d4, type: 3}
+    Volume: 0.9
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 23
+    Clips:
+    - {fileID: 8300000, guid: 4543f686c57c54f7baf00bcb1cb5d290, type: 3}
+    Volume: 0.7
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.5
+  - Id: 24
+    Clips:
+    - {fileID: 8300000, guid: faca09ca25cce4b38887069442c45307, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.97, y: 1.03}
+    MinInterval: 0.05
+  - Id: 25
+    Clips:
+    - {fileID: 8300000, guid: d67408bc2916f4e599011d9d7bd50faa, type: 3}
+    Volume: 0.22
+    Pitch: {x: 0.97, y: 1.03}
+    MinInterval: 0.04
+  - Id: 26
+    Clips:
+    - {fileID: 8300000, guid: 4d0c112b1c44340f882b5b95b435cbde, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.2
+  - Id: 27
+    Clips:
+    - {fileID: 8300000, guid: 1a630bbb957b54c7180e98e98f39c01d, type: 3}
+    Volume: 0.65
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 28
+    Clips:
+    - {fileID: 8300000, guid: 6625583598bfb440585189224469f621, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.2
+  - Id: 29
+    Clips:
+    - {fileID: 8300000, guid: ce81ae467766b4273be70ebc8026cd5c, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 30
+    Clips:
+    - {fileID: 8300000, guid: d329fd9c68d4447cbb248d1135ab7e17, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 31
+    Clips:
+    - {fileID: 8300000, guid: 934e6beac935a4628922739a6115feb5, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 32
+    Clips:
+    - {fileID: 8300000, guid: 58f85cf912d164587b8c24ef20735a68, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.1
+  - Id: 33
+    Clips:
+    - {fileID: 8300000, guid: 56e002529bd9c4ab7b87fec188cfec1f, type: 3}
+    Volume: 0.8
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 34
+    Clips:
+    - {fileID: 8300000, guid: 97811ae4176594ad1a74c6367a926f7a, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 35
+    Clips:
+    - {fileID: 8300000, guid: ecaf384c74e6147f08307eaa26d04926, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 36
+    Clips:
+    - {fileID: 8300000, guid: e410d2ea3b1644fabbbc98d5f115f479, type: 3}
+    Volume: 0.75
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 37
+    Clips:
+    - {fileID: 8300000, guid: ca201452ea345463c8c5c93d3b61aa1a, type: 3}
+    Volume: 0.55
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.5
+  - Id: 38
+    Clips:
+    - {fileID: 8300000, guid: 44ed999c50c4149929b8b6dc8a8d92c1, type: 3}
+    Volume: 0.26
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.09
+  - Id: 39
+    Clips:
+    - {fileID: 8300000, guid: a819598cb3f214fdf842166140a8bb56, type: 3}
+    Volume: 0.28
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.07
+  - Id: 40
+    Clips:
+    - {fileID: 8300000, guid: cc1eb53e3e6614e7da306e8caf04ede2, type: 3}
+    Volume: 0.26
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.09
+  - Id: 41
+    Clips:
+    - {fileID: 8300000, guid: 2edcfb900020b4869a2168294c2e2465, type: 3}
+    Volume: 0.28
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.07
+  - Id: 42
+    Clips:
+    - {fileID: 8300000, guid: 5ca684d1146e9469b99182d711594c93, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.2
+  - Id: 43
+    Clips:
+    - {fileID: 8300000, guid: f2a7c268994dc483387f48212057e139, type: 3}
+    Volume: 0.32
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.08
+  - Id: 44
+    Clips:
+    - {fileID: 8300000, guid: 00e72301c760f474494da6a299bc2e34, type: 3}
+    Volume: 0.24
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.1
+  - Id: 45
+    Clips:
+    - {fileID: 8300000, guid: b88386fa9de9d4ecd9756e575af5daef, type: 3}
+    Volume: 0.22
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 1.2
+  - Id: 46
+    Clips:
+    - {fileID: 8300000, guid: 1c8532084579a4dbebe915b5fbdf9ae6, type: 3}
+    Volume: 0.5
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.05
+  - Id: 47
+    Clips:
+    - {fileID: 8300000, guid: 8bfd0ac3a14ef475ab83298704512270, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.05
+  - Id: 48
+    Clips:
+    - {fileID: 8300000, guid: 05ae48056f1f54ae28347ad343249a68, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.05
+  - Id: 49
+    Clips:
+    - {fileID: 8300000, guid: 7a7b90f4b5f32437e9b308e63d15383e, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.1
+  - Id: 50
+    Clips:
+    - {fileID: 8300000, guid: 498eaf0a71c4d43ffa0507926fea6275, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 5
+  - Id: 51
+    Clips:
+    - {fileID: 8300000, guid: 1678a77baec9d4896af90448f711303c, type: 3}
+    Volume: 0.75
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 52
+    Clips:
+    - {fileID: 8300000, guid: 6071a32efc7704efb96820f5d73ff3ef, type: 3}
+    Volume: 0.5
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.5
+  - Id: 53
+    Clips:
+    - {fileID: 8300000, guid: bbe59a3dd5734432f9205c64352976a4, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.15
+  - Id: 54
+    Clips:
+    - {fileID: 8300000, guid: 05d5eff2c1e1b45e5874dd5da33a6b0d, type: 3}
+    Volume: 0.4
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.25
+  - Id: 55
+    Clips:
+    - {fileID: 8300000, guid: 8b6d6ab52fe0c43c5bbfb1a17a507f18, type: 3}
+    Volume: 0.4
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.4
+  - Id: 56
+    Clips:
+    - {fileID: 8300000, guid: 51d3eedb8ef534fd9866aad0716ec684, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 57
+    Clips:
+    - {fileID: 8300000, guid: 51251da9d4f264e4495a7edfc59c2b57, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  MusicClip: {fileID: 0}
   MusicVolume: 0.25
   MusicFadeIn: 2.5
   MusicChangeTime: 0.25
@@ -24968,6 +25261,28 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &781014874
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 781014871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50030cbac7ffa42e9a631f318c6bfd41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.MusicDirector
+  MenuClip: {fileID: 8300000, guid: d07963838aa9f42069ea5e8bee7d87df, type: 3}
+  BuildClip: {fileID: 8300000, guid: 0a68cf86e2448485090a1ef98b566268, type: 3}
+  CombatBaseClip: {fileID: 8300000, guid: 905d9f5cd77c24aaba2368f83f459387, type: 3}
+  CombatIntenseClip: {fileID: 8300000, guid: 966a5076867704b43bddc065cb9c3b0e, type: 3}
+  BossClip: {fileID: 8300000, guid: a2c7d735697714e9d8208e7c8c6ea8e7, type: 3}
+  CrossfadeTime: 2.5
+  GameOverFade: 4
+  IntensityRate: 0.35
+  EnemiesLow: 12
+  EnemiesHigh: 45
 --- !u!1 &801609015
 GameObject:
   m_ObjectHideFlags: 0

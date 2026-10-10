@@ -19,6 +19,22 @@ namespace ElementalBuddies
         public static bool IsLocalChoosing => Instance != null && Instance.IsChoosing;
 
         public const int CardsPerDraft = 3;
+        // Steuercodes für ServerSelect (statt Kartenindex): Überspringen bzw. Neu würfeln
+        public const int SkipCode = -1, RerollCode = -2;
+
+        [Header("Draft (Plan Fesselung D2/D5/D6)")]
+        [Tooltip("Gratis-Neuwürfe zu Beginn des Runs (pro Spieler); jeder Boss-Kill gibt allen einen weiteren.")]
+        public int StartRerolls = 1;
+        [Tooltip("Überspringen gibt SkipShardsBase + SkipShardsPerWave · Welle Seelensplitter (× Einkommen der Schwierigkeit).")]
+        public float SkipShardsBase = 10f;
+        public float SkipShardsPerWave = 2f;
+        [Tooltip("Wahrscheinlichkeit Selten bzw. Episch je Karte: linear von Welle 1 (bzw. EpicFromWave) bis RarityRampWave.")]
+        public float RareChanceStart = 0.22f, RareChanceEnd = 0.33f;
+        public float EpicChanceStart = 0.03f, EpicChanceEnd = 0.12f;
+        public int EpicFromWave = 3;
+        public int RarityRampWave = 20;
+        [Tooltip("Gewicht einer Karte, die ein Schlüsselwort mit einer bereits gewählten Karte teilt („Kombo“).")]
+        public float ComboWeight = 2.5f;
 
         [Header("Data")]
         public List<UpgradeDefinitionSO> AllUpgrades;
@@ -48,6 +64,11 @@ namespace ElementalBuddies
 
         // Lokale Upgrade-Auswahl gerade offen
         public bool IsChoosing { get; private set; }
+        // Zur offenen Auswahl: verfügbare Gratis-Neuwürfe und Splitter fürs Überspringen (vom Server)
+        public int OfferRerolls { get; private set; }
+        public int OfferSkipShards { get; private set; }
+        // Neu würfeln angefragt, Antwort steht aus (UI sperrt die Knöpfe)
+        public bool IsRerollPending { get; private set; }
         private int _localSerial = -1;      // Nummer der offenen Auswahl
         private int _localClosedSerial = -1; // zuletzt lokal geschlossene Auswahl (verspätete Pakete ignorieren)
         private readonly List<UpgradeDefinitionSO> _localOffer = new List<UpgradeDefinitionSO>();
@@ -59,6 +80,7 @@ namespace ElementalBuddies
             public bool Open;    // Auswahl liegt beim Spieler
             public bool Pending; // wartet, bis der Händlerladen des Spielers zu ist
             public int Serial;
+            public int Rerolls = -1; // −1 = noch nicht gesetzt (StartRerolls)
         }
         private readonly Dictionary<ulong, DraftState> _drafts = new Dictionary<ulong, DraftState>();
         private int _serialCounter;
@@ -90,6 +112,7 @@ namespace ElementalBuddies
         void Awake()
         {
             Instance = this;
+            CardEffects.Reset(); // neuer Run
         }
 
         void Start()
@@ -119,11 +142,36 @@ namespace ElementalBuddies
              NetPlayer.OnPlayerLeft += HandlePlayerLeft;
              PlayerAvatar.OnAvatarDespawned += HandleAvatarDespawned;
              WaveGate.Register(this, IsDraftBlocking, DraftBlockReason);
+             EnemyBrain.OnEnemyKilled += HandleEnemyKilled;
         }
+
+        // Server: Boss besiegt → jeder Spieler bekommt einen Gratis-Neuwurf
+        private void HandleEnemyKilled(EnemyBrain e)
+        {
+            if (!Net.IsServer || e == null || !e.IsBoss) return;
+            foreach (ulong id in PlayerIds())
+            {
+                var st = GetDraft(id);
+                st.Rerolls = RerollsOf(st) + 1;
+            }
+            ToastUI.Show("Gratis-Neuwurf für die Kartenwahl erhalten!");
+        }
+
+        private int RerollsOf(DraftState st) => st.Rerolls < 0 ? StartRerolls : st.Rerolls;
+
+        public int SkipShards(int waveNumber)
+        {
+            var wm = WaveManager.Instance;
+            float v = (SkipShardsBase + SkipShardsPerWave * Mathf.Max(1, waveNumber)) * (wm != null ? wm.IncomeMultiplier : 1f);
+            return Mathf.RoundToInt(v);
+        }
+
+        private static int CompletedWave => WaveManager.Instance != null ? Mathf.Max(1, WaveManager.Instance.CurrentWaveIndex) : 1;
 
         void OnDestroy()
         {
             WaveGate.Unregister(this);
+            EnemyBrain.OnEnemyKilled -= HandleEnemyKilled;
             if (GameManager.Instance != null) GameManager.Instance.OnGameOver -= HandleGameOver;
             NetPlayer.OnPlayerLeft -= HandlePlayerLeft;
             PlayerAvatar.OnAvatarDespawned -= HandleAvatarDespawned;
@@ -191,7 +239,12 @@ namespace ElementalBuddies
             }
             st.Open = true;
             st.Serial = ++_serialCounter;
-            NetGame.SendUpgradeOffer(clientId, st.Serial, st.Offer.ToArray());
+            SendOffer(clientId, st);
+        }
+
+        private void SendOffer(ulong clientId, DraftState st)
+        {
+            NetGame.SendUpgradeOffer(clientId, st.Serial, st.Offer.ToArray(), RerollsOf(st), SkipShards(CompletedWave));
         }
 
         // Server: Laden des Spielers geschlossen → wartenden Draft zeigen. true, wenn einer wartete.
@@ -211,10 +264,40 @@ namespace ElementalBuddies
             if (!Net.IsServer) return;
             if (!_drafts.TryGetValue(clientId, out var st) || !st.Open || st.Serial != serial) return;
             if (IsGameOver) { st.Open = false; return; }
+            if (cardIndex == RerollCode)
+            {
+                // Neu würfeln: neue drei Karten (möglichst ohne die bisherigen), neue Nummer
+                if (RerollsOf(st) > 0)
+                {
+                    st.Rerolls = RerollsOf(st) - 1;
+                    var avoid = new List<UpgradeDefinitionSO>();
+                    foreach (int i in st.Offer) avoid.Add(GetUpgrade(i));
+                    var fresh = GetRandomUpgrades(CardsPerDraft, clientId, avoid);
+                    st.Offer.Clear();
+                    foreach (var up in fresh)
+                    {
+                        int idx = IndexOfUpgrade(up);
+                        if (idx >= 0) st.Offer.Add(idx);
+                    }
+                    st.Serial = ++_serialCounter;
+                }
+                SendOffer(clientId, st);
+                return;
+            }
+            if (cardIndex == SkipCode)
+            {
+                // Überspringen: keine Karte, dafür Splitter in die Teamkasse
+                st.Open = false;
+                st.Offer.Clear();
+                int shards = SkipShards(CompletedWave);
+                if (EconomyManager.Instance != null) EconomyManager.Instance.EarnShards(shards);
+                if (MerchantManager.Instance != null) MerchantManager.Instance.ServerOnDraftFinished(clientId);
+                return;
+            }
             if (!st.Offer.Contains(cardIndex))
             {
                 // ungültig → Auswahl erneut schicken
-                NetGame.SendUpgradeOffer(clientId, st.Serial, st.Offer.ToArray());
+                SendOffer(clientId, st);
                 return;
             }
             st.Open = false;
@@ -292,8 +375,11 @@ namespace ElementalBuddies
         // ======================= Client: Auswahl =======================
 
         // Server-Angebot empfangen → Auswahl zeigen
-        public void ClientReceiveOffer(int serial, int[] cards)
+        public void ClientReceiveOffer(int serial, int[] cards, int rerolls = 0, int skipShards = 0)
         {
+            IsRerollPending = false;
+            OfferRerolls = rerolls;
+            OfferSkipShards = skipShards;
             if (IsGameOver || cards == null) return;
             if (serial == _localClosedSerial) return; // bereits gewählt
             _localOffer.Clear();
@@ -324,8 +410,44 @@ namespace ElementalBuddies
             NetGame.RequestSelectUpgrade(serial, idx);
         }
 
+        // Von der UI: Karten neu würfeln (Fenster bleibt offen, der Server schickt ein neues Angebot)
+        public void RequestReroll()
+        {
+            if (PauseManager.IsPaused || !IsChoosing || IsRerollPending || OfferRerolls <= 0) return;
+            IsRerollPending = true;
+            NetGame.RequestSelectUpgrade(_localSerial, RerollCode);
+        }
+
+        // Von der UI: Kartenwahl überspringen (Splitter statt Karte)
+        public void SkipDraft()
+        {
+            if (PauseManager.IsPaused || !IsChoosing || IsRerollPending) return;
+            int serial = _localSerial;
+            int shards = OfferSkipShards;
+            CloseLocal();
+            NetGame.RequestSelectUpgrade(serial, SkipCode);
+            ToastUI.Show($"Übersprungen: +{shards} Seelensplitter");
+        }
+
+        // Teilt die Karte ein Schlüsselwort mit einer bereits gewählten Karte des lokalen Spielers?
+        public bool IsCombo(UpgradeDefinitionSO up) => SharesKeyword(up, _picked);
+
+        private static bool SharesKeyword(UpgradeDefinitionSO up, IReadOnlyList<UpgradeDefinitionSO> picked)
+        {
+            if (up == null || picked == null || string.IsNullOrEmpty(up.Keywords)) return false;
+            var mine = up.KeywordList;
+            foreach (var p in picked)
+            {
+                if (p == null || p == up || string.IsNullOrEmpty(p.Keywords)) continue;
+                foreach (var k in p.KeywordList)
+                    if (!string.IsNullOrEmpty(k) && System.Array.IndexOf(mine, k) >= 0) return true;
+            }
+            return false;
+        }
+
         private void CloseLocal()
         {
+            IsRerollPending = false;
             _localClosedSerial = _localSerial;
             IsChoosing = false;
             _localOffer.Clear();
@@ -383,9 +505,14 @@ namespace ElementalBuddies
         // count zufällige Karten ohne Doppelte für den lokalen Spieler
         public List<UpgradeDefinitionSO> GetRandomUpgrades(int count) => GetRandomUpgrades(count, Net.LocalClientId);
 
-        // count zufällige Karten ohne Doppelte für einen Spieler; Slot-Karten fallen raus, sobald die Slot-Obergrenze
-        // erreicht ist; MaxPicks zählt pro Spieler. Zufall nur auf dem Server.
-        public List<UpgradeDefinitionSO> GetRandomUpgrades(int count, ulong clientId)
+        // count Karten ohne Doppelte für einen Spieler (Zufall nur auf dem Server):
+        //  1. Seltenheit je Karte würfeln (Selten/Episch werden mit der Welle häufiger, D2)
+        //  2. innerhalb der Seltenheit gewichtet ziehen: Kombo-Karten (gemeinsames Schlüsselwort mit eigener Wahl) öfter
+        //  3. Garantie (D6): mindestens eine Karte passt zum Gebauten bzw. zum Champion, ab Welle 3 öffnet eine etwas Neues
+        // Nicht ziehbar: Slot-Karten am Slot-Deckel, Karten über MaxPicks; avoid wird nur gemieden, solange genug andere da sind.
+        public List<UpgradeDefinitionSO> GetRandomUpgrades(int count, ulong clientId) => GetRandomUpgrades(count, clientId, null);
+
+        public List<UpgradeDefinitionSO> GetRandomUpgrades(int count, ulong clientId, List<UpgradeDefinitionSO> avoid)
         {
             var pool = new List<UpgradeDefinitionSO>();
             if (AllUpgrades != null)
@@ -397,15 +524,133 @@ namespace ElementalBuddies
                     pool.Add(up);
                 }
             }
+            if (avoid != null && pool.Count - avoid.Count >= count)
+                pool.RemoveAll(u => avoid.Contains(u));
 
+            var mine = GetPickedUpgrades(clientId);
+            int wave = CompletedWave;
             var picked = new List<UpgradeDefinitionSO>();
             while (picked.Count < count && pool.Count > 0)
             {
-                int idx = Random.Range(0, pool.Count);
-                picked.Add(pool[idx]);
-                pool.RemoveAt(idx);
+                var rarity = RollRarity(wave);
+                var up = PickWeighted(pool, rarity, mine);
+                picked.Add(up);
+                pool.Remove(up);
             }
+            EnsureGuarantee(picked, pool, wave);
             return picked;
+        }
+
+        public float RareChance(int wave) => Mathf.Lerp(RareChanceStart, RareChanceEnd, Mathf.InverseLerp(1, RarityRampWave, wave));
+        public float EpicChance(int wave) => wave < EpicFromWave ? 0f : Mathf.Lerp(EpicChanceStart, EpicChanceEnd, Mathf.InverseLerp(EpicFromWave, RarityRampWave, wave));
+
+        private CardRarity RollRarity(int wave)
+        {
+            float r = Random.value;
+            float epic = EpicChance(wave);
+            if (r < epic) return CardRarity.Epic;
+            if (r < epic + RareChance(wave)) return CardRarity.Rare;
+            return CardRarity.Common;
+        }
+
+        // Gewichtet aus der gewünschten Seltenheit; fehlt sie im Pool, die nächstniedrigere (dann höhere)
+        private UpgradeDefinitionSO PickWeighted(List<UpgradeDefinitionSO> pool, CardRarity rarity, IReadOnlyList<UpgradeDefinitionSO> mine)
+        {
+            var order = new List<int> { (int)rarity };
+            for (int r = (int)rarity - 1; r >= 0; r--) order.Add(r);
+            for (int r = (int)rarity + 1; r <= (int)CardRarity.Epic; r++) order.Add(r);
+            foreach (int ri in order)
+            {
+                var cands = pool.FindAll(u => (int)u.Rarity == ri);
+                if (cands.Count > 0) return WeightedChoice(cands, mine);
+            }
+            return WeightedChoice(pool, mine);
+        }
+
+        private UpgradeDefinitionSO WeightedChoice(List<UpgradeDefinitionSO> cands, IReadOnlyList<UpgradeDefinitionSO> mine)
+        {
+            float total = 0f;
+            var w = new float[cands.Count];
+            for (int i = 0; i < cands.Count; i++)
+            {
+                w[i] = SharesKeyword(cands[i], mine) ? ComboWeight : 1f;
+                total += w[i];
+            }
+            float r = Random.value * total;
+            for (int i = 0; i < cands.Count; i++)
+            {
+                r -= w[i];
+                if (r <= 0f) return cands[i];
+            }
+            return cands[cands.Count - 1];
+        }
+
+        // Elemente der gebauten Basis-Buddies (Fusionen zählen mit ihrem ersten Element)
+        private static bool[] BuiltElements()
+        {
+            var built = new bool[4];
+            foreach (var b in ElementalBuddy.Active)
+                if (b != null && !b.IsDead && b.ElementIndex >= 0 && b.ElementIndex < 4) built[b.ElementIndex] = true;
+            return built;
+        }
+
+        private static int ElementOf(CardAffinity a) =>
+            a == CardAffinity.Fire ? 0 : a == CardAffinity.Ice ? 1 : a == CardAffinity.Earth ? 2 : a == CardAffinity.Light ? 3 : -1;
+
+        // passt zum Gebauten bzw. zum Champion
+        private static bool Fits(UpgradeDefinitionSO u, bool[] built)
+        {
+            if (u.Affinity == CardAffinity.Champion) return true;
+            int e = ElementOf(u.Affinity);
+            return e >= 0 && built[e];
+        }
+
+        // öffnet ein noch nicht gebautes Element
+        private static bool Opens(UpgradeDefinitionSO u, bool[] built)
+        {
+            int e = ElementOf(u.Affinity);
+            return e >= 0 && !built[e];
+        }
+
+        private void EnsureGuarantee(List<UpgradeDefinitionSO> picked, List<UpgradeDefinitionSO> pool, int wave)
+        {
+            if (picked.Count < 2 || pool.Count == 0) return;
+            var built = BuiltElements();
+
+            if (!picked.Exists(u => Fits(u, built)))
+            {
+                var cands = pool.FindAll(u => Fits(u, built));
+                if (cands.Count > 0) Replace(picked, pool, picked.Count - 1, cands);
+            }
+            if (wave >= 3 && !picked.Exists(u => Opens(u, built)))
+            {
+                var cands = pool.FindAll(u => Opens(u, built));
+                if (cands.Count > 0)
+                {
+                    // eine Karte ersetzen, ohne die einzige passende zu verlieren
+                    int fitCount = picked.FindAll(u => Fits(u, built)).Count;
+                    for (int i = picked.Count - 1; i >= 0; i--)
+                    {
+                        if (Fits(picked[i], built) && fitCount <= 1) continue;
+                        Replace(picked, pool, i, cands);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // picked[i] gegen eine Karte aus cands tauschen
+        private void Replace(List<UpgradeDefinitionSO> picked, List<UpgradeDefinitionSO> pool, int i, List<UpgradeDefinitionSO> cands)
+        {
+            // gleiche Seltenheit, sonst niedrigere – die Garantie soll keine Seltenheit „schenken“
+            var r = picked[i].Rarity;
+            var list = cands.FindAll(u => u.Rarity == r);
+            if (list.Count == 0) list = cands.FindAll(u => u.Rarity < r);
+            if (list.Count == 0) return;
+            var next = list[Random.Range(0, list.Count)];
+            pool.Add(picked[i]);
+            pool.Remove(next);
+            picked[i] = next;
         }
 
         // Für den lokalen Spieler ziehbar?
@@ -418,6 +663,10 @@ namespace ElementalBuddies
             if (up.StatToBuff == StatType.BuddySlot && slots != null && slots.IsAtCap) return false;
             // Deckel pro Run und Spieler (z. B. Beschwörerband höchstens 6×)
             if (up.MaxPicks > 0 && Instance != null && Instance.GetPickCount(up, clientId) >= up.MaxPicks) return false;
+            // nur eine epische Build-Karte pro Run (Glaskanone, Einzelgänger, Elementar-Harmonie)
+            if (CardEffects.IsBuildCard(up) && Instance != null)
+                foreach (var p in Instance.GetPickedUpgrades(clientId))
+                    if (CardEffects.IsBuildCard(p)) return false;
             return true;
         }
 
@@ -526,6 +775,16 @@ namespace ElementalBuddies
                     ApplyManaUpgrade(upgrade, target);
                     break;
             }
+
+            // Blutpakt: Champion verliert Max-Leben (Schaden kommt über StatToBuff)
+            if (upgrade.Effect == CardEffect.BloodPact && target.Stats != null)
+            {
+                var b = GetBase(target);
+                target.Stats.MaxHP = Mathf.Max(1f, target.Stats.MaxHP - b.MaxHP * upgrade.Value2 / 100f);
+                if (Net.IsServer) target.Stats.Heal(0);
+            }
+            // Team-Sonderwirkungen (Synergien, Build-Karten) auf jedem Rechner
+            else if (upgrade.Effect != CardEffect.None) CardEffects.Add(upgrade);
         }
 
         private void ApplyStatUpgrade(UpgradeDefinitionSO upgrade, PlayerTarget t)

@@ -18,7 +18,55 @@ namespace ElementalBuddies
         Fusion,
         BuddyDeath,
         BossSpawn,
-        ShardPickup
+        ShardPickup,
+        // Game Feel (2026-10-08, eigene Synthese-Sounds aus art-src/audio) – nur anhängen, Werte sind serialisiert
+        SwordSwing,
+        SwordHit,
+        ShieldBlock,
+        BowShot,
+        BowHit,
+        DodgeRoll,
+        HeavyImpact,
+        EnemyHit,
+        BossDeath,
+        EliteSpawn,
+        UiClick,
+        UiHover,
+        CardPick,
+        Coin,
+        Reroll,
+        MerchantBell,
+        WaveStart,
+        WaveClear,
+        LevelUp,
+        GameOver,
+        BossDefeated,
+        Streak,
+        NexusAlarm,
+        LowHpHeartbeat,
+        FireShot,
+        FireHit,
+        IceShot,
+        IceHit,
+        EarthShot,
+        EarthHit,
+        LightShot,
+        LightHeal,
+        // Sprint 3 (Draft & Eliten)
+        CardRevealCommon,
+        CardRevealRare,
+        CardRevealEpic,
+        FrostShatter,
+        // Sprint 4 (Morgengrauen, Wellen-Ereignisse)
+        Dawn,
+        WaveEvent,
+        // Sprint 5 (Hinweise, Pings, Buddy-Stimmen, Flüche)
+        Hint,
+        Ping,
+        BuddyHappy,
+        BuddySad,
+        BuddyCheer,
+        Curse
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.
@@ -78,6 +126,7 @@ namespace ElementalBuddies
             if (PlayerPrefs.HasKey(PrefSfx)) SfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefSfx));
 
             foreach (var e in Entries) if (e != null) _map[e.Id] = e;
+            if (GetComponent<UiSoundFeedback>() == null) gameObject.AddComponent<UiSoundFeedback>();
 
             _pool = new AudioSource[Mathf.Max(1, Voices)];
             for (int i = 0; i < _pool.Length; i++)
@@ -95,8 +144,14 @@ namespace ElementalBuddies
             }
         }
 
+        // Ziel-Lautstärke der Musik (Grundpegel × Regler × Master, im Pause-Menü gedämpft) – auch für den MusicDirector
+        public float MusicGain => MusicVolume * MusicLevel * MasterVolume * (PauseManager.IsPaused ? PauseMusicDuck : 1f);
+
         private void StartMusic()
         {
+            // Adaptive Musik (MusicDirector) ersetzt den einzelnen Loop
+            var director = GetComponent<MusicDirector>();
+            if (director != null && director.HasMusic) return;
             if (MusicClip == null) return;
             _music = gameObject.AddComponent<AudioSource>();
             _music.clip = MusicClip;
@@ -180,7 +235,29 @@ namespace ElementalBuddies
         public static bool Has(SfxId id) =>
             Instance != null && Instance._map.TryGetValue(id, out var e) && e.Clips != null && e.Clips.Length > 0;
 
-        private void PlayInternal(SfxId id, Vector3? position)
+        // Mit zusätzlichem Tonhöhen-Faktor (z. B. Tonleiter beim Splitter-Einsammeln)
+        public static void PlayPitched(SfxId id, Vector3? position, float pitchFactor)
+        {
+            if (Instance != null) Instance.PlayInternal(id, position, pitchFactor);
+        }
+
+        // Kette: Folge-Abspielungen innerhalb von ChainWindow steigen eine Stufe der Pentatonik (bis 2 Oktaven)
+        private static readonly int[] ChainSteps = { 0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24 };
+        public const float ChainWindow = 0.6f;
+        private readonly Dictionary<SfxId, (float time, int step)> _chains = new Dictionary<SfxId, (float, int)>();
+
+        public static void PlayChain(SfxId id, Vector3? position)
+        {
+            var inst = Instance;
+            if (inst == null) return;
+            float now = Time.unscaledTime;
+            int step = 0;
+            if (inst._chains.TryGetValue(id, out var c) && now - c.time < ChainWindow) step = Mathf.Min(c.step + 1, ChainSteps.Length - 1);
+            inst._chains[id] = (now, step);
+            inst.PlayInternal(id, position, Mathf.Pow(2f, ChainSteps[step] / 12f), true);
+        }
+
+        private void PlayInternal(SfxId id, Vector3? position, float pitchFactor = 1f, bool exactPitch = false)
         {
             if (!_map.TryGetValue(id, out var e) || e.Clips == null || e.Clips.Length == 0) return;
 
@@ -197,7 +274,7 @@ namespace ElementalBuddies
             Vector3 pos = position ?? (Camera.main != null ? Camera.main.transform.position : transform.position);
             src.transform.position = pos;
             src.spatialBlend = position.HasValue ? SpatialBlend : 0f;
-            src.pitch = Random.Range(e.Pitch.x, e.Pitch.y);
+            src.pitch = (exactPitch ? 1f : Random.Range(e.Pitch.x, e.Pitch.y)) * pitchFactor;
             src.clip = clip;
             src.volume = e.Volume * SfxVolume * MasterVolume;
             src.Play();

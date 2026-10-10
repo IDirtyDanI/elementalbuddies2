@@ -104,6 +104,11 @@ namespace ElementalBuddies
             if (!Net.IsServer) return;
             if (enemy == null || (GameManager.Instance != null && GameManager.Instance.IsGameOver)) return;
             float bounty = GetKillBounty(enemy.Config, CurrentWaveNumber);
+            // Elite: × Eigenschaft (Splitterdieb mehr); Elite und Boss × Kopfgeld-Karte
+            if (enemy.IsElite) bounty *= EliteInfo.Bounty(enemy.Elite);
+            if (enemy.IsElite || enemy.IsBoss) bounty *= CardEffects.EliteBountyFactor;
+            // Wellen-Ereignis (Blutmond, Seelensturm)
+            if (WaveManager.Instance != null) bounty *= WaveManager.Instance.EventBountyFactor;
             if (bounty > 0f) ShardPickup.Spawn(enemy.transform.position, bounty, settings);
         }
 

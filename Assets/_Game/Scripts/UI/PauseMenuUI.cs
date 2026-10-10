@@ -177,7 +177,112 @@ namespace ElementalBuddies
                     PlayerPrefs.Save();
                 });
             }
+            BuildFeelRows();
             SyncSettings();
+        }
+
+        // ---------------- Game Feel (Zeilen werden zur Laufzeit aus den vorhandenen Zeilen geklont) ----------------
+
+        private Slider _shakeSlider, _numbersSlider;
+        private TextMeshProUGUI _shakeValue, _numbersValue;
+        private Toggle _hitStopToggle, _flashToggle, _hintsToggle;
+
+        private void BuildFeelRows()
+        {
+            if (SfxSlider != null && SfxSlider.transform.parent != null)
+            {
+                _shakeSlider = CloneSliderRow(SfxSlider, "ShakeRow", "Bildschirmwackeln", out _shakeValue);
+                if (_shakeSlider != null)
+                    SetupSlider(_shakeSlider, _shakeValue, v => GameFeel.ShakeStrength = v);
+
+                _numbersSlider = CloneSliderRow(SfxSlider, "NumbersRow", "Schadenszahlen", out _numbersValue);
+                if (_numbersSlider != null)
+                {
+                    _numbersSlider.minValue = 0f;
+                    _numbersSlider.maxValue = 2f;
+                    _numbersSlider.wholeNumbers = true;
+                    _numbersSlider.onValueChanged.AddListener(v =>
+                    {
+                        GameFeel.Numbers = (GameFeel.NumberMode)Mathf.RoundToInt(v);
+                        if (_numbersValue != null) _numbersValue.text = GameFeel.NumberModeLabel(GameFeel.Numbers);
+                    });
+                }
+            }
+            if (FullscreenToggle != null && FullscreenToggle.transform.parent != null)
+            {
+                _hitStopToggle = CloneToggleRow(FullscreenToggle, "HitStopRow", "Treffer-Stopp & Zeitlupe");
+                if (_hitStopToggle != null) _hitStopToggle.onValueChanged.AddListener(v => GameFeel.HitStop = v);
+                _flashToggle = CloneToggleRow(FullscreenToggle, "FlashRow", "Treffer-Aufblitzen");
+                if (_flashToggle != null) _flashToggle.onValueChanged.AddListener(v => GameFeel.Flash = v);
+                _hintsToggle = CloneToggleRow(FullscreenToggle, "HintsRow", "Tipps anzeigen");
+                if (_hintsToggle != null) _hintsToggle.onValueChanged.AddListener(v => HintManager.Enabled = v);
+            }
+            CompactRows();
+        }
+
+        // Mit acht statt vier Zeilen: Abstände verkleinern, damit alles über dem Hinweis unten Platz hat
+        private void CompactRows()
+        {
+            var rows = SfxSlider != null ? SfxSlider.transform.parent.parent as RectTransform : null;
+            var layout = rows != null ? rows.GetComponent<VerticalLayoutGroup>() : null;
+            if (layout == null) return;
+            int count = 0;
+            foreach (RectTransform c in rows) if (c.gameObject.activeSelf) count++;
+            // Ab neun Zeilen (Tipps anzeigen, Sprint 5) enger: kleinere Abstände und Zeilenhöhe
+            bool dense = count > 8;
+            layout.spacing = dense ? 4f : 10f;
+            layout.padding = new RectOffset(layout.padding.left, layout.padding.right, dense ? 0 : 4, dense ? 0 : 4);
+            float h = layout.padding.top + layout.padding.bottom;
+            int n = 0;
+            foreach (RectTransform c in rows)
+            {
+                if (!c.gameObject.activeSelf) continue;
+                if (dense)
+                {
+                    float rh = Mathf.Min(c.sizeDelta.y, 48f);
+                    c.sizeDelta = new Vector2(c.sizeDelta.x, rh);
+                    var le = c.GetComponent<LayoutElement>();
+                    if (le != null) { le.preferredHeight = rh; le.minHeight = Mathf.Min(le.minHeight, rh); }
+                }
+                h += c.sizeDelta.y;
+                n++;
+            }
+            h += Mathf.Max(0, n - 1) * layout.spacing;
+            rows.sizeDelta = new Vector2(rows.sizeDelta.x, h);
+        }
+
+        private static Slider CloneSliderRow(Slider template, string name, string label, out TextMeshProUGUI value)
+        {
+            value = null;
+            var row = template.transform.parent;
+            var copy = Instantiate(row.gameObject, row.parent);
+            copy.name = name;
+            var slider = copy.GetComponentInChildren<Slider>(true);
+            if (slider == null) { Destroy(copy); return null; }
+            slider.onValueChanged.RemoveAllListeners();
+            SetRowLabel(copy.transform, label);
+            var v = copy.transform.Find("Value");
+            if (v != null) value = v.GetComponent<TextMeshProUGUI>();
+            return slider;
+        }
+
+        private static Toggle CloneToggleRow(Toggle template, string name, string label)
+        {
+            var row = template.transform.parent;
+            var copy = Instantiate(row.gameObject, row.parent);
+            copy.name = name;
+            var toggle = copy.GetComponentInChildren<Toggle>(true);
+            if (toggle == null) { Destroy(copy); return null; }
+            toggle.onValueChanged.RemoveAllListeners();
+            SetRowLabel(copy.transform, label);
+            return toggle;
+        }
+
+        private static void SetRowLabel(Transform row, string text)
+        {
+            var l = row.Find("Label");
+            var tmp = l != null ? l.GetComponent<TextMeshProUGUI>() : null;
+            if (tmp != null) tmp.text = text;
         }
 
         private void SetupSlider(Slider slider, TextMeshProUGUI label, System.Action<float> apply)
@@ -201,6 +306,12 @@ namespace ElementalBuddies
             SyncSlider(MusicSlider, MusicValue, ga != null ? ga.MusicLevel : 1f);
             SyncSlider(SfxSlider, SfxValue, ga != null ? ga.SfxVolume : 1f);
             if (FullscreenToggle != null) FullscreenToggle.SetIsOnWithoutNotify(Screen.fullScreen);
+            SyncSlider(_shakeSlider, _shakeValue, GameFeel.ShakeStrength);
+            if (_numbersSlider != null) _numbersSlider.SetValueWithoutNotify((int)GameFeel.Numbers);
+            if (_numbersValue != null) _numbersValue.text = GameFeel.NumberModeLabel(GameFeel.Numbers);
+            if (_hitStopToggle != null) _hitStopToggle.SetIsOnWithoutNotify(GameFeel.HitStop);
+            if (_flashToggle != null) _flashToggle.SetIsOnWithoutNotify(GameFeel.Flash);
+            if (_hintsToggle != null) _hintsToggle.SetIsOnWithoutNotify(HintManager.Enabled);
         }
 
         private static void SyncSlider(Slider slider, TextMeshProUGUI label, float v)
@@ -350,6 +461,9 @@ namespace ElementalBuddies
             }
             if (card.Type == UpgradeType.Heal)
                 return $"Gesamt: {Num(n * card.Value, "0")} HP geheilt";
+            // Sonderkarten (Sprint 3) ohne einfachen Wert: Zusammenfassung aus CardEffects
+            if (card.Effect != CardEffect.None && card.Effect != CardEffect.BloodPact)
+                return "Gesamt: " + CardEffects.Summary(card.Effect);
 
             if (card.StatToBuff == StatType.ShardGain)
                 return $"Gesamt: Splitter-Ausbeute {Signed(n * card.Value, "0.#")} %";

@@ -27,6 +27,9 @@ namespace ElementalBuddies
             0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         public readonly NetworkVariable<byte> Status = new NetworkVariable<byte>(
             0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Elite-Eigenschaft (EliteAffix), beim Spawn gesetzt
+        public readonly NetworkVariable<byte> Elite = new NetworkVariable<byte>(
+            0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         // Laufgeschwindigkeit für den Animator (Speed/Moving), grob quantisiert geschrieben
         public readonly NetworkVariable<float> MoveSpeed = new NetworkVariable<float>(
             0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -53,6 +56,7 @@ namespace ElementalBuddies
             if (_brain == null) _brain = GetComponent<EnemyBrain>();
             HP.Value = _brain.CurrentHP;
             MaxHP.Value = _brain.MaxHP;
+            Elite.Value = (byte)_brain.Elite;
         }
 
         public override void OnNetworkSpawn()
@@ -67,6 +71,7 @@ namespace ElementalBuddies
             var agent = GetComponent<NavMeshAgent>();
             if (agent != null) agent.enabled = false;
             _brain.ApplyRemoteHealth(HP.Value, MaxHP.Value);
+            _brain.ApplyRemoteElite((EliteAffix)Elite.Value);
             HP.OnValueChanged += HandleHealthChanged;
             MaxHP.OnValueChanged += HandleHealthChanged;
         }

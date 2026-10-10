@@ -73,6 +73,45 @@ namespace ElementalBuddies
         [Tooltip("Gegnerschaden × (1 + DamageGrowthPerWave·(w−1)) – Nahkampf, Fernkampf, Kontakt und Boss-Fähigkeiten.")]
         public float DamageGrowthPerWave = 0.04f;
 
+        [Header("Sägezahn – Ernte-Welle (Plan Fesselung C3)")]
+        [Tooltip("Die Welle direkt nach einer Boss-Welle ist eine Ernte-Welle: weniger Gegner, mehr Wellenbonus – der Spieler spürt seine neue Stärke.")]
+        public bool HarvestAfterBoss = true;
+        [Tooltip("Ernte-Welle: Normalgegner-Anzahl × Faktor (Kopfgeld pro Kill bleibt gleich).")]
+        public float HarvestCountFactor = 0.75f;
+        [Tooltip("Ernte-Welle: Wellenbonus × Faktor.")]
+        public float HarvestBonusFactor = 1.5f;
+
+        [Header("Früher Wellenstart (Plan Fesselung C2)")]
+        [Tooltip("Höchstbonus für einen sofortigen Start = Anteil des Wellenbonus der kommenden Welle (ab Welle 2).")]
+        public float EarlyCallMaxFraction = 0.3f;
+        [Tooltip("In so vielen Sekunden freier Bauphase sinkt der Bonus linear auf 0 (Draft/Laden/Pause zählen nicht).")]
+        public float EarlyCallWindow = 25f;
+
+        [Header("Elite-Gegner (Plan Fesselung C4)")]
+        [Tooltip("Ab dieser Welle können Normalgegner Elite werden (nicht in Ernte-Wellen).")]
+        public int EliteFromWave = 12;
+        [Tooltip("Anteil Eliten an den Normalgegnern: Start + pro Welle, gedeckelt.")]
+        public float EliteShareStart = 0.025f;
+        public float EliteSharePerWave = 0.003f;
+        public float EliteShareMax = 0.06f;
+        [Tooltip("Höchstens so viele Eliten pro Welle.")]
+        public int MaxElitesPerWave = 8;
+        [Tooltip("Aura-Partikel unter einer Elite (wird pro Eigenschaft eingefärbt).")]
+        public GameObject EliteAuraPrefab;
+        [Tooltip("Symbole der Eigenschaften in EliteAffix-Reihenfolge ohne None (Feuerfest, Frostgepanzert, Flink, Schildträger, Splitterdieb).")]
+        public Sprite[] EliteIcons;
+
+        [Header("Wellen-Ereignisse (Plan Fesselung C5)")]
+        [Tooltip("Erstes Ereignis frühestens in dieser Welle; danach alle EventEvery Wellen (Boss-/Ernte-Wellen werden übersprungen).")]
+        public int EventFromWave = 16;
+        public int EventEvery = 3;
+        [Tooltip("Blutmond: Tempo × Faktor, Kopfgeld × Faktor.")]
+        public float BloodMoonSpeed = 1.2f;
+        public float BloodMoonBounty = 1.5f;
+        [Tooltip("Seelensturm: Kopfgeld × Faktor, Splitter-Magnet-Radius × Faktor (selbst einsammeln).")]
+        public float SoulStormBounty = 2f;
+        public float SoulStormMagnet = 0.3f;
+
         [Header("Mehrspieler – Skalierung nach Spielerzahl n")]
         [Tooltip("Gegner-Anzahl × (1 + CountPerExtraPlayer·(n−1)). Geht über CountMultiplier auch in die Kopfgeld-Division ein (Teamkasse wächst nicht mit n).")]
         public float CountPerExtraPlayer = 0.5f;
@@ -102,6 +141,8 @@ namespace ElementalBuddies
 
         // Wellen-Bonus der zuletzt abgeschlossenen Welle (inkl. Einkommens-Faktor), z. B. für die Telemetrie
         public float LastWaveBonus { get; private set; }
+        // Früh-Start-Bonus beim letzten Wellenstart (0 = regulär gestartet)
+        public float LastEarlyCallBonus { get; private set; }
 
         // Neuer Wellengegner (Welle, Schrein-/Händler-Angreifer, Dev-Boss) – nach Initialize
         public static event System.Action<EnemyBrain> OnEnemySpawned;
@@ -134,14 +175,14 @@ namespace ElementalBuddies
         // HP-Multiplikator für einen Gegnertyp (Boss-Zweig über Config.IsBoss)
         public float HpMultiplierFor(EnemyConfigSO config, int wave)
         {
-            return config != null && config.IsBoss ? BossHpMultiplier(wave) : HpMultiplier(wave);
+            return config != null && config.IsBoss ? BossHpMultiplier(wave) * SiegeLevels.BossHpFactor : HpMultiplier(wave);
         }
 
         // Gegnerschaden-Multiplikator inkl. Schwierigkeit
         public float DamageMultiplier(int wave)
         {
             float m = 1f + DamageGrowthPerWave * Mathf.Max(0, wave - 1);
-            return m * (Difficulty != null ? Difficulty.DamageMultiplier : 1f);
+            return m * (Difficulty != null ? Difficulty.DamageMultiplier : 1f) * SiegeLevels.EnemyDamageFactor;
         }
 
         // Spawn-Intervall-Faktor der Nicht-Boss-Gruppen (ohne Boss-Eskorte)
@@ -152,6 +193,75 @@ namespace ElementalBuddies
 
         // Einkommens-Faktor der Stufe (Kill-Drops + Wellen-Bonus)
         public float IncomeMultiplier => Difficulty != null ? Difficulty.IncomeMultiplier : 1f;
+
+        // ---------------- Wellen-Typen (Boss, Ernte) ----------------
+
+        // Basiswelle (Asset oder Endless-Vorlage) mit Zusatzgruppen, ohne Rampe – nur zum Prüfen der Zusammensetzung
+        private WaveConfigSO UnscaledWave(int waveNumber)
+        {
+            if (Waves == null || Waves.Count == 0 || waveNumber < 1) return null;
+            WaveConfigSO wave = waveNumber <= Waves.Count ? Waves[waveNumber - 1] : Waves[Waves.Count - 1];
+            return AddExtraGroups(wave, waveNumber);
+        }
+
+        // Welle enthält einen Boss (Basis- oder Zusatzgruppe); gecacht – AddExtraGroups legt Kopien an
+        private readonly Dictionary<int, bool> _bossWaveCache = new Dictionary<int, bool>();
+        public bool IsBossWave(int waveNumber)
+        {
+            if (_bossWaveCache.TryGetValue(waveNumber, out bool cached)) return cached;
+            bool boss = false;
+            var wave = UnscaledWave(waveNumber);
+            if (wave != null && wave.EnemiesToSpawn != null)
+                foreach (var g in wave.EnemiesToSpawn)
+                    if (g != null && g.Count > 0 && g.EnemyType != null && g.EnemyType.IsBoss) { boss = true; break; }
+            _bossWaveCache[waveNumber] = boss;
+            return boss;
+        }
+
+        // Ernte-Welle: direkt nach einer Boss-Welle (selbst keine)
+        public bool IsHarvestWave(int waveNumber) =>
+            HarvestAfterBoss && waveNumber > 1 && IsBossWave(waveNumber - 1) && !IsBossWave(waveNumber);
+
+        // Wellenbonus für das Ende von Welle waveNumber (Formel aus GlobalSettings + WaveConfig-Extra, Schwierigkeit, Ernte)
+        public float WaveEndBonus(int waveNumber)
+        {
+            float bonus = 0f;
+            if (Waves != null && Waves.Count > 0)
+                bonus = Waves[Mathf.Clamp(waveNumber - 1, 0, Waves.Count - 1)].EndBonusShards;
+            var eco = EconomyManager.Instance;
+            var settings = eco != null ? eco.Settings : null;
+            if (settings != null) bonus += settings.WaveBonusShardsBase + settings.WaveBonusShardsPerWave * Mathf.Max(0, waveNumber - 1);
+            bonus *= IncomeMultiplier * SiegeLevels.WaveBonusFactor;
+            if (IsHarvestWave(waveNumber)) bonus *= HarvestBonusFactor;
+            return bonus;
+        }
+
+        // ---------------- Früher Wellenstart ----------------
+
+        private float _buildElapsed;
+
+        // Aktueller Bonus für einen sofortigen Start der nächsten Welle (Server rechnet, Clients lesen NetGame)
+        public float EarlyCallBonus
+        {
+            get
+            {
+                if (!Net.IsServer) return NetGame.EarlyCallBonus;
+                if (IsWaveActive || IsGameOver || UpcomingWaveNumber <= 1 || EarlyCallWindow <= 0f) return 0f;
+                float baseBonus = WaveEndBonus(UpcomingWaveNumber);
+                if (IsHarvestWave(UpcomingWaveNumber)) baseBonus /= Mathf.Max(0.01f, HarvestBonusFactor);
+                float left = 1f - Mathf.Clamp01(_buildElapsed / EarlyCallWindow);
+                return Mathf.Floor(baseBonus * EarlyCallMaxFraction * left);
+            }
+        }
+
+        // Server: freie Bauphase mitzählen (Draft, Laden, Pause und Wellengate halten die Uhr an)
+        private void TickBuildPhase()
+        {
+            if (IsWaveActive || IsGameOver) return;
+            if (Net.CanPauseTime && PauseManager.IsPaused) return;
+            if (WaveGate.IsBlocked()) return;
+            _buildElapsed += Time.deltaTime;
+        }
 
         private int _portalCursor;
 
@@ -195,10 +305,13 @@ namespace ElementalBuddies
 
             // Portale für die erste Welle schon beim Spielstart sichtbar öffnen (ohne Meldung)
             UpdatePortals(false);
+            // Morgengrauen: bis zur Entscheidung „Weiter / Beenden“ keine neue Welle
+            WaveGate.Register(this, () => DawnPending, () => "Morgengrauen – Entscheidung des Hosts");
         }
 
         void OnDestroy()
         {
+            WaveGate.Unregister(this);
             EnemyBrain.OnEnemyDeath -= HandleEnemyDeath;
             EnemyBrain.OnBossSpawned -= HandleBossSpawned;
             if (GameManager.Instance != null) GameManager.Instance.OnGameOver -= HandleGameOver;
@@ -325,6 +438,20 @@ namespace ElementalBuddies
 
             waveToSpawn = AddExtraGroups(waveToSpawn, UpcomingWaveNumber);
             waveToSpawn = ScaleWave(waveToSpawn, UpcomingWaveNumber);
+            PrepareElites(waveToSpawn, UpcomingWaveNumber);
+            ActiveEvent = EventFor(UpcomingWaveNumber);
+
+            // Früher Start: Splitter-Bonus (sinkt mit der Dauer der Bauphase)
+            float early = EarlyCallBonus;
+            _buildElapsed = 0f;
+            if (early >= 1f && EconomyManager.Instance != null)
+            {
+                EconomyManager.Instance.EarnShards(early);
+                LastEarlyCallBonus = early;
+                ToastUI.Show($"Früher Start: +{early:0} Seelensplitter");
+            }
+            else LastEarlyCallBonus = 0f;
+            if (IsHarvestWave(UpcomingWaveNumber)) ToastUI.Show($"Ernte-Welle! Weniger Gegner, +{(HarvestBonusFactor - 1f) * 100f:0} % Wellenbonus");
 
             if (NetGame.Ready) NetGame.Instance.ServerClearReady();
             UpdatePortals(true);
@@ -472,6 +599,7 @@ namespace ElementalBuddies
                 m *= BossWaveEscortFactor;
                 f /= BossWaveEscortFactor;
             }
+            if (!bossWave && IsHarvestWave(waveNumber)) m *= Mathf.Max(0.05f, HarvestCountFactor); // Ernte-Welle
 
             var scaled = ScriptableObject.CreateInstance<WaveConfigSO>();
             scaled.StartDelay = wave.StartDelay;
@@ -590,6 +718,7 @@ namespace ElementalBuddies
 
             if (NetGame.Ready) NetGame.Instance.ServerWaveStarted(CurrentWaveIndex, EnemiesRemaining);
             OnWaveStart?.Invoke();
+            SpawnEventEnemies();
             wave = ExtendForShrine(wave); // Schrein erwacht erst in OnWaveStart
             if (GameManager.Instance != null) GameManager.Instance.StartCombat();
             Debug.Log($"WaveManager: Wave {CurrentWaveIndex + 1} Started!");
@@ -627,6 +756,7 @@ namespace ElementalBuddies
         void Update()
         {
             if (!Net.IsServer) return;
+            TickBuildPhase();
             SyncNet();
             ServerTickReady();
 
@@ -662,7 +792,7 @@ namespace ElementalBuddies
 
             if (config != null && config.Prefab != null)
             {
-                InstantiateEnemy(config, pos, rot, HpMultiplierFor(config, UpcomingWaveNumber));
+                InstantiateEnemy(config, pos, rot, HpMultiplierFor(config, UpcomingWaveNumber), NextEliteFor(config));
             }
             else
             {
@@ -675,7 +805,7 @@ namespace ElementalBuddies
 
         // Gemeinsamer Spawn-Pfad: HP × hpMultiplier, Schaden × Multiplikator der laufenden (bzw. nächsten) Welle
         // Mehrspieler: nur auf dem Server; Initialize vor dem Netz-Spawn (HP gehen mit der Spawn-Nachricht raus)
-        private EnemyBrain InstantiateEnemy(EnemyConfigSO config, Vector3 pos, Quaternion rot, float hpMultiplier)
+        private EnemyBrain InstantiateEnemy(EnemyConfigSO config, Vector3 pos, Quaternion rot, float hpMultiplier, EliteAffix elite = EliteAffix.None)
         {
             if (!Net.IsServer) return null;
             GameObject go = Instantiate(config.Prefab, pos, rot);
@@ -684,6 +814,8 @@ namespace ElementalBuddies
             {
                 brain.Config = config;
                 brain.Initialize(hpMultiplier, DamageMultiplier(UpcomingWaveNumber));
+                brain.SetSpeedFactor(SiegeLevels.EnemySpeedFactor * (ActiveEvent == WaveEvent.BloodMoon ? BloodMoonSpeed : 1f));
+                if (elite != EliteAffix.None) brain.MakeElite(elite); // vor dem Netz-Spawn (HP, Eigenschaft)
             }
             // HP-NetworkVariables setzt EnemyNet.OnNetworkSpawn (vor dem Spawn geschrieben warnt Netcode)
             var no = go.GetComponent<Unity.Netcode.NetworkObject>();
@@ -745,6 +877,149 @@ namespace ElementalBuddies
             if (IsWaveActive && !IsGameOver && EnemiesRemaining <= 0) EndWave();
         }
 
+        public int LastInterest { get; private set; }
+
+        // ---------------- Elite-Gegner ----------------
+
+        private readonly List<EliteAffix> _elitePlan = new List<EliteAffix>();
+        private int _eliteNext, _eliteNormalTotal, _normalSpawned;
+
+        // Eliten einer Welle – deterministisch aus Wellennummer und Zusammensetzung (Vorschau auf allen Rechnern gleich)
+        public List<EliteAffix> PlanElites(int waveNumber) => PlanElites(BuildWave(waveNumber), waveNumber);
+
+        public List<EliteAffix> PlanElites(WaveConfigSO wave, int waveNumber)
+        {
+            var plan = new List<EliteAffix>();
+            int from = SiegeLevels.EliteFromWave(EliteFromWave);
+            if (wave == null || waveNumber < from || IsHarvestWave(waveNumber)) return plan;
+            int normal = 0;
+            foreach (var g in wave.EnemiesToSpawn)
+                if (g != null && g.EnemyType != null && !g.EnemyType.IsBoss) normal += Mathf.Max(0, g.Count);
+            float share = Mathf.Min(EliteShareMax, EliteShareStart + EliteSharePerWave * Mathf.Max(0, waveNumber - EliteFromWave))
+                          * SiegeLevels.EliteShareFactor;
+            var rng = new System.Random(waveNumber * 7919 + 101);
+            float exact = normal * share;
+            int n = Mathf.FloorToInt(exact) + (rng.NextDouble() < exact - Mathf.Floor(exact) ? 1 : 0);
+            n = Mathf.Clamp(n, waveNumber == from ? 1 : 0, MaxElitesPerWave);
+            bool thief = false;
+            for (int i = 0; i < n; i++)
+            {
+                var a = (EliteAffix)(1 + rng.Next(EliteInfo.Count));
+                if (a == EliteAffix.ShardThief && thief) a = EliteAffix.Swift;
+                if (a == EliteAffix.ShardThief) thief = true;
+                plan.Add(a);
+            }
+            return plan;
+        }
+
+        // Server, Wellenstart: Plan merken; Eliten werden gleichmäßig über die Normal-Spawns verteilt
+        private void PrepareElites(WaveConfigSO wave, int waveNumber)
+        {
+            _elitePlan.Clear();
+            _elitePlan.AddRange(PlanElites(wave, waveNumber));
+            // Fluch „Elitenruf“: zusätzliche Eliten mit zufälliger Eigenschaft
+            for (int i = 0; i < _curseElites; i++) _elitePlan.Add((EliteAffix)(1 + Random.Range(0, EliteInfo.Count)));
+            _curseElites = 0;
+            _eliteNext = 0;
+            _normalSpawned = 0;
+            _eliteNormalTotal = 0;
+            foreach (var g in wave.EnemiesToSpawn)
+                if (g != null && g.EnemyType != null && !g.EnemyType.IsBoss) _eliteNormalTotal += Mathf.Max(0, g.Count);
+        }
+
+        // Händler-Flüche (D7): zusätzliche Eliten bzw. halbierter Bonus für die nächste Welle (Server)
+        private int _curseElites;
+        private float _bonusDebt = 1f;
+        public int PendingCurseElites => _curseElites;
+        public bool HasBonusDebt => _bonusDebt < 1f;
+        public void AddCurseElites(int n) => _curseElites += Mathf.Max(0, n);
+        public void AddBonusDebt(float factor) => _bonusDebt *= Mathf.Clamp01(factor);
+
+        private EliteAffix NextEliteFor(EnemyConfigSO config)
+        {
+            if (config == null || config.IsBoss || _eliteNext >= _elitePlan.Count) return EliteAffix.None;
+            int k = Mathf.Max(1, _eliteNormalTotal / Mathf.Max(1, _elitePlan.Count));
+            int i = _normalSpawned++;
+            if (i % k != k / 2) return EliteAffix.None;
+            return _elitePlan[_eliteNext++];
+        }
+
+        // ---------------- Wellen-Ereignisse (C5) ----------------
+
+        // Ereignis der laufenden Welle (Server und Clients: aus EventFor beim Wellenstart bzw. für die Anzeige)
+        public WaveEvent ActiveEvent { get; private set; }
+
+        // Ereignis einer Welle – deterministisch (Vorschau auf allen Rechnern gleich): ab EventFromWave alle EventEvery
+        // Wellen; fällt der Termin auf eine Boss- oder Ernte-Welle, rückt er auf die nächste freie. Typen im Wechsel.
+        public WaveEvent EventFor(int waveNumber)
+        {
+            if (EventFromWave <= 0 || waveNumber < EventFromWave) return WaveEvent.None;
+            int next = EventFromWave, k = 0;
+            while (next <= waveNumber)
+            {
+                int c = next;
+                while (IsBossWave(c) || IsHarvestWave(c)) c++;
+                if (c == waveNumber) return WaveEvents.Cycle[k % WaveEvents.Cycle.Length];
+                if (c > waveNumber) return WaveEvent.None;
+                next = c + Mathf.Max(1, EventEvery);
+                k++;
+            }
+            return WaveEvent.None;
+        }
+
+        // Kopfgeld-Faktor des laufenden Ereignisses (EconomyManager)
+        public float EventBountyFactor => !IsWaveActive ? 1f
+            : ActiveEvent == WaveEvent.BloodMoon ? BloodMoonBounty
+            : ActiveEvent == WaveEvent.SoulStorm ? SoulStormBounty : 1f;
+
+        // Magnet-Radius-Faktor (ShardPickup) – Seelensturm: selbst einsammeln
+        public float ShardMagnetFactor => IsWaveActive && ActiveEvent == WaveEvent.SoulStorm ? SoulStormMagnet : 1f;
+
+        // Server, Wellenstart (OnWaveStart): Ramme an einem offenen Portal
+        private void SpawnEventEnemies()
+        {
+            if (!Net.IsServer || ActiveEvent != WaveEvent.Ram) return;
+            var cfg = RamConfig != null ? RamConfig : GetDefaultEnemyType();
+            if (cfg == null || !TryGetSpawnPose(out Vector3 pos, out _)) return;
+            var brain = SpawnEnemyAt(cfg, pos);
+            if (brain != null) brain.MakeElite(EliteAffix.Ram);
+        }
+
+        [Tooltip("Gegnertyp der Belagerungsramme (Wellen-Ereignis); leer = erster Typ der Welle.")]
+        public EnemyConfigSO RamConfig;
+
+        // ---------------- Morgengrauen (E5) ----------------
+
+        // Morgengrauen erreicht (Welle SiegeLevels.DawnWave überstanden); danach Endlos-Modus
+        public bool DawnReached { get; private set; }
+        // Server: Entscheidung „Weiter / Beenden“ steht aus (blockiert Kartenwahl und nächste Welle)
+        public bool DawnPending { get; private set; }
+        // Alle Rechner: Morgengrauen (Server direkt, Clients über NetGame)
+        public event System.Action OnDawn;
+
+        // Alle Rechner (NetGame.BroadcastDawn): Morgengrauen anzeigen
+        public void ApplyDawn()
+        {
+            if (DawnReached) return;
+            DawnReached = true;
+            if (AchievementManager.Instance != null) AchievementManager.Instance.ReportDawn();
+            var am = AchievementManager.Instance;
+            if (am != null && am.AchievementsAllowed) SiegeLevels.RecordDawn(SiegeLevels.Current);
+            OnDawn?.Invoke();
+        }
+
+        // Alle Rechner: Host hat „Weiter (Endlos)“ gewählt (Siegbildschirm schließen)
+        public event System.Action OnDawnContinued;
+        public void RaiseDawnContinued() => OnDawnContinued?.Invoke();
+
+        // Server: Spieler wählt „Weiter (Endlos)“ → Kartenwahl wie nach jeder Welle
+        public void ServerContinueAfterDawn()
+        {
+            if (!Net.IsServer || !DawnPending) return;
+            DawnPending = false;
+            if (UpgradeManager.Instance != null) UpgradeManager.Instance.PresentUpgrades();
+        }
+
         private void EndWave()
         {
             if (IsGameOver) return;
@@ -753,24 +1028,29 @@ namespace ElementalBuddies
             IsWaveActive = false;
             if (GameManager.Instance != null) GameManager.Instance.EndCombat();
             
-            // Shard Bonus: WaveBonusShardsBase + WaveBonusShardsPerWave * (completedWave - 1),
-            // plus the optional per-wave extra from the WaveConfig (endless: last config).
-            float bonus = 0f;
-            if (CurrentWaveIndex < Waves.Count)
-                bonus = Waves[CurrentWaveIndex].EndBonusShards;
-            else if (Waves.Count > 0)
-                bonus = Waves[Waves.Count - 1].EndBonusShards;
-
+            // Splitter-Bonus: WaveBonusShardsBase + WaveBonusShardsPerWave * (completedWave - 1) + WaveConfig-Extra
+            // (endless: letzte Config), × Schwierigkeit, Ernte-Welle × HarvestBonusFactor
             LastWaveBonus = 0f;
-            if (EconomyManager.Instance != null)
+            if (EconomyManager.Instance != null && EconomyManager.Instance.Settings != null)
             {
-                var settings = EconomyManager.Instance.Settings;
-                if (settings != null)
-                    bonus += settings.WaveBonusShardsBase + settings.WaveBonusShardsPerWave * CurrentWaveIndex; // CurrentWaveIndex = completedWave - 1
-                bonus *= IncomeMultiplier; // Schwierigkeit
+                float bonus = WaveEndBonus(CurrentWaveIndex + 1) * _bonusDebt;
+                if (_bonusDebt < 1f) ToastUI.Show("Splitterschuld: Wellenbonus halbiert");
+                _bonusDebt = 1f;
                 LastWaveBonus = bonus;
                 EconomyManager.Instance.EarnShards(bonus);
             }
+            // Zinsen-Karte: Anteil des Kontostands nach dem Wellenbonus
+            LastInterest = 0;
+            if (EconomyManager.Instance != null)
+            {
+                LastInterest = CardEffects.InterestFor(EconomyManager.Instance.CurrentShards);
+                if (LastInterest > 0)
+                {
+                    EconomyManager.Instance.EarnShards(LastInterest);
+                    ToastUI.Show($"Zinsen: +{LastInterest} Seelensplitter");
+                }
+            }
+            _buildElapsed = 0f;
 
             CurrentWaveIndex++;
             if (NetGame.Ready)
@@ -779,7 +1059,16 @@ namespace ElementalBuddies
                 NetGame.Instance.ServerWaveEnded(CurrentWaveIndex);
             }
             OnWaveEnd?.Invoke();
-            
+            ActiveEvent = WaveEvent.None;
+
+            // Morgengrauen: Die Nacht ist überstanden → Siegbildschirm; Kartenwahl erst nach „Weiter (Endlos)“
+            if (!DawnReached && CurrentWaveIndex == SiegeLevels.DawnWave)
+            {
+                DawnPending = true;
+                NetGame.BroadcastDawn();
+                return;
+            }
+
             // Trigger Upgrade Phase
             if (UpgradeManager.Instance != null)
             {
@@ -794,7 +1083,11 @@ namespace ElementalBuddies
         // Server: Zustand an NetGame (schreibt nur bei Änderung)
         private void SyncNet()
         {
-            if (NetGame.Ready) NetGame.Instance.ServerSyncWaveState(CurrentWaveIndex, IsWaveActive, EnemiesRemaining);
+            if (NetGame.Ready)
+            {
+                NetGame.Instance.ServerSyncWaveState(CurrentWaveIndex, IsWaveActive, EnemiesRemaining);
+                NetGame.Instance.ServerSetEarlyCallBonus(EarlyCallBonus);
+            }
         }
 
         // Client: Werte aus NetGame übernehmen (ohne Ereignisse)
@@ -814,6 +1107,7 @@ namespace ElementalBuddies
             IsWaveActive = true;
             EnemiesRemaining = enemiesRemaining;
             if (GameManager.Instance != null) GameManager.Instance.ApplyRemoteState(GameState.Combat);
+            ActiveEvent = EventFor(waveIndex + 1);
             OnWaveStart?.Invoke();
         }
 
@@ -826,6 +1120,7 @@ namespace ElementalBuddies
             EnemiesRemaining = 0;
             if (GameManager.Instance != null) GameManager.Instance.ApplyRemoteState(GameState.Building);
             OnWaveEnd?.Invoke();
+            ActiveEvent = WaveEvent.None;
         }
 
         // Client: Portal geöffnet (Zuordnung über die Position – Registry-Reihenfolge kann abweichen)

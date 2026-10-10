@@ -43,6 +43,7 @@ namespace ElementalBuddies
 
         void Start()
         {
+            if (GetComponent<WavePreviewUI>() == null) WavePreviewUI.Create(this); // Wellenvorschau (Plan Fesselung C1)
             if (EconomyManager.Instance != null)
             {
                 EconomyManager.Instance.OnShardsChanged += UpdateShards;
@@ -269,6 +270,12 @@ namespace ElementalBuddies
                 if (!wm.IsLocalReady) label = $"Bereit ({wm.ReadyCount}/{wm.ReadyNeeded})";
                 else if (!string.IsNullOrEmpty(reason)) label = reason;
                 else label = $"Warte auf Mitspieler ({wm.ReadyCount}/{wm.ReadyNeeded})";
+            }
+            // Früher Start: sinkender Splitter-Bonus (nur solange man selbst noch starten bzw. zustimmen kann)
+            if (!active && (!Net.IsMultiplayer || !wm.IsLocalReady))
+            {
+                float early = wm.EarlyCallBonus;
+                if (early >= 1f) label += $"  <color=#9fe8ff>+{early:0}</color>";
             }
             if (label != _lastWaveLabel)
             {

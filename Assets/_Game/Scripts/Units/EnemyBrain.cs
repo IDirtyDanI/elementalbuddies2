@@ -65,6 +65,71 @@ namespace ElementalBuddies
                 return _burn != null && _burn.IsActive;
             }
         }
+        // ---------------- Elite (Plan „Fesselung“ C4) ----------------
+        public EliteAffix Elite { get; private set; }
+        public bool IsElite => Elite != EliteAffix.None;
+        private static readonly System.Collections.Generic.List<EnemyBrain> _shieldbearers = new System.Collections.Generic.List<EnemyBrain>();
+        private float _speedFactor = 1f;
+
+        // Server, vor Start: Tempo-Faktor (Belagerungsstufe, Blutmond); multipliziert sich mit Elite-Tempo
+        public void SetSpeedFactor(float factor)
+        {
+            _speedFactor *= Mathf.Max(0.1f, factor);
+        }
+        private bool _started;
+        // Server: eine Elite ist erschienen (für Hinweis-Toast und Sound)
+        public static event System.Action<EnemyBrain> OnEliteSpawned;
+
+        // Server, direkt nach Initialize und vor dem Netz-Spawn: Gegner wird zur Elite (mehr Leben, Eigenschaft)
+        public void MakeElite(EliteAffix affix)
+        {
+            if (!Net.IsServer || affix == EliteAffix.None || IsBoss || IsElite) return;
+            Elite = affix;
+            _currentHP *= EliteInfo.Hp(affix);
+            _maxHP = _currentHP;
+            _speedFactor *= EliteInfo.SpeedFactor(affix);
+            DamageMultiplier *= EliteInfo.Damage(affix);
+            if (affix == EliteAffix.Shieldbearer && !_shieldbearers.Contains(this)) _shieldbearers.Add(this);
+            SyncHealth();
+            if (_started) ApplyEliteLook();
+            OnEliteSpawned?.Invoke(this);
+        }
+
+        // Client: Eigenschaft vom Server (EnemyNet) – nur Optik
+        public void ApplyRemoteElite(EliteAffix affix)
+        {
+            if (affix == EliteAffix.None || IsElite) return;
+            Elite = affix;
+            if (_started) ApplyEliteLook();
+        }
+
+        private void ApplyEliteLook()
+        {
+            Codex.Discover(Elite == EliteAffix.Ram ? Codex.EventKey(WaveEvent.Ram) : Codex.EliteKey(Elite));
+            transform.localScale *= EliteInfo.Scale(Elite);
+            EliteVisual.Attach(this, Elite);
+        }
+
+        // Feuerfest gegen Feuer-Buddies, Schildträger in der Nähe
+        private float EliteDamageTakenFactor(ElementalBuddy source)
+        {
+            float f = 1f;
+            if (Elite == EliteAffix.Fireproof && source != null && !source.IsFusion && source.ElementIndex == 0) f *= EliteInfo.FireproofTaken;
+            if (_shieldbearers.Count > 0)
+            {
+                float r2 = EliteInfo.ShieldRadius * EliteInfo.ShieldRadius;
+                foreach (var sb in _shieldbearers)
+                {
+                    if (sb == null || sb == this || sb._isDead) continue;
+                    if ((sb.transform.position - transform.position).sqrMagnitude <= r2) { f *= EliteInfo.ShieldTaken; break; }
+                }
+            }
+            return f;
+        }
+
+        // Gespottet (Erd-Buddy) bzw. verlangsamt – für Kartensynergien (nur Server-Zustand)
+        public bool IsTaunted => _tauntTarget != null;
+        public bool IsSlowed => IsRemote ? HasRemoteStatus(EnemyNet.StatusSlowed) : Time.time < _slowUntil && _slowPercent > 0f;
         // Schadensreduktion 0..0.9 aus der Config (Fluch ignoriert sie)
         public float Armor => Config != null ? Mathf.Clamp(Config.Armor, 0f, 0.9f) : 0f;
 
@@ -146,6 +211,12 @@ namespace ElementalBuddies
         public static event System.Action<EnemyBrain> OnReachedNexus;
         // Tatsächlich abgezogene HP (höchstens Rest-HP) – Ziel, Menge, vom Spieler/Champion (sonst Türme/Rest)
         public static event System.Action<EnemyBrain, float, bool> OnDamageDealt;
+        // Treffer-Rückmeldung auf JEDEM Rechner (Server: echte Treffer; Clients: aus der HP-Synchronisation, Quelle unbekannt = false)
+        // – Ziel, Menge, vom Champion, tödlich. Nur für Optik/Sound (Schadenszahlen, Aufblitzen, Treffer-Stopp).
+        public static event System.Action<EnemyBrain, float, bool, bool> OnLocalHit;
+        // Server: Buddy, der gerade Schaden austeilt (ElementalBuddy.Update / BuddyProjectile) – für die Run-Statistik
+        // („bester Buddy“), auszuwerten in OnDamageDealt. Nicht zugeordnet: DoTs, Fusions-Geschosse, Schrein-Auren.
+        public static ElementalBuddy DamageSource;
 
         // Schadensmultiplikator dieses Gegners (Wellen-Rampe × Schwierigkeit, aus Initialize): Nahkampf, Fernkampf,
         // Kontaktschaden an Buddies und Boss-Fähigkeiten (BossBrain)
@@ -201,6 +272,10 @@ namespace ElementalBuddies
             OnBossSpawned = null;
             OnReachedNexus = null;
             OnDamageDealt = null;
+            OnLocalHit = null;
+            DamageSource = null;
+            OnEliteSpawned = null;
+            _shieldbearers.Clear();
             _playerSourceDepth = 0;
             _activeBosses.Clear();
         }
@@ -219,8 +294,8 @@ namespace ElementalBuddies
             if (Config != null)
             {
                 if (_currentHP <= 0) _currentHP = Config.BaseHP;
-                _agent.speed = Config.Speed;
-                _baseSpeed = Config.Speed;
+                _agent.speed = Config.Speed * _speedFactor;
+                _baseSpeed = Config.Speed * _speedFactor;
             }
             else
             {
@@ -234,6 +309,10 @@ namespace ElementalBuddies
             // Gegnertyp-Größe (vor der HP-Bar, die ihre Höhe beim Binden misst); Skalierung wird nicht synchronisiert
             if (Config != null && Config.VisualScale > 0f && !Mathf.Approximately(Config.VisualScale, 1f))
                 transform.localScale = _prefabScale * Config.VisualScale;
+
+            _started = true;
+            if (IsElite) ApplyEliteLook(); // vor der HP-Leiste (misst die Höhe)
+            Codex.Discover(Codex.EnemyKey(Config));
 
             if (HealthBarPrefab != null)
                 Instantiate(HealthBarPrefab).Bind(this);
@@ -259,6 +338,7 @@ namespace ElementalBuddies
         void OnDestroy()
         {
             _activeBosses.Remove(this);
+            _shieldbearers.Remove(this);
         }
 
         // Wellen-Skalierung (WaveManager): HP = BaseHP × hpMultiplier (Bosse: Boss-Kurve, siehe WaveManager.HpMultiplierFor),
@@ -284,8 +364,11 @@ namespace ElementalBuddies
         public void ApplyRemoteHealth(float current, float max)
         {
             if (!IsRemote) return;
+            float before = _currentHP, beforeMax = _maxHP;
             _currentHP = current;
             if (max > 0f) _maxHP = max;
+            // Nur echte Treffer melden (nicht die Erst-Synchronisation, bei der sich auch das Max-Leben setzt)
+            if (current < before && before > 0f && Mathf.Approximately(beforeMax, _maxHP) && OnLocalHit != null) OnLocalHit(this, before - current, false, current <= 0f);
         }
 
         // Client: Server meldet den Tod (vor dem Despawn) → Ereignisse lokal feuern (HUD, Erfolge, Boss-Leiste)
@@ -476,6 +559,8 @@ namespace ElementalBuddies
         // Priority: Taunt > Buddy (Jäger) > Player (within aggro radius) > Buddy > ForcedTarget > Nexus > Player (fallback if no Nexus)
         private Transform GetCurrentTarget()
         {
+            // Belagerungsramme: nur der Nexus zählt (kein Spott, keine Spieler/Buddies)
+            if (Elite == EliteAffix.Ram && Nexus.Instance != null) return Nexus.Instance.transform;
             if (_tauntTarget != null && _tauntTarget.gameObject.activeInHierarchy) return _tauntTarget;
 
             ElementalBuddy buddy = GetBuddyTarget();
@@ -828,6 +913,9 @@ namespace ElementalBuddies
             if (!Net.IsServer || _isDead || amount <= 0f) return;
             if (IsCursed) amount *= 1f + _curse.DamageTakenBonus;
             else amount *= 1f - Armor;
+            // Kartensynergien (Spottmal, Dampfschock …) und Elite-Eigenschaften (Feuerfest, Schildträger)
+            amount *= CardEffects.DamageTakenFactor(this, DamageSource);
+            amount *= EliteDamageTakenFactor(DamageSource);
             TakeTrueDamage(amount);
         }
 
@@ -835,19 +923,23 @@ namespace ElementalBuddies
         public void TakeTrueDamage(float amount)
         {
             if (!Net.IsServer || _isDead) return;
-            if (amount > 0f && OnDamageDealt != null) OnDamageDealt(this, Mathf.Min(amount, Mathf.Max(0f, _currentHP)), _playerSourceDepth > 0);
+            float dealt = Mathf.Min(amount, Mathf.Max(0f, _currentHP));
+            if (amount > 0f && OnDamageDealt != null) OnDamageDealt(this, dealt, _playerSourceDepth > 0);
             _currentHP -= amount;
+            if (amount > 0f && OnLocalHit != null) OnLocalHit(this, dealt, _playerSourceDepth > 0, _currentHP <= 0f);
             if (_currentHP <= 0)
             {
                 // Guard: several hits in one frame must not report the death twice (bounty / wave count)
                 _isDead = true;
                 _currentHP = 0f;
                 _activeBosses.Remove(this);
+                bool shatter = IsFrozen;
                 // Clients zuerst informieren (RPC kommt zuverlässig vor der Despawn-Nachricht an)
                 if (_net != null) _net.ServerKilled();
                 OnEnemyDeath?.Invoke();
                 OnEnemyKilled?.Invoke(this);
                 GameAudio.Play(SfxId.EnemyDeath, transform.position);
+                if (shatter) CardEffects.Shatter(this); // Splitterfrost-Karte
                 Despawn();
             }
             else SyncHealth();
@@ -864,7 +956,7 @@ namespace ElementalBuddies
         // Mehrere Slows überschreiben sich nicht mehr: es gilt der stärkste noch laufende
         public void ApplySlow(float percentage, float duration)
         {
-            if (!Net.IsServer || _isDead) return;
+            if (!Net.IsServer || _isDead || Elite == EliteAffix.Frostguard) return;
             percentage = Mathf.Clamp01(percentage);
             duration *= ControlFactor;
             bool active = Time.time < _slowUntil;
@@ -883,7 +975,7 @@ namespace ElementalBuddies
         // Komplett einfrieren (Frostnova): steht still, greift nicht an, Animation pausiert
         public void Freeze(float duration, GameObject vfxPrefab = null)
         {
-            if (!Net.IsServer || _isDead || duration <= 0f) return;
+            if (!Net.IsServer || _isDead || duration <= 0f || Elite == EliteAffix.Frostguard) return;
             if (IsWet) duration *= 2f; // Nass + Frost: friert doppelt so lange ein
             duration *= ControlFactor;
             _freeze = FreezeEffect.Apply(gameObject, duration, vfxPrefab);

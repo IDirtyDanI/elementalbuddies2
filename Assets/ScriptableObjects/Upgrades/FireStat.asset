@@ -20,3 +20,9 @@ MonoBehaviour:
   StatToBuff: 1
   Value: 8
   IsPercentage: 1
+  Effect: 0
+  Value2: 0
+  Keywords: Feuer
+  Rarity: 0
+  Affinity: 1
+  MaxPicks: 0

@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 232969f20748fec4d8d4d79953e45d44, type: 3}
+  m_Name: IceFreeze
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.UpgradeDefinitionSO
+  Title: Raureif
+  Description: Jeder 4. Schuss eines Eis-Buddys friert das Ziel 1 s ein.
+  Icon: {fileID: 21300000, guid: 95749d9822e1d4e8aadfa3107cdb2845, type: 3}
+  Type: 0
+  Target: 1
+  StatToBuff: 0
+  Value: 4
+  IsPercentage: 1
+  Effect: 5
+  Value2: 1
+  Keywords: Frost
+  Rarity: 1
+  Affinity: 2
+  MaxPicks: 3

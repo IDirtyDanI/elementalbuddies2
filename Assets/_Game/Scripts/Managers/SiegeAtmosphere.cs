@@ -115,11 +115,76 @@ namespace ElementalBuddies
 
         void Update()
         {
-            if (_blend >= 1f) return;
-            _blend = Mathf.Min(1f, _blend + Time.unscaledDeltaTime / Mathf.Max(0.05f, TransitionTime));
-            float s = Mathf.SmoothStep(0f, 1f, _blend);
-            Progress = Mathf.Lerp(_from, _to, s);
-            Apply(Progress);
+            bool dirty = false;
+            if (_blend < 1f)
+            {
+                _blend = Mathf.Min(1f, _blend + Time.unscaledDeltaTime / Mathf.Max(0.05f, TransitionTime));
+                float s = Mathf.SmoothStep(0f, 1f, _blend);
+                Progress = Mathf.Lerp(_from, _to, s);
+                dirty = true;
+            }
+            // Morgengrauen (langsam) und Ereignis-Färbung (Blutmond) überblenden
+            if (!Mathf.Approximately(_dawn, _dawnTarget))
+            {
+                _dawn = Mathf.MoveTowards(_dawn, _dawnTarget, Time.unscaledDeltaTime / DawnTime);
+                dirty = true;
+            }
+            if (!Mathf.Approximately(_tint, _tintTarget))
+            {
+                _tint = Mathf.MoveTowards(_tint, _tintTarget, Time.unscaledDeltaTime / 3f);
+                dirty = true;
+            }
+            if (dirty) Apply(Progress);
+        }
+
+        // ---------------- Morgengrauen & Ereignis-Färbung (Plan Fesselung E5/C5) ----------------
+
+        [Header("Morgengrauen / Ereignisse")]
+        [Tooltip("Sekunden, bis die Sonne aufgegangen ist.")]
+        public float DawnTime = 8f;
+        private float _dawn, _dawnTarget, _tint, _tintTarget;
+        private Color _tintColor = Color.red;
+
+        // Sonnenaufgang über der belagerten Stadt (true) bzw. zurück in die Nacht (false)
+        public void SetDawn(bool on) => _dawnTarget = on ? 1f : 0f;
+
+        // Ereignis-Färbung (z. B. Blutmond rot); strength 0 = aus
+        public void SetEventTint(Color color, float strength)
+        {
+            _tintColor = color;
+            _tintTarget = Mathf.Clamp01(strength);
+        }
+
+        private AtmosphereKey DawnKey()
+        {
+            var k = Dusk;
+            k.SunEuler = new Vector3(9f, 95f, 0f);
+            k.SunColor = new Color(1f, 0.66f, 0.42f);
+            k.SunIntensity = 1.15f;
+            k.ShadowStrength = 0.8f;
+            k.AmbientSky = new Color(0.78f, 0.6f, 0.55f);
+            k.AmbientEquator = new Color(0.62f, 0.48f, 0.44f);
+            k.AmbientGround = new Color(0.26f, 0.22f, 0.22f);
+            k.FogColor = new Color(0.96f, 0.72f, 0.58f);
+            k.FogDensity = 0.005f;
+            k.SkyExposure = Mathf.Max(Dusk.SkyExposure, Afternoon.SkyExposure) * 1.1f;
+            k.SkyTint = new Color(0.95f, 0.62f, 0.5f);
+            k.LanternFactor = 1f;
+            k.WindowGlow = 1.1f;
+            return k;
+        }
+
+        private AtmosphereKey Tinted(AtmosphereKey k)
+        {
+            if (_tint <= 0.001f) return k;
+            float s = _tint;
+            k.SunColor = Color.Lerp(k.SunColor, _tintColor, 0.6f * s);
+            k.AmbientSky = Color.Lerp(k.AmbientSky, _tintColor * 0.55f, 0.55f * s);
+            k.AmbientEquator = Color.Lerp(k.AmbientEquator, _tintColor * 0.4f, 0.5f * s);
+            k.FogColor = Color.Lerp(k.FogColor, _tintColor * 0.5f, 0.7f * s);
+            k.FogDensity = Mathf.Lerp(k.FogDensity, Mathf.Max(k.FogDensity, 0.012f), s);
+            k.SkyTint = Color.Lerp(k.SkyTint, _tintColor, 0.6f * s);
+            return k;
         }
 
         void OnDestroy()
@@ -154,7 +219,9 @@ namespace ElementalBuddies
         {
             if (!DayCaptured) return;
             var k = Evaluate(t);
-            bool day = t <= 0.0001f;
+            if (_dawn > 0.001f) k = AtmosphereKey.Lerp(k, DawnKey(), Mathf.SmoothStep(0f, 1f, _dawn));
+            k = Tinted(k);
+            bool day = t <= 0.0001f && _dawn <= 0.001f && _tint <= 0.001f;
 
             if (Sun != null)
             {

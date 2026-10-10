@@ -52,7 +52,9 @@ namespace ElementalBuddies
                 if (!_difficultyLoaded)
                 {
                     _difficultyLoaded = true;
-                    _difficultyId = PlayerPrefs.GetString(DifficultyPrefKey, DifficultySO.DefaultId);
+                    // Sanfter Einstieg (Plan Fesselung F2): beim allerersten Spiel ist „Leicht“ vorgewählt
+                    string first = PlayerPrefs.HasKey("BestWave") ? DifficultySO.DefaultId : "leicht";
+                    _difficultyId = PlayerPrefs.GetString(DifficultyPrefKey, first);
                 }
                 return _difficultyId;
             }
@@ -70,6 +72,21 @@ namespace ElementalBuddies
         {
             get => DifficultySO.Get(DifficultyId);
             set => DifficultyId = value != null ? value.Id : DifficultySO.DefaultId;
+        }
+
+        // ---------------- Belagerungsstufe (Plan Fesselung E6) ----------------
+
+        private const string SiegePrefKey = "siege_level";
+
+        // Gewählte Belagerungsstufe 0..SiegeLevels.Max (Menü: auf die freigeschaltete Stufe begrenzt; Koop: vom Host)
+        public static int SiegeLevel
+        {
+            get => Mathf.Clamp(PlayerPrefs.GetInt(SiegePrefKey, 0), 0, SiegeLevels.Max);
+            set
+            {
+                PlayerPrefs.SetInt(SiegePrefKey, Mathf.Clamp(value, 0, SiegeLevels.Max));
+                PlayerPrefs.Save();
+            }
         }
 
         // Name der Spielszene und des Hauptmenüs

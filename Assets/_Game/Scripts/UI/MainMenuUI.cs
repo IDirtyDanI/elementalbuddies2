@@ -229,6 +229,7 @@ namespace ElementalBuddies
             if (IsLocked(start)) start = ChampionClass.Mage;
             RefreshDifficulty();
             Select(start, true);
+            MainMenuMeta.Attach(this); // Nächstes Ziel, Belagerungsstufe, Kodex (Plan Fesselung E3/E4/E6)
         }
 
         void OnEnable()
@@ -284,6 +285,7 @@ namespace ElementalBuddies
                 if (kb.escapeKey.wasPressedThisFrame) ShowSettings(false);
                 return;
             }
+            if (MainMenuMeta.HandleKeys(kb)) return;
             if (AchievementsPanel != null && AchievementsPanel.activeSelf)
             {
                 if (kb.escapeKey.wasPressedThisFrame) ShowAchievements(false);
@@ -638,6 +640,7 @@ namespace ElementalBuddies
             }
             if (DifficultyDescription != null)
                 DifficultyDescription.text = "<b>" + cur.DisplayName + "</b> – " + cur.EffectSummary();
+            if (MainMenuMeta.Instance != null) MainMenuMeta.Instance.Refresh(); // Ziel hängt an der Stufe
         }
 
         // ---------------- Erfolge ----------------
@@ -866,6 +869,8 @@ namespace ElementalBuddies
         private enum NetView { Main, Join, Lobby }
 
         private NetView _view = NetView.Main;
+        // Hauptbildschirm (nicht Lobby/Beitreten) – für MainMenuMeta
+        public bool IsMainView => _view == NetView.Main;
         private bool _connecting;      // Hosten/Beitreten läuft (async)
         private bool _leaving;
         private bool _netInitialized;

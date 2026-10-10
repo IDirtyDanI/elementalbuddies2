@@ -717,10 +717,10 @@ namespace ElementalBuddies.EditorTools
             k.LightOath.CastEffectPrefab = Champ("VFX_LightOath");
             k.LightOath.EffectLifetime = 2.5f;
             k.LightOath.AuraPrefab = Champ("VFX_LightOathAura");
-            k.SwingSfx = Sfx("AIPfeilsSchuss.wav", 0.45f, 1.25f, 1.45f);
-            k.FinisherSfx = Sfx("AIPfeilsSchuss.wav", 0.6f, 0.8f, 0.9f);
-            k.BlockHitSfx = Sfx("Pfeiltreffer.mp3", 0.6f, 0.6f, 0.72f, 0.2f);
-            k.BlockBreakSfx = Sfx("explosion.wav", 0.45f, 1.5f, 1.7f);
+            k.SwingSfx = Sfx("Generated/sword_swing_1.wav", 0.5f, 0.92f, 1.1f);
+            k.FinisherSfx = Sfx("Generated/sword_swing_3.wav", 0.65f, 0.85f, 0.95f);
+            k.BlockHitSfx = Sfx("Generated/shield_block.wav", 0.6f, 0.9f, 1.05f, 0.2f);
+            k.BlockBreakSfx = Sfx("Generated/heavy_impact.wav", 0.6f, 1.1f, 1.25f);
             k.Abilities = new System.Collections.Generic.List<ChampionKit.AbilityDisplay>
             {
                 D(AbilityId.SwordSlash, "Schwerthieb", "ability_knight_slash"),
@@ -754,9 +754,9 @@ namespace ElementalBuddies.EditorTools
             a.LightArrow.BeamPrefab = Champ("VFX_LightBeam");
             a.LightArrow.HitFxPrefab = Prefab(Vfx + "LightHit.prefab");
             a.LightArrow.BlindVfxPrefab = blind;
-            a.ShootSfx = Sfx("Pfeilschuss.mp3", 0.6f, 0.95f, 1.1f);
-            a.ArrowHitSfx = Sfx("Pfeiltreffer.mp3", 0.55f, 0.95f, 1.1f);
-            a.RollSfx = Sfx("AIPfeilsSchuss.wav", 0.35f, 0.55f, 0.65f);
+            a.ShootSfx = Sfx("Generated/bow_shot.wav", 0.6f, 0.95f, 1.08f);
+            a.ArrowHitSfx = Sfx("Generated/bow_hit.wav", 0.55f, 0.92f, 1.1f);
+            a.RollSfx = Sfx("Generated/dodge_roll.wav", 0.45f, 0.95f, 1.08f);
             a.Abilities = new System.Collections.Generic.List<ChampionKit.AbilityDisplay>
             {
                 D(AbilityId.ArrowShot, "Pfeilschuss", "ability_archer_shot"),

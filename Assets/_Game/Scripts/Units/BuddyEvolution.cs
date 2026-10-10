@@ -91,6 +91,7 @@ namespace ElementalBuddies
             }
             if (LevelUpSound != null)
                 AudioSource.PlayClipAtPoint(LevelUpSound, transform.position, LevelUpVolume);
+            else GameAudio.Play(SfxId.LevelUp, transform.position);
         }
 
         private void ApplyStage(int stage)

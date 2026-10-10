@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 232969f20748fec4d8d4d79953e45d44, type: 3}
+  m_Name: FireIgnite
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.UpgradeDefinitionSO
+  Title: Glutgeschosse
+  Description: Treffer von Feuer-Buddies setzen Gegner 3 s in Brand (pro Sekunde
+    15 % des Treffers).
+  Icon: {fileID: 21300000, guid: 45a2d1a51a80243b0ae4bb3816f54636, type: 3}
+  Type: 0
+  Target: 1
+  StatToBuff: 0
+  Value: 15
+  IsPercentage: 1
+  Effect: 3
+  Value2: 3
+  Keywords: Brand
+  Rarity: 1
+  Affinity: 1
+  MaxPicks: 3

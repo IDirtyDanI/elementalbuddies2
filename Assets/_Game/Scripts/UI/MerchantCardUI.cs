@@ -66,18 +66,86 @@ namespace ElementalBuddies
 
         public void Setup(MerchantCardSO data, Sprite badge) => Setup(data, badge, -1);
 
+        // ---------------- Fluch-Optik (D7): violette Zierleiste + Banner ----------------
+
+        private static readonly Color CurseColor = new Color(0.55f, 0.16f, 0.6f);
+        private GameObject _curseDeco;
+
+        private void SetCursed(MerchantCurse curse)
+        {
+            if (curse == MerchantCurse.None)
+            {
+                if (_curseDeco != null) _curseDeco.SetActive(false);
+                return;
+            }
+            if (_curseDeco == null)
+            {
+                _curseDeco = new GameObject("CurseDeco", typeof(RectTransform));
+                var root = (RectTransform)_curseDeco.transform;
+                root.SetParent(transform, false);
+                root.SetSiblingIndex(0);
+                root.anchorMin = Vector2.zero;
+                root.anchorMax = Vector2.one;
+                root.offsetMin = root.offsetMax = Vector2.zero;
+                for (int i = 0; i < 4; i++)
+                {
+                    var bar = new GameObject("Trim" + i, typeof(RectTransform), typeof(Image));
+                    var rt = (RectTransform)bar.transform;
+                    rt.SetParent(root, false);
+                    bool h = i < 2;
+                    rt.anchorMin = h ? new Vector2(0f, i == 0 ? 1f : 0f) : new Vector2(i == 2 ? 0f : 1f, 0f);
+                    rt.anchorMax = h ? new Vector2(1f, i == 0 ? 1f : 0f) : new Vector2(i == 2 ? 0f : 1f, 1f);
+                    const float inset = 7f, w = 6f;
+                    rt.sizeDelta = h ? new Vector2(-2f * inset, w) : new Vector2(w, -2f * inset);
+                    rt.anchoredPosition = h ? new Vector2(0f, i == 0 ? -inset : inset) : new Vector2(i == 2 ? inset : -inset, 0f);
+                    var img = bar.GetComponent<Image>();
+                    img.color = CurseColor;
+                    img.raycastTarget = false;
+                }
+                var banner = new GameObject("CurseBanner", typeof(RectTransform), typeof(Image));
+                var brt = (RectTransform)banner.transform;
+                brt.SetParent(transform, false);
+                brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 1f);
+                brt.sizeDelta = new Vector2(150f, 30f);
+                brt.anchoredPosition = new Vector2(0f, 2f);
+                var bimg = banner.GetComponent<Image>();
+                bimg.color = CurseColor;
+                bimg.raycastTarget = false;
+                var label = new GameObject("Label", typeof(RectTransform)).AddComponent<TextMeshProUGUI>();
+                label.transform.SetParent(brt, false);
+                label.rectTransform.anchorMin = Vector2.zero;
+                label.rectTransform.anchorMax = Vector2.one;
+                label.rectTransform.sizeDelta = Vector2.zero;
+                if (TitleText != null) label.font = TitleText.font;
+                label.text = "VERFLUCHT";
+                label.fontSize = 17f;
+                label.characterSpacing = 6f;
+                label.alignment = TextAlignmentOptions.Center;
+                label.color = Color.white;
+                label.raycastTarget = false;
+                banner.transform.SetParent(_curseDeco.transform, true);
+            }
+            _curseDeco.SetActive(true);
+        }
+
         public void Setup(MerchantCardSO data, Sprite badge, int slot)
         {
             if (TitleText == null) Awake();
             _data = data;
             Slot = slot;
 
+            var mgrC = MerchantManager.Instance;
+            var curse = mgrC != null ? mgrC.CurseOf(slot) : MerchantCurse.None;
+            SetCursed(curse);
             if (TitleText != null) TitleText.text = data.Title;
             if (DescriptionText != null)
             {
-                string preview = MerchantManager.PreviewValues(data);
+                // Verflucht: doppelte Wirkung in der Vorschau, dazu der Nachteil
+                string preview = curse != MerchantCurse.None ? MerchantManager.PreviewValues(data, 2f) : MerchantManager.PreviewValues(data);
                 string text = data.Description ?? "";
                 if (!string.IsNullOrEmpty(preview)) text += (text.Length > 0 ? "\n" : "") + $"<color={PreviewColor}>{preview}</color>";
+                if (curse != MerchantCurse.None)
+                    text += $"\n<color=#6a1b6e><b>×2</b> · Fluch: {MerchantCurses.Short(curse)}</color>";
                 DescriptionText.text = text;
                 DescriptionText.enableAutoSizing = true;
                 DescriptionText.fontSizeMin = 14f;

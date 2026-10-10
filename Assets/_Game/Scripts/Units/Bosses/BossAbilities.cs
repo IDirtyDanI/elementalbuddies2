@@ -264,6 +264,7 @@ namespace ElementalBuddies
             }
             if (!_visualOnly && Net.IsServer) BossCombat.Apply(_shape, _ability, c, _ability.Damage * _damageMultiplier);
             if (_ability.PlaySfx && (_done == 1 || _done % 2 == 0)) GameAudio.Play(_ability.ImpactSfx, c);
+            CameraFollow.AddTraumaAt(0.18f, c, 16f);
         }
     }
 }

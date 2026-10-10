@@ -19,6 +19,7 @@ MonoBehaviour:
   Damage: 0
   Prefab: {fileID: 7739312400145016387, guid: 1ec3f012234d048ed99b2d53955fea7f, type: 3}
   BuddyMaxHP: 0
+  BossDamageMultiplier: 1
   BaseHP: 480
   Speed: 1.7
   AttackDamage: 14
@@ -38,3 +39,5 @@ MonoBehaviour:
   DisplayName: "Totenj\xE4ger"
   ControlResistance: 0.6
   ThemeColor: {r: 0.6, g: 0.2, b: 1, a: 1}
+  Icon: {fileID: 21300000, guid: 61fc27d2875404de386e888be3b77af1, type: 3}
+  PreviewHint: "Fernkampf-Boss mit Pfeilhagel \u2013 in Bewegung bleiben"

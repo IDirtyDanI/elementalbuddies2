@@ -41,6 +41,8 @@ namespace ElementalBuddies
         public static event System.Action OnBuddyCountChanged;
         // Buddy im Kampf zerstört (nicht bei Verkauf/Fusion)
         public static event System.Action<ElementalBuddy> OnBuddyDestroyed;
+        // Aufgewertet (alle Rechner; nicht bei stiller Erst-Synchronisation/Wiedergeburt) – Buddy-Emotes
+        public static event System.Action<ElementalBuddy> OnAnyLevelUp;
 
         protected float lastActionTime;
         public float CurrentHP { get; protected set; }
@@ -50,7 +52,8 @@ namespace ElementalBuddies
         protected virtual float DefaultMaxHP => BaseMaxHP;
         // Config.BuddyMaxHP > 0 hat Vorrang; skaliert mit der Stufe
         public float GetMaxHPAtLevel(int level) =>
-            (Config != null && Config.BuddyMaxHP > 0f ? Config.BuddyMaxHP : DefaultMaxHP) * LevelMultiplier(HPBonusPerLevel, level);
+            (Config != null && Config.BuddyMaxHP > 0f ? Config.BuddyMaxHP : DefaultMaxHP) * LevelMultiplier(HPBonusPerLevel, level)
+            * CardEffects.BuddyHealthFactor; // Wellenkarten Steinhaut/Glaskanone
         public float MaxHP => GetMaxHPAtLevel(_level);
         public bool IsDead => _isDead;
         bool IHealthBarTarget.HealthBarVisible => isActiveAndEnabled && !_isDead;
@@ -96,6 +99,7 @@ namespace ElementalBuddies
             _active.Clear();
             OnBuddyCountChanged = null;
             OnBuddyDestroyed = null;
+            OnAnyLevelUp = null;
             _nextAttackedToastTime = 0f;
         }
 
@@ -144,7 +148,7 @@ namespace ElementalBuddies
         private void HandleWaveEnd()
         {
             if (!Net.IsServer || _isDead || !isActiveAndEnabled) return;
-            float pct = Settings != null ? Settings.BuddyWaveEndHealPercent : 0.5f;
+            float pct = (Settings != null ? Settings.BuddyWaveEndHealPercent : 0.5f) + CardEffects.WaveEndHealBonus;
             Heal(MaxHP * pct);
         }
 
@@ -157,6 +161,14 @@ namespace ElementalBuddies
         // Betäubt (Boss-Fähigkeiten): keine Aktionen, Auren/Segen der Subklassen pausieren
         private float _stunUntil;
         public bool IsStunned => Time.time < _stunUntil;
+
+        // Server: Leben-Faktor geändert (Wellenkarte) → aktuelles Leben anteilig mitziehen
+        public void RescaleHealth(float factor)
+        {
+            if (!Net.IsServer || _isDead || factor <= 0f) return;
+            CurrentHP = Mathf.Clamp(CurrentHP * factor, 1f, MaxHP);
+            if (_healthBar != null) _healthBar.MarkDirty();
+        }
 
         // Nur Server; Clients bekommen die Betäubung über BuddyNet (NetApplyStun)
         public void Stun(float duration, GameObject vfxPrefab = null)
@@ -175,13 +187,27 @@ namespace ElementalBuddies
             float fireRate = EffectiveFireRate;
             if (fireRate > 0 && Time.time >= lastActionTime + (1f / fireRate))
             {
-                if (TryPerformAction())
+                bool acted;
+                var prevSource = EnemyBrain.DamageSource;
+                EnemyBrain.DamageSource = this; // Run-Statistik: Schaden diesem Buddy zuordnen
+                try { acted = TryPerformAction(); }
+                finally { EnemyBrain.DamageSource = prevSource; }
+                if (acted)
                 {
                     lastActionTime = Time.time;
                     if (_visualAnimator != null && _visualAnimator.isActiveAndEnabled) _visualAnimator.SetTrigger(CastTrigger);
                     OnCast?.Invoke();
+                    PlayCastSound();
                 }
             }
+        }
+
+        // Klangsignatur der Nicht-Schützen (Feuer/Eis klingen über ihre Projektile, BuddyProjectile)
+        private void PlayCastSound()
+        {
+            if (Config == null) return;
+            if (Config.Type == UnitType.Earth) GameAudio.Play(SfxId.EarthShot, transform.position);
+            else if (Config.Type == UnitType.Light) GameAudio.Play(SfxId.LightHeal, transform.position);
         }
 
         // Returns true if action was performed (and CD should reset)
@@ -364,6 +390,7 @@ namespace ElementalBuddies
             SuppressLevelFx = silent;
             try { OnLevelChanged?.Invoke(); }
             finally { SuppressLevelFx = false; }
+            if (!silent) OnAnyLevelUp?.Invoke(this);
         }
 
         // Nächster Punkt auf dem Collider (große Buddies wie der Kristall), sonst Pivot
@@ -431,7 +458,8 @@ namespace ElementalBuddies
 
         // Basiswerte (Config, inkl. globaler Roguelike-Upgrades) × Stufen-Multiplikator; Subklassen können umdeuten
         // Schaden inkl. passivem Schrein-Bonus des eigenen Elements (ShrineBonuses); Subklassen überschreiben GetBaseDamageAtLevel
-        public float GetDamageAtLevel(int level) => GetBaseDamageAtLevel(level) * ShrineDamageMultiplier;
+        // × Build-Karten (Glaskanone, Einzelgänger, Elementar-Reinheit; CardEffects)
+        public float GetDamageAtLevel(int level) => GetBaseDamageAtLevel(level) * ShrineDamageMultiplier * CardEffects.BuddyDamageFactor(this);
         // Fusionen: Produkt der Schrein-Boni beider Eltern-Elemente
         protected virtual float ShrineDamageMultiplier => ShrineBonuses.GetDamageMultiplier(ElementIndex);
         protected virtual float GetBaseDamageAtLevel(int level) => Config != null ? Config.Damage * LevelMultiplier(DamageBonusPerLevel, level) : 0f;
@@ -465,6 +493,7 @@ namespace ElementalBuddies
             CurrentHP += MaxHP - oldMaxHP; // Leben steigt mit
             if (_healthBar != null) _healthBar.MarkDirty();
             OnLevelChanged?.Invoke();
+            OnAnyLevelUp?.Invoke(this);
             return true;
         }
 

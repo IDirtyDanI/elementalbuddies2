@@ -32,6 +32,8 @@ namespace ElementalBuddies.EditorTools
             { "bonebreaker", "ach_boss" },
             { "boss_slayer", "ach_bosses_all" },
             { "soul_collector", "ach_soulcollector" },
+            { "first_night", "ach_survivor" },
+            { "dawn", "card_sonnenstrahl" },
         };
 
         // Neue PNGs als Sprite (2D and UI) importieren, falls noch nicht geschehen
@@ -66,6 +68,9 @@ namespace ElementalBuddies.EditorTools
             added += Add(db, "boss_slayer", "Bosstöter", AchievementCondition.DefeatBossKinds, 3, 0, -1, UnlockId.None);
             added += Add(db, "soul_collector", "Seelensammler", AchievementCondition.ShardsCollected, 1000, 0, -1, UnlockId.None);
             added += Add(db, "primal_force", "Urgewalt", AchievementCondition.BuildSuper, 1, 0, -1, UnlockId.None);
+            // Sprint 4 (Plan Fesselung E5/E7): früher erster Erfolg und Morgengrauen
+            added += Add(db, "first_night", "Erste Nacht", AchievementCondition.ReachWave, 3, 0, -1, UnlockId.None);
+            added += Add(db, "dawn", "Morgengrauen", AchievementCondition.SurviveDawn, 1, 0, -1, UnlockId.SiegeLevels);
 
             AddUnlock(db, UnlockId.ChampionKnight, "Schwertkämpfer");
             AddUnlock(db, UnlockId.ChampionArcher, "Bogenschütze");
@@ -75,6 +80,7 @@ namespace ElementalBuddies.EditorTools
             AddUnlock(db, UnlockId.Stage4Earth, "Erde Stufe 4 – Bergkönig");
             AddUnlock(db, UnlockId.Stage4Light, "Licht Stufe 4 – Sonnenerzengel");
             AddUnlock(db, UnlockId.TriFusion, "Super-Elementare");
+            AddUnlock(db, UnlockId.SiegeLevels, "Belagerungsstufen");
 
             AssignIcons(db);
 
@@ -151,6 +157,7 @@ namespace ElementalBuddies.EditorTools
             SetUnlockIcon(db, UnlockId.Stage4Earth, "portrait4_earth");
             SetUnlockIcon(db, UnlockId.Stage4Light, "portrait4_light");
             SetUnlockIcon(db, UnlockId.TriFusion, "portrait_super_vulkan");
+            SetUnlockIcon(db, UnlockId.SiegeLevels, "elite_ram");
             if (db.MedalFrame == null) db.MedalFrame = Icon("achievement_frame");
             if (db.MedalFrameLocked == null) db.MedalFrameLocked = Icon("achievement_frame_locked");
             if (db.LockIcon == null) db.LockIcon = Icon("icon_lock");

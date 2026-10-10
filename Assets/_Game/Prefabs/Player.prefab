@@ -116,6 +116,7 @@ MonoBehaviour:
     m_Bits: 256
   JumpForce: 8
   Gravity: -9.81
+  FallRecoverDepth: 8
 --- !u!114 &4379008303335661780
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -368,24 +369,24 @@ MonoBehaviour:
     DamageReduction: 0.3
     AuraPrefab: {fileID: 1167986297878195783, guid: fdfd8e2a05df04b07b1cf0e1cb0e5f7a, type: 3}
   SwingSfx:
-    Clip: {fileID: 8300000, guid: 8b184d67a93f548a88484e7553cc659f, type: 3}
-    Volume: 0.45
-    Pitch: {x: 1.25, y: 1.45}
+    Clip: {fileID: 8300000, guid: c752b717bae4d42f0a0d78588aa8bb2b, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.92, y: 1.1}
     MinInterval: 0.05
   FinisherSfx:
-    Clip: {fileID: 8300000, guid: 8b184d67a93f548a88484e7553cc659f, type: 3}
-    Volume: 0.6
-    Pitch: {x: 0.8, y: 0.9}
+    Clip: {fileID: 8300000, guid: d9b9b956fed1b494db63bc5010eef121, type: 3}
+    Volume: 0.65
+    Pitch: {x: 0.85, y: 0.95}
     MinInterval: 0.05
   BlockHitSfx:
-    Clip: {fileID: 8300000, guid: e3e6f762c7303534fbdcea6e22e6cad5, type: 3}
+    Clip: {fileID: 8300000, guid: 4fc99f3ef6107457a89ed5af4ee0c820, type: 3}
     Volume: 0.6
-    Pitch: {x: 0.6, y: 0.72}
+    Pitch: {x: 0.9, y: 1.05}
     MinInterval: 0.2
   BlockBreakSfx:
-    Clip: {fileID: 8300000, guid: 2dc6394d24b2faf48afd63c874bf6a1a, type: 3}
-    Volume: 0.45
-    Pitch: {x: 1.5, y: 1.7}
+    Clip: {fileID: 8300000, guid: 48302ff98473645ac8d1fd89f8940dcb, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1.1, y: 1.25}
     MinInterval: 0.05
 --- !u!114 &4853629543689315124
 MonoBehaviour:
@@ -498,19 +499,19 @@ MonoBehaviour:
       serializedVersion: 2
       m_Bits: 1
   ShootSfx:
-    Clip: {fileID: 8300000, guid: 6c100961f0a503b4f88c20313f3d26c6, type: 3}
+    Clip: {fileID: 8300000, guid: 980f5fb1fd99341fca3c301ab9653c25, type: 3}
     Volume: 0.6
-    Pitch: {x: 0.95, y: 1.1}
+    Pitch: {x: 0.95, y: 1.08}
     MinInterval: 0.05
   ArrowHitSfx:
-    Clip: {fileID: 8300000, guid: e3e6f762c7303534fbdcea6e22e6cad5, type: 3}
+    Clip: {fileID: 8300000, guid: 1648e3aad914840ebbeaefb17232e214, type: 3}
     Volume: 0.55
-    Pitch: {x: 0.95, y: 1.1}
+    Pitch: {x: 0.92, y: 1.1}
     MinInterval: 0.05
   RollSfx:
-    Clip: {fileID: 8300000, guid: 8b184d67a93f548a88484e7553cc659f, type: 3}
-    Volume: 0.35
-    Pitch: {x: 0.55, y: 0.65}
+    Clip: {fileID: 8300000, guid: 595e76f13a7134fae9665d7239e3a0b6, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.95, y: 1.08}
     MinInterval: 0.05
 --- !u!114 &2080816278211358273
 MonoBehaviour:

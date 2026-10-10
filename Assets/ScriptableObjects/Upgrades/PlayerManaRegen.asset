@@ -20,3 +20,9 @@ MonoBehaviour:
   StatToBuff: 6
   Value: 100
   IsPercentage: 1
+  Effect: 0
+  Value2: 0
+  Keywords: 
+  Rarity: 0
+  Affinity: 5
+  MaxPicks: 0

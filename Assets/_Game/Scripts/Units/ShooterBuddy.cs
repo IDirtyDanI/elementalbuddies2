@@ -36,7 +36,7 @@ namespace ElementalBuddies
         public float Stage4FreezeDuration = 1.2f;
         public GameObject Stage4FreezeVfxPrefab; // optional, an EnemyBrain.Freeze übergeben
 
-        private int _shotCount;
+        private int _shotCount, _cardShotCount;
 
         // Perks hängen am Element (Feuer- und Eis-Prefab nutzen beide ShooterBuddy)
         public bool HasPiercePerk => HasPerk && ElementIndex == 0;
@@ -119,9 +119,19 @@ namespace ElementalBuddies
                     proj.transform.localScale *= 1.4f;
                 }
                 projectileScript.Initialize(target, damage, Config.Type);
+                projectileScript.Source = this;
 
                 if (HasPiercePerk)
                     projectileScript.SetPierce(Stage4PierceCount, Stage4PierceRange, Stage4BurnDps, Stage4BurnDuration, Stage4BurnVfxPrefab);
+                // Wellenkarten: Glutgeschosse (Feuer → Brand), Raureif (Eis → jeder N. Schuss friert ein)
+                if (ElementIndex == 0 && CardEffects.IgniteFraction > 0f)
+                    projectileScript.SetIgnite(damage * CardEffects.IgniteFraction, CardEffects.IgniteDuration, Stage4BurnVfxPrefab);
+                if (ElementIndex == 1 && CardEffects.FreezeEvery > 0)
+                {
+                    _cardShotCount++;
+                    if (_cardShotCount % CardEffects.FreezeEvery == 0)
+                        projectileScript.SetFreeze(CardEffects.FreezeDuration, Stage4FreezeVfxPrefab);
+                }
                 if (HasFreezePerk)
                 {
                     _shotCount++;

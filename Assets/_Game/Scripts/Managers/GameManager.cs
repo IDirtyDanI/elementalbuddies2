@@ -35,9 +35,35 @@ namespace ElementalBuddies
         public bool CanRestart => Net.IsServer;
 
         public const string AllDeadReason = "Alle Champions sind gefallen";
-        [Tooltip("So lange (s) müssen alle Champions gleichzeitig gefallen sein, bevor das Spiel endet.")]
+        [Tooltip("So lange (s) müssen alle Champions gleichzeitig gefallen sein, bevor der Team-Ausfall zählt.")]
         public float AllDeadGrace = 0.5f;
         private float _allDeadSince = -1f;
+
+        // Team-Ausfall (Nutzer-Entscheidung 2026-10-09: „Wiederbelebung mit Preis“): Sind alle Champions gefallen, opfert der
+        // Nexus Leben und alle stehen nach WipeReviveDelay wieder auf. Der Preis steigt mit jedem Ausfall; reicht das
+        // Nexus-Leben nicht, ist der Run vorbei. Die Buddies verteidigen in der Zwischenzeit allein.
+        [Header("Wiederbelebung bei Team-Ausfall")]
+        [Tooltip("Wartezeit (s), bis alle Champions nach einem Team-Ausfall wieder aufstehen.")]
+        public float WipeReviveDelay = 10f;
+        [Tooltip("Preis des ersten Team-Ausfalls als Anteil der Nexus-Max-LP …")]
+        public float WipeCostFirst = 0.15f;
+        [Tooltip("… und so viel mehr bei jedem weiteren.")]
+        public float WipeCostStep = 0.10f;
+        public int TeamWipes { get; private set; }
+        private bool _wipeHandled;
+        // Alle Rechner: Team-Ausfall (Nummer, geopferte Nexus-LP, Wartezeit)
+        public static event System.Action<int, float, float> OnTeamWipe;
+
+        // Preis des nächsten Team-Ausfalls in Nexus-LP
+        public float NextWipeCost => Nexus.Instance != null
+            ? Nexus.Instance.MaxHP * (WipeCostFirst + SiegeLevels.WipeCostExtra + WipeCostStep * TeamWipes) : 0f;
+
+        // Alle Rechner (NetGame.BroadcastTeamWipe): Ereignis lokal auslösen
+        public void RaiseTeamWipe(int wipe, float cost, float delay)
+        {
+            if (!Net.IsServer) TeamWipes = wipe;
+            OnTeamWipe?.Invoke(wipe, cost, delay);
+        }
         private float _startTime;
 
         void Awake()
@@ -59,9 +85,24 @@ namespace ElementalBuddies
         {
             if (!Net.IsServer || IsGameOver) return;
             bool allDead = PlayerAvatar.All.Count > 0 && !PlayerAvatar.AnyAlive() && Time.time - _startTime > 1f;
-            if (!allDead) { _allDeadSince = -1f; return; }
+            if (!allDead) { _allDeadSince = -1f; _wipeHandled = false; return; }
             if (_allDeadSince < 0f) _allDeadSince = Time.time;
-            if (Time.time - _allDeadSince >= AllDeadGrace) TriggerGameOver(AllDeadReason);
+            if (_wipeHandled || Time.time - _allDeadSince < AllDeadGrace) return;
+            _wipeHandled = true;
+
+            // Wiederbelebung mit Preis: Nexus opfert Leben; reicht es nicht, ist der Run vorbei
+            var nexus = Nexus.Instance;
+            float cost = NextWipeCost;
+            if (nexus == null || nexus.CurrentHP - cost < 1f)
+            {
+                TriggerGameOver(AllDeadReason);
+                return;
+            }
+            TeamWipes++;
+            nexus.Sacrifice(cost);
+            foreach (var a in PlayerAvatar.All)
+                if (a != null) a.ServerScheduleWipeRevive(WipeReviveDelay);
+            NetGame.BroadcastTeamWipe(TeamWipes, cost, WipeReviveDelay);
         }
 
         private void SetState(GameState state)
@@ -136,6 +177,9 @@ namespace ElementalBuddies
                 LastWaveReached = 0;
 
             SaveBestWave();
+            // Rekord der Belagerungsstufe (nur ohne Cheats)
+            var am = AchievementManager.Instance;
+            if (am == null || am.AchievementsAllowed) SiegeLevels.RecordWave(SiegeLevels.Current, LastWaveReached);
 
             Debug.Log($"Game State: GameOver ({reason}) - Wave {LastWaveReached}, Best {BestWave}");
 

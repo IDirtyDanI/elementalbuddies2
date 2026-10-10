@@ -16,6 +16,7 @@ namespace ElementalBuddies
         Stage4Earth,
         Stage4Light,
         TriFusion,   // alle 4 Super-Elementare
+        SiegeLevels, // Belagerungsstufen (nach dem ersten Morgengrauen)
     }
 
     // Bedingungs-Arten; Parameter stehen in AchievementDefinition (Threshold, Level, Element)
@@ -28,6 +29,7 @@ namespace ElementalBuddies
         DefeatBossKinds,       // Threshold verschiedene Boss-Arten besiegt, über alle Spiele (BossKinds)
         ShardsCollected,       // Threshold Seelensplitter in einem Spiel eingenommen (Summe der Gewinne)
         BuildSuper,            // Threshold Super-Elementare in einem Spiel erschaffen
+        SurviveDawn,           // die Nacht bis zum Morgengrauen (Welle SiegeLevels.DawnWave) überstehen
     }
 
     [Serializable]
@@ -179,6 +181,8 @@ namespace ElementalBuddies
                     return $"{t} Seelensplitter in einem Spiel einsammeln";
                 case AchievementCondition.BuildSuper:
                     return t <= 1 ? "Ein Super-Elementar erschaffen" : $"{t} Super-Elementare in einem Spiel erschaffen";
+                case AchievementCondition.SurviveDawn:
+                    return $"Überstehe die Nacht bis zum Morgengrauen (Welle {SiegeLevels.DawnWave})";
             }
             return "";
         }

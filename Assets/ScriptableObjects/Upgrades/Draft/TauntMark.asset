@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 232969f20748fec4d8d4d79953e45d44, type: 3}
+  m_Name: TauntMark
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.UpgradeDefinitionSO
+  Title: Spottmal
+  Description: Vom Erd-Buddy verspottete Gegner erleiden 20 % mehr Schaden.
+  Icon: {fileID: 21300000, guid: 4a8704061414e49539160f6351e3c161, type: 3}
+  Type: 0
+  Target: 1
+  StatToBuff: 0
+  Value: 20
+  IsPercentage: 1
+  Effect: 7
+  Value2: 0
+  Keywords: Spott
+  Rarity: 1
+  Affinity: 3
+  MaxPicks: 0

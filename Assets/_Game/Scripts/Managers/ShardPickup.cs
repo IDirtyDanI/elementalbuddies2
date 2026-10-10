@@ -309,6 +309,7 @@ namespace ElementalBuddies
                 if (!_magnet)
                 {
                     float magnet = _settings != null ? _settings.ShardMagnetRadius : 3f;
+                    if (WaveManager.Instance != null) magnet *= WaveManager.Instance.ShardMagnetFactor; // Seelensturm
                     var t = FindTarget(_land, magnet, out var avatar);
                     if (t != null)
                     {
@@ -360,7 +361,7 @@ namespace ElementalBuddies
 
         private void PlayCollectFx()
         {
-            GameAudio.Play(SfxId.ShardPickup, transform.position);
+            GameAudio.PlayChain(SfxId.ShardPickup, transform.position); // Kette: steigende Tonleiter
             if (_settings != null && _settings.ShardCollectEffect != null)
                 Destroy(Instantiate(_settings.ShardCollectEffect, transform.position, Quaternion.identity), 3f);
         }

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 232969f20748fec4d8d4d79953e45d44, type: 3}
+  m_Name: Interest
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.UpgradeDefinitionSO
+  Title: Zinseszins
+  Description: "Am Wellenende bekommst du 8 % deiner Seelensplitter als Zinsen (h\xF6chstens
+    40)."
+  Icon: {fileID: 21300000, guid: 16611c1b27c474e47b9f482479622581, type: 3}
+  Type: 0
+  Target: 1
+  StatToBuff: 0
+  Value: 8
+  IsPercentage: 1
+  Effect: 13
+  Value2: 40
+  Keywords: 
+  Rarity: 1
+  Affinity: 0
+  MaxPicks: 2

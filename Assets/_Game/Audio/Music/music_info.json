@@ -1,0 +1,65 @@
+{
+  "music_build.wav": {
+    "bpm": 96,
+    "bars": 32,
+    "beats_per_bar": 4,
+    "samples": 3528000,
+    "loop": true,
+    "key": "D minor",
+    "seconds": 80.0
+  },
+  "music_combat_base.wav": {
+    "bpm": 96,
+    "bars": 32,
+    "beats_per_bar": 4,
+    "samples": 3528000,
+    "loop": true,
+    "key": "D minor",
+    "seconds": 80.0
+  },
+  "music_combat_intense.wav": {
+    "bpm": 96,
+    "bars": 32,
+    "beats_per_bar": 4,
+    "samples": 3528000,
+    "loop": true,
+    "key": "D minor",
+    "seconds": 80.0
+  },
+  "music_boss.wav": {
+    "bpm": 108,
+    "bars": 32,
+    "beats_per_bar": 4,
+    "samples": 3136000,
+    "loop": true,
+    "key": "C# minor",
+    "seconds": 71.1111
+  },
+  "music_menu.wav": {
+    "bpm": 80,
+    "bars": 24,
+    "beats_per_bar": 4,
+    "samples": 3175200,
+    "loop": true,
+    "key": "D minor",
+    "seconds": 72.0
+  },
+  "stinger_dawn.wav": {
+    "bpm": 90,
+    "bars": 3.3,
+    "beats_per_bar": 4,
+    "samples": 388080,
+    "loop": false,
+    "key": "D major",
+    "seconds": 8.8
+  },
+  "stinger_event.wav": {
+    "bpm": 90,
+    "bars": 1.425,
+    "beats_per_bar": 4,
+    "samples": 167580,
+    "loop": false,
+    "key": "D minor (ominous)",
+    "seconds": 3.8
+  }
+}

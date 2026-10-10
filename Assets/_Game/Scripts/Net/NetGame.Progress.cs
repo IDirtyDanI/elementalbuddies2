@@ -13,19 +13,20 @@ namespace ElementalBuddies
         // ======================= Upgrade-Draft =======================
 
         // Server → ein Client: eigene Kartenauswahl (Indizes in UpgradeManager.AllUpgrades)
-        public static void SendUpgradeOffer(ulong clientId, int serial, int[] cards)
+        // rerolls/skipShards: verfügbare Gratis-Neuwürfe und Splitter fürs Überspringen
+        public static void SendUpgradeOffer(ulong clientId, int serial, int[] cards, int rerolls, int skipShards)
         {
-            if (Ready) Instance.UpgradeOfferRpc(serial, cards, Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
-            else if (clientId == Net.LocalClientId && UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards);
+            if (Ready) Instance.UpgradeOfferRpc(serial, cards, rerolls, skipShards, Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
+            else if (clientId == Net.LocalClientId && UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards, rerolls, skipShards);
         }
 
         [Rpc(SendTo.SpecifiedInParams)]
-        private void UpgradeOfferRpc(int serial, int[] cards, RpcParams p)
+        private void UpgradeOfferRpc(int serial, int[] cards, int rerolls, int skipShards, RpcParams p)
         {
-            if (UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards);
+            if (UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards, rerolls, skipShards);
         }
 
-        // Client → Server: Karte gewählt
+        // Client → Server: Karte gewählt (card = Index) bzw. UpgradeManager.SkipCode / RerollCode
         public static void RequestSelectUpgrade(int serial, int card)
         {
             if (Ready) Instance.SelectUpgradeRpc(serial, card);
@@ -51,20 +52,87 @@ namespace ElementalBuddies
             if (UpgradeManager.Instance != null) UpgradeManager.Instance.ApplyPicked(clientId, card);
         }
 
+        // ======================= Pings (Plan Fesselung G1) =======================
+
+        // Spieler → Server → alle: Markierung an pos (PingSystem.PingType), mit Spielernamen im Koop
+        public static void RequestPing(Vector3 pos, byte type)
+        {
+            if (Ready) Instance.PingRequestRpc(pos, type);
+            else if (PingSystem.Instance != null) PingSystem.Instance.ShowPing(pos, (PingSystem.PingType)type, null);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void PingRequestRpc(Vector3 pos, byte type, RpcParams p = default)
+        {
+            var np = NetPlayer.ByClientId(p.Receive.SenderClientId);
+            string who = Net.IsMultiplayer && np != null ? np.DisplayName : "";
+            PingRpc(pos, type, new FixedString64Bytes(who));
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        private void PingRpc(Vector3 pos, byte type, FixedString64Bytes who)
+        {
+            if (PingSystem.Instance != null) PingSystem.Instance.ShowPing(pos, (PingSystem.PingType)type, who.ToString());
+        }
+
+        // ======================= Morgengrauen (Plan Fesselung E5) =======================
+
+        // Server → alle: Welle 20 überstanden
+        public static void BroadcastDawn()
+        {
+            if (Ready) Instance.DawnRpc();
+            else if (WaveManager.Instance != null) WaveManager.Instance.ApplyDawn();
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        private void DawnRpc()
+        {
+            if (WaveManager.Instance != null) WaveManager.Instance.ApplyDawn();
+        }
+
+        // Host → Server: „Weiter (Endlos)“ (Clients warten auf den Host; „Beenden“ verlässt das Spiel lokal)
+        public static void RequestDawnContinue()
+        {
+            if (!Net.IsServer) return;
+            if (WaveManager.Instance != null) WaveManager.Instance.ServerContinueAfterDawn();
+            if (Ready) Instance.DawnContinuedRpc();
+            else if (WaveManager.Instance != null) WaveManager.Instance.RaiseDawnContinued();
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        private void DawnContinuedRpc()
+        {
+            if (WaveManager.Instance != null) WaveManager.Instance.RaiseDawnContinued();
+        }
+
+        // Server → alle: Team-Ausfall bezahlt (Banner, Countdown)
+        public static void BroadcastTeamWipe(int wipe, float cost, float delay)
+        {
+            if (Ready) Instance.TeamWipeRpc(wipe, cost, delay);
+            else if (GameManager.Instance != null) GameManager.Instance.RaiseTeamWipe(wipe, cost, delay);
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        private void TeamWipeRpc(int wipe, float cost, float delay)
+        {
+            if (GameManager.Instance != null) GameManager.Instance.RaiseTeamWipe(wipe, cost, delay);
+        }
+
         // ======================= Händlerladen =======================
 
         // Server → ein Client: kompletter Ladenzustand dieses Spielers (Öffnen, Änderung, Schließen)
-        public static void SendShopState(ulong clientId, int visit, int kind, int[] offer, bool[] bought, int purchases, int rerolls, bool open)
+        // curses: MerchantCurse je Slot (0 = kein Fluch)
+        public static void SendShopState(ulong clientId, int visit, int kind, int[] offer, bool[] bought, int[] curses, int purchases, int rerolls, bool open)
         {
-            if (Ready) Instance.ShopStateRpc(visit, kind, offer, bought, purchases, rerolls, open, Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
+            if (Ready) Instance.ShopStateRpc(visit, kind, offer, bought, curses, purchases, rerolls, open, Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
             else if (clientId == Net.LocalClientId && MerchantManager.Instance != null)
-                MerchantManager.Instance.ClientReceiveShop(visit, kind, offer, bought, purchases, rerolls, open);
+                MerchantManager.Instance.ClientReceiveShop(visit, kind, offer, bought, curses, purchases, rerolls, open);
         }
 
         [Rpc(SendTo.SpecifiedInParams)]
-        private void ShopStateRpc(int visit, int kind, int[] offer, bool[] bought, int purchases, int rerolls, bool open, RpcParams p)
+        private void ShopStateRpc(int visit, int kind, int[] offer, bool[] bought, int[] curses, int purchases, int rerolls, bool open, RpcParams p)
         {
-            if (MerchantManager.Instance != null) MerchantManager.Instance.ClientReceiveShop(visit, kind, offer, bought, purchases, rerolls, open);
+            if (MerchantManager.Instance != null) MerchantManager.Instance.ClientReceiveShop(visit, kind, offer, bought, curses, purchases, rerolls, open);
         }
 
         public static void RequestBuyCard(int visit, int slot)
@@ -104,16 +172,16 @@ namespace ElementalBuddies
         }
 
         // Server → alle: gekaufte Händlerkarte auf die Figur des Käufers anwenden
-        public static void BroadcastApplyMerchantCard(ulong clientId, int card)
+        public static void BroadcastApplyMerchantCard(ulong clientId, int card, int curse)
         {
-            if (Ready) Instance.ApplyMerchantCardRpc(clientId, card);
-            else if (MerchantManager.Instance != null) MerchantManager.Instance.ApplyBoughtCard(clientId, card);
+            if (Ready) Instance.ApplyMerchantCardRpc(clientId, card, curse);
+            else if (MerchantManager.Instance != null) MerchantManager.Instance.ApplyBoughtCard(clientId, card, curse);
         }
 
         [Rpc(SendTo.ClientsAndHost)]
-        private void ApplyMerchantCardRpc(ulong clientId, int card)
+        private void ApplyMerchantCardRpc(ulong clientId, int card, int curse)
         {
-            if (MerchantManager.Instance != null) MerchantManager.Instance.ApplyBoughtCard(clientId, card);
+            if (MerchantManager.Instance != null) MerchantManager.Instance.ApplyBoughtCard(clientId, card, curse);
         }
 
         // Server → ein Client: Kauf/Wurf abgelehnt (zu wenig Gold). slot -1 = Neu würfeln

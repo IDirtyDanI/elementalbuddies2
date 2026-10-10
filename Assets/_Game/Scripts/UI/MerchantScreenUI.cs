@@ -225,6 +225,7 @@ namespace ElementalBuddies
 
         private void OnRerollClicked()
         {
+            GameAudio.Play(SfxId.Reroll);
             if (_mgr != null) _mgr.Reroll();
         }
 

@@ -47,5 +47,11 @@ namespace ElementalBuddies
         [Range(0f, 0.9f)] public float ControlResistance = 0f;
         [Tooltip("Boss-Farbe für UI und Boden-Warnflächen.")]
         public Color ThemeColor = Color.white;
+
+        [Header("Wellenvorschau")]
+        [Tooltip("Icon für Wellenvorschau und Statistik (GameFeelSetup rendert es aus dem Prefab).")]
+        public Sprite Icon;
+        [Tooltip("Kurzer Hinweis in der Wellenvorschau, z. B. „Fernkampf – greift Buddies an“.")]
+        public string PreviewHint = "";
     }
 }

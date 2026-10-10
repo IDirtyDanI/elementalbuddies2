@@ -73,7 +73,16 @@ namespace ElementalBuddies
             CurrentTarget = bestTarget;
             var damageable = bestTarget.GetComponent<IDamageable>();
             Vector3 hitPoint = bestTarget.position + Vector3.up * 0.9f;
-            if (damageable != null && Net.IsServer) damageable.TakeDamage(EffectiveDamage);
+            if (damageable != null && Net.IsServer)
+            {
+                // Wellenkarte „Läuterung“: kurzer Fluch (mehr erlittener Schaden, Rüstung ignoriert) vor dem Treffer
+                if (CardEffects.LightCurseBonus > 0f)
+                {
+                    var enemy = bestTarget.GetComponent<EnemyBrain>();
+                    if (enemy != null) enemy.ApplyCurse(0f, CardEffects.LightCurseDuration, CardEffects.LightCurseBonus);
+                }
+                damageable.TakeDamage(EffectiveDamage);
+            }
 
             StopCoroutine(nameof(ShowBeam));
             StartCoroutine(ShowBeam(hitPoint));
