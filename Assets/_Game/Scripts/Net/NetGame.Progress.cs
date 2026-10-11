@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -61,9 +62,25 @@ namespace ElementalBuddies
             else if (PingSystem.Instance != null) PingSystem.Instance.ShowPing(pos, (PingSystem.PingType)type, null);
         }
 
+        // Server-Drossel je Spieler: höchstens PingBurst Pings am Stück, danach einer pro PingRefill Sekunden
+        private const float PingBurst = 3f, PingRefill = 1.2f;
+        private readonly Dictionary<ulong, Vector2> _pingBudget = new Dictionary<ulong, Vector2>(); // x = Guthaben, y = Zeitpunkt
+
+        private bool TakePingBudget(ulong clientId)
+        {
+            float now = Time.unscaledTime;
+            if (!_pingBudget.TryGetValue(clientId, out var b)) b = new Vector2(PingBurst, now);
+            float tokens = Mathf.Min(PingBurst, b.x + (now - b.y) / PingRefill);
+            bool ok = tokens >= 1f;
+            _pingBudget[clientId] = new Vector2(ok ? tokens - 1f : tokens, now);
+            return ok;
+        }
+
         [Rpc(SendTo.Server)]
         private void PingRequestRpc(Vector3 pos, byte type, RpcParams p = default)
         {
+            if (type > (byte)PingSystem.PingType.Gather || float.IsNaN(pos.x) || float.IsNaN(pos.y) || float.IsNaN(pos.z)) return;
+            if (!TakePingBudget(p.Receive.SenderClientId)) return;
             var np = NetPlayer.ByClientId(p.Receive.SenderClientId);
             string who = Net.IsMultiplayer && np != null ? np.DisplayName : "";
             PingRpc(pos, type, new FixedString64Bytes(who));

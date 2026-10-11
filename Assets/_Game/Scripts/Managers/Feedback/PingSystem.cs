@@ -3,12 +3,14 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace ElementalBuddies
 {
     // Ping-System (Plan „Fesselung“ G1): Taste G oder mittlere Maustaste setzt eine Welt-Markierung an der Maus.
     // Kontext aus der Umgebung: Gegner in der Nähe → „Gefahr!“, Schrein/Händler → „Hierher!“, sonst „Hier bauen“.
     // Im Koop geht der Ping über NetGame an alle (mit Spielernamen). Liegt auf dem Managers-Objekt (FeedbackDirector).
+    // Pings außerhalb des Bildes zeigt eine Randmarke in Ping-Farbe. Linien-Material: Resources/PingLine.mat (im Build sicher dabei).
     public class PingSystem : MonoBehaviour
     {
         public enum PingType : byte { Build, Danger, Gather }
@@ -22,6 +24,10 @@ namespace ElementalBuddies
         private Camera _cam;
         private TMP_FontAsset _font;
         private readonly List<Marker> _markers = new List<Marker>();
+        private Material _lineMaterial;
+        private RectTransform _edgeCanvas;
+        // Randabstände der Randmarken (Referenz 1920×1080): oben Kopfleiste, unten Bau-/Fähigkeitenleiste
+        private const float EdgeMarginX = 50f, EdgeMarginTop = 110f, EdgeMarginBottom = 265f;
 
         private class Marker
         {
@@ -30,6 +36,8 @@ namespace ElementalBuddies
             public TextMeshPro Label;
             public float Born;
             public Color Color;
+            public RectTransform Edge;
+            public CanvasGroup EdgeGroup;
         }
 
         void Awake() => Instance = this;
@@ -39,6 +47,71 @@ namespace ElementalBuddies
         {
             var hud = FindFirstObjectByType<HUDManager>(FindObjectsInactive.Include);
             if (hud != null && hud.ShardText != null) _font = hud.ShardText.font;
+            _lineMaterial = Resources.Load<Material>("PingLine");
+            BuildEdgeCanvas();
+        }
+
+        private void BuildEdgeCanvas()
+        {
+            var go = new GameObject("PingEdgeCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+            go.transform.SetParent(transform, false);
+            var canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 40; // über dem HUD, unter Pause/Karten
+            var scaler = go.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+            _edgeCanvas = (RectTransform)go.transform;
+        }
+
+        // Randmarke: Raute in Ping-Farbe mit dunklem Rand, darunter die Beschriftung
+        private RectTransform MakeEdge(PingType type, Color color, out CanvasGroup group)
+        {
+            group = null;
+            if (_edgeCanvas == null) return null;
+            var root = new GameObject("PingEdge", typeof(RectTransform), typeof(CanvasGroup));
+            var rt = (RectTransform)root.transform;
+            rt.SetParent(_edgeCanvas, false);
+            rt.sizeDelta = new Vector2(40f, 40f);
+            group = root.GetComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            var frame = new GameObject("Frame", typeof(RectTransform), typeof(Image));
+            var frt = (RectTransform)frame.transform;
+            frt.SetParent(rt, false);
+            frt.sizeDelta = new Vector2(34f, 34f);
+            frt.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            var fimg = frame.GetComponent<Image>();
+            fimg.color = new Color32(30, 18, 8, 230);
+            fimg.raycastTarget = false;
+
+            var dot = new GameObject("Dot", typeof(RectTransform), typeof(Image));
+            var drt = (RectTransform)dot.transform;
+            drt.SetParent(frt, false);
+            drt.sizeDelta = new Vector2(24f, 24f);
+            var dimg = dot.GetComponent<Image>();
+            dimg.color = color;
+            dimg.raycastTarget = false;
+
+            var label = new GameObject("Label", typeof(RectTransform));
+            var lrt = (RectTransform)label.transform;
+            lrt.SetParent(rt, false);
+            lrt.sizeDelta = new Vector2(200f, 30f);
+            lrt.anchoredPosition = new Vector2(0f, -36f);
+            var tmp = label.AddComponent<TextMeshProUGUI>();
+            if (_font != null) tmp.font = _font;
+            tmp.text = Label(type);
+            tmp.fontSize = 22f;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.color = color;
+            tmp.outlineWidth = 0.25f;
+            tmp.outlineColor = new Color32(30, 18, 8, 255);
+            tmp.raycastTarget = false;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            root.SetActive(false);
+            return rt;
         }
 
         public static string Label(PingType t) =>
@@ -109,11 +182,12 @@ namespace ElementalBuddies
             m.Label.color = color;
             m.Label.outlineWidth = 0.25f;
             m.Label.outlineColor = new Color32(30, 18, 8, 255);
+            m.Edge = MakeEdge(type, color, out m.EdgeGroup);
             _markers.Add(m);
             GameAudio.Play(GameAudio.Has(SfxId.Ping) ? SfxId.Ping : SfxId.UiClick, pos);
         }
 
-        private static LineRenderer MakeLine(Transform parent, string name, Color color, float width, int points)
+        private LineRenderer MakeLine(Transform parent, string name, Color color, float width, int points)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -122,8 +196,7 @@ namespace ElementalBuddies
             lr.positionCount = points;
             lr.loop = false;
             lr.widthMultiplier = width;
-            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default");
-            lr.material = new Material(shader);
+            lr.material = _lineMaterial != null ? new Material(_lineMaterial) : new Material(Shader.Find("Sprites/Default"));
             if (lr.material.HasProperty("_BaseColor")) lr.material.SetColor("_BaseColor", color);
             lr.startColor = lr.endColor = color;
             lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -147,6 +220,7 @@ namespace ElementalBuddies
                         foreach (var lr in m.Root.GetComponentsInChildren<LineRenderer>()) Destroy(lr.material);
                         Destroy(m.Root);
                     }
+                    if (m.Edge != null) Destroy(m.Edge.gameObject);
                     _markers.RemoveAt(i);
                     continue;
                 }
@@ -167,7 +241,48 @@ namespace ElementalBuddies
                 m.Beam.endColor = cb;
                 m.Label.alpha = fade;
                 if (_cam != null) m.Label.transform.rotation = _cam.transform.rotation;
+                UpdateEdge(m, fade, t);
             }
+        }
+
+        // Ping außerhalb des Bildes: Randmarke in Richtung des Pings (vom Bildmittelpunkt aus), sonst ausblenden
+        private void UpdateEdge(Marker m, float fade, float age)
+        {
+            if (m.Edge == null || _cam == null || _edgeCanvas == null) return;
+            Vector3 sp = _cam.WorldToScreenPoint(m.Root.transform.position + Vector3.up * 1.5f);
+            bool behind = sp.z < 0f;
+            if (behind) sp = new Vector3(Screen.width - sp.x, Screen.height - sp.y, 0f);
+            bool onScreen = !behind && sp.x >= 0f && sp.x <= Screen.width && sp.y >= 0f && sp.y <= Screen.height;
+            if (onScreen)
+            {
+                if (m.Edge.gameObject.activeSelf) m.Edge.gameObject.SetActive(false);
+                return;
+            }
+            if (!m.Edge.gameObject.activeSelf) m.Edge.gameObject.SetActive(true);
+
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(_edgeCanvas, sp, null, out Vector2 local);
+            // Sichtbereich ohne Kopf- und Fußleisten; Richtung vom Mittelpunkt dieses Bereichs aus
+            Vector2 size = _edgeCanvas.rect.size;
+            float cy = (EdgeMarginBottom - EdgeMarginTop) * 0.5f;
+            Vector2 half = new Vector2(size.x * 0.5f - EdgeMarginX, (size.y - EdgeMarginTop - EdgeMarginBottom) * 0.5f);
+            Vector2 d = local - new Vector2(0f, cy);
+            if (d.sqrMagnitude < 0.01f) d = Vector2.down;
+            float k = Mathf.Min(half.x / Mathf.Max(0.001f, Mathf.Abs(d.x)), half.y / Mathf.Max(0.001f, Mathf.Abs(d.y)));
+            Vector2 pos = new Vector2(0f, cy) + d * Mathf.Min(1f, k);
+            m.Edge.anchoredPosition = pos;
+            // Beschriftung nach innen ausrichten, damit sie am Rand nicht abgeschnitten wird
+            var label = m.Edge.childCount > 1 ? m.Edge.GetChild(1) as RectTransform : null;
+            if (label != null)
+            {
+                float side = pos.x > half.x - 120f ? 1f : pos.x < -half.x + 120f ? -1f : 0f;
+                label.pivot = new Vector2(side > 0f ? 1f : side < 0f ? 0f : 0.5f, 0.5f);
+                label.anchoredPosition = new Vector2(side * 20f, -36f);
+                var tmp = label.GetComponent<TextMeshProUGUI>();
+                if (tmp != null) tmp.alignment = side > 0f ? TextAlignmentOptions.Right : side < 0f ? TextAlignmentOptions.Left : TextAlignmentOptions.Center;
+            }
+            float pulse = age < 1f ? 1f + 0.35f * Mathf.Sin(age * Mathf.PI * 3f) * (1f - age) : 1f;
+            m.Edge.localScale = Vector3.one * pulse;
+            m.EdgeGroup.alpha = fade;
         }
     }
 }

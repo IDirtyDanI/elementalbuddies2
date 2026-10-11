@@ -128,6 +128,7 @@ namespace ElementalBuddies
                 return;
             }
             Instance = this;
+            MerchantCurses.ResetAll();
         }
 
         void Start()
@@ -213,6 +214,7 @@ namespace ElementalBuddies
 
         private void HandleWaveStart()
         {
+            MerchantCurses.HandleWaveStart();
             if (!Net.IsServer) return;
             if (ActiveMerchant != null && (ActiveMerchant.IsActive || ActiveMerchant.IsCaptured)) return;
             int wave = WaveManager.Instance != null ? WaveManager.Instance.UpcomingWaveNumber : 0;
@@ -290,15 +292,29 @@ namespace ElementalBuddies
 
         // ---------------- Gold (Server) ----------------
 
-        // Wellenende: jeder Spieler bekommt GoldPerWave
+        // Wellenende: jeder Spieler bekommt GoldPerWave (außer mit Fluch „Goldschuld“); danach laufen Flüche ab
         private void HandleWaveEnd()
+        {
+            PayWaveGold();
+            MerchantCurses.HandleWaveEnd();
+        }
+
+        private void PayWaveGold()
         {
             if (!Net.IsServer || IsGameOver) return;
             var gs = GoldSettings;
             float amount = gs != null ? gs.GoldPerWave : 15f;
             if (amount <= 0f) return;
             foreach (var np in NetPlayer.All)
-                if (np != null) np.AddGold(amount);
+            {
+                if (np == null) continue;
+                if (MerchantCurses.OwesGold(np.OwnerClientId))
+                {
+                    NetGame.SendToast(np.OwnerClientId, "Goldschuld: kein Gold für diese Welle");
+                    continue;
+                }
+                np.AddGold(amount);
+            }
         }
 
         // Einnahme: Bonus geteilt durch die Anzahl der Einnehmenden
@@ -430,7 +446,6 @@ namespace ElementalBuddies
             st.Purchases++;
             int curse = slot < st.Curse.Count ? st.Curse[slot] : 0;
             NetGame.BroadcastApplyMerchantCard(clientId, cardIndex, curse);
-            if (curse > 0) MerchantCurses.Apply((MerchantCurse)curse);
             SendShop(clientId, st);
         }
 
@@ -710,12 +725,16 @@ namespace ElementalBuddies
             PlayerAbilities abilities = avatar != null ? avatar.Abilities : null;
             if (abilities == null && PlayerAvatar.All.Count == 0 && clientId == Net.LocalClientId) abilities = PlayerAbilities.Instance;
             card.Apply(abilities);
-            // Verfluchte Karte: doppelte Wirkung; der Nachteil wirkt teamweit (Server, MerchantCurses.Apply)
+            // Verfluchte Karte: doppelte Wirkung; der Nachteil trifft nur den Käufer (auf jedem Rechner eingetragen)
             if (curse > 0)
             {
                 card.Apply(abilities);
-                ToastUI.Show($"Fluch „{MerchantCurses.Name((MerchantCurse)curse)}“: {MerchantCurses.Description((MerchantCurse)curse)}");
-                GameAudio.Play(GameAudio.Has(SfxId.Curse) ? SfxId.Curse : SfxId.NexusAlarm);
+                MerchantCurses.Apply(clientId, (MerchantCurse)curse, abilities);
+                if (clientId == Net.LocalClientId)
+                {
+                    ToastUI.Show($"Fluch „{MerchantCurses.Name((MerchantCurse)curse)}“: {MerchantCurses.Description((MerchantCurse)curse)}");
+                    GameAudio.Play(GameAudio.Has(SfxId.Curse) ? SfxId.Curse : SfxId.NexusAlarm);
+                }
             }
             Debug.Log($"MerchantManager: Spieler {clientId} kauft '{card.Title}' ({card.Ability} {card.Stat} {card.Value}).");
 

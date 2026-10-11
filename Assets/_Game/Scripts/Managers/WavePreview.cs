@@ -118,6 +118,9 @@ namespace ElementalBuddies
                 p.Events.Add($"Elite-Gegner: {string.Join(", ", parts)}");
                 p.EliteCount = elites.Count;
             }
+            // Eigene Händler-Flüche (D7, nur der lokale Spieler)
+            string curses = MerchantCurses.LocalSummary();
+            if (curses.Length > 0) p.Events.Add($"<color=#6a1b6e><b>Dein Fluch:</b> {curses}</color>");
             if (p.Harvest) p.Events.Add($"Ernte-Welle: weniger Gegner, +{(wm.HarvestBonusFactor - 1f) * 100f:0} % Wellenbonus");
 
             for (int w = wave + 1; w <= wave + BossLookahead; w++)

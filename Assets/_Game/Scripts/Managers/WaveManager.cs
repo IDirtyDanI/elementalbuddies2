@@ -917,23 +917,12 @@ namespace ElementalBuddies
         {
             _elitePlan.Clear();
             _elitePlan.AddRange(PlanElites(wave, waveNumber));
-            // Fluch „Elitenruf“: zusätzliche Eliten mit zufälliger Eigenschaft
-            for (int i = 0; i < _curseElites; i++) _elitePlan.Add((EliteAffix)(1 + Random.Range(0, EliteInfo.Count)));
-            _curseElites = 0;
             _eliteNext = 0;
             _normalSpawned = 0;
             _eliteNormalTotal = 0;
             foreach (var g in wave.EnemiesToSpawn)
                 if (g != null && g.EnemyType != null && !g.EnemyType.IsBoss) _eliteNormalTotal += Mathf.Max(0, g.Count);
         }
-
-        // Händler-Flüche (D7): zusätzliche Eliten bzw. halbierter Bonus für die nächste Welle (Server)
-        private int _curseElites;
-        private float _bonusDebt = 1f;
-        public int PendingCurseElites => _curseElites;
-        public bool HasBonusDebt => _bonusDebt < 1f;
-        public void AddCurseElites(int n) => _curseElites += Mathf.Max(0, n);
-        public void AddBonusDebt(float factor) => _bonusDebt *= Mathf.Clamp01(factor);
 
         private EliteAffix NextEliteFor(EnemyConfigSO config)
         {
@@ -1033,9 +1022,7 @@ namespace ElementalBuddies
             LastWaveBonus = 0f;
             if (EconomyManager.Instance != null && EconomyManager.Instance.Settings != null)
             {
-                float bonus = WaveEndBonus(CurrentWaveIndex + 1) * _bonusDebt;
-                if (_bonusDebt < 1f) ToastUI.Show("Splitterschuld: Wellenbonus halbiert");
-                _bonusDebt = 1f;
+                float bonus = WaveEndBonus(CurrentWaveIndex + 1);
                 LastWaveBonus = bonus;
                 EconomyManager.Instance.EarnShards(bonus);
             }

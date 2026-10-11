@@ -1483,6 +1483,24 @@ namespace ElementalBuddies
                     PlayerPrefs.SetInt(PrefFullscreen, v ? 1 : 0);
                     PlayerPrefs.Save();
                 });
+
+                // Tipps (Sprint 5): Schalter „Tipps anzeigen“ + Knopf „Tipps zurücksetzen“ als Kopie der Vollbild-Zeile
+                var row = FullscreenToggle.transform.parent;
+                var copy = Instantiate(row.gameObject, row.parent);
+                copy.name = "HintsRow";
+                _hintsToggle = copy.GetComponentInChildren<Toggle>(true);
+                var label = copy.transform.Find("Label");
+                var tmp = label != null ? label.GetComponent<TextMeshProUGUI>() : null;
+                if (tmp != null) tmp.text = "Tipps anzeigen";
+                if (_hintsToggle != null)
+                {
+                    _hintsToggle.onValueChanged.RemoveAllListeners();
+                    _hintsToggle.onValueChanged.AddListener(v => HintManager.Enabled = v);
+                }
+                _hintReset = HintResetButton.Attach(copy.transform, SettingsBackButton);
+                // Fünf statt vier Zeilen: Abstand verkleinern, damit alles im festen Zeilenbereich bleibt
+                var layout = row.parent.GetComponent<VerticalLayoutGroup>();
+                if (layout != null) layout.spacing = Mathf.Min(layout.spacing, 10f);
             }
             SyncSettings();
         }
@@ -1514,7 +1532,12 @@ namespace ElementalBuddies
             SyncSlider(MusicSlider, MusicValue, ga != null ? ga.MusicLevel : PlayerPrefs.GetFloat(GameAudio.PrefMusic, 1f));
             SyncSlider(SfxSlider, SfxValue, ga != null ? ga.SfxVolume : PlayerPrefs.GetFloat(GameAudio.PrefSfx, 1f));
             if (FullscreenToggle != null) FullscreenToggle.SetIsOnWithoutNotify(Screen.fullScreen);
+            if (_hintsToggle != null) _hintsToggle.SetIsOnWithoutNotify(HintManager.Enabled);
+            HintResetButton.ResetLabel(_hintReset);
         }
+
+        private Toggle _hintsToggle;
+        private Button _hintReset;
 
         private static void SyncSlider(Slider slider, TextMeshProUGUI label, float v)
         {

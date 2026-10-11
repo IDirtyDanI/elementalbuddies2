@@ -186,6 +186,7 @@ namespace ElementalBuddies
         private Slider _shakeSlider, _numbersSlider;
         private TextMeshProUGUI _shakeValue, _numbersValue;
         private Toggle _hitStopToggle, _flashToggle, _hintsToggle;
+        private Button _hintReset;
 
         private void BuildFeelRows()
         {
@@ -215,7 +216,11 @@ namespace ElementalBuddies
                 _flashToggle = CloneToggleRow(FullscreenToggle, "FlashRow", "Treffer-Aufblitzen");
                 if (_flashToggle != null) _flashToggle.onValueChanged.AddListener(v => GameFeel.Flash = v);
                 _hintsToggle = CloneToggleRow(FullscreenToggle, "HintsRow", "Tipps anzeigen");
-                if (_hintsToggle != null) _hintsToggle.onValueChanged.AddListener(v => HintManager.Enabled = v);
+                if (_hintsToggle != null)
+                {
+                    _hintsToggle.onValueChanged.AddListener(v => HintManager.Enabled = v);
+                    _hintReset = HintResetButton.Attach(_hintsToggle.transform.parent, OverviewButton != null ? OverviewButton : ResumeButton);
+                }
             }
             CompactRows();
         }
@@ -312,6 +317,7 @@ namespace ElementalBuddies
             if (_hitStopToggle != null) _hitStopToggle.SetIsOnWithoutNotify(GameFeel.HitStop);
             if (_flashToggle != null) _flashToggle.SetIsOnWithoutNotify(GameFeel.Flash);
             if (_hintsToggle != null) _hintsToggle.SetIsOnWithoutNotify(HintManager.Enabled);
+            HintResetButton.ResetLabel(_hintReset);
         }
 
         private static void SyncSlider(Slider slider, TextMeshProUGUI label, float v)

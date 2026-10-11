@@ -74,12 +74,14 @@ namespace ElementalBuddies
             _content = _root;
         }
 
+        private int _shownCurses = -1; // MerchantCurses.Version beim letzten Aufbau
+
         void Update()
         {
             var wm = WaveManager.Instance;
             var gm = GameManager.Instance;
             bool show = wm != null && !wm.IsWaveActive && (gm == null || !gm.IsGameOver);
-            if (show && wm.UpcomingWaveNumber != _shownWave) Rebuild(wm);
+            if (show && (wm.UpcomingWaveNumber != _shownWave || MerchantCurses.Version != _shownCurses)) Rebuild(wm);
             if (show != _visible) _visible = show;
             float target = _visible ? 1f : 0f;
             _group.alpha = Mathf.MoveTowards(_group.alpha, target, Time.unscaledDeltaTime * 4f);
@@ -88,6 +90,7 @@ namespace ElementalBuddies
         private void Rebuild(WaveManager wm)
         {
             _shownWave = wm.UpcomingWaveNumber;
+            _shownCurses = MerchantCurses.Version;
             for (int i = _content.childCount - 1; i >= 0; i--)
             {
                 var c = _content.GetChild(i).gameObject;

@@ -40,6 +40,8 @@ namespace ElementalBuddies
         public float CooldownMultiplier = 1f;
         [Tooltip("Multipliziert die Reichweite der Mobilitäts-Fähigkeit (Blink-Reichweite, Rollen-Distanz).")]
         public float MobilityMultiplier = 1f;
+        // Händler-Fluch „Schwäche“ (MerchantCurses): Schaden des Champions bis zum Ende der nächsten Welle gesenkt
+        [System.NonSerialized] public float CurseDamageFactor = 1f;
 
         // Fähigkeits-Modifikatoren pro Fähigkeit (Händlerkarten, MerchantManager). Wirken zusätzlich zu den globalen Faktoren.
         public readonly AbilityMods Mods = new AbilityMods();
@@ -407,8 +409,8 @@ namespace ElementalBuddies
         // Gesamtfaktor für Abklingzeiten einer Fähigkeit (global × Händlerkarten), auch für Kit-eigene Sperren
         public float GetCooldownFactor(AbilityId id) => Mathf.Max(0.1f, CooldownMultiplier) * Mods.Factor(id, AbilityStat.Cooldown);
 
-        // Gesamtschaden einer Fähigkeit: globaler DamageMultiplier × Händlerkarten dieser Fähigkeit
-        public float GetDamageMultiplier(AbilityId id) => DamageMultiplier * Mods.Factor(id, AbilityStat.Damage);
+        // Gesamtschaden einer Fähigkeit: globaler DamageMultiplier × Fluch „Schwäche“ × Händlerkarten dieser Fähigkeit
+        public float GetDamageMultiplier(AbilityId id) => DamageMultiplier * CurseDamageFactor * Mods.Factor(id, AbilityStat.Damage);
 
         // Wofür der Radial-Balken gerade läuft (bei Aufladungen: Sperre oder Wiederaufladung)
         public float GetCooldownDisplayDuration(AbilityId id)
@@ -540,7 +542,7 @@ namespace ElementalBuddies
                 Caster = this,
                 Origin = origin,
                 AimDirection = _controller.AimDirection,
-                DamageMultiplier = DamageMultiplier,
+                DamageMultiplier = DamageMultiplier * CurseDamageFactor,
                 AimPoint = _controller.AimPoint,
                 HasAimPoint = _controller.HasAimPoint,
                 MoveDirection = MoveDirectionNow()
