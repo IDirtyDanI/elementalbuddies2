@@ -89,7 +89,14 @@ namespace ElementalBuddies
                 else if (!Net.IsServer && sm.AwakenAtWave != null && System.Array.IndexOf(sm.AwakenAtWave, wave) >= 0) p.Events.Add("Ein Schrein erwacht");
             }
             var mm = MerchantManager.Instance;
-            if (mm != null && mm.IsMerchantWave(wave)) p.Events.Add("Ein Händler öffnet seinen Stand");
+            if (mm != null && mm.IsMerchantWave(wave))
+            {
+                // Welcher Händler kommt, wird erst zu Wellenbeginn aus dem Beutel gezogen – nur ein erzwungener ist vorab bekannt
+                Merchant forced = Net.IsServer && mm.ForceKind && MerchantManager.IsAvailable(mm.ForcedKind) ? mm.GetMerchant(mm.ForcedKind) : null;
+                p.Events.Add(forced != null && forced.State == MerchantState.Geschlossen
+                    ? $"Der {forced.DisplayName} öffnet seinen Stand {forced.LocationPhrase}"
+                    : "Ein Händler öffnet seinen Stand vor der Stadtmauer");
+            }
             // Wellen-Ereignis (C5)
             var ev = wm.EventFor(wave);
             if (ev != WaveEvent.None)

@@ -183,7 +183,7 @@ namespace ElementalBuddies
 
         private void HandleMerchantActivated(Merchant m)
         {
-            Show($"Der {m.DisplayName} ist da! Nimm seinen Stand ein.", MerchantIcon(m));
+            Show($"Der {m.DisplayName} hat seinen Stand {m.LocationPhrase} geöffnet! Nimm ihn ein.", MerchantIcon(m));
         }
 
         private void HandleMerchantCaptured(Merchant m)

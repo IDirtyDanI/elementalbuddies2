@@ -29,6 +29,7 @@ namespace ElementalBuddies
             foreach (var r in _renderers)
             {
                 if (r == null || r is ParticleSystemRenderer || r.sharedMaterial == null || !r.sharedMaterial.HasProperty(BaseColorId)) continue;
+                if (StatusTint.IsMulti(r)) { StatusTint.TintEach(r, Color.white, strength); continue; }
                 Color baseCol = r.sharedMaterial.GetColor(BaseColorId);
                 r.GetPropertyBlock(Block);
                 Block.SetColor(BaseColorId, Color.Lerp(baseCol, white, strength));

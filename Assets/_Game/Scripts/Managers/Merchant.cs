@@ -61,10 +61,23 @@ namespace ElementalBuddies
             var pa = PlayerAbilities.Instance;
             return pa != null ? pa.GetElementAbilityName(e) : ElementInfo.AbilityName(e);
         }
+
+        // Halbe Kantenlänge des Mauerquadrats (Stadtmauer bei ±35 m um den Ursprung)
+        public const float CityWallHalfSize = 35f;
+
+        public static bool IsInsideCity(Vector3 pos) => Mathf.Max(Mathf.Abs(pos.x), Mathf.Abs(pos.z)) < CityWallHalfSize;
+
+        // Ortsangabe relativ zur Stadtmauer: „in der Stadt“ oder „vor der West-/Nord-/Süd-/Ostmauer“ (dominante Achse)
+        public static string LocationPhrase(Vector3 pos)
+        {
+            if (IsInsideCity(pos)) return "in der Stadt";
+            if (Mathf.Abs(pos.x) >= Mathf.Abs(pos.z)) return pos.x < 0f ? "vor der Westmauer" : "vor der Ostmauer";
+            return pos.z > 0f ? "vor der Nordmauer" : "vor der Südmauer";
+        }
     }
 
-    // Händlerstand in der Stadt. Wird vom MerchantManager zu Wellenbeginn geöffnet (Aktiv): Der Spieler muss
-    // RequiredTime Sekunden im Kreis (CaptureRadius, XZ) stehen – gleiche Regeln wie beim Schrein (Shrine.cs):
+    // Händlerstand vor der Stadtmauer (Ring zwischen Mauer und Außenrand). Wird vom MerchantManager zu Wellenbeginn
+    // geöffnet (Aktiv): Der Spieler muss RequiredTime Sekunden im Kreis (CaptureRadius, XZ) stehen – gleiche Regeln wie beim Schrein (Shrine.cs):
     // Angreifer erst beim ersten Betreten, Gegner im Kreis = umkämpft (40 % Tempo), draußen Verfall.
     // Erfolg → Eingenommen, der MerchantManager öffnet die Kartenauswahl; zum Wellenende schließt der Stand wieder.
     // Endet die Welle vorher → Fehlschlag (Händler kommt zurück in den Beutel).
@@ -144,6 +157,8 @@ namespace ElementalBuddies
         public event System.Action<Merchant> OnStateChanged;
 
         public Vector3 CenterPosition => (Center != null ? Center : transform).position;
+        // „vor der Westmauer“ usw. (Toasts, Hinweise, Ziel-Panel – Szenen-Positionen sind auf allen Rechnern gleich)
+        public string LocationPhrase => MerchantInfo.LocationPhrase(transform.position);
         public Transform CenterTransform => Center != null ? Center : transform;
 
         private readonly List<PlayerAvatar> _inside = new List<PlayerAvatar>();
@@ -534,19 +549,31 @@ namespace ElementalBuddies
             }
         }
 
+        // Angreifer-Spawnpunkte: so oft wird gewürfelt, bevor der Fallback (NavMesh-Punkt am Kreis) greift
+        private const int RingAttempts = 24;
+        // Weg zum Kreis höchstens Faktor × Luftlinie + Puffer lang – sonst liegt der Punkt hinter der Stadtmauer
+        private const float MaxDetourFactor = 1.6f;
+        private const float MaxDetourSlack = 4f;
+
         private bool TryGetRingPoint(out Vector3 pos)
         {
             Vector3 c = CenterPosition;
             float min = Mathf.Max(0f, Mathf.Min(SpawnRingMin, SpawnRingMax));
             float max = Mathf.Max(SpawnRingMin, SpawnRingMax);
-            for (int attempt = 0; attempt < 12; attempt++)
+            float inner = Mathf.Min(min, CaptureRadius + 3f);
+            bool hasTarget = NavMesh.SamplePosition(c, out NavMeshHit target, 3f, NavMesh.AllAreas);
+            for (int attempt = 0; attempt < RingAttempts; attempt++)
             {
+                // Zweite Hälfte der Versuche näher am Kreis – dort liegt seltener die Mauer dazwischen
+                bool close = attempt >= RingAttempts / 2;
                 float angle = Random.Range(0f, Mathf.PI * 2f);
-                float dist = Random.Range(min, max);
+                float dist = close ? Random.Range(inner, min) : Random.Range(min, max);
                 Vector3 p = c + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * dist;
-                // In der Stadt: nur Punkte, von denen ein vollständiger Weg zum Kreis führt (nicht in eingezäunten Gärten)
+                // Stand vor der Stadtmauer: nur Punkte, von denen ein vollständiger, direkter Weg zum Kreis führt
+                // (nicht hinter der Mauer in der Stadt, nicht in eingezäunten Gärten)
                 if (NavMesh.SamplePosition(p, out NavMeshHit hit, 2f, NavMesh.AllAreas)
-                    && XZDistance(hit.position, c) > CaptureRadius + 1f && HasPath(hit.position, c))
+                    && XZDistance(hit.position, c) > CaptureRadius + 1f
+                    && (!hasTarget || IsDirectlyReachable(hit.position, target.position)))
                 {
                     pos = hit.position;
                     return true;
@@ -565,11 +592,18 @@ namespace ElementalBuddies
         }
 
         private static NavMeshPath _path;
-        private static bool HasPath(Vector3 from, Vector3 to)
+        private static readonly Vector3[] _corners = new Vector3[32];
+
+        // Vollständiger Weg ohne großen Umweg? Länge aus den Ecken des berechneten Pfads
+        private static bool IsDirectlyReachable(Vector3 from, Vector3 to)
         {
             if (_path == null) _path = new NavMeshPath();
-            if (!NavMesh.SamplePosition(to, out NavMeshHit target, 3f, NavMesh.AllAreas)) return true;
-            return NavMesh.CalculatePath(from, target.position, NavMesh.AllAreas, _path) && _path.status == NavMeshPathStatus.PathComplete;
+            if (!NavMesh.CalculatePath(from, to, NavMesh.AllAreas, _path) || _path.status != NavMeshPathStatus.PathComplete) return false;
+            int n = _path.GetCornersNonAlloc(_corners);
+            if (n >= _corners.Length) return false; // so verwinkelt, dass es ohnehin ein Umweg ist
+            float length = 0f;
+            for (int i = 1; i < n; i++) length += Vector3.Distance(_corners[i - 1], _corners[i]);
+            return length <= MaxDetourFactor * Vector3.Distance(from, to) + MaxDetourSlack;
         }
 
         private void StopSpawning()

@@ -252,13 +252,15 @@ namespace ElementalBuddies.EditorTools
         public const float CircleOffset = 4.2f;
         public const float CircleRadius = 3.5f;
 
+        // Seit 2026-10-12 vor der Mauer (±35 m), je ~20 m neben den Portal-Laufwegen, Front zur Stadt. In der Stadt lagen die
+        // Kreise auf den Gegnerrouten – die Hauptwelle machte die Einnahme fast unmöglich (Playtest W20).
         public static readonly StallDef[] Stalls =
         {
-            new StallDef { Kind = MerchantKind.Waffen, X = -4.6f, Z = 4.3f, Yaw = 180f },  // Marktplatz, Nordost-Ecke
-            new StallDef { Kind = MerchantKind.Feuer, X = 2.45f, Z = 21f, Yaw = 270f },  // Nordstraße, Ostseite
-            new StallDef { Kind = MerchantKind.Eis, X = 13f, Z = 10.6f, Yaw = 180f },    // Nexusplatz, Nordwest-Einmündung
-            new StallDef { Kind = MerchantKind.Erde, X = 2.45f, Z = -22f, Yaw = 270f },  // Südstraße, Ostseite
-            new StallDef { Kind = MerchantKind.Licht, X = 13f, Z = -10.6f, Yaw = 0f, CircleX = 2.8f }, // Nexusplatz, Südwest-Einmündung
+            new StallDef { Kind = MerchantKind.Waffen, X = -22f, Z = 49f, Yaw = 180f }, // vor der Nordmauer, westlich des Nordportals
+            new StallDef { Kind = MerchantKind.Feuer, X = -49f, Z = 20f, Yaw = 90f },   // vor der Westmauer, nördlich des Westportals
+            new StallDef { Kind = MerchantKind.Eis, X = -49f, Z = -20f, Yaw = 90f },    // vor der Westmauer, südlich des Westportals
+            new StallDef { Kind = MerchantKind.Erde, X = 22f, Z = 49f, Yaw = 180f },    // vor der Nordmauer, östlich des Nordportals
+            new StallDef { Kind = MerchantKind.Licht, X = 22f, Z = -49f, Yaw = 0f },    // vor der Südmauer, östlich des Südportals
         };
 
         // Prüft Stand-Grundflächen (Überschneidung mit Collidern, ohne Terrain und ohne eigene Händler) und den Kreis

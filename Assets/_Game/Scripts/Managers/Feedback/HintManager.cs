@@ -102,8 +102,13 @@ namespace ElementalBuddies
         private void HandleShrine(Shrine s) =>
             Show("shrine", "Ein <b>Schrein</b> ist erwacht! Stell dich in seinen Kreis, bis er eingenommen ist – das schaltet einen neuen Element-Zauber frei.");
 
-        private void HandleMerchant(Merchant m) =>
-            Show("merchant", "Ein <b>Händler</b> ist da! Nimm seinen Stand ein wie einen Schrein. Mit Gold kaufst du dort Verbesserungen für deine Fähigkeiten.");
+        private void HandleMerchant(Merchant m)
+        {
+            // Stände liegen draußen vor der Stadtmauer – der Pfeil am Bildschirmrand (OffscreenIndicatorUI) führt hin
+            string where = m == null ? "vor der Stadtmauer"
+                : MerchantInfo.IsInsideCity(m.transform.position) ? m.LocationPhrase : $"draußen {m.LocationPhrase}";
+            Show("merchant", $"Ein <b>Händler</b> hat seinen Stand {where} geöffnet – der Pfeil am Bildschirmrand zeigt den Weg. Nimm ihn ein wie einen Schrein; mit Gold kaufst du dort Verbesserungen für deine Fähigkeiten.");
+        }
 
         private void HandleBoss(EnemyBrain e) =>
             Show("boss", "Ein <b>Boss</b>! Rote Flächen am Boden zeigen seine Angriffe – geh raus, bevor sie zuschlagen. Bosse geben viele Splitter.");

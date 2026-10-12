@@ -31,11 +31,34 @@ namespace ElementalBuddies
             foreach (var r in root.GetComponentsInChildren<Renderer>())
             {
                 if (r is ParticleSystemRenderer || r.sharedMaterial == null || !r.sharedMaterial.HasProperty(BaseColorId)) continue;
-                if (!frozen && !burning && !cursed && !wetted && !blinded) { r.SetPropertyBlock(null); continue; }
+                bool none = !frozen && !burning && !cursed && !wetted && !blinded;
                 Color tint = frozen ? FrozenTint : burning ? BurnTint : cursed ? CurseTint : wetted ? WetTint : BlindTint;
+                if (IsMulti(r)) { TintEach(r, none ? (Color?)null : tint, 0f); continue; }
+                if (none) { r.SetPropertyBlock(null); continue; }
                 r.GetPropertyBlock(Block);
                 Block.SetColor(BaseColorId, r.sharedMaterial.GetColor(BaseColorId) * tint);
                 r.SetPropertyBlock(Block);
+            }
+        }
+
+        // Mehrere Materialien an einem Renderer (z. B. Ramme: Holz/Eisen/Haut): Block je Material-Index, sonst nähme
+        // der ganze Renderer die Farbe des ersten Materials an
+        public static bool IsMulti(Renderer r) => r.sharedMaterials.Length > 1;
+
+        // tint null = Färbung entfernen; whiten > 0 = Treffer-Aufhellung (HitFlash) statt Multiplikation
+        public static void TintEach(Renderer r, Color? tint, float whiten)
+        {
+            var mats = r.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+            {
+                Block.Clear();
+                var m = mats[i];
+                if (tint.HasValue && m != null && m.HasProperty(BaseColorId))
+                {
+                    Color c = m.GetColor(BaseColorId);
+                    Block.SetColor(BaseColorId, whiten > 0f ? Color.Lerp(c, new Color(1.6f, 1.6f, 1.6f, 1f), whiten) : c * tint.Value);
+                }
+                r.SetPropertyBlock(Block, i);
             }
         }
     }

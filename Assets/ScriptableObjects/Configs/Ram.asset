@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e8abe452fb0a3b47845a6d44bc7b082, type: 3}
+  m_Name: Ram
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.EnemyConfigSO
+  Type: 4
+  CostOutCombat: 0
+  Range: 0
+  FireRate: 0
+  Damage: 0
+  Prefab: {fileID: 2998355834605593025, guid: 9a251c2423650468fb2aaeef954bd125, type: 3}
+  BuddyMaxHP: 0
+  BossDamageMultiplier: 1
+  BaseHP: 170
+  Speed: 2.5
+  AttackDamage: 22
+  Armor: 0.5
+  BountyMultiplier: 3
+  VisualScale: 1
+  BuddyAggroRadius: 3
+  HuntsBuddies: 0
+  BuddyDamageMultiplier: 0.6
+  AttackRange: 0
+  ProjectilePrefab: {fileID: 0}
+  AttackInterval: 1.5
+  ProjectileSpeed: 14
+  AttackWindup: 0.35
+  ProjectileSpawnHeight: 1.3
+  IsBoss: 0
+  DisplayName: Belagerungsramme
+  ControlResistance: 0
+  ThemeColor: {r: 1, g: 1, b: 1, a: 1}
+  Icon: {fileID: 21300000, guid: f4c96c938df574851849b12b01e64a61, type: 3}
+  PreviewHint: "Marschiert stur zum Nexus \u2013 aufhalten!"

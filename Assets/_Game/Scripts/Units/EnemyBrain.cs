@@ -312,7 +312,8 @@ namespace ElementalBuddies
 
             _started = true;
             if (IsElite) ApplyEliteLook(); // vor der HP-Leiste (misst die Höhe)
-            Codex.Discover(Codex.EnemyKey(Config));
+            // Ramme hat keinen eigenen Gegner-Eintrag – sie wird als Ereignis entdeckt (ApplyEliteLook)
+            if (Elite != EliteAffix.Ram) Codex.Discover(Codex.EnemyKey(Config));
 
             if (HealthBarPrefab != null)
                 Instantiate(HealthBarPrefab).Bind(this);
@@ -383,12 +384,19 @@ namespace ElementalBuddies
             GameAudio.Play(SfxId.EnemyDeath, transform.position);
         }
 
-        // Client: Angriffs-Animation (Server-Takt)
+        // Angriffs-Takt für Optik ohne Animator (z. B. RamVisual: Rammbalken) – Server und Clients, unabhängig vom Animator
+        public event System.Action OnAttackVisual;
+
+        // Angriffs-Animation (Server direkt, Clients per RPC im Server-Takt)
         public void PlayAttackTrigger()
         {
+            OnAttackVisual?.Invoke();
             if (_animator == null || !_hasAttackTrigger || !_animator.isActiveAndEnabled) return;
             _animator.SetTrigger(AttackHash);
         }
+
+        // Server: Angriffs-Takt auslösen, wenn ihn jemand anzeigt (Attack-Trigger am Animator oder OnAttackVisual)
+        private bool HasAttackVisual => (_hasAttackTrigger && _animator.isActiveAndEnabled) || OnAttackVisual != null;
 
         // Client: beliebiger Animator-Trigger (Boss-Zauber); unbekannte Parameter werden ignoriert
         public void PlayAnimTrigger(int hash)
@@ -747,6 +755,14 @@ namespace ElementalBuddies
                 return;
             }
 
+            if (Elite == EliteAffix.Ram && IsInAttackRange(target))
+            {
+                // Ramme (lang, Pivot in der Mitte): vor dem Nexus anhalten statt sich hineinzuschieben, Bug zum Nexus
+                if (_agent.isOnNavMesh && _agent.hasPath) _agent.ResetPath();
+                FaceTowards(target);
+                return;
+            }
+
             if (IsNexus(target))
             {
                 // Walk to the Nexus surface instead of its pivot (the Nexus is big / may carve the NavMesh)
@@ -822,10 +838,10 @@ namespace ElementalBuddies
                  float amount = (Config != null ? Config.AttackDamage : 10f) * DamageMultiplier * Time.deltaTime;
                  if (BuddyOf(target) != null) amount *= BuddyDamageMultiplier;
                  // Optik: Angriffs-Animation im Takt von AttackInterval (Schaden bleibt kontinuierlich)
-                 if (_hasAttackTrigger && _animator.isActiveAndEnabled && target != ForcedTarget && Time.time >= _nextAttackTime)
+                 if (target != ForcedTarget && Time.time >= _nextAttackTime && HasAttackVisual)
                  {
                      _nextAttackTime = Time.time + AttackInterval;
-                     _animator.SetTrigger(AttackHash);
+                     PlayAttackTrigger();
                      if (_net != null) _net.ServerAttackTrigger();
                  }
                  // Spieler bekommt die Angriffsrichtung mit (Schildblock blockt nur frontal)
@@ -865,9 +881,9 @@ namespace ElementalBuddies
             if (Time.time < _nextAttackTime) return;
 
             _nextAttackTime = Time.time + AttackInterval;
-            if (_hasAttackTrigger && _animator.isActiveAndEnabled)
+            if (HasAttackVisual)
             {
-                _animator.SetTrigger(AttackHash);
+                PlayAttackTrigger();
                 if (_net != null) _net.ServerAttackTrigger();
             }
             _shotTarget = target;
@@ -1022,11 +1038,14 @@ namespace ElementalBuddies
             if (curse != null) _curse = curse;
         }
 
+        private const float RamKnockbackFactor = 0.25f;
+
         // Rückstoß entlang des NavMesh (agent.Move, verlässt das NavMesh nicht); unterbricht kurz die Bewegung
         public void Knockback(Vector3 direction, float distance, float duration = 0.25f)
         {
             if (!Net.IsServer) return;
             distance *= ControlFactor;
+            if (Elite == EliteAffix.Ram) distance *= RamKnockbackFactor; // 4,6-m-Belagerungsramme lässt sich kaum schieben
             if (_isDead || distance <= 0f) return;
             direction.y = 0f;
             if (direction.sqrMagnitude < 0.0001f) return;

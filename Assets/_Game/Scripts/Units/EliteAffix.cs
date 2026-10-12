@@ -123,6 +123,9 @@ namespace ElementalBuddies
             {
                 var aura = Instantiate(wm.EliteAuraPrefab, transform);
                 aura.transform.localPosition = Vector3.up * 0.05f;
+                // Ramme: Drehpunkt liegt mitten im 4,6-m-Rumpf → Aura auf den Boden, sonst schneidet sie durch die Seitenwand
+                if (affix == EliteAffix.Ram && any)
+                    aura.transform.localPosition = Vector3.up * ((b.min.y - transform.position.y) / Mathf.Max(0.01f, transform.lossyScale.y) + 0.05f);
                 aura.transform.localRotation = Quaternion.identity;
                 foreach (var ps in aura.GetComponentsInChildren<ParticleSystem>())
                 {

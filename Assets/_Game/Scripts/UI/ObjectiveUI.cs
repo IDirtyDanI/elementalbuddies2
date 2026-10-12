@@ -34,6 +34,7 @@ namespace ElementalBuddies
 
         private Shrine _shrine;
         private Merchant _merchant;
+        private string _mWhere;
         private TextMeshProUGUI _mTitle, _mStatus;
         private Image _mFill, _mIcon;
         private RectTransform _mRect;
@@ -87,6 +88,7 @@ namespace ElementalBuddies
                 MerchantPanel.SetActive(m != null);
                 if (m != null)
                 {
+                    _mWhere = m.LocationPhrase;
                     if (_mTitle != null) _mTitle.text = $"{m.DisplayName} ist da!";
                     if (_mIcon != null)
                     {
@@ -107,7 +109,7 @@ namespace ElementalBuddies
                 string t = $"{Mathf.FloorToInt(_merchant.ProgressSeconds)} / {Mathf.RoundToInt(_merchant.RequiredTime)} s";
                 if (!_merchant.PlayerInside)
                 {
-                    _mStatus.text = _merchant.ProgressSeconds > 0f ? $"Betritt den Kreis! ({t})" : "Betritt den Kreis am Stand!";
+                    _mStatus.text = _merchant.ProgressSeconds > 0f ? $"Betritt den Kreis! ({t})" : $"Betritt den Kreis {_mWhere}!";
                     _mStatus.color = StatusWarning;
                 }
                 else if (_merchant.Contested)

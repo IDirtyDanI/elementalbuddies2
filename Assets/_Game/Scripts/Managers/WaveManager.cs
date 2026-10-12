@@ -41,6 +41,8 @@ namespace ElementalBuddies
         [Header("Schrein-Wellen")]
         [Tooltip("Ist in einer Welle ein Schrein erwacht, dauert die Spawn-Phase mindestens Schrein-Dauer + dieser Puffer (Weg zum Schrein, Umkämpft-Verlangsamung). Fehlende Zeit wird mit zusätzlichen Gegnern aufgefüllt.")]
         public float ShrineWaveExtraTime = 25f;
+        [Tooltip("Zusätzlicher Puffer für Händler-Wellen: Die Stände liegen vor der Stadtmauer, der Weg vom Nexus ist deutlich länger.")]
+        public float MerchantWaveExtraTime = 20f;
 
         [Header("Gemischte Wellen")]
         [Tooltip("Zusatzgruppen (z. B. Schwarm, Ritter), die ab StartWave an jede Welle angehängt werden.")]
@@ -666,21 +668,22 @@ namespace ElementalBuddies
         // Arbeitet auf einer Kopie, die WaveConfig-Assets bleiben unverändert.
         private WaveConfigSO ExtendForShrine(WaveConfigSO wave)
         {
-            // Längste Einnahme-Dauer dieser Welle: erwachter Schrein und/oder geöffneter Händler
-            float required = 0f;
+            // Längste Ziel-Dauer dieser Welle: erwachter Schrein und/oder geöffneter Händler (Stand vor der Mauer → längerer Weg)
+            float target = 0f;
             string label = null;
             var sm = ShrineManager.Instance;
             Shrine shrine = sm != null ? sm.ActiveShrine : null;
             if (shrine != null && shrine.IsAwakened)
             {
-                required = shrine.RequiredTime;
+                target = shrine.RequiredTime + ShrineWaveExtraTime;
                 label = shrine.DisplayName;
             }
             var mm = MerchantManager.Instance;
             Merchant merchant = mm != null ? mm.ActiveMerchant : null;
-            if (merchant != null && merchant.IsActive && merchant.RequiredTime > required)
+            float merchantTarget = merchant != null ? merchant.RequiredTime + ShrineWaveExtraTime + MerchantWaveExtraTime : 0f;
+            if (merchant != null && merchant.IsActive && merchantTarget > target)
             {
-                required = merchant.RequiredTime;
+                target = merchantTarget;
                 label = merchant.DisplayName;
             }
             if (label == null || wave.EnemiesToSpawn == null || wave.EnemiesToSpawn.Count == 0) return wave;
@@ -688,7 +691,6 @@ namespace ElementalBuddies
             float groupsDuration = GetSpawnDuration(wave);
             float spawnTime = wave.StartDelay + groupsDuration;
 
-            float target = required + ShrineWaveExtraTime;
             EnemySpawnInfo first = wave.EnemiesToSpawn[0];
             float interval = Mathf.Max(0.2f, first.SpawnInterval);
             int extra = Mathf.CeilToInt((target - spawnTime) / interval);
@@ -828,8 +830,8 @@ namespace ElementalBuddies
         // Wellengegner (Config + Initialize). countTowardWave: während einer aktiven Welle wird EnemiesRemaining erhöht,
         // d. h. die Welle endet erst, wenn auch diese Gegner tot sind. hpMultiplier < 0 → Kurve der aktuellen Welle
         // (Bosse: Boss-Kurve).
-        // Mehrspieler: nur auf dem Server (Clients: null)
-        public EnemyBrain SpawnEnemyAt(EnemyConfigSO config, Vector3 position, float hpMultiplier = -1f, bool countTowardWave = true)
+        // Mehrspieler: nur auf dem Server (Clients: null). elite: Eigenschaft vor dem Netz-Spawn (geht mit der Spawn-Nachricht raus)
+        public EnemyBrain SpawnEnemyAt(EnemyConfigSO config, Vector3 position, float hpMultiplier = -1f, bool countTowardWave = true, EliteAffix elite = EliteAffix.None)
         {
             if (!Net.IsServer || IsGameOver) return null;
             if (config == null || config.Prefab == null)
@@ -846,7 +848,7 @@ namespace ElementalBuddies
                 if (dir.sqrMagnitude > 0.01f) rot = Quaternion.LookRotation(dir);
             }
 
-            var brain = InstantiateEnemy(config, position, rot, hpMultiplier < 0f ? HpMultiplierFor(config, UpcomingWaveNumber) : hpMultiplier);
+            var brain = InstantiateEnemy(config, position, rot, hpMultiplier < 0f ? HpMultiplierFor(config, UpcomingWaveNumber) : hpMultiplier, elite);
             if (countTowardWave && IsWaveActive) EnemiesRemaining++;
             return brain;
         }
@@ -970,8 +972,8 @@ namespace ElementalBuddies
             if (!Net.IsServer || ActiveEvent != WaveEvent.Ram) return;
             var cfg = RamConfig != null ? RamConfig : GetDefaultEnemyType();
             if (cfg == null || !TryGetSpawnPose(out Vector3 pos, out _)) return;
-            var brain = SpawnEnemyAt(cfg, pos);
-            if (brain != null) brain.MakeElite(EliteAffix.Ram);
+            // Eigenschaft vor dem Netz-Spawn: sonst bleibt EnemyNet.Elite auf den Clients 0 (keine Ramme-Optik/-Größe)
+            SpawnEnemyAt(cfg, pos, -1f, true, EliteAffix.Ram);
         }
 
         [Tooltip("Gegnertyp der Belagerungsramme (Wellen-Ereignis); leer = erster Typ der Welle.")]

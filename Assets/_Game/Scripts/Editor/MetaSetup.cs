@@ -91,7 +91,9 @@ namespace ElementalBuddies.EditorTools
 
             if (wm != null)
             {
-                wm.RamConfig = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>("Assets/ScriptableObjects/Configs/Knight.asset");
+                // Ramme mit eigenem Modell (RamBuilder); solange Ram.asset fehlt, wie bisher der Ritter
+                var ram = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(RamBuilder.RamConfig);
+                wm.RamConfig = ram != null ? ram : AssetDatabase.LoadAssetAtPath<EnemyConfigSO>("Assets/ScriptableObjects/Configs/Knight.asset");
                 var icons = new List<Sprite>(wm.EliteIcons ?? new Sprite[0]);
                 while (icons.Count < 5) icons.Add(null);
                 if (icons.Count < 6) icons.Add(Icon("elite_ram"));
@@ -170,7 +172,7 @@ namespace ElementalBuddies.EditorTools
                     Icon = Icon(eliteIcons[i - 1]), Extra = "ab Welle 12",
                 });
             }
-            string[] eventIcons = { null, "event_bloodmoon", "event_soulstorm", "elite_ram" };
+            string[] eventIcons = { null, "event_bloodmoon", "event_soulstorm", "icon_enemy_ram" }; // Ramme: Bild des eigenen Modells (RamBuilder)
             foreach (var ev in new[] { WaveEvent.BloodMoon, WaveEvent.SoulStorm, WaveEvent.Ram })
                 db.Entries.Add(new CodexDatabaseSO.Entry
                 {

@@ -107,7 +107,7 @@ MonoBehaviour:
     Category: 3
     Title: Belagerungsramme
     Description: "eine Ramme marschiert stur zum Nexus \u2013 aufhalten!"
-    Icon: {fileID: 21300000, guid: 015931bcaa0e0424796e82fb16aa6933, type: 3}
+    Icon: {fileID: 21300000, guid: f4c96c938df574851849b12b01e64a61, type: 3}
     Extra: ab Welle 16
   - Key: fusion:Lightning
     Category: 4
