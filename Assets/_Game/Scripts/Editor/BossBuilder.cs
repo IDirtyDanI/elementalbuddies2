@@ -780,6 +780,8 @@ namespace ElementalBuddies.EditorTools
             c.BaseHP = 560f; c.Speed = 1.5f; c.AttackDamage = 20f; c.Armor = 0.4f;
             c.VisualScale = 2f; c.BuddyAggroRadius = 6f; c.AttackInterval = 1.6f;
             c.AttackRange = 0f; c.ProjectilePrefab = null;
+            // Einzelhiebe (2026-10-12): Trefferframe der Attack-Animation (Klinge ~0,9 s im Clip / Tempo 1,6), 20 DPS = 32 je Hieb
+            c.AttackWindup = EnemyAttackBuilder.BoneLordWindup; c.MeleeHitSound = true; c.MeleeHitSfx = SfxId.EnemyChop;
 
             var rig = NewRig("BossBoneLord", ctrl, BoneMaterial("Boss_BoneLord_Bone", new Color(0.33f, 0.29f, 0.29f)), BoneLordColor, "BoneLord");
             Model(rig, "Head", "Boss_Knight_Helm", Vector3.zero);

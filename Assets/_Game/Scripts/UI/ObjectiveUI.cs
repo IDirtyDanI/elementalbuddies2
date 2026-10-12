@@ -42,6 +42,10 @@ namespace ElementalBuddies
 
         void Start()
         {
+            // Lange Titel/Status (Händler-Ortsangabe „… vor der Nordmauer!“, Umkämpft + Zeit) dürfen nicht aus dem
+            // Pergament ragen: einzeilig, Schrift schrumpft bei Bedarf (vor dem Kopieren → gilt auch fürs Händler-Panel)
+            FitToBox(TitleText);
+            FitToBox(StatusText);
             if (Panel != null) Panel.SetActive(false);
             if (MerchantPanel == null && Panel != null)
             {
@@ -124,6 +128,16 @@ namespace ElementalBuddies
                 }
             }
             if (_mFill != null) _mFill.fillAmount = _merchant.Progress01;
+        }
+
+        private static void FitToBox(TextMeshProUGUI t)
+        {
+            if (t == null) return;
+            t.textWrappingMode = TextWrappingModes.NoWrap;
+            t.overflowMode = TextOverflowModes.Ellipsis;
+            t.fontSizeMax = t.fontSize;
+            t.fontSizeMin = Mathf.Round(t.fontSize * 0.7f);
+            t.enableAutoSizing = true;
         }
 
         private static T FindChild<T>(Transform root, string childName) where T : Component

@@ -8,7 +8,10 @@ namespace ElementalBuddies
         [Header("Enemy Specific Stats")]
         public float BaseHP; // Basis-HP; Welle skaliert über WaveManager.HpMultiplier (Bosse: BaseHP · w · min(1, w/12)²)
         public float Speed;
-        public float AttackDamage; // Damage dealt to player or blocker
+        // Nahkampf: Schaden pro SEKUNDE (DPS) – ein Hieb macht AttackDamage × AttackInterval (seit 2026-10-12 Einzelhiebe,
+        // gleicher DPS wie der frühere Dauerschaden). Fernkampf: Schaden pro Schuss.
+        [Tooltip("Nahkampf: DPS (Schaden pro Hieb = AttackDamage × AttackInterval). Fernkampf: Schaden pro Schuss.")]
+        public float AttackDamage;
 
         [Header("Gegnertyp")]
         [Tooltip("Schadensreduktion (0.3 = 30 % weniger Schaden). Fluch ignoriert die Rüstung.")]
@@ -31,12 +34,17 @@ namespace ElementalBuddies
         public float AttackRange = 0f;
         [Tooltip("Projektil (mit EnemyProjectile). Leer = Nahkampf.")]
         public GameObject ProjectilePrefab;
-        [Tooltip("Fernkampf: Sekunden zwischen zwei Schüssen; jeder Schuss macht AttackDamage.")]
+        [Tooltip("Sekunden zwischen zwei Schüssen (Schuss = AttackDamage) bzw. Nahkampf-Hieben (Hieb = AttackDamage × AttackInterval).")]
         public float AttackInterval = 1.5f;
         public float ProjectileSpeed = 14f;
-        [Tooltip("Verzögerung zwischen Attack-Trigger und Abschuss (s).")]
+        [Tooltip("Verzögerung zwischen Attack-Trigger und Abschuss bzw. Nahkampf-Treffer (s) – auf den Trefferframe der Angriffs-Animation abstimmen.")]
         public float AttackWindup = 0.35f;
         public float ProjectileSpawnHeight = 1.3f;
+
+        [Header("Nahkampf-Treffer")]
+        [Tooltip("Ton im Trefferzeitpunkt eines Nahkampf-Hiebs (auf allen Rechnern, global begrenzt).")]
+        public bool MeleeHitSound;
+        public SfxId MeleeHitSfx = SfxId.EnemyHit;
 
         [Header("Boss")]
         [Tooltip("Boss: Ankündigung, Boss-HP-Leiste (BossHealthBarUI). Fähigkeiten über BossBrain am Prefab.")]

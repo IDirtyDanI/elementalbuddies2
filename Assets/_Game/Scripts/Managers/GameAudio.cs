@@ -66,7 +66,11 @@ namespace ElementalBuddies
         BuddyHappy,
         BuddySad,
         BuddyCheer,
-        Curse
+        Curse,
+        // Nahkampf-Treffer der Gegner (2026-10-12): Runner-Kralle, Biss (Schwarm/Grabspinne), Hieb (Ritter/Knochenfürst)
+        EnemyClaw,
+        EnemySnap,
+        EnemyChop
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.

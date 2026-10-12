@@ -43,6 +43,16 @@ namespace ElementalBuddies.EditorTools
             Debug.Log("GameFeelSetup: fertig.");
         }
 
+        // Nur Audio: Import-Einstellungen + GameAudio-Einträge in Spiel- und Menüszene (z. B. nach neuen Sounds in SfxTable)
+        [MenuItem("BuddyTD/Game Feel/Nur Sounds zuweisen")]
+        public static void SetupSoundsOnly()
+        {
+            ImportAudio();
+            SetupScene();
+            AssetDatabase.SaveAssets();
+            Debug.Log("GameFeelSetup: Sounds zugewiesen.");
+        }
+
         [MenuItem("BuddyTD/Game Feel/Nur VFX neu bauen")]
         public static void BuildVfxOnly()
         {
@@ -148,6 +158,10 @@ namespace ElementalBuddies.EditorTools
             yield return new Sfx(SfxId.BuddySad, 0.4f, 0.4f, P, "buddy_sad");
             yield return new Sfx(SfxId.BuddyCheer, 0.45f, 0.3f, P, "buddy_cheer");
             yield return new Sfx(SfxId.Curse, 0.7f, 1f, PFix, "curse");
+            // Nahkampf-Treffer der Gegner (EnemyBrain.PlayMeleeHitSfx, zusätzlich global max. 3 je 0,1 s)
+            yield return new Sfx(SfxId.EnemyClaw, 0.36f, 0.04f, PWide, "enemy_claw");
+            yield return new Sfx(SfxId.EnemySnap, 0.3f, 0.04f, PWide, "enemy_snap");
+            yield return new Sfx(SfxId.EnemyChop, 0.42f, 0.05f, P, "enemy_chop");
         }
 
         private static void AssignGameAudio(GameAudio ga)

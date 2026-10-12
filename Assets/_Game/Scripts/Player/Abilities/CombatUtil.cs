@@ -99,5 +99,43 @@ namespace ElementalBuddies
             if (lifetime > 0f) Object.Destroy(fx, lifetime);
             return fx;
         }
+
+        // Effekt gleichmäßig um factor vergrößern. Transform-Skalierung (Partikel-Skalierung "Hierarchy") streckt Form,
+        // Emitter-Abstände, Partikelgröße und auch die Startgeschwindigkeit/Geschwindigkeit über Lebenszeit (in Unity
+        // auch bei Simulation im Weltraum). Bei Weltraum-Simulation bleiben aber Schwerkraft, Tempo-Grenze und der
+        // größenabhängige Luftwiderstand absolut - die gleicht ScaleParticleTravel aus, sonst wachsen Flugweite/Höhe
+        // nicht linear mit (Staubring bliebe gleich groß, Brocken flögen zu hoch). Lichter bekommen mehr Reichweite.
+        public static void ScaleFx(GameObject fx, Vector3 baseScale, float factor, bool scaleTravel = true)
+        {
+            if (fx == null || factor <= 0f || Mathf.Approximately(factor, 1f)) return;
+            fx.transform.localScale = baseScale * factor;
+            foreach (var light in fx.GetComponentsInChildren<Light>(true)) light.range *= factor;
+            if (!scaleTravel) return;
+            foreach (var ps in fx.GetComponentsInChildren<ParticleSystem>(true)) ScaleParticleTravel(ps, factor);
+        }
+
+        // Bahnen eines (per Transform skalierten) Partikelsystems mit Simulation im Weltraum maßstabsgetreu halten.
+        // Lokale Simulation skaliert komplett über den Transform. Wirkt nur auf diese Instanz.
+        public static void ScaleParticleTravel(ParticleSystem ps, float factor)
+        {
+            if (ps == null) return;
+            var main = ps.main;
+            if (main.simulationSpace != ParticleSystemSimulationSpace.World) return;
+            main.gravityModifierMultiplier *= factor;
+
+            var limit = ps.limitVelocityOverLifetime;
+            if (limit.enabled)
+            {
+                if (limit.separateAxes)
+                {
+                    limit.limitXMultiplier *= factor;
+                    limit.limitYMultiplier *= factor;
+                    limit.limitZMultiplier *= factor;
+                }
+                else limit.limitMultiplier *= factor;
+                // Widerstand wächst mit der (mitskalierten) Partikelgröße → sonst bremst er größere Effekte überproportional
+                if (limit.multiplyDragByParticleSize) limit.dragMultiplier /= factor;
+            }
+        }
     }
 }

@@ -31,10 +31,12 @@ MonoBehaviour:
   BuddyDamageMultiplier: 0.6
   AttackRange: 0
   ProjectilePrefab: {fileID: 0}
-  AttackInterval: 1.5
+  AttackInterval: 1.6
   ProjectileSpeed: 14
-  AttackWindup: 0.35
+  AttackWindup: 0.55
   ProjectileSpawnHeight: 1.3
+  MeleeHitSound: 1
+  MeleeHitSfx: 60
   IsBoss: 0
   DisplayName: Skelett-Ritter
   ControlResistance: 0

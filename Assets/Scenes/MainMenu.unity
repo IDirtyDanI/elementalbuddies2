@@ -25240,6 +25240,24 @@ MonoBehaviour:
     Volume: 0.7
     Pitch: {x: 1, y: 1}
     MinInterval: 1
+  - Id: 58
+    Clips:
+    - {fileID: 8300000, guid: 32edca887011d4dd184bc85105bd4b41, type: 3}
+    Volume: 0.36
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.04
+  - Id: 59
+    Clips:
+    - {fileID: 8300000, guid: 031073572b0214ad1a41f3c504ffe5e5, type: 3}
+    Volume: 0.3
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.04
+  - Id: 60
+    Clips:
+    - {fileID: 8300000, guid: 0978f931b3ea349f587b61489af8a38c, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
   MusicClip: {fileID: 0}
   MusicVolume: 0.25
   MusicFadeIn: 2.5

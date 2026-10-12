@@ -31,10 +31,12 @@ MonoBehaviour:
   BuddyDamageMultiplier: 1
   AttackRange: 0
   ProjectilePrefab: {fileID: 0}
-  AttackInterval: 1.5
+  AttackInterval: 1
   ProjectileSpeed: 14
   AttackWindup: 0.35
   ProjectileSpawnHeight: 1.3
+  MeleeHitSound: 1
+  MeleeHitSfx: 58
   IsBoss: 0
   DisplayName: "Skelett-L\xE4ufer"
   ControlResistance: 0

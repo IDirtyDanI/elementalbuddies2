@@ -31,6 +31,24 @@ namespace ElementalBuddies
         // Zusätzlicher Skalierungs-Faktor von außen (z. B. Entwicklungs-Pop durch BuddyEvolution)
         public float ScaleMultiplier { get; set; } = 1f;
 
+        // Ausrichtung von außen (BuddyAim): Gier-Versatz in Grad um die Hochachse; Rotation = Ausrichtung × eigene Bewegung.
+        // Solange Aiming gesetzt ist, wird das Drehen (Spin) ausgeblendet, damit die Vorderseite zum Ziel zeigt.
+        public float AimYaw { get; set; }
+        public bool Aiming { get; set; }
+        [Tooltip("Tempo, mit dem der Spin beim Zielen zurück auf die Vorderseite dreht (Grad pro Sekunde).")]
+        public float AimSpinReturnSpeed = 360f;
+        private float _aimBlend; // 0 = freier Spin, 1 = Spin aus
+
+        // Ausgangs-Rotation (lokal) = Ruhe-Blickrichtung
+        public Quaternion BaseLocalRotation
+        {
+            get
+            {
+                CaptureBaseline();
+                return _baseRot;
+            }
+        }
+
         private ElementalBuddy _owner;
         private bool _baselineSet;
         private Vector3 _basePos;
@@ -52,6 +70,8 @@ namespace ElementalBuddies
             if (_owner == null) _owner = GetComponentInParent<ElementalBuddy>();
             if (_owner != null) _owner.OnCast += HandleCast;
             _punchTime = -1f;
+            _aimBlend = 0f;
+            Aiming = false;
         }
 
         void OnDisable()
@@ -87,9 +107,12 @@ namespace ElementalBuddies
 
             // Drehen / Pendeln
             float yaw;
+            _aimBlend = Mathf.MoveTowards(_aimBlend, Aiming ? 1f : 0f, Time.deltaTime * 2f);
             if (Motion == IdleMotion.Spin)
             {
-                _yaw = (_yaw + SpinSpeed * Time.deltaTime) % 360f;
+                // Beim Zielen anhalten und zur Vorderseite zurückdrehen; danach sanft wieder anlaufen
+                _yaw = (_yaw + SpinSpeed * (1f - _aimBlend) * Time.deltaTime) % 360f;
+                if (_aimBlend > 0f) _yaw = Mathf.MoveTowardsAngle(_yaw, 0f, AimSpinReturnSpeed * _aimBlend * Time.deltaTime) % 360f;
                 yaw = _yaw;
             }
             else
@@ -126,7 +149,7 @@ namespace ElementalBuddies
             }
 
             transform.localPosition = pos;
-            transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * _baseRot;
+            transform.localRotation = Quaternion.Euler(0f, AimYaw + yaw, 0f) * _baseRot;
             transform.localScale = scale * ScaleMultiplier;
         }
     }

@@ -47,6 +47,7 @@ namespace ElementalBuddies
                     _vfx = Instantiate(prefab, transform);
                     _vfx.transform.position = BodyCenter();
                     _vfx.transform.localRotation = Quaternion.identity;
+                    BodyFootprint.FitStatusVfx(_vfx, gameObject); // große Gegner (Ramme): VFX mitwachsen lassen
                     _vfxSystems = _vfx.GetComponentsInChildren<ParticleSystem>();
                 }
                 foreach (var ps in _vfxSystems) if (ps != null && !ps.isEmitting) ps.Play(false);

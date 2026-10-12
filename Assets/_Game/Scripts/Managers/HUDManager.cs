@@ -65,7 +65,16 @@ namespace ElementalBuddies
                         if (WaveManager.Instance != null) WaveManager.Instance.RequestStartWave();
                     });
                     _waveButtonLabel = StartWaveButton.GetComponentInChildren<TextMeshProUGUI>(true);
-                    if (_waveButtonLabel != null) _waveButtonDefault = _waveButtonLabel.text;
+                    if (_waveButtonLabel != null)
+                    {
+                        _waveButtonDefault = _waveButtonLabel.text;
+                        // Lange Beschriftungen („Warte auf Mitspieler (1/3)“, „Welle starten +14“) bleiben im Knopf
+                        _waveButtonLabel.textWrappingMode = TextWrappingModes.NoWrap;
+                        _waveButtonLabel.fontSizeMax = _waveButtonLabel.fontSize;
+                        _waveButtonLabel.fontSizeMin = Mathf.Round(_waveButtonLabel.fontSize * 0.6f);
+                        _waveButtonLabel.enableAutoSizing = true;
+                        if (_waveButtonLabel.margin == Vector4.zero) _waveButtonLabel.margin = new Vector4(24f, 0f, 24f, 0f);
+                    }
                 }
                 else
                 {
@@ -242,14 +251,71 @@ namespace ElementalBuddies
             if (WaveManager.Instance == null) return;
             if (WaveText != null)
             {
-                // Schwierigkeit dezent als zweite Zeile unter der Wellennummer (kleiner, halbtransparent; passt in die 200er-Box)
+                // Schwierigkeit dezent in derselben Zeile hinter der Wellennummer (kleiner, halbtransparent).
+                // Früher zweite Zeile darunter – die ragte unten aus der Top-Bar (Bekannte-Probleme #158).
                 var diff = WaveManager.Instance.Difficulty;
                 string wave = $"Welle {WaveManager.Instance.CurrentWaveIndex + 1}";
                 WaveText.text = diff != null
-                    ? $"<line-height=80%>{wave}\n<size=50%><alpha=#B0>{diff.DisplayName}</line-height>"
+                    ? $"{wave} <size=60%><alpha=#B0>· {diff.DisplayName}</size>"
                     : wave;
+                FitWaveText();
             }
             UpdateWaveButton();
+        }
+
+        // ---------------- Wellen-Anzeige in der Top-Bar ----------------
+
+        private bool _waveLayoutInit;
+        private float _waveBaseWidth, _waveBaseFont, _waveIconGap;
+        private RectTransform _waveIcon;
+
+        // Wellen-Text einzeilig in der Top-Bar halten: Box wächst nach links (Symbol rückt mit), bis höchstens
+        // WaveTextMaxWidth; reicht das nicht, verkleinert TMP-Auto-Size die Schrift. Nichts ragt aus der Leiste.
+        [Tooltip("Größte Breite des Wellen-Textes in der Top-Bar (Canvas-Einheiten), danach wird die Schrift kleiner.")]
+        public float WaveTextMaxWidth = 380f;
+        [Tooltip("Mindestabstand des Wellen-Textes zum rechten Ende der Top-Bar (Holzrahmen), Canvas-Einheiten.")]
+        public float WaveTextRightInset = 40f;
+
+        private void FitWaveText()
+        {
+            var rt = WaveText.rectTransform;
+            if (!_waveLayoutInit)
+            {
+                _waveLayoutInit = true;
+                _waveBaseWidth = rt.sizeDelta.x;
+                _waveBaseFont = WaveText.fontSize;
+                WaveText.textWrappingMode = TextWrappingModes.NoWrap;
+                WaveText.overflowMode = TextOverflowModes.Ellipsis;
+                WaveText.fontSizeMax = _waveBaseFont;
+                WaveText.fontSizeMin = Mathf.Round(_waveBaseFont * 0.6f);
+                // Symbol links neben dem Text (Geschwister „WaveIcon“ mit gleichem Anker)
+                var parent = rt.parent;
+                var icon = parent != null ? parent.Find("WaveIcon") as RectTransform : null;
+                if (icon != null && icon.anchorMin == rt.anchorMin && icon.anchorMax == rt.anchorMax)
+                {
+                    _waveIcon = icon;
+                    float textLeft = rt.anchoredPosition.x - rt.pivot.x * rt.sizeDelta.x;
+                    float iconRight = icon.anchoredPosition.x + (1f - icon.pivot.x) * icon.sizeDelta.x;
+                    _waveIconGap = textLeft - iconRight;
+                }
+                // Text endet jetzt bündig mit der Box → etwas Luft zum Holzrahmen lassen
+                if (rt.anchorMin.x >= 1f && rt.pivot.x >= 1f && rt.anchoredPosition.x > -WaveTextRightInset)
+                    rt.anchoredPosition = new Vector2(-WaveTextRightInset, rt.anchoredPosition.y);
+            }
+
+            WaveText.enableAutoSizing = false;
+            WaveText.fontSize = _waveBaseFont;
+            float pref = WaveText.GetPreferredValues(WaveText.text, Mathf.Infinity, Mathf.Infinity).x + 6f;
+            float width = Mathf.Clamp(pref, _waveBaseWidth, Mathf.Max(_waveBaseWidth, WaveTextMaxWidth));
+            WaveText.enableAutoSizing = pref > width; // nur wenn die Maximalbreite nicht reicht
+            rt.sizeDelta = new Vector2(width, rt.sizeDelta.y);
+
+            if (_waveIcon != null)
+            {
+                float textLeft = rt.anchoredPosition.x - rt.pivot.x * width;
+                float x = textLeft - _waveIconGap - (1f - _waveIcon.pivot.x) * _waveIcon.sizeDelta.x;
+                _waveIcon.anchoredPosition = new Vector2(x, _waveIcon.anchoredPosition.y);
+            }
         }
 
         // Knopf zwischen den Wellen: Solo "Welle starten", Koop "Bereit (1/3)" bzw. Wartegrund

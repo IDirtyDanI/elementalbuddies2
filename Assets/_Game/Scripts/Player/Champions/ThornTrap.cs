@@ -91,7 +91,11 @@ namespace ElementalBuddies
             }
 
             if (ArmedIndicator != null) ArmedIndicator.SetActive(false);
-            if (_spell.SnapFxPrefab != null) CombatUtil.SpawnFx(_spell.SnapFxPrefab, c, Quaternion.identity, 2f);
+            if (_spell.SnapFxPrefab != null)
+            {
+                var snapFx = CombatUtil.SpawnFx(_spell.SnapFxPrefab, c, Quaternion.identity, 2f);
+                CombatUtil.ScaleFx(snapFx, _spell.SnapFxPrefab.transform.localScale, _spell.EffectScaleFor(_spell.TriggerRadius), _spell.ScaleParticleTravel);
+            }
             GameAudio.Play(SfxId.StoneWall, c);
         }
     }

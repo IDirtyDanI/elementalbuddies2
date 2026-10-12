@@ -212,7 +212,9 @@ MonoBehaviour:
     Cooldown: 6
     CastEffectPrefab: {fileID: 1356342072438297140, guid: 423d320dc682b40869f3426fb5709dfa, type: 3}
     EffectLifetime: 3
-    ScaleEffectBySize: 0
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 7
+    ScaleParticleTravel: 1
     Range: 7
     ConeAngle: 60
     Damage: 40
@@ -224,7 +226,9 @@ MonoBehaviour:
     Cooldown: 10
     CastEffectPrefab: {fileID: 3771474662947884753, guid: c02a290f0d01640608733aabe636d97b, type: 3}
     EffectLifetime: 3
-    ScaleEffectBySize: 0
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 6
+    ScaleParticleTravel: 1
     Radius: 6
     Damage: 20
     FreezeDuration: 2.5
@@ -235,6 +239,8 @@ MonoBehaviour:
     CastEffectPrefab: {fileID: 0}
     EffectLifetime: 3
     ScaleEffectBySize: 0
+    EffectAuthoredSize: 1
+    ScaleParticleTravel: 1
     WallPrefab: {fileID: 3783064027663644335, guid: 17db8f5d19f584c018be6fdd6251bf58, type: 3}
     WallPrefabIsUnitSize: 0
     Length: 6
@@ -249,7 +255,9 @@ MonoBehaviour:
     Cooldown: 15
     CastEffectPrefab: {fileID: 5303329118524933150, guid: 7862d9904f5224fd0bfc5b85d9c4d895, type: 3}
     EffectLifetime: 3
-    ScaleEffectBySize: 0
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 6
+    ScaleParticleTravel: 1
     Radius: 6
     PlayerHeal: 25
     BuddyHeal: 25
@@ -315,14 +323,16 @@ MonoBehaviour:
   BlockReleaseCooldown: 0.3
   BlockSparkPrefab: {fileID: 830645702673277360, guid: 2e6732ec19dfb4d1085cfcbc64f14e39, type: 3}
   BlockGlowPrefab: {fileID: 769073494061516394, guid: 0968a4a59a9ff490fb262d5ce586ea48, type: 3}
-  BlockSparkInterval: 0.25
+  BlockSparkInterval: 0.05
   ShieldOffset: {x: 0, y: 1.1, z: 0.6}
   FlameWhirl:
     ManaCost: 35
     Cooldown: 7
     CastEffectPrefab: {fileID: 201213760875782486, guid: 39a94a5f1b3564919825492984c42f8e, type: 3}
     EffectLifetime: 2.5
-    ScaleEffectBySize: 0
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 3.5
+    ScaleParticleTravel: 1
     Radius: 3.5
     Damage: 45
     BurnDps: 10
@@ -336,7 +346,9 @@ MonoBehaviour:
     Cooldown: 10
     CastEffectPrefab: {fileID: 208262409982767435, guid: 71e74342a40a84e409ea15b5054afe5d, type: 3}
     EffectLifetime: 2.5
-    ScaleEffectBySize: 0
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 7
+    ScaleParticleTravel: 1
     Range: 7
     ConeAngle: 70
     Damage: 30
@@ -347,7 +359,9 @@ MonoBehaviour:
     Cooldown: 11
     CastEffectPrefab: {fileID: 4709923967430105243, guid: 6883ba2b59ee14c09b05ae02b0e5da2e, type: 3}
     EffectLifetime: 2.5
-    ScaleEffectBySize: 0
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 4
+    ScaleParticleTravel: 1
     LeapDistance: 3.5
     LeapDuration: 0.35
     LeapHeight: 1.2
@@ -361,7 +375,9 @@ MonoBehaviour:
     Cooldown: 16
     CastEffectPrefab: {fileID: 6175794979189866812, guid: ebb98b5121e62403aae2dcc3fa920e6e, type: 3}
     EffectLifetime: 2.5
-    ScaleEffectBySize: 0
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 7
+    ScaleParticleTravel: 1
     Radius: 7
     TauntDuration: 4
     PlayerHeal: 30
@@ -382,7 +398,7 @@ MonoBehaviour:
     Clip: {fileID: 8300000, guid: 4fc99f3ef6107457a89ed5af4ee0c820, type: 3}
     Volume: 0.6
     Pitch: {x: 0.9, y: 1.05}
-    MinInterval: 0.2
+    MinInterval: 0.05
   BlockBreakSfx:
     Clip: {fileID: 8300000, guid: 48302ff98473645ac8d1fd89f8940dcb, type: 3}
     Volume: 0.6
@@ -442,6 +458,8 @@ MonoBehaviour:
     CastEffectPrefab: {fileID: 719169916921872346, guid: 81620fb5a3c434c5c9eedfd59ad08709, type: 3}
     EffectLifetime: 2.5
     ScaleEffectBySize: 1
+    EffectAuthoredSize: 1
+    ScaleParticleTravel: 0
     MaxCastRange: 16
     Radius: 3.5
     RainDuration: 1.5
@@ -459,6 +477,8 @@ MonoBehaviour:
     CastEffectPrefab: {fileID: 1434809752132362422, guid: 2d8fd16b33d984abbaa1b9df812328a9, type: 3}
     EffectLifetime: 1.5
     ScaleEffectBySize: 0
+    EffectAuthoredSize: 1
+    ScaleParticleTravel: 1
     Damage: 35
     FreezeDuration: 2
     Speed: 30
@@ -470,7 +490,9 @@ MonoBehaviour:
     Cooldown: 12
     CastEffectPrefab: {fileID: 0}
     EffectLifetime: 3
-    ScaleEffectBySize: 0
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 2.2
+    ScaleParticleTravel: 1
     MaxCastRange: 10
     TriggerRadius: 2.2
     ArmTime: 0.4
@@ -487,6 +509,8 @@ MonoBehaviour:
     CastEffectPrefab: {fileID: 0}
     EffectLifetime: 3
     ScaleEffectBySize: 0
+    EffectAuthoredSize: 1
+    ScaleParticleTravel: 1
     Length: 25
     Width: 1.2
     Damage: 55

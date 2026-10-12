@@ -29,6 +29,10 @@ namespace ElementalBuddies
         public float SpriteAngleOffset = -90f;
         [Tooltip("Ziel gilt als sichtbar, wenn es mindestens so weit (Viewport 0..1) innerhalb des Bildschirms liegt.")]
         public float OnScreenMargin = 0.03f;
+        [Tooltip("HUD-Leiste oben (TopBar): Pfeile bleiben darunter. Leer → Objekt \"TopBar\" im Canvas.")]
+        public RectTransform TopHud;
+        [Tooltip("Abstand der Pfeilmitte zur Unterkante der TopBar, Canvas-Einheiten.")]
+        public float TopHudPadding = 46f;
 
         [Header("Ziele")]
         [Tooltip("Wie lange nach dem Öffnen ein Portal angezeigt wird (s).")]
@@ -37,6 +41,7 @@ namespace ElementalBuddies
         public bool TintWithElement = true;
 
         private Camera _cam;
+        private static readonly Vector3[] _corners = new Vector3[4];
         private Canvas _canvas;
         private RectTransform _area;
         private Transform _player;
@@ -48,6 +53,16 @@ namespace ElementalBuddies
             _canvas = GetComponentInParent<Canvas>();
             if (Arrow != null) _area = Arrow.parent as RectTransform;
             if (ArrowImage == null && Arrow != null) ArrowImage = Arrow.GetComponent<Image>();
+            if (TopHud == null && _canvas != null)
+            {
+                var t = _canvas.transform.Find("TopBar");
+                if (t != null) TopHud = t as RectTransform;
+            }
+            // Unter dem Meldungs-Banner zeichnen: Pfeil + Distanz liegen in derselben Höhe und schnitten sonst in den
+            // Text (das Banner ist nur kurz sichtbar und verdeckt den Pfeil dann sauber)
+            var toast = ToastUI.Instance != null ? ToastUI.Instance : FindFirstObjectByType<ToastUI>(FindObjectsInactive.Include);
+            if (toast != null && toast.transform.parent == transform.parent && toast.transform.GetSiblingIndex() < transform.GetSiblingIndex())
+                transform.SetSiblingIndex(toast.transform.GetSiblingIndex());
         }
 
         void Start()
@@ -169,8 +184,17 @@ namespace ElementalBuddies
             float halfW = Mathf.Max(1f, r.width * 0.5f - EdgePadding);
             float halfH = Mathf.Max(1f, r.height * 0.5f - EdgePadding);
             Vector2 areaCenter = r.center;
+            // Oben nur bis unter die TopBar – sonst lagen Pfeil und „74 m“ auf HP-/Mana-Leiste bzw. der Wellen-Anzeige
+            // und ragten unten aus der Leiste (Bekannte-Probleme #158)
+            float halfUp = halfH;
+            if (TopHud != null && TopHud.gameObject.activeInHierarchy)
+            {
+                TopHud.GetWorldCorners(_corners); // 0 = unten links
+                float barBottom = _area.InverseTransformPoint(_corners[0]).y;
+                halfUp = Mathf.Clamp(barBottom - TopHudPadding - areaCenter.y, 1f, halfH);
+            }
             float tx = Mathf.Abs(localDir.x) > 1e-5f ? halfW / Mathf.Abs(localDir.x) : float.PositiveInfinity;
-            float ty = Mathf.Abs(localDir.y) > 1e-5f ? halfH / Mathf.Abs(localDir.y) : float.PositiveInfinity;
+            float ty = Mathf.Abs(localDir.y) > 1e-5f ? (localDir.y > 0f ? halfUp : halfH) / Mathf.Abs(localDir.y) : float.PositiveInfinity;
             Vector2 pos = areaCenter + localDir * Mathf.Min(tx, ty);
 
             SetVisible(ch, true);

@@ -211,6 +211,7 @@ namespace ElementalBuddies.EditorTools
             c.PreviewHint = "Marschiert stur zum Nexus – aufhalten!";
             c.VisualScale = 1f;
             c.IsBoss = false;
+            c.ControlResistance = 0.4f; // zwischen Normalgegnern (0) und Bossen (0,6): Stun/Frost/Slow ×0,6
             c.ProjectilePrefab = null;
             EditorUtility.SetDirty(c);
             return c;
@@ -267,7 +268,10 @@ namespace ElementalBuddies.EditorTools
                 box.size = rb.size;
 
                 var agent = root.GetComponent<NavMeshAgent>();
-                agent.radius = 0.5f;
+                // Eigener Agententyp „Ramme“ (Radius 1,3 m, RamNavMesh) – mit Humanoid (0,5) schnitt der 2,54 m breite
+                // Rumpf an Ecken durch Mauern und Zäune (#134). radius ist lokal und wird ×1,7 skaliert → ~1,3 m.
+                agent.agentTypeID = RamNavMesh.EnsureAgentType();
+                agent.radius = RamNavMesh.AgentRadius / EliteInfo.Scale(EliteAffix.Ram);
                 agent.height = 2f;
                 agent.baseOffset = PivotHeight;
                 agent.avoidancePriority = 30;

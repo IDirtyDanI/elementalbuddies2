@@ -8,13 +8,49 @@ namespace ElementalBuddies
     // the visual child rises out of the ground, stays, then sinks away and the wall is destroyed.
     public class StoneWall : MonoBehaviour
     {
+        // Eigener Layer „SpellWall“: Gegner-Projektile, Sichtlinie der Fernkämpfer und Boss-Strahl/-Kegel prüfen
+        // nur gegen diesen Layer. Kollisionsmatrix bleibt voll (Spieler/Gegner laufen weiter dagegen).
+        public const string LayerName = "SpellWall";
+        private static int _layer = -2;
+        public static int Layer
+        {
+            get
+            {
+                if (_layer == -2) _layer = LayerMask.NameToLayer(LayerName);
+                return _layer;
+            }
+        }
+        // Maske für Wand-Abfragen (0, falls der Layer fehlt)
+        public static int BlockMask => Layer >= 0 ? 1 << Layer : 0;
+
+        // Anzahl blockierender Wände (Kollider aktiv) – ohne Wand sparen sich Gegner die Sichtlinien-Abfragen
+        public static int ActiveCount { get; private set; }
+        public static bool AnyActive => ActiveCount > 0 && BlockMask != 0;
+
+        // Liegt eine aktive Wand zwischen from und to?
+        public static bool Blocks(Vector3 from, Vector3 to)
+        {
+            if (!AnyActive) return false;
+            return Physics.Linecast(from, to, BlockMask, QueryTriggerInteraction.Ignore);
+        }
+
+        // Erster Wandtreffer auf der Strecke from→to (für Strahl-Kürzung)
+        public static bool Blocks(Vector3 from, Vector3 to, out RaycastHit hit)
+        {
+            hit = default(RaycastHit);
+            if (!AnyActive) return false;
+            return Physics.Linecast(from, to, out hit, BlockMask, QueryTriggerInteraction.Ignore);
+        }
+
         private Transform _visual;
         private float _height;
+        private bool _counted;
 
         public static StoneWall Spawn(StoneWallSpell cfg, Vector3 position, Quaternion rotation)
         {
             var root = new GameObject("StoneWall");
             root.transform.SetPositionAndRotation(position, rotation);
+            if (Layer >= 0) root.layer = Layer;
 
             Vector3 size = new Vector3(cfg.Length, cfg.Height, cfg.Thickness);
             Vector3 center = new Vector3(0f, cfg.Height * 0.5f, 0f);
@@ -39,6 +75,13 @@ namespace ElementalBuddies
                 visual.localPosition = Vector3.zero;
                 visual.localRotation = Quaternion.identity;
                 if (cfg.WallPrefabIsUnitSize) visual.localScale = Vector3.Scale(cfg.WallPrefab.transform.localScale, size);
+                else if (cfg.WallPrefabLength > 0.01f && !Mathf.Approximately(cfg.Length, cfg.WallPrefabLength))
+                {
+                    // Mauerlänge-Karte: Optik entlang der Wand (lokal X) mitstrecken, damit sie zum Kollider passt
+                    Vector3 s = visual.localScale;
+                    s.x *= cfg.Length / cfg.WallPrefabLength;
+                    visual.localScale = s;
+                }
                 // The root collider does the blocking; prefab colliders would only duplicate it
                 foreach (var c in visual.GetComponentsInChildren<Collider>()) c.enabled = false;
             }
@@ -63,6 +106,8 @@ namespace ElementalBuddies
             }
 
             var wall = root.AddComponent<StoneWall>();
+            wall._counted = true;
+            ActiveCount++;
             wall._visual = visual;
             wall._height = cfg.Height;
             wall.StartCoroutine(wall.Run(cfg.RiseTime, cfg.Lifetime, cfg.SinkTime));
@@ -85,10 +130,28 @@ namespace ElementalBuddies
             if (box != null) box.enabled = false;
             var obstacle = GetComponent<NavMeshObstacle>();
             if (obstacle != null) obstacle.enabled = false;
+            Uncount();
 
             // Sink (ease in)
             yield return Animate(up, down, sinkTime, t => t * t);
             Destroy(gameObject);
+        }
+
+        void OnDestroy() => Uncount();
+
+        private void Uncount()
+        {
+            if (!_counted) return;
+            _counted = false;
+            ActiveCount = Mathf.Max(0, ActiveCount - 1);
+        }
+
+        // Domain-Reload aus (Enter Play Mode Options): Zähler beim Spielstart zurücksetzen
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            ActiveCount = 0;
+            _layer = -2;
         }
 
         private IEnumerator Animate(Vector3 from, Vector3 to, float duration, System.Func<float, float> ease)

@@ -163,9 +163,9 @@ namespace ElementalBuddies
                 }
             }
 
-            // Wall Check
+            // Wall Check (inkl. Steinwall-Layer: nicht durch die eigene Wand blinzeln)
             Vector3 targetPos = transform.position + blinkDir * distance;
-            if (Physics.Raycast(transform.position + Vector3.up, blinkDir, out RaycastHit hit, distance, ObstacleLayer))
+            if (Physics.Raycast(transform.position + Vector3.up, blinkDir, out RaycastHit hit, distance, ObstacleLayer | global::ElementalBuddies.StoneWall.BlockMask))
             {
                 targetPos = hit.point - blinkDir * 0.5f; // Stop slightly before wall
                 targetPos.y = transform.position.y;

@@ -62,4 +62,67 @@ namespace ElementalBuddies
             }
         }
     }
+
+    // Körpergröße von Gegnern aus dem Collider (Root-Raum, ohne Transform-Skalierung). Status-VFX sind für
+    // Normalgegner (~1 m breit, 2 m hoch) gebaut; große Gegner (Belagerungsramme, 2,7 m lang im Root-Raum)
+    // bekommen sie passend vergrößert. Normalgegner und Bosse liegen unter der Referenz → exakt unverändert.
+    public static class BodyFootprint
+    {
+        // Größte horizontale Halbausdehnung eines Normalgegners im Root-Raum (Grabspinne: Kapsel 1,5 m lang)
+        private const float RefLocalHalfExtent = 0.75f;
+
+        // Größte horizontale Halbausdehnung des Colliders im Raum seines Transforms (ohne lossyScale)
+        public static float LocalHalfExtent(Collider c)
+        {
+            switch (c)
+            {
+                case CapsuleCollider cap:
+                    return cap.direction == 1 ? cap.radius : Mathf.Max(cap.radius, cap.height * 0.5f);
+                case BoxCollider box:
+                    return Mathf.Max(box.size.x, box.size.z) * 0.5f;
+                case SphereCollider sph:
+                    return sph.radius;
+                default:
+                    return c.bounds.extents.x / Mathf.Max(0.01f, Mathf.Abs(c.transform.lossyScale.x));
+            }
+        }
+
+        // Zusatz-Faktor für Status-VFX (nur Gegner): ≥ 1, für alle Normalgegner genau 1
+        public static float StatusVfxFactor(GameObject host)
+        {
+            if (host == null || host.GetComponent<EnemyBrain>() == null) return 1f;
+            var col = host.GetComponent<Collider>();
+            if (col == null) return 1f;
+            return Mathf.Max(1f, LocalHalfExtent(col) / RefLocalHalfExtent);
+        }
+
+        // Frisch instanziierte Status-VFX (Kind von host) an große Gegner anpassen. Hierarchy-Systeme erben die
+        // Root-Skalierung (Ramme ×1,7) schon und bekommen nur den Faktor; Local-Systeme ignorieren Eltern-Skalierung
+        // und bekommen Faktor × Root-Skalierung, damit alle Teile gleich groß wirken. Dichte wächst linear mit.
+        public static void FitStatusVfx(GameObject vfx, GameObject host)
+        {
+            if (vfx == null) return;
+            float k = StatusVfxFactor(host);
+            if (k <= 1f) return;
+            float hostScale = Mathf.Abs(host.transform.lossyScale.x);
+            vfx.transform.localScale *= k;
+            foreach (var ps in vfx.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                var main = ps.main;
+                if (ps.transform != vfx.transform && main.scalingMode != ParticleSystemScalingMode.Hierarchy)
+                    ps.transform.localScale *= k * hostScale;
+                main.maxParticles = Mathf.CeilToInt(main.maxParticles * k);
+                var emission = ps.emission;
+                emission.rateOverTimeMultiplier *= k;
+                for (int i = 0; i < emission.burstCount; i++)
+                {
+                    var burst = emission.GetBurst(i);
+                    if (burst.count.mode != ParticleSystemCurveMode.Constant) continue;
+                    burst.count = new ParticleSystem.MinMaxCurve(burst.count.constant * k);
+                    emission.SetBurst(i, burst);
+                }
+            }
+            foreach (var l in vfx.GetComponentsInChildren<Light>(true)) l.range *= k * hostScale;
+        }
+    }
 }

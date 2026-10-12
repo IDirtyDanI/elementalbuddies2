@@ -97,7 +97,8 @@ namespace ElementalBuddies
             get
             {
                 if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver) return false;
-                return !_brain.IsStunned && !_brain.IsFrozen && !_brain.IsCasting && (_agent == null || _agent.isOnNavMesh);
+                // Kein Zauber mitten im Ausholen des Grundangriffs (Nahkampf-Hieb des Knochenfürsten); LockForCast bricht ihn sonst ab
+                return !_brain.IsStunned && !_brain.IsFrozen && !_brain.IsCasting && !_brain.IsMeleeSwinging && (_agent == null || _agent.isOnNavMesh);
             }
         }
 
@@ -268,17 +269,26 @@ namespace ElementalBuddies
             return desired;
         }
 
-        // Wände (ObstacleLayer) kürzen den Strahl – wie beim Lichtpfeil des Bogenschützen
+        // Wände (ObstacleLayer) kürzen den Strahl – wie beim Lichtpfeil des Bogenschützen.
+        // Steinwall (eigener Layer) kürzt immer, geprüft in fester Höhe über dem Boden (Pivot schwebt).
         private float BeamLength(BossAbility a, Vector3 me, Vector3 dir)
         {
             float length = a.Length;
-            if (a.ObstacleLayer.value == 0) return length;
-            Vector3 from = me + Vector3.up * BeamHeight;
-            foreach (var h in Physics.RaycastAll(from, dir, a.Length, a.ObstacleLayer, QueryTriggerInteraction.Ignore))
+            if (a.ObstacleLayer.value != 0)
             {
-                if (h.collider.GetComponentInParent<EnemyBrain>() != null || h.collider.GetComponentInParent<PlayerStats>() != null
-                    || h.collider.GetComponentInParent<ElementalBuddy>() != null) continue;
-                length = Mathf.Min(length, Mathf.Max(1f, h.distance));
+                Vector3 from = me + Vector3.up * BeamHeight;
+                foreach (var h in Physics.RaycastAll(from, dir, a.Length, a.ObstacleLayer, QueryTriggerInteraction.Ignore))
+                {
+                    if (h.collider.GetComponentInParent<EnemyBrain>() != null || h.collider.GetComponentInParent<PlayerStats>() != null
+                        || h.collider.GetComponentInParent<ElementalBuddy>() != null) continue;
+                    length = Mathf.Min(length, Mathf.Max(1f, h.distance));
+                }
+            }
+            if (StoneWall.AnyActive)
+            {
+                Vector3 chest = BossCombat.WallCheckPoint(me);
+                if (StoneWall.Blocks(chest, chest + dir * length, out RaycastHit wall))
+                    length = Mathf.Min(length, Mathf.Max(1f, wall.distance));
             }
             return length;
         }
@@ -313,6 +323,10 @@ namespace ElementalBuddies
             var telegraph = _telegraph;
             _telegraph = null;
             if (a.Kind == BossAbilityKind.Slam) shape.Origin = me; // tatsächlicher Landepunkt
+            // Strahl: Länge erst beim Auslösen festlegen – ein während des Ausholens errichteter Steinwall kürzt ihn
+            // (Wirkung und Optik, auch auf den Clients)
+            if (a.Kind == BossAbilityKind.Beam)
+                shape = AoeShape.Line(shape.Origin, shape.Forward, BeamLength(a, shape.Origin, shape.Forward), shape.Width);
 
             // Optik lokal und auf den Clients
             var fx = new BossFxData { Shape = shape, Me = me, Dir = dir, Theme = ThemeColor, ScaleY = transform.lossyScale.y };

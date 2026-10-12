@@ -800,7 +800,8 @@ namespace ElementalBuddies.EditorTools
                 EditorUtility.SetDirty(surface);
                 AssetDatabase.SaveAssets();
             }
-            return "NavMesh neu gebacken → " + AssetDatabase.GetAssetPath(surface.navMeshData);
+            // Zweites NavMesh für die breite Belagerungsramme immer mitbacken (sonst veraltet es bei Umbauten)
+            return "NavMesh neu gebacken → " + AssetDatabase.GetAssetPath(surface.navMeshData) + "\n" + RamNavMesh.Bake();
         }
 
         // Weglängen Portal → Nexus (NavMesh)

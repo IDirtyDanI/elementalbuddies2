@@ -191,6 +191,9 @@ namespace ElementalBuddies
             SpawnEffect(target, Quaternion.identity, TriggerRadius);
             var go = TrapPrefab != null ? Object.Instantiate(TrapPrefab, target, Quaternion.LookRotation(ctx.AimDirection)) : new GameObject("ThornTrap");
             go.transform.position = target;
+            // Fallen-Optik wächst mit dem Radius (Händlerkarte), Bezug EffectAuthoredSize = Radius, für den die Falle gebaut ist.
+            // Vor Setup, damit ThornTrap die skalierte Größe als Grundgröße fürs Zuschnappen nimmt.
+            CombatUtil.ScaleFx(go, go.transform.localScale, EffectScaleFor(TriggerRadius), ScaleParticleTravel);
             var trap = go.GetComponent<ThornTrap>();
             if (trap == null) trap = go.AddComponent<ThornTrap>();
             trap.Setup(this, ctx.DamageMultiplier);
@@ -246,9 +249,9 @@ namespace ElementalBuddies
             Vector3 from = kit != null ? kit.MuzzlePosition : ctx.Origin + Vector3.up * 1.2f;
             Vector3 dir = ctx.AimDirection;
 
-            // Wände stoppen den Strahl
+            // Wände (inkl. Steinwall-Layer) stoppen den Strahl
             float length = Length;
-            foreach (var h in Physics.RaycastAll(from, dir, Length, ObstacleLayer, QueryTriggerInteraction.Ignore))
+            foreach (var h in Physics.RaycastAll(from, dir, Length, ObstacleLayer | StoneWall.BlockMask, QueryTriggerInteraction.Ignore))
             {
                 if (h.collider.GetComponentInParent<EnemyBrain>() != null || h.collider.GetComponentInParent<PlayerStats>() != null
                     || h.collider.GetComponentInParent<ElementalBuddy>() != null) continue;

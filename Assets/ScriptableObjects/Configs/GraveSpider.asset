@@ -33,8 +33,10 @@ MonoBehaviour:
   ProjectilePrefab: {fileID: 0}
   AttackInterval: 1
   ProjectileSpeed: 14
-  AttackWindup: 0.35
+  AttackWindup: 0.25
   ProjectileSpawnHeight: 1.3
+  MeleeHitSound: 1
+  MeleeHitSfx: 59
   IsBoss: 0
   DisplayName: Grabspinne
   ControlResistance: 0

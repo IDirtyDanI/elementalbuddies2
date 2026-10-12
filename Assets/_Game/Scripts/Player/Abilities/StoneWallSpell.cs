@@ -13,6 +13,9 @@ namespace ElementalBuddies
         [Tooltip("If true, the prefab is authored as a 1x1x1 m unit and gets scaled to Length x Height x Thickness. " +
                  "If false, it is used as-is (author it for Length x Height x Thickness).")]
         public bool WallPrefabIsUnitSize = false;
+        [Tooltip("Nur ohne Unit-Size: Länge, für die das Prefab gebaut ist. Weicht Length ab (Mauerlänge-Karte), " +
+                 "wird die Optik entlang der Wand entsprechend gestreckt.")]
+        public float WallPrefabLength = 6f;
 
         public float Length = 6f;
         public float Height = 2.5f;

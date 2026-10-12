@@ -428,7 +428,7 @@ namespace ElementalBuddies
             if (BuddySlotManager.Instance != null && !BuddySlotManager.Instance.HasFreeSlot) return "Alle Buddy-Plätze sind belegt.";
 
             // Check Overlap
-            if (Physics.CheckSphere(position, 0.45f, ObstacleLayer)) return "Der Platz ist belegt.";
+            if (Physics.CheckSphere(position, 0.45f, ObstacleLayer | StoneWall.BlockMask)) return "Der Platz ist belegt."; // inkl. Steinwall
 
             // Check Cost
             float cost = EconomyManager.Instance.GetBuildingCost(config.CostOutCombat);

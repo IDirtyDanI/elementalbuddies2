@@ -119,6 +119,7 @@ namespace ElementalBuddies
                     Icon.sprite = t.Icon;
                     Icon.gameObject.SetActive(t.Icon != null);
                 }
+                FitRibbon(t.Icon != null && Icon != null);
 
                 yield return Fade(0f, 1f);
                 float end = Time.unscaledTime + DisplayTime;
@@ -129,6 +130,72 @@ namespace ElementalBuddies
                 while (Time.unscaledTime < gapEnd) yield return null;
             }
             _routine = null;
+        }
+
+        // ---------------- Banner-Breite ----------------
+
+        [Header("Banner-Breite")]
+        [Tooltip("Abstand Text ↔ Bannerende (Schwalbenschwänze), Canvas-Einheiten.")]
+        public float TextInset = 100f;
+        [Tooltip("Mindestabstand des Banners zum Bildschirmrand (je Seite), Canvas-Einheiten.")]
+        public float ScreenMargin = 60f;
+
+        private bool _fitInit;
+        private RectTransform _ribbon, _objective;
+        private static readonly Vector3[] _corners = new Vector3[4];
+        private float _ribbonBaseWidth, _baseFont;
+
+        // Banner wächst mit dem Text (bis zur Bildschirmbreite), danach verkleinert TMP-Auto-Size die Schrift.
+        // Mit Icon rückt der Text rechts neben das Icon (beidseitig gleich, damit er mittig bleibt).
+        // Früher feste 820er-Breite ohne Umbruch: lange Meldungen (Händler „… vor der Nordmauer geöffnet!“) ragten
+        // links und rechts aus dem Banner, und der Text lag unter dem Icon (Bekannte-Probleme #158).
+        private void FitRibbon(bool hasIcon)
+        {
+            if (Text == null) return;
+            if (!_fitInit)
+            {
+                _fitInit = true;
+                _ribbon = Root != null ? Root.transform as RectTransform : Text.rectTransform.parent as RectTransform;
+                if (_ribbon != null) _ribbonBaseWidth = _ribbon.sizeDelta.x;
+                _baseFont = Text.fontSize;
+                Text.textWrappingMode = TextWrappingModes.NoWrap;
+                Text.overflowMode = TextOverflowModes.Ellipsis;
+                Text.fontSizeMax = _baseFont;
+                Text.fontSizeMin = Mathf.Round(_baseFont * 0.65f);
+                // Ziel-Panels oben rechts (Schrein/Händler) – erscheinen meist zusammen mit der Meldung
+                var obj = FindFirstObjectByType<ObjectiveUI>(FindObjectsInactive.Include);
+                if (obj != null) _objective = obj.transform as RectTransform;
+            }
+            if (_ribbon == null) return;
+
+            float inset = TextInset;
+            if (hasIcon)
+            {
+                var irt = Icon.rectTransform;
+                float iconRight = irt.anchoredPosition.x + (1f - irt.pivot.x) * irt.sizeDelta.x; // Icon links verankert
+                inset = Mathf.Max(inset, iconRight + 14f);
+            }
+
+            Text.enableAutoSizing = false;
+            Text.fontSize = _baseFont;
+            float pref = Text.GetPreferredValues(Text.text, Mathf.Infinity, Mathf.Infinity).x;
+            var parent = _ribbon.parent as RectTransform;
+            float maxW = parent != null ? Mathf.Max(_ribbonBaseWidth, parent.rect.width - 2f * ScreenMargin) : float.MaxValue;
+            if (parent != null && _objective != null)
+            {
+                // symmetrisch um die Mitte, rechts nur bis vor die Ziel-Panels (sonst überdeckt das Banner sie bei 16:10/4:3)
+                _objective.GetWorldCorners(_corners);
+                float objLeft = parent.InverseTransformPoint(_corners[0]).x;
+                float centerX = parent.InverseTransformPoint(_ribbon.position).x;
+                maxW = Mathf.Max(_ribbonBaseWidth, Mathf.Min(maxW, 2f * (objLeft - centerX - 16f)));
+            }
+            float width = Mathf.Clamp(pref + 2f * inset + 8f, _ribbonBaseWidth, maxW);
+            Text.enableAutoSizing = pref + 2f * inset + 8f > width; // nur wenn der Bildschirm nicht reicht
+            _ribbon.sizeDelta = new Vector2(width, _ribbon.sizeDelta.y);
+
+            var trt = Text.rectTransform;
+            trt.offsetMin = new Vector2(inset, trt.offsetMin.y);
+            trt.offsetMax = new Vector2(-inset, trt.offsetMax.y);
         }
 
         private IEnumerator Fade(float from, float to)

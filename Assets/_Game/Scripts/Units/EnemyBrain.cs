@@ -181,6 +181,27 @@ namespace ElementalBuddies
         private float _shotFireTime;
         private Transform _shotTarget;
 
+        // Nahkampf (2026-10-12): einzelne, angekündigte Hiebe statt Dauerschaden. Ausholen (Config.AttackWindup) → ein Treffer.
+        // AttackDamage bleibt ein DPS-Wert: Schaden pro Hieb = AttackDamage × AttackInterval (× DamageMultiplier, gegen Buddies
+        // × BuddyDamageMultiplier) → gleicher DPS wie früher, solange das Ziel in Reichweite bleibt.
+        private const float MeleeHitTolerance = 0.4f;   // beim Treffer: Reichweite + Toleranz (Ziel darf leicht zurückweichen)
+        private const float SwingCancelCooldown = 0.3f; // abgebrochener Hieb → kurze Pause bis zum nächsten
+        private const float SwingRecovery = 0.35f;      // nach dem Treffer noch so lange stehen bleiben (höchstens 0,6 × Intervall)
+        private bool _swingPending;
+        private bool _swingVsBlocker;                   // Anti-Cheese-Hieb gegen einen blockierenden Buddy (nicht das Ziel)
+        private float _swingHitTime;
+        private float _swingHoldUntil;
+        private Transform _swingTarget;
+        private Collider _swingBlocker;
+        private ElementalBuddy _swingBuddy;
+        private PlayerStats _swingPlayer;
+        private float _remoteSwingSfxTime = -1f;        // Client: Trefferton nach dem Ausholen (aus dem Angriffs-RPC)
+        // Trefferton global begrenzt (50 Schwarm-Skelette sollen nicht 50-mal gleichzeitig klappern)
+        private const int MeleeSfxPerWindow = 3;
+        private const float MeleeSfxWindow = 0.1f;
+        private static float _meleeSfxWindowStart = -1f;
+        private static int _meleeSfxCount;
+
         // Animator (optional, Parameter nur wenn vorhanden)
         private static readonly int AttackHash = Animator.StringToHash("Attack");
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
@@ -197,6 +218,11 @@ namespace ElementalBuddies
         private float _remoteAnimSpeed = 1f;
 
         private bool IsRanged => Config != null && Config.ProjectilePrefab != null;
+        // Einzelhiebe: alle Nahkämpfer außer der Belagerungsramme (die macht weiter Dauerschaden am Nexus, Takt über RamVisual)
+        private bool UsesMeleeSwings => !IsRanged && Elite != EliteAffix.Ram;
+        private float MeleeWindup => Config != null ? Mathf.Max(0f, Config.AttackWindup) : 0.35f;
+        // Server: holt gerade zu einem Nahkampf-Hieb aus (BossBrain startet dann keinen Zauber)
+        public bool IsMeleeSwinging => _swingPending;
         // Reichweite gegen Einheiten (Spieler, Buddies, Spott-Ziel)
         private float UnitAttackRange => Config != null && Config.AttackRange > 0f ? Config.AttackRange : AttackRange;
         private float NexusRange => Config != null && Config.AttackRange > 0f ? Mathf.Max(NexusAttackRange, Config.AttackRange) : NexusAttackRange;
@@ -278,6 +304,8 @@ namespace ElementalBuddies
             _shieldbearers.Clear();
             _playerSourceDepth = 0;
             _activeBosses.Clear();
+            _meleeSfxWindowStart = -1f;
+            _meleeSfxCount = 0;
         }
 
         void Awake()
@@ -391,6 +419,9 @@ namespace ElementalBuddies
         public void PlayAttackTrigger()
         {
             OnAttackVisual?.Invoke();
+            // Client: Trefferton des Nahkampf-Hiebs nach dem Ausholen nachspielen (Server spielt ihn in ResolveSwing).
+            // Kein eigenes RPC für den Treffer – die Clients kennen AttackWindup aus der Config.
+            if (IsRemote && UsesMeleeSwings && Config != null && Config.MeleeHitSound) _remoteSwingSfxTime = Time.time + MeleeWindup;
             if (_animator == null || !_hasAttackTrigger || !_animator.isActiveAndEnabled) return;
             _animator.SetTrigger(AttackHash);
         }
@@ -430,6 +461,16 @@ namespace ElementalBuddies
         {
             if (_isDead) return;
             bool frozen = IsFrozen;
+            if (_remoteSwingSfxTime >= 0f)
+            {
+                // Betäubt/eingefroren/zaubert → der Server hat den Hieb abgebrochen (kein Ton); die Animation läuft einfach aus
+                if (frozen || IsStunned || IsCasting) _remoteSwingSfxTime = -1f;
+                else if (Time.time >= _remoteSwingSfxTime)
+                {
+                    _remoteSwingSfxTime = -1f;
+                    PlayMeleeHitSfx();
+                }
+            }
             float speed = frozen || IsStunned ? 0f : (_net != null && _net.IsSpawned ? _net.MoveSpeed.Value : 0f);
             UpdateAnimator(speed);
             if (_animator == null) return;
@@ -479,6 +520,7 @@ namespace ElementalBuddies
             {
                 if (_agent.isOnNavMesh && !_agent.isStopped) _agent.isStopped = true;
                 _shotPending = false;
+                CancelSwing();
                 UpdateAnimator(0f);
                 return;
             }
@@ -486,6 +528,7 @@ namespace ElementalBuddies
             if (IsFrozen || IsStunned)
             {
                 _shotPending = false; // laufender Schuss bricht ab
+                CancelSwing();        // ebenso ein laufender Nahkampf-Hieb
                 UpdateAnimator(0f);
                 _wasFrozen = true;
                 if (_agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
@@ -502,6 +545,7 @@ namespace ElementalBuddies
             if (IsCasting)
             {
                 _shotPending = false;
+                CancelSwing();
                 _wasFrozen = true;
                 _stuckTimer = 0f;
                 _noProgressTimer = 0f;
@@ -516,6 +560,7 @@ namespace ElementalBuddies
                 if (_agent.isOnNavMesh) _agent.isStopped = true;
                 _stuckTimer = 0f;
                 _shotPending = false;
+                CancelSwing();
                 UpdateAnimator(0f);
                 return;
             }
@@ -542,7 +587,7 @@ namespace ElementalBuddies
             if (StragglerRescueTime <= 0f) return;
             bool blocked = _blockedByBuddy;
             _blockedByBuddy = false;
-            if (blocked || IsInAttackRange(GetCurrentTarget()) || (transform.position - _progressPos).sqrMagnitude > 2.25f)
+            if (blocked || InAttackPosition(GetCurrentTarget()) || (transform.position - _progressPos).sqrMagnitude > 2.25f)
             {
                 _progressPos = transform.position;
                 _noProgressTimer = 0f;
@@ -714,12 +759,13 @@ namespace ElementalBuddies
             return Vector3.Distance(a, b);
         }
 
-        private bool IsInAttackRange(Transform target)
+        // extra: zusätzliche Reichweite (Treffer-Toleranz der Nahkampf-Hiebe); gilt nicht fürs ForcedTarget
+        private bool IsInAttackRange(Transform target, float extra = 0f)
         {
             if (target == null) return false;
 
             if (IsNexus(target))
-                return Nexus.Instance.GetDistanceFrom(transform.position) <= NexusRange;
+                return Nexus.Instance.GetDistanceFrom(transform.position) <= NexusRange + extra;
 
             if (target == ForcedTarget)
             {
@@ -731,15 +777,49 @@ namespace ElementalBuddies
             // Buddies: bis zum Collider-Rand (große Buddies wie der Kristall)
             var buddy = BuddyOf(target);
             if (buddy != null)
-                return HorizontalDistance(transform.position, buddy.GetClosestPoint(transform.position)) <= UnitAttackRange;
+                return HorizontalDistance(transform.position, buddy.GetClosestPoint(transform.position)) <= UnitAttackRange + extra;
 
-            return Vector3.Distance(transform.position, target.position) < UnitAttackRange;
+            return Vector3.Distance(transform.position, target.position) < UnitAttackRange + extra;
         }
+
+        // Fernkampf: freie Schusslinie zum Ziel? Prüft nur den Steinwall-Layer (Linecast vom Abschusspunkt zum
+        // Zielpunkt wie FireShot), je Gegner 0,2 s gecacht; ohne Wand sofort frei.
+        private const float LineOfSightInterval = 0.2f;
+        private Transform _losTarget;
+        private float _losNextCheck;
+        private bool _losClear = true;
+
+        private bool HasLineOfSight(Transform target)
+        {
+            if (target == null || target == ForcedTarget || Config == null || !StoneWall.AnyActive) return true;
+            if (target == _losTarget && Time.time < _losNextCheck) return _losClear;
+            _losTarget = target;
+            _losNextCheck = Time.time + LineOfSightInterval;
+            // Gleiche Höhe wie der echte Abschuss (Projektil fliegt ungefähr gerade dorthin)
+            Vector3 from = transform.position + Vector3.up * Config.ProjectileSpawnHeight;
+            Vector3 to = IsNexus(target) ? Nexus.Instance.GetClosestPoint(from) : target.position + Vector3.up * 0.9f;
+            _losClear = !StoneWall.Blocks(from, to);
+            return _losClear;
+        }
+
+        // Fernkämpfer: in Reichweite UND freie Schusslinie
+        private bool CanShoot(Transform target) => IsInAttackRange(target) && HasLineOfSight(target);
+
+        // „Steht zu Recht still“ (Anti-Cheese/Nachzügler): Fernkämpfer hinter einer Wand zählen nicht als angreifend
+        private bool InAttackPosition(Transform target) => IsRanged ? CanShoot(target) : IsInAttackRange(target);
 
         private void HandleMovement()
         {
             Transform target = GetCurrentTarget();
             if (target == null) return;
+
+            // Nahkampf-Hieb: während Ausholen + kurzer Erholung stehen bleiben (kein Rutschen in den Treffer).
+            // Anti-Cheese-Hiebe gegen einen Blocker nicht – der Gegner steckt dort ohnehin fest.
+            if ((_swingPending && !_swingVsBlocker) || Time.time < _swingHoldUntil)
+            {
+                if (_agent.isOnNavMesh && _agent.hasPath) _agent.ResetPath();
+                return;
+            }
 
             if (target == ForcedTarget && IsInAttackRange(target))
             {
@@ -748,9 +828,10 @@ namespace ElementalBuddies
                 return;
             }
 
-            if (IsRanged && IsInAttackRange(target))
+            if (IsRanged && CanShoot(target))
             {
-                // Fernkämpfer: in Reichweite stehen bleiben und schießen
+                // Fernkämpfer: in Reichweite und freier Schusslinie stehen bleiben und schießen
+                // (Steinwall dazwischen → weiterlaufen, die Wand ist aus dem NavMesh geschnitten)
                 if (_agent.isOnNavMesh && _agent.hasPath) _agent.ResetPath();
                 return;
             }
@@ -785,10 +866,31 @@ namespace ElementalBuddies
             _agent.SetDestination(dest);
         }
 
+        // Anti-Cheese-Suchradius: 2,5 m, bei großen Gegnern (Ramme, 4,6 m lang) Collider-Halbausdehnung + 1,2 m.
+        // Gecacht je Root-Skalierung (Elite-Look skaliert erst nach dem Spawn); Normalgegner bleiben bei genau 2,5 m.
+        private const float AntiCheeseRadius = 2.5f;
+        private const float AntiCheeseMargin = 1.2f;
+        private float _antiCheeseRadius = -1f;
+        private float _antiCheeseScale;
+
+        private float GetAntiCheeseRadius()
+        {
+            float scale = Mathf.Abs(transform.lossyScale.x);
+            if (_antiCheeseRadius > 0f && Mathf.Approximately(scale, _antiCheeseScale)) return _antiCheeseRadius;
+            _antiCheeseScale = scale;
+            var col = GetComponent<Collider>();
+            float half = col != null ? BodyFootprint.LocalHalfExtent(col) * scale : 0f;
+            _antiCheeseRadius = Mathf.Max(AntiCheeseRadius, half + AntiCheeseMargin);
+            return _antiCheeseRadius;
+        }
+
         private void HandleAntiCheese()
         {
-            // Standing still while attacking our target is not "stuck"
-            if (IsInAttackRange(GetCurrentTarget()))
+            // Laufender Anti-Cheese-Hieb: Zähler bleibt stehen (nach dem Hieb sofort der nächste, solange er feststeckt)
+            if (_swingPending && _swingVsBlocker) return;
+
+            // Standing still while attacking our target is not "stuck" (auch nicht während Hieb + Erholung)
+            if (_swingPending || Time.time < _swingHoldUntil || InAttackPosition(GetCurrentTarget()))
             {
                 _stuckTimer = 0;
                 return;
@@ -805,15 +907,22 @@ namespace ElementalBuddies
 
             if (_stuckTimer > 0.6f)
             {
-                Collider[] hits = Physics.OverlapSphere(transform.position, 2.5f, LayerMask.GetMask("Buddy"));
+                Collider[] hits = Physics.OverlapSphere(transform.position, GetAntiCheeseRadius(), LayerMask.GetMask("Buddy"));
                 foreach (var hit in hits)
                 {
                      var buddy = hit.GetComponent<IDamageable>();
                      if (buddy != null)
                      {
+                         _blockedByBuddy = true; // blockiert = kein Nachzügler
+                         if (UsesMeleeSwings)
+                         {
+                             // Einzelhiebe wie im Nahkampf: alle AttackInterval s ein Hieb mit AttackDamage × AttackInterval
+                             if (Time.time >= _nextAttackTime) StartSwing(hit.transform, hit);
+                             return;
+                         }
+                         // Fernkämpfer und Ramme: weiter kontinuierlich
                          float dmg = (Config != null ? Config.AttackDamage : 10f) * DamageMultiplier * Time.deltaTime;
                          buddy.TakeDamage(dmg);
-                         _blockedByBuddy = true; // blockiert = kein Nachzügler
                          return; 
                      }
                 }
@@ -833,6 +942,17 @@ namespace ElementalBuddies
                  HandleRangedAttack(target);
                  return;
              }
+             if (UsesMeleeSwings)
+             {
+                 HandleMeleeAttack(target);
+                 return;
+             }
+             HandleContactAttack(target);
+        }
+
+        // Dauerschaden (AttackDamage × deltaTime) – nur noch Belagerungsramme am Nexus und ForcedTarget (Schrein/Händler)
+        private void HandleContactAttack(Transform target)
+        {
              if (target != null && IsInAttackRange(target))
              {
                  float amount = (Config != null ? Config.AttackDamage : 10f) * DamageMultiplier * Time.deltaTime;
@@ -844,19 +964,159 @@ namespace ElementalBuddies
                      PlayAttackTrigger();
                      if (_net != null) _net.ServerAttackTrigger();
                  }
-                 // Spieler bekommt die Angriffsrichtung mit (Schildblock blockt nur frontal)
-                 var directional = target.GetComponent<IDirectionalDamageable>();
-                 if (directional != null)
-                 {
-                     directional.TakeDamage(amount, transform.position);
-                     return;
-                 }
-                 var dmg = target.GetComponent<IDamageable>();
-                 if (dmg != null)
-                 {
-                     dmg.TakeDamage(amount);
-                 }
+                 DealMeleeDamage(target, amount);
              }
+        }
+
+        // Spieler bekommt die Angriffsrichtung mit (Schildblock blockt nur frontal), sonst IDamageable
+        private void DealMeleeDamage(Transform target, float amount)
+        {
+             var directional = target.GetComponent<IDirectionalDamageable>();
+             if (directional != null)
+             {
+                 directional.TakeDamage(amount, transform.position);
+                 return;
+             }
+             var dmg = target.GetComponent<IDamageable>();
+             if (dmg != null)
+             {
+                 dmg.TakeDamage(amount);
+             }
+        }
+
+        // ---------------- Nahkampf-Hiebe ----------------
+
+        // In Reichweite: stehen bleiben, zum Ziel drehen, Attack-Trigger (Server + Clients), nach AttackWindup ein Treffer.
+        // Nächster Hieb AttackInterval s nach Beginn des vorigen. ForcedTarget (Schrein/Händler): Dauerschaden wie bisher.
+        private void HandleMeleeAttack(Transform target)
+        {
+            if (_swingPending)
+            {
+                // Ziel gewechselt oder tot → Hieb abbrechen (kein Schaden); Anti-Cheese-Hiebe hängen nur am Blocker
+                Transform t = _swingTarget;
+                if (!IsSwingTargetValid() || (!_swingVsBlocker && t != target)) CancelSwing();
+                else
+                {
+                    if (!_swingVsBlocker) FaceTowards(t);
+                    if (Time.time >= _swingHitTime) ResolveSwing();
+                    return;
+                }
+            }
+
+            if (target == null) return;
+            if (target == ForcedTarget)
+            {
+                HandleContactAttack(target);
+                return;
+            }
+            if (!IsInAttackRange(target)) return;
+            // Im Stand dreht der Agent nicht selbst
+            if (Time.time < _swingHoldUntil || _agent.velocity.sqrMagnitude < 0.04f) FaceTowards(target);
+            if (Time.time < _nextAttackTime) return;
+            StartSwing(target, null);
+        }
+
+        // blocker != null: Anti-Cheese-Hieb gegen diesen Collider (Reichweite = Anti-Cheese-Radius, kein Stehenbleiben)
+        private void StartSwing(Transform target, Collider blocker)
+        {
+            if (target == null) return;
+            float now = Time.time;
+            float windup = MeleeWindup;
+            _swingPending = true;
+            _swingVsBlocker = blocker != null;
+            _swingBlocker = blocker;
+            _swingTarget = target;
+            _swingBuddy = BuddyOf(target);
+            _swingPlayer = _swingBuddy == null ? target.GetComponent<PlayerStats>() : null;
+            _swingHitTime = now + windup;
+            _nextAttackTime = now + AttackInterval;
+            if (!_swingVsBlocker)
+            {
+                // stehen bleiben bis kurz nach dem Treffer: min(0,6 × Intervall; Windup + 0,35 s), mindestens bis zum Treffer
+                _swingHoldUntil = now + Mathf.Max(windup, Mathf.Min(AttackInterval * 0.6f, windup + SwingRecovery));
+                if (_agent.isOnNavMesh)
+                {
+                    if (_agent.hasPath) _agent.ResetPath();
+                    _agent.velocity = Vector3.zero;
+                }
+            }
+            // Angriffs-Animation immer (Clients per RPC; dort startet auch der Trefferton nach AttackWindup)
+            PlayAttackTrigger();
+            if (_net != null) _net.ServerAttackTrigger();
+            if (windup <= 0f) ResolveSwing();
+        }
+
+        // Ziel noch gültig? (lebender Buddy / Spieler, aktives Objekt, Blocker-Collider noch an)
+        private bool IsSwingTargetValid()
+        {
+            if (_swingTarget == null || !_swingTarget.gameObject.activeInHierarchy) return false;
+            if (_swingVsBlocker && (_swingBlocker == null || !_swingBlocker.enabled)) return false;
+            if (_swingBuddy != null) return IsValidBuddy(_swingBuddy);
+            if (_swingPlayer != null) return !_swingPlayer.IsDead;
+            return true;
+        }
+
+        // Trefferzeitpunkt: Ton (auch bei Fehlschlag), Schaden nur, wenn das Ziel noch in Reichweite + Toleranz ist
+        private void ResolveSwing()
+        {
+            Transform t = _swingTarget;
+            bool blocker = _swingVsBlocker;
+            Collider col = _swingBlocker;
+            bool valid = IsSwingTargetValid();
+            _swingPending = false;
+            _swingVsBlocker = false;
+            _swingTarget = null;
+            _swingBlocker = null;
+            _swingBuddy = null;
+            _swingPlayer = null;
+            if (!valid) return;
+
+            PlayMeleeHitSfx();
+            bool inRange = blocker
+                ? Vector3.Distance(transform.position, col.bounds.ClosestPoint(transform.position)) <= GetAntiCheeseRadius() + MeleeHitTolerance
+                : IsInAttackRange(t, MeleeHitTolerance);
+            if (!inRange) return; // ausgewichen
+
+            // AttackDamage ist DPS: ein Hieb = AttackDamage × AttackInterval
+            float amount = (Config != null ? Config.AttackDamage : 10f) * AttackInterval * DamageMultiplier;
+            if (blocker)
+            {
+                // wie der frühere Blocker-Dauerschaden: ohne BuddyDamageMultiplier
+                var d = col.GetComponent<IDamageable>();
+                if (d != null) d.TakeDamage(amount);
+                return;
+            }
+            if (BuddyOf(t) != null) amount *= BuddyDamageMultiplier;
+            DealMeleeDamage(t, amount);
+        }
+
+        // Laufenden Hieb verwerfen (Betäubung, Frost, Rückstoß, Zauber, Zielwechsel, Game Over) – kurze Pause bis zum nächsten
+        private void CancelSwing()
+        {
+            if (!_swingPending) return;
+            _swingPending = false;
+            _swingVsBlocker = false;
+            _swingTarget = null;
+            _swingBlocker = null;
+            _swingBuddy = null;
+            _swingPlayer = null;
+            _swingHoldUntil = 0f;
+            _nextAttackTime = Time.time + SwingCancelCooldown;
+        }
+
+        // Trefferton je Gegnertyp (Config.MeleeHitSfx), Server und Clients; global höchstens MeleeSfxPerWindow je 0,1 s
+        private void PlayMeleeHitSfx()
+        {
+            if (Config == null || !Config.MeleeHitSound) return;
+            float now = Time.unscaledTime;
+            if (now - _meleeSfxWindowStart >= MeleeSfxWindow)
+            {
+                _meleeSfxWindowStart = now;
+                _meleeSfxCount = 0;
+            }
+            if (_meleeSfxCount >= MeleeSfxPerWindow) return;
+            _meleeSfxCount++;
+            GameAudio.PlayPitched(Config.MeleeHitSfx, transform.position, Random.Range(0.94f, 1.06f));
         }
 
         private float AttackInterval => Config != null && Config.AttackInterval > 0f ? Config.AttackInterval : 1.5f;
@@ -876,7 +1136,7 @@ namespace ElementalBuddies
                 }
             }
 
-            if (target == null || target == ForcedTarget || !IsInAttackRange(target)) return;
+            if (target == null || target == ForcedTarget || !CanShoot(target)) return;
             FaceTowards(target);
             if (Time.time < _nextAttackTime) return;
 
@@ -949,6 +1209,7 @@ namespace ElementalBuddies
                 _isDead = true;
                 _currentHP = 0f;
                 _activeBosses.Remove(this);
+                _swingPending = false;
                 bool shatter = IsFrozen;
                 // Clients zuerst informieren (RPC kommt zuverlässig vor der Despawn-Nachricht an)
                 if (_net != null) _net.ServerKilled();
@@ -1038,7 +1299,8 @@ namespace ElementalBuddies
             if (curse != null) _curse = curse;
         }
 
-        private const float RamKnockbackFactor = 0.25f;
+        // Zusätzlich zur Kontroll-Resistenz der Ramme (0,4 → ControlFactor 0,6): 0,6 × 0,4 = 0,24 ≈ 25 % Rückstoß gesamt
+        private const float RamKnockbackFactor = 0.4f;
 
         // Rückstoß entlang des NavMesh (agent.Move, verlässt das NavMesh nicht); unterbricht kurz die Bewegung
         public void Knockback(Vector3 direction, float distance, float duration = 0.25f)
@@ -1133,6 +1395,7 @@ namespace ElementalBuddies
             if (!Net.IsServer || _isDead) return;
             _castUntil = Mathf.Max(_castUntil, Time.time + Mathf.Max(0f, duration));
             _shotPending = false;
+            CancelSwing(); // kein Grundangriff-Hieb während des Zaubers
             if (_agent == null) _agent = GetComponent<NavMeshAgent>();
             if (_agent != null && _agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
         }

@@ -30,8 +30,12 @@ namespace ElementalBuddies
         [Tooltip("Spawned on cast, destroyed after EffectLifetime.")]
         public GameObject CastEffectPrefab;
         public float EffectLifetime = 3f;
-        [Tooltip("If true, the effect's localScale is multiplied by the spell size (radius / range / wall length) - author the VFX for a size of 1 m then.")]
+        [Tooltip("If true, the effect is scaled by spell size / EffectAuthoredSize (radius / range / wall length), so Händlerkarten (Radius/Reichweite) auch die Optik vergrößern.")]
         public bool ScaleEffectBySize = false;
+        [Tooltip("Größe (m), für die der Effekt gebaut ist: bei dieser Zauber-Größe bleibt er unverändert (Faktor 1). 1 = Effekt für 1 m gebaut.")]
+        public float EffectAuthoredSize = 1f;
+        [Tooltip("Bei Partikeln mit Simulation im Weltraum Schwerkraft, Tempo-Grenze und Luftwiderstand an den Faktor anpassen, damit Flugweite und -höhe linear mitwachsen (siehe CombatUtil.ScaleFx).")]
+        public bool ScaleParticleTravel = true;
 
         public abstract void Cast(SpellCastContext ctx);
 
@@ -67,12 +71,19 @@ namespace ElementalBuddies
             return true;
         }
 
-        protected void SpawnEffect(Vector3 position, Quaternion rotation, float size)
+        // Effekt-Faktor für eine Zauber-Größe (1 = Effekt wie gebaut)
+        public float EffectScaleFor(float size)
         {
-            if (CastEffectPrefab == null) return;
+            return ScaleEffectBySize && EffectAuthoredSize > 0f ? size / EffectAuthoredSize : 1f;
+        }
+
+        protected GameObject SpawnEffect(Vector3 position, Quaternion rotation, float size)
+        {
+            if (CastEffectPrefab == null) return null;
             GameObject fx = Object.Instantiate(CastEffectPrefab, position, rotation);
-            if (ScaleEffectBySize) fx.transform.localScale = CastEffectPrefab.transform.localScale * size;
+            if (ScaleEffectBySize) CombatUtil.ScaleFx(fx, CastEffectPrefab.transform.localScale, EffectScaleFor(size), ScaleParticleTravel);
             if (EffectLifetime > 0f) Object.Destroy(fx, EffectLifetime);
+            return fx;
         }
 
         // ---------------- Shared helpers ----------------

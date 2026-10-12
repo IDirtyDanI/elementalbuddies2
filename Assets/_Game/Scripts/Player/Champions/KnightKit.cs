@@ -51,7 +51,10 @@ namespace ElementalBuddies
         public GameObject BlockSparkPrefab;
         [Tooltip("Leuchten am Schild, solange der Block gehalten wird (optional, wird an-/ausgeschaltet).")]
         public GameObject BlockGlowPrefab;
-        public float BlockSparkInterval = 0.25f;
+        // Gegner treffen seit 2026-10-12 mit Einzelhieben → jeder geblockte Hieb soll funken; die Sperre fängt nur
+        // gleichzeitige Treffer ab (vorher 0,25 s gegen den Dauerschaden). Player.prefab setzt EnemyAttackBuilder.
+        [Tooltip("Mindestabstand zwischen zwei Block-Funken (s).")]
+        public float BlockSparkInterval = 0.05f;
         [Tooltip("Position des Schildes relativ zum Spieler (für Funken).")]
         public Vector3 ShieldOffset = new Vector3(0f, 1.1f, 0.6f);
 
@@ -64,7 +67,7 @@ namespace ElementalBuddies
         [Header("Sounds")]
         public ChampionSfx SwingSfx = new ChampionSfx();
         public ChampionSfx FinisherSfx = new ChampionSfx();
-        public ChampionSfx BlockHitSfx = new ChampionSfx { MinInterval = 0.2f };
+        public ChampionSfx BlockHitSfx = new ChampionSfx { MinInterval = 0.05f };
         public ChampionSfx BlockBreakSfx = new ChampionSfx();
 
         // Zustand (öffentlich lesbar für UI/Tests)

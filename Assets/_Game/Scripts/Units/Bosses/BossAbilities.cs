@@ -103,6 +103,9 @@ namespace ElementalBuddies
         // Laufzeit
         [System.NonSerialized] public float ReadyTime;
 
+        // Steinwall blockt diese Fähigkeit (gerichtete Angriffe: Kegel, Strahl) – Kreise/Regen/Heilung nicht
+        public bool BlockedByWalls => Kind == BossAbilityKind.Cone || Kind == BossAbilityKind.Beam;
+
         // Größe der Fläche (für Effekt-Skalierung und Default-Bedingung)
         public float AreaSize => Kind == BossAbilityKind.Cone || Kind == BossAbilityKind.Beam ? Length : Radius;
     }
@@ -128,6 +131,15 @@ namespace ElementalBuddies
             return result;
         }
 
+        // Wand-Prüfung in fester Höhe über dem Boden (Boss-Pivots schweben je nach baseOffset unterschiedlich hoch;
+        // der Steinwall ist 2,5 m hoch)
+        public const float WallCheckHeight = 1.2f;
+        public static Vector3 WallCheckPoint(Vector3 p) => new Vector3(p.x, AoeTelegraph.GroundY(p) + WallCheckHeight, p.z);
+
+        // Steht ein Steinwall zwischen Quelle und Ziel?
+        public static bool WallBetween(Vector3 source, Vector3 target) =>
+            StoneWall.AnyActive && StoneWall.Blocks(WallCheckPoint(source), WallCheckPoint(target));
+
         public static bool IsAlive(PlayerStats p) => p != null && p.isActiveAndEnabled && p.CurrentHP > 0f && !p.IsDead;
 
         private static PlayerStats _player;
@@ -149,12 +161,14 @@ namespace ElementalBuddies
         public static void Apply(AoeShape shape, BossAbility a, Vector3 source, float damage)
         {
             if (!Net.IsServer) return;
+            bool walls = a.BlockedByWalls && StoneWall.AnyActive;
 
             // Alle Spielfiguren in der Fläche (Slow/Rückstoß leitet PlayerController an den Besitzer weiter)
             CollectPlayers(_players);
             foreach (var player in _players)
             {
                 if (!IsAlive(player) || !shape.Contains(player.transform.position, PlayerRadius)) continue;
+                if (walls && WallBetween(source, player.transform.position)) continue;
                 bool immune = player.IsInvulnerable;
                 if (damage > 0f) player.TakeDamage(damage, source);
                 if (immune) continue;
@@ -174,6 +188,7 @@ namespace ElementalBuddies
                 if (b == null || b.IsDead || !b.isActiveAndEnabled) continue;
                 Vector3 p = b.GetClosestPoint(shape.Origin);
                 if (!shape.Contains(p, 0.1f) && !shape.Contains(b.transform.position, 0.4f)) continue;
+                if (walls && WallBetween(source, b.transform.position) && WallBetween(source, p)) continue;
                 if (a.BuddyStunDuration > 0f) b.Stun(a.BuddyStunDuration, a.StunVfxPrefab);
                 if (damage > 0f) b.TakeDamage(damage * a.BuddyDamageMultiplier);
             }
@@ -182,7 +197,7 @@ namespace ElementalBuddies
             if (a.HitsNexus && damage > 0f && Nexus.Instance != null)
             {
                 Vector3 p = Nexus.Instance.GetClosestPoint(shape.Origin);
-                if (shape.Contains(p, 0.1f)) Nexus.Instance.TakeDamage(damage);
+                if (shape.Contains(p, 0.1f) && !(walls && WallBetween(source, p))) Nexus.Instance.TakeDamage(damage);
             }
         }
 

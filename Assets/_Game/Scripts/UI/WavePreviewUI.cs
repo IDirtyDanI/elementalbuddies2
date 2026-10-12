@@ -21,6 +21,10 @@ namespace ElementalBuddies
         private TMP_FontAsset _font, _bodyFont;
         private int _shownWave = -1;
         private bool _visible;
+        private ObjectiveUI _objective;   // Ziel-Panels oben rechts – die Vorschau darf nicht hineinwachsen
+        private RectTransform _topBar;
+        private static readonly Vector3[] _corners = new Vector3[4];
+        private const float MinScale = 0.6f, TopGap = 12f;
 
         public static WavePreviewUI Create(HUDManager hud)
         {
@@ -39,6 +43,9 @@ namespace ElementalBuddies
 
             Sprite parchment = null;
             var obj = FindFirstObjectByType<ObjectiveUI>(FindObjectsInactive.Include);
+            _objective = obj;
+            var canvas = hud.GetComponentInParent<Canvas>();
+            if (canvas != null) _topBar = canvas.rootCanvas.transform.Find("TopBar") as RectTransform;
             if (obj != null)
                 foreach (var img in obj.GetComponentsInChildren<Image>(true))
                     if (img.sprite != null && img.sprite.name.Contains("parchment")) { parchment = img.sprite; break; }
@@ -85,6 +92,49 @@ namespace ElementalBuddies
             if (show != _visible) _visible = show;
             float target = _visible ? 1f : 0f;
             _group.alpha = Mathf.MoveTowards(_group.alpha, target, Time.unscaledDeltaTime * 4f);
+            if (_group.alpha > 0f) FitHeight();
+        }
+
+        // Viele Zeilen (Ereignis + Elite-Liste + Fluch + Morgengrauen, umgebrochen) machen das Panel hoch. Es wächst vom
+        // „Welle starten“-Knopf nach oben und lief bei flachen Seitenverhältnissen (21:9, Canvas nur ~1170 hoch) in die
+        // Ziel-Panels bzw. bis unter die Top-Bar (Bekannte-Probleme #158). Dann wird es verkleinert (Pivot unten rechts).
+        private void FitHeight()
+        {
+            var parent = _root.parent as RectTransform;
+            if (parent == null) return;
+            float limit = float.PositiveInfinity; // Oberkante des freien Bereichs (lokal im Parent)
+            Consider(_topBar, parent, ref limit);
+            if (_objective != null)
+            {
+                Consider(_objective.Panel, parent, ref limit);
+                Consider(_objective.MerchantPanel, parent, ref limit);
+            }
+            if (float.IsPositiveInfinity(limit)) { _root.localScale = Vector3.one; return; }
+
+            _root.GetWorldCorners(_corners);
+            float bottom = parent.InverseTransformPoint(_corners[0]).y;
+            float h = _root.rect.height;
+            float scale = h > 1f ? Mathf.Clamp((limit - TopGap - bottom) / h, MinScale, 1f) : 1f;
+            if (Mathf.Abs(_root.localScale.x - scale) > 0.001f) _root.localScale = new Vector3(scale, scale, 1f);
+        }
+
+        // Nur Elemente, die horizontal über der Vorschau liegen, begrenzen sie nach oben
+        private void Consider(Component c, RectTransform parent, ref float limit) => Consider(c != null ? c.gameObject : null, parent, ref limit);
+
+        private void Consider(GameObject go, RectTransform parent, ref float limit)
+        {
+            if (go == null || !go.activeInHierarchy) return;
+            var rt = go.transform as RectTransform;
+            if (rt == null) return;
+            rt.GetWorldCorners(_corners);
+            Vector2 a = parent.InverseTransformPoint(_corners[0]); // unten links
+            Vector2 b = parent.InverseTransformPoint(_corners[2]); // oben rechts
+            _root.GetWorldCorners(_corners);
+            Vector2 ra = parent.InverseTransformPoint(_corners[0]);
+            Vector2 rb = parent.InverseTransformPoint(_corners[2]);
+            float myLeft = rb.x - _root.rect.width; // ungeskalierte Breite (Pivot rechts)
+            if (b.x <= myLeft || a.x >= rb.x || a.y <= ra.y) return;
+            limit = Mathf.Min(limit, a.y);
         }
 
         private void Rebuild(WaveManager wm)

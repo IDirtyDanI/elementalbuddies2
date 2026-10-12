@@ -67,6 +67,7 @@ namespace ElementalBuddies
 
         private static readonly int CastTrigger = Animator.StringToHash("Cast");
         private Animator _visualAnimator;
+        private BuddyAim _aim;
 
         // --- Aufwertung (pro Instanz) ---
         private int _level = 1;
@@ -106,6 +107,8 @@ namespace ElementalBuddies
         // Ghosts werden direkt nach Instantiate deaktiviert -> netto nicht gezählt
         protected virtual void OnEnable()
         {
+            // Ausrichtung zum Ziel (rein kosmetisch) – zur Laufzeit anhängen statt in jedem Prefab
+            if (_aim == null && !TryGetComponent(out _aim)) _aim = gameObject.AddComponent<BuddyAim>();
             if (!_active.Contains(this))
             {
                 _active.Add(this);

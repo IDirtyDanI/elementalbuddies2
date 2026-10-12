@@ -652,6 +652,14 @@ namespace ElementalBuddies.EditorTools
             return c != null ? c : root.AddComponent<T>();
         }
 
+        // Cast-Effekt mit der Zauber-Größe skalieren (authoredSize = Größe, für die der Effekt gebaut ist)
+        private static void ScaleFx(ElementSpell spell, float authoredSize)
+        {
+            spell.ScaleEffectBySize = true;
+            spell.EffectAuthoredSize = authoredSize;
+            spell.ScaleParticleTravel = true;
+        }
+
         private static GameObject Prefab(string path) { return AssetDatabase.LoadAssetAtPath<GameObject>(path); }
         private static GameObject Champ(string name) { return Prefab(ChampionFxBuilder.Dir + name + ".prefab"); }
         private static GameObject ByGuid(string guid) { return Prefab(AssetDatabase.GUIDToAssetPath(guid)); }
@@ -683,6 +691,10 @@ namespace ElementalBuddies.EditorTools
             if (mage.StoneWall.WallPrefab == null) mage.StoneWall.WallPrefab = ByGuid("17db8f5d19f584c018be6fdd6251bf58");
             if (mage.HolyCircle.CastEffectPrefab == null) mage.HolyCircle.CastEffectPrefab = ByGuid("7862d9904f5224fd0bfc5b85d9c4d895");
             if (mage.HolyCircle.BlindVfxPrefab == null) mage.HolyCircle.BlindVfxPrefab = ByGuid("e8dcdc109ff9c4c4f978531732e0bfd3");
+            // Effekte wachsen mit Händlerkarten (Radius/Reichweite) mit; Bezugsgröße = Grundwert, für den sie gebaut sind
+            ScaleFx(mage.FireWave, 7f);
+            ScaleFx(mage.FrostNova, 6f);
+            ScaleFx(mage.HolyCircle, 6f);
             mage.Abilities = new System.Collections.Generic.List<ChampionKit.AbilityDisplay>
             {
                 D(AbilityId.ArcaneBall, "Arkanball", "ability_arcane"),
@@ -716,6 +728,10 @@ namespace ElementalBuddies.EditorTools
             k.Earthquake.StunVfxPrefab = blind;
             k.LightOath.CastEffectPrefab = Champ("VFX_LightOath");
             k.LightOath.EffectLifetime = 2.5f;
+            ScaleFx(k.FlameWhirl, 3.5f);
+            ScaleFx(k.FrostStrike, 7f);
+            ScaleFx(k.Earthquake, 4f);
+            ScaleFx(k.LightOath, 7f);
             k.LightOath.AuraPrefab = Champ("VFX_LightOathAura");
             k.SwingSfx = Sfx("Generated/sword_swing_1.wav", 0.5f, 0.92f, 1.1f);
             k.FinisherSfx = Sfx("Generated/sword_swing_3.wav", 0.65f, 0.85f, 0.95f);
@@ -740,6 +756,8 @@ namespace ElementalBuddies.EditorTools
             a.RollDustPrefab = Champ("VFX_RollDust");
             a.FireArrowRain.CastEffectPrefab = Champ("VFX_FireRainArea");
             a.FireArrowRain.ScaleEffectBySize = true;
+            a.FireArrowRain.EffectAuthoredSize = 1f;
+            a.FireArrowRain.ScaleParticleTravel = false; // Glut/Rauch so belassen wie abgestimmt
             a.FireArrowRain.EffectLifetime = 2.5f;
             a.FireArrowRain.FallingArrowPrefab = Champ("FireArrow_Falling");
             a.FireArrowRain.ImpactFxPrefab = Champ("VFX_FireImpact");
@@ -751,6 +769,7 @@ namespace ElementalBuddies.EditorTools
             a.ThornTrap.TrapPrefab = Champ("ThornTrap");
             a.ThornTrap.RootVfxPrefab = Champ("VFX_ThornRoot");
             a.ThornTrap.SnapFxPrefab = Champ("VFX_ThornSnap");
+            ScaleFx(a.ThornTrap, 2.2f); // kein Cast-Effekt: skaliert Falle + Zuschnapp-Effekt (gebaut für TriggerRadius 2.2)
             a.LightArrow.BeamPrefab = Champ("VFX_LightBeam");
             a.LightArrow.HitFxPrefab = Prefab(Vfx + "LightHit.prefab");
             a.LightArrow.BlindVfxPrefab = blind;

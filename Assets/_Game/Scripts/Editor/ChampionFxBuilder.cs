@@ -400,11 +400,12 @@ namespace ElementalBuddies.EditorTools
             AddLight(go.transform, new Vector3(0, 1f, 0), Fire, 4f, 7f).gameObject.AddComponent<LightFade>().Duration = 0.6f;
         }
 
-        // Frostschlag: Eiszacken brechen im Kegel nach vorne aus dem Boden, dazu Frostnebel und Schockwellen-Schlieren
+        // Frostschlag: Eiszacken brechen im Kegel nach vorne aus dem Boden, dazu Frostnebel und Schockwellen-Schlieren.
+        // Gebaut für 7 m Reichweite (EffectAuthoredSize 7): 4 Zacken-Reihen bis ~7 m, Glitzer-Box 0-7 m.
         private static void FrostStrike(GameObject go)
         {
             var shardMat = AssetDatabase.LoadAssetAtPath<Material>(VfxMat + "VFX_Ice_Shard.mat");
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
                 float t = i * 0.06f;
                 var sh = PS(go.transform, "Spikes" + i, Vector3.zero, shardMat, new Vector2(0.9f, 1.2f), new Vector2(0.5f + i * 0.15f, 0.9f + i * 0.2f), Color.white, 30);
@@ -421,8 +422,8 @@ namespace ElementalBuddies.EditorTools
             var mist = PS(go.transform, "FrostMist", new Vector3(0, 0.3f, 0.5f), SmokeAlpha, new Vector2(0.8f, 1.2f), new Vector2(0.8f, 1.4f), new Color(0.85f, 0.95f, 1f, 0.6f), 40);
             Burst(mist, 22); Cone(mist, 30f, 0.4f, Vector3.zero); Speed(mist, 5f, 9f); Drag(mist, 3f); Spin(mist, 40f);
             SizeLife(mist, 0.6f, 1.5f); ColorLife(mist, Fade(Color.white, Color.white, 0.8f));
-            var gl = PS(go.transform, "Glints", new Vector3(0, 0.6f, 2.5f), StarAdd, new Vector2(0.3f, 0.6f), new Vector2(0.15f, 0.3f), new Color(0.8f, 0.95f, 1f), 30);
-            Burst(gl, 16, 0.05f); var gs = gl.shape; gs.enabled = true; gs.shapeType = ParticleSystemShapeType.Box; gs.scale = new Vector3(3f, 0.8f, 5f);
+            var gl = PS(go.transform, "Glints", new Vector3(0, 0.6f, 3.5f), StarAdd, new Vector2(0.3f, 0.6f), new Vector2(0.15f, 0.3f), new Color(0.8f, 0.95f, 1f), 30);
+            Burst(gl, 22, 0.05f); var gs = gl.shape; gs.enabled = true; gs.shapeType = ParticleSystemShapeType.Box; gs.scale = new Vector3(3.5f, 0.8f, 7f);
             ColorLife(gl, Fade(Color.white, Color.white));
         }
 
