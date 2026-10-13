@@ -728,7 +728,21 @@ namespace ElementalBuddies
                     stats = Line("Schaden", dmg, dmg, false, "", "0.#") + "\n" + rateLine + "\n" + rangeLine;
                     break;
             }
+            if (!(fusion is CrystalBuddy || fusion is VolcanoTitanBuddy || fusion is WorldTreeBuddy))
+                stats = HpLine(false, 1, 1) + "\n" + stats;
             return stats + AuraLine();
+        }
+
+        // "Leben: 34/50" – beim Aufwerten mit Vorschau des neuen Maximums
+        private string HpLine(bool canUpgrade, int level, int next)
+        {
+            string text = $"Leben: {Mathf.CeilToInt(_buddy.CurrentHP)}/{Mathf.CeilToInt(_buddy.MaxHP)}";
+            if (canUpgrade && next != level)
+            {
+                string hex = ColorUtility.ToHtmlStringRGB(NextValueColor);
+                text += $" {Arrow} <color=#{hex}>max {Mathf.CeilToInt(_buddy.GetMaxHPAtLevel(next))}</color>";
+            }
+            return text;
         }
 
         // Buffs durch Nachbarn: Rückenwind (Luft), Phönix-Aura, Steinhaut (Bergkönig), Schild (Sonnenerzengel)
@@ -776,14 +790,16 @@ namespace ElementalBuddies
             if (_buddy is TankBuddy)
             {
                 // Tank: Damage = Aura-DPS, FireRate = Spott-Rate, Range = Spott-/Aura-Radius
-                return Line("Aura-Schaden", _buddy.GetDamageAtLevel(level), _buddy.GetDamageAtLevel(next), canUpgrade, "/s", "0.#") + "\n"
+                return HpLine(canUpgrade, level, next) + "\n"
+                     + Line("Aura-Schaden", _buddy.GetDamageAtLevel(level), _buddy.GetDamageAtLevel(next), canUpgrade, "/s", "0.#") + "\n"
                      + Line("Spott alle", Interval(_buddy.GetFireRateAtLevel(level)), Interval(_buddy.GetFireRateAtLevel(next)), canUpgrade, " s", "0.#") + "\n"
                      + Line("Radius", _buddy.GetRangeAtLevel(level), _buddy.GetRangeAtLevel(next), canUpgrade, " m", "0.#")
                      + PerkLine(canUpgrade, level, next) + AuraLine();
             }
 
             var healer = _buddy as HealerBuddy;
-            string stats = Line(healer != null ? "Strahl" : "Schaden", _buddy.GetDamageAtLevel(level), _buddy.GetDamageAtLevel(next), canUpgrade, "", "0.#") + "\n"
+            string stats = HpLine(canUpgrade, level, next) + "\n"
+                 + Line(healer != null ? "Strahl" : "Schaden", _buddy.GetDamageAtLevel(level), _buddy.GetDamageAtLevel(next), canUpgrade, "", "0.#") + "\n"
                  + Line(healer != null ? "Angriffsrate" : "Feuerrate", _buddy.GetFireRateAtLevel(level), _buddy.GetFireRateAtLevel(next), canUpgrade, "/s", "0.##") + "\n"
                  + Line("Reichweite", _buddy.GetRangeAtLevel(level), _buddy.GetRangeAtLevel(next), canUpgrade, " m", "0.#");
             if (healer != null)
