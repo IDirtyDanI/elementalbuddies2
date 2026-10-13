@@ -43,8 +43,9 @@ namespace ElementalBuddies.EditorTools
 
         private static AudioClip Music(string name) => AssetDatabase.LoadAssetAtPath<AudioClip>(MusicDir + name + ".wav");
 
-        // GameAudio der Szene: MusicDirector mit den eigenen Stücken, alter Loop (FunProject) raus
-        private static void AddDirector(UnityEngine.SceneManagement.Scene scene)
+        // GameAudio der Szene: MusicDirector mit den eigenen Stücken, alter Loop (FunProject) raus.
+        // Auch vom MainMenuBuilder aufgerufen, damit ein Neuaufbau des Menüs die eigene Musik behält.
+        public static void AddDirector(UnityEngine.SceneManagement.Scene scene)
         {
             foreach (var root in scene.GetRootGameObjects())
                 foreach (var ga in root.GetComponentsInChildren<GameAudio>(true))

@@ -11,6 +11,7 @@ namespace ElementalBuddies.EditorTools
         public string Label;
         public string BaseState = "Locomotion";
         public float Speed;
+        public float MoveX, MoveZ;  // Richtung im Raum der Figur (2D-Locomotion-Blend); Standard = vorwärts mit Speed
         public bool Grounded = true;
         public int Layer;           // 0 = nur Base Layer
         public string State;        // Aktions-State im Layer
@@ -63,6 +64,8 @@ namespace ElementalBuddies.EditorTools
             var a = Animator;
             a.Rebind();
             SetParam(a, "Speed", s.Speed);
+            SetParam(a, "MoveX", s.MoveX);
+            SetParam(a, "MoveZ", s.MoveX == 0f && s.MoveZ == 0f ? s.Speed : s.MoveZ);
             SetBool(a, "Grounded", s.Grounded);
             a.Play(s.BaseState, 0, s.Layer == 0 ? t : Mathf.Repeat(t * 0.999f, 1f));
             var ac = ChampionPoseSampler.ControllerOf(a);
@@ -72,6 +75,7 @@ namespace ElementalBuddies.EditorTools
                 else if (ac != null && HasState(ac.layers[i].stateMachine, "Empty")) a.Play("Empty", i, 0f);
             }
             a.Update(0f);
+            Visual.CounterLocomotionTwist(); // Rumpf-Gegendrehung wie im Spiel (PlayerVisualAnimator.LateUpdate)
             // Laufzeit-Korrekturen nach dem Animator (IK-Tragehaltung, Freiraum) wie im Spiel anwenden
             foreach (var h in Root.GetComponentsInChildren<ChampionWeaponHold>()) h.Apply(true);
             foreach (var h in Root.GetComponentsInChildren<ChampionTwoHandGrip>()) h.Apply(true);
@@ -104,6 +108,17 @@ namespace ElementalBuddies.EditorTools
 
         // Alle relevanten Posen eines Controllers: Locomotion je Blend-Schwelle (Idle/Walk/Run), Sprung-States,
         // jeder Aktions-State (im Stand; maskierte Oberkörper-Aktionen zusätzlich im Lauf).
+        private static void CollectLeaves(BlendTree bt, List<KeyValuePair<BlendTree, ChildMotion>> leaves)
+        {
+            foreach (var ch in bt.children)
+            {
+                if (ch.motion == null) continue;
+                var sub = ch.motion as BlendTree;
+                if (sub != null) CollectLeaves(sub, leaves);
+                else leaves.Add(new KeyValuePair<BlendTree, ChildMotion>(bt, ch));
+            }
+        }
+
         public static List<PoseSample> Enumerate(AnimatorController ac)
         {
             var list = new List<PoseSample>();
@@ -116,12 +131,33 @@ namespace ElementalBuddies.EditorTools
                 var bt = st.motion as BlendTree;
                 if (bt != null)
                 {
-                    foreach (var ch in bt.children)
+                    // verschachtelt (Locomotion = 1D Idle/„Move“, Move = 2D-Richtungsblend): Blätter einsammeln
+                    var leaves = new List<KeyValuePair<BlendTree, ChildMotion>>();
+                    CollectLeaves(bt, leaves);
+                    var seen = new HashSet<string>();
+                    foreach (var kv in leaves)
                     {
-                        if (ch.motion == null) continue;
-                        string label = ch.threshold <= 0.01f ? "Idle" : ch.threshold < 4f ? "Walk" : "Run";
-                        runSpeed = Mathf.Max(runSpeed, ch.threshold);
-                        list.Add(new PoseSample { Label = label, BaseState = st.name, Speed = ch.threshold, Length = ch.motion.averageDuration / Mathf.Max(0.01f, st.speed) });
+                        var tree = kv.Key; var ch = kv.Value;
+                        bool is2D = tree.blendType != BlendTreeType.Simple1D && tree.blendType != BlendTreeType.Direct;
+                        float speed = is2D ? ch.position.magnitude : ch.threshold;
+                        string label = speed <= 0.01f ? "Idle" : speed < 4f ? "Walk" : "Run";
+                        // 2D-Locomotion: vorwärts bleibt "Walk"/"Run", sonst Richtung anhängen ("Walk_B", "Run_L" …);
+                        // gleicher Clip im selben Ring (Rückfall ohne Richtungs-Clips) nur einmal
+                        if (is2D && speed > 0.01f)
+                        {
+                            if (!seen.Add(label + ch.motion.GetInstanceID() + (ch.timeScale < 0f ? "rev" : ""))) continue;
+                            Vector2 d = ch.position;
+                            if (Mathf.Abs(d.y) < Mathf.Abs(d.x)) label += d.x < 0f ? "_L" : "_R";
+                            else if (d.y < 0f) label += "_B";
+                            if (ch.timeScale < 0f) label += "b"; // hinterer Seitwärts-Punkt (Gegen-Clip rückwärts)
+                        }
+                        runSpeed = Mathf.Max(runSpeed, speed);
+                        list.Add(new PoseSample
+                        {
+                            Label = label, BaseState = st.name, Speed = speed,
+                            MoveX = is2D ? ch.position.x : 0f, MoveZ = is2D ? ch.position.y : speed,
+                            Length = ch.motion.averageDuration / Mathf.Max(0.01f, st.speed * Mathf.Abs(ch.timeScale))
+                        });
                     }
                 }
                 else if (st.motion != null)

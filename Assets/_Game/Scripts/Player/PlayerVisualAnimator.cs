@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace ElementalBuddies
 {
-    // Treibt den Animator des aktiven Champion-Visuals (ChampionVisual): Speed/Grounded/Jump für die Fortbewegung,
+    // Treibt den Animator des aktiven Champion-Visuals (ChampionVisual): Speed/MoveX/MoveZ/Grounded/Jump für die Fortbewegung
+    // (MoveX/MoveZ = Geschwindigkeit relativ zur Blickrichtung der Figur für den richtungsabhängigen Locomotion-Blend),
     // Fähigkeiten-Trigger vom aktiven ChampionKit (z. B. "Cast", "Slash1", "Shoot", "Roll") und laufende Zustände
     // (z. B. Bool "Block"). Fehlende Parameter im Controller werden still übersprungen.
     [RequireComponent(typeof(CharacterController))]
@@ -12,6 +13,12 @@ namespace ElementalBuddies
         private static readonly int SpeedParam = Animator.StringToHash("Speed");
         private static readonly int GroundedParam = Animator.StringToHash("Grounded");
         private static readonly int JumpParam = Animator.StringToHash("Jump");
+        private static readonly int MoveXParam = Animator.StringToHash("MoveX");
+        private static readonly int MoveZParam = Animator.StringToHash("MoveZ");
+        private static readonly int LocoSpeedParam = Animator.StringToHash("LocoSpeed");
+
+        // Ringe des Locomotion-Blends (ChampionAnimatorBuilder: Idle 0, Bewegung ab 0,8, Gehen 2,5 m/s, Rennen 6 m/s)
+        public const float MoveThreshold = 0.8f, WalkRing = 2.5f, RunRing = 6f;
 
         [SerializeField] private float speedDampTime = 0.1f;
         [SerializeField] private float groundedGrace = 0.15f; // Tolerate brief isGrounded flicker
@@ -115,6 +122,16 @@ namespace ElementalBuddies
             v.y = 0f;
             _animator.SetFloat(SpeedParam, v.magnitude, speedDampTime, Time.deltaTime);
 
+            // Richtung relativ zur Figur (die Figur schaut zur Maus, WASD bewegt unabhängig davon): x = rechts, z = vorwärts
+            if (HasParam(_animator, MoveXParam) && HasParam(_animator, MoveZParam))
+            {
+                Vector3 lv = LocalVelocity(v);
+                _animator.SetFloat(MoveXParam, lv.x, speedDampTime, Time.deltaTime);
+                _animator.SetFloat(MoveZParam, lv.z, speedDampTime, Time.deltaTime);
+            }
+            if (HasParam(_animator, LocoSpeedParam))
+                _animator.SetFloat(LocoSpeedParam, LocoSpeedFor(_animator.GetFloat(SpeedParam)));
+
             // Grounded debounce
             if (isGrounded) _ungroundedTime = 0f;
             else _ungroundedTime += Time.deltaTime;
@@ -123,6 +140,35 @@ namespace ElementalBuddies
             _animator.SetBool(GroundedParam, grounded);
 
             if (_abilities != null && _abilities.ActiveKit != null) _abilities.ActiveKit.UpdateAnimator(_animator, _visual);
+        }
+
+        // Nach dem Animator, vor der Waffen-IK (ChampionWeaponHold/TwoHandGrip, Ausführungsreihenfolge 100/110):
+        // Rumpf-Gegendrehung, wenn ein Aktions-/Trage-Layer den Rumpf beim Seitwärtslaufen überschreibt
+        void LateUpdate()
+        {
+            if (_visual != null && _animator != null && _visual.gameObject.activeInHierarchy && _animator.isActiveAndEnabled)
+                _visual.CounterLocomotionTwist();
+        }
+
+        // Tempo-Multiplikator des Locomotion-States: Die Lauf-Clips haben feste Schrittlängen (Gehen 2,5 m/s, Rennen 6 m/s
+        // bei Tempo 1). Unter dem Geh-Ring und über dem Renn-Ring (Tempo-Upgrades) läuft der Zyklus deshalb proportional
+        // schneller/langsamer; dazwischen interpoliert der Blend die Schrittlänge. Im Stand 1 (Idle normal), bis zur
+        // Bewegungs-Schwelle weich auf den Geh-Wert.
+        public static float LocoSpeedFor(float speed)
+        {
+            if (speed >= RunRing) return speed / RunRing;
+            if (speed >= WalkRing) return 1f;
+            if (speed >= MoveThreshold) return speed / WalkRing;
+            return Mathf.Lerp(1f, MoveThreshold / WalkRing, speed / MoveThreshold);
+        }
+
+        // Horizontale Geschwindigkeit im Raum des Modells (nur Gier-Drehung, Neigung/Skalierung egal)
+        private Vector3 LocalVelocity(Vector3 horizontal)
+        {
+            Vector3 fwd = _animator.transform.forward;
+            fwd.y = 0f;
+            if (fwd.sqrMagnitude < 1e-6f) return new Vector3(0f, 0f, horizontal.magnitude);
+            return Quaternion.Inverse(Quaternion.LookRotation(fwd, Vector3.up)) * horizontal;
         }
 
         // Geschwindigkeit aus der Positionsänderung (geglättet; Teleports/Blinks werden ignoriert)

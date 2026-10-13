@@ -40583,6 +40583,10 @@ MonoBehaviour:
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEuler: {x: 0, y: 0, z: 0}
     WorldScale: 1
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
 --- !u!1001 &529475532
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -54313,6 +54317,10 @@ MonoBehaviour:
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEuler: {x: 0, y: 0, z: 0}
     WorldScale: 1
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
 --- !u!1001 &783006232
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -80119,6 +80127,10 @@ MonoBehaviour:
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEuler: {x: 0, y: 0, z: 0}
     WorldScale: 1
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
 --- !u!1 &975120734
 GameObject:
   m_ObjectHideFlags: 0
@@ -97720,6 +97732,10 @@ MonoBehaviour:
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEuler: {x: 0, y: 0, z: 0}
     WorldScale: 1
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
 --- !u!1001 &1287613844
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -98847,6 +98863,10 @@ MonoBehaviour:
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEuler: {x: 0, y: 0, z: 0}
     WorldScale: 1
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
 --- !u!1 &1314953514
 GameObject:
   m_ObjectHideFlags: 0

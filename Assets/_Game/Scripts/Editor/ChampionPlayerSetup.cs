@@ -37,6 +37,7 @@ namespace ElementalBuddies.EditorTools
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
+            ChampionAnimatorBuilder.ApplyTorsoLayers(); // Rumpf-Ausgleich-Layer der neu angelegten Visuals aus den Masken
             UpdatePreviews();
             AssetDatabase.SaveAssets();
             Debug.Log("ChampionPlayerSetup: Player-Prefab mit drei Champions eingerichtet.");
@@ -450,6 +451,7 @@ namespace ElementalBuddies.EditorTools
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
+            ChampionAnimatorBuilder.ApplyTorsoLayers(); // Berserker: HoldArm überschreibt den Rumpf → Gegendrehung
             UpdatePreviews(ChampionClass.Berserker);
             AssetDatabase.SaveAssets();
             Debug.Log("ChampionPlayerSetup: Berserker eingerichtet (" + (BerserkerIsPlaceholder ? "Platzhalter: Ritter-Modell + Schwert" : "BerserkerChampion2 + Axt") + ").");

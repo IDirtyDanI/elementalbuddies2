@@ -949,6 +949,9 @@ MonoBehaviour:
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEuler: {x: 0, y: 0, z: 0}
     WorldScale: 1
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers: []
 --- !u!114 &4820813816611233376
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1167,6 +1170,10 @@ MonoBehaviour:
     LocalPosition: {x: -0.000000022562718, y: 0.036287453, z: -0.18286394}
     LocalEuler: {x: 1.9636557, y: 0.000007074468, z: 8}
     WorldScale: 1
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
 --- !u!114 &7090261229840713157
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1494,6 +1501,10 @@ MonoBehaviour:
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEuler: {x: 0, y: 0, z: 0}
     WorldScale: 1
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
 --- !u!114 &1968015057288498451
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1904,6 +1915,11 @@ MonoBehaviour:
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEuler: {x: 0, y: 0, z: 0}
     WorldScale: 1
+  SpineOverrideLayers:
+  - HoldArm
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
 --- !u!114 &3415902302254934519
 MonoBehaviour:
   m_ObjectHideFlags: 0

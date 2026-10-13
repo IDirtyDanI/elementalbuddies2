@@ -3618,6 +3618,7 @@ GameObject:
   m_Component:
   - component: {fileID: 248309524}
   - component: {fileID: 248309523}
+  - component: {fileID: 248309525}
   m_Layer: 0
   m_Name: MenuAudio
   m_TagString: Untagged
@@ -4006,7 +4007,7 @@ MonoBehaviour:
     Volume: 0.55
     Pitch: {x: 1, y: 1}
     MinInterval: 1
-  MusicClip: {fileID: 8300000, guid: f877ffc5b635f0e438e6bd8d577002a5, type: 3}
+  MusicClip: {fileID: 0}
   MusicVolume: 0.25
   MusicFadeIn: 2.5
   MusicChangeTime: 0.25
@@ -4027,6 +4028,28 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &248309525
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 248309522}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50030cbac7ffa42e9a631f318c6bfd41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.MusicDirector
+  MenuClip: {fileID: 8300000, guid: d07963838aa9f42069ea5e8bee7d87df, type: 3}
+  BuildClip: {fileID: 8300000, guid: 0a68cf86e2448485090a1ef98b566268, type: 3}
+  CombatBaseClip: {fileID: 8300000, guid: 905d9f5cd77c24aaba2368f83f459387, type: 3}
+  CombatIntenseClip: {fileID: 8300000, guid: 966a5076867704b43bddc065cb9c3b0e, type: 3}
+  BossClip: {fileID: 8300000, guid: a2c7d735697714e9d8208e7c8c6ea8e7, type: 3}
+  CrossfadeTime: 2.5
+  GameOverFade: 4
+  IntensityRate: 0.35
+  EnemiesLow: 12
+  EnemiesHigh: 45
 --- !u!1 &251836491
 GameObject:
   m_ObjectHideFlags: 0

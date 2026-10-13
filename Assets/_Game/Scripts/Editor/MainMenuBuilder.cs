@@ -286,6 +286,7 @@ namespace ElementalBuddies.EditorTools
                 // Temporäre Objekte der Prefab-Erzeugung landen so in der Menü-Szene, nicht in der Spielszene
                 CreateChampionAssets(false);
                 BuildContents();
+                MetaSetup.AddDirector(menu); // eigene Menümusik (MusicDirector) statt des alten Loops
                 EditorSceneManager.MarkSceneDirty(menu);
                 EditorSceneManager.SaveScene(menu, ScenePath);
             }

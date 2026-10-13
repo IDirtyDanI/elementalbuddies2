@@ -83,15 +83,25 @@ namespace ElementalBuddies.EditorTools
             mi.animationCompression = ModelImporterAnimationCompression.Optimal;
         }
 
-        // Clip je Datei: Name = Dateiname, kein Loop, Wurzel (Hüfte) fest – die Clips bewegen nur den Oberkörper
+        // Schleifen-Clips: Lauf-Animationen (Loco_Walk_F … Loco_Run_R), Trage-Haltung (Berserker_HoldIdle/HoldRun),
+        // Glutsturm (Berserker_SpinLoop) und Ansturm (Berserker_Charge); alle übrigen (Hiebe, Sprünge …) laufen einmal
+        public static bool IsLoopClip(string name)
+        {
+            return name.StartsWith("Loco_") || name.EndsWith("_HoldIdle") || name.EndsWith("_HoldRun")
+                || name.EndsWith("_SpinLoop") || name.EndsWith("_Charge");
+        }
+
+        // Clip je Datei: Name = Dateiname, Wurzel (Hüfte) in die Pose gebacken (Rotation, Höhe, XZ – in-place, die Figur
+        // bewegt der CharacterController). Loop Time + Loop Pose nur für Schleifen-Clips (IsLoopClip), sonst einmalig.
         public static void ConfigureAnimClips(ModelImporter mi, string path)
         {
             var defs = mi.defaultClipAnimations;
             if (defs == null || defs.Length == 0) return;
             var c = defs[0];
             c.name = Path.GetFileNameWithoutExtension(path);
-            c.loopTime = false;
-            c.loopPose = false;
+            bool loop = IsLoopClip(c.name);
+            c.loopTime = loop;
+            c.loopPose = loop;
             c.lockRootRotation = true;
             c.lockRootHeightY = true;
             c.lockRootPositionXZ = true;
