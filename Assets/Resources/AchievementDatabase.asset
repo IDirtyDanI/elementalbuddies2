@@ -148,6 +148,15 @@ MonoBehaviour:
     Level: 0
     Element: -1
     Unlock: 9
+  - Id: bloodlust
+    Title: Blutdurst
+    Description: 
+    Icon: {fileID: 21300000, guid: 013150d55f46c4f3597b28afc55944c4, type: 3}
+    Condition: 0
+    Threshold: 15
+    Level: 0
+    Element: -1
+    Unlock: 10
   Unlocks:
   - Id: 1
     Name: "Schwertk\xE4mpfer"
@@ -176,6 +185,9 @@ MonoBehaviour:
   - Id: 9
     Name: Belagerungsstufen
     Icon: {fileID: 21300000, guid: 015931bcaa0e0424796e82fb16aa6933, type: 3}
+  - Id: 10
+    Name: Berserker
+    Icon: {fileID: 21300000, guid: e2dd2762c0c06406b8f7e1a5feacec6a, type: 3}
   BossKinds:
   - BossBoneLord
   - BossNecromancer

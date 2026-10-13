@@ -3,6 +3,29 @@ using UnityEngine;
 
 namespace ElementalBuddies
 {
+    // Ressourcen-Profil eines Champions, der statt Mana eine eigene Ressource nutzt (Berserker: Wut).
+    // Liefert das aktive ChampionKit (ChampionKit.Resource); null = normales Mana aus GlobalSettings.
+    [Serializable]
+    public class ResourceProfile
+    {
+        public string Name = "Wut";
+        [Tooltip("Farbe der HUD-Leiste und der Kostenzeilen.")]
+        public Color Color = new Color(0.66f, 0.2f, 0.16f);
+        public float Cap = 100f;
+        [Tooltip("Wert beim Champion-Wechsel / Spielstart.")]
+        public float StartValue = 0f;
+        [Tooltip("Bei Wellenstart mindestens auf diesen Wert setzen (0 = nichts).")]
+        public float WaveStartMinimum = 25f;
+        [Tooltip("Regeneration pro Sekunde im Kampf / außerhalb (Wut: 0).")]
+        public float RegenIn = 0f, RegenOut = 0f;
+        [Tooltip("Verfall: so lange nach dem letzten ausgeteilten/erlittenen Schaden beginnt er (s).")]
+        public float DecayDelay = 4f;
+        [Tooltip("Verfall pro Sekunde bis 0.")]
+        public float DecayRate = 8f;
+        [Tooltip("Anteil der Mana-Obergrenzen-Boni (Draft-Karten), der auf diese Obergrenze wirkt.")]
+        public float CapBonusScale = 0.5f;
+    }
+
     // Mana einer Spielfigur (jeder Spieler hat sein eigenes). Sitzt auf Player.prefab.
     // Besitzer-lokal: Nur die eigene Figur regeneriert, gibt aus und füllt bei Wellenstart/-ende auf.
     // Andere Rechner sehen den Wert über PlayerAvatar (Besitzer schreibt eine NetworkVariable) – damit kann der
@@ -26,6 +49,12 @@ namespace ElementalBuddies
         private WaveManager _waveSub;
         private PlayerAvatar _avatar;
 
+        // Ressourcen-Profil des aktiven Champions (null = Mana). Gesetzt von PlayerAbilities beim Champion-Wechsel.
+        public ResourceProfile Profile { get; private set; }
+        public bool HasProfile => Profile != null;
+        public string ResourceName => Profile != null ? Profile.Name : "Mana";
+        private float _lastCombat = -999f;
+
         // Persönliche Boni (ManaBoost-Karte u. ä.)
         public float CapBonus { get; private set; }
         public float RegenBonusPercent { get; private set; }
@@ -47,10 +76,12 @@ namespace ElementalBuddies
         public float BaseRegenIn => Settings != null ? Settings.RegenInCombat : 0.5f;
         public float BaseRegenOut => Settings != null ? Settings.RegenOutCombat : 1.5f;
 
-        public float MaxMana => Mathf.Max(0f, BaseManaCap + CapBonus);
-        public float RegenIn => BaseRegenIn * RegenFactor;
-        public float RegenOut => BaseRegenOut * RegenFactor;
+        public float MaxMana => Profile != null ? ProfileCap(Profile.Cap, CapBonus, Profile.CapBonusScale) : Mathf.Max(0f, BaseManaCap + CapBonus);
+        public float RegenIn => (Profile != null ? Profile.RegenIn : BaseRegenIn) * RegenFactor;
+        public float RegenOut => (Profile != null ? Profile.RegenOut : BaseRegenOut) * RegenFactor;
         private float RegenFactor => Mathf.Max(0f, 1f + RegenBonusPercent / 100f);
+        // Wut-Aufbau: Regenerations-Karten (+%) erhöhen den Aufbau um denselben Prozentsatz
+        public float GainFactor => RegenFactor;
 
         // Aktuelle Regeneration pro Sekunde (Kampf / außerhalb)
         public float CurrentRegen => InCombat ? RegenIn : RegenOut;
@@ -92,8 +123,8 @@ namespace ElementalBuddies
             }
             if (_waveSub != null)
             {
-                _waveSub.OnWaveStart -= Refill;
-                _waveSub.OnWaveEnd -= Refill;
+                _waveSub.OnWaveStart -= HandleWaveStart;
+                _waveSub.OnWaveEnd -= HandleWaveEnd;
                 _waveSub = null;
             }
         }
@@ -120,20 +151,28 @@ namespace ElementalBuddies
             if (wm == null || wm == _waveSub) return;
             if (_waveSub != null)
             {
-                _waveSub.OnWaveStart -= Refill;
-                _waveSub.OnWaveEnd -= Refill;
+                _waveSub.OnWaveStart -= HandleWaveStart;
+                _waveSub.OnWaveEnd -= HandleWaveEnd;
             }
             _waveSub = wm;
-            wm.OnWaveStart += Refill;
-            wm.OnWaveEnd += Refill;
+            wm.OnWaveStart += HandleWaveStart;
+            wm.OnWaveEnd += HandleWaveEnd;
         }
 
         void Update()
         {
             if (_waveSub == null) TrySubscribeWaves();
             if (!IsLocal) return;
+            if (_current > MaxMana) { SetValue(MaxMana); return; } // Bonus entfernt / Grenze gesunken
+            if (Profile != null)
+            {
+                // Wut: kein Auffüllen, nach DecayDelay ohne Kampf verfällt sie
+                float next = DecayStep(_current, Time.time - _lastCombat, Profile.DecayDelay, Profile.DecayRate, Time.deltaTime);
+                if (CurrentRegen > 0f) next = Mathf.Min(MaxMana, next + CurrentRegen * Time.deltaTime);
+                if (!Mathf.Approximately(next, _current)) SetValue(next);
+                return;
+            }
             if (_current < MaxMana) Add(CurrentRegen * Time.deltaTime);
-            else if (_current > MaxMana) SetValue(MaxMana); // Bonus entfernt / Grenze gesunken
         }
 
         // ---------------- Ändern (Besitzer) ----------------
@@ -159,6 +198,56 @@ namespace ElementalBuddies
             SetValue(MaxMana);
         }
 
+        private void HandleWaveStart()
+        {
+            if (Profile == null) { Refill(); return; }
+            // Wut: kein Auffüllen, nur Mindestwert, damit die erste Fähigkeit schnell möglich ist
+            if (!IsLocal || IsGameOver) return;
+            if (_current < Profile.WaveStartMinimum) SetValue(Mathf.Min(MaxMana, Profile.WaveStartMinimum));
+            MarkCombat();
+        }
+
+        private void HandleWaveEnd()
+        {
+            if (Profile == null) Refill();
+        }
+
+        // ---------------- Ressourcen-Profil (Wut) ----------------
+
+        // Champion-Wechsel: Profil setzen (null = Mana) und auf den Startwert bringen
+        public void ApplyProfile(ResourceProfile profile)
+        {
+            EnsureInitialized();
+            bool changed = profile != Profile;
+            Profile = profile;
+            if (!changed) return;
+            _lastCombat = -999f;
+            SetValue(profile != null ? Mathf.Clamp(profile.StartValue, 0f, MaxMana) : MaxMana);
+            NotifyChanged();
+        }
+
+        // Wut gewinnen (nur Besitzer; Server schickt sie über das Kit-Ereignis). Karten-Bonus (GainFactor) wird angerechnet.
+        // amount 0 = nur Kampf markieren (Verfall aufschieben).
+        public void Gain(float amount)
+        {
+            MarkCombat();
+            if (amount <= 0f || !IsLocal) return;
+            Add(amount * GainFactor);
+        }
+
+        // Ausgeteilter/erlittener Schaden: Verfall startet erst DecayDelay später
+        public void MarkCombat() => _lastCombat = Time.time;
+
+        // Obergrenze mit Profil: Draft-Boni wirken mit Faktor scale
+        public static float ProfileCap(float cap, float capBonus, float scale) => Mathf.Max(0f, cap + capBonus * scale);
+
+        // Ein Verfall-Schritt: erst nach delay Sekunden ohne Kampf, dann rate pro Sekunde bis 0
+        public static float DecayStep(float current, float sinceCombat, float delay, float rate, float dt)
+        {
+            if (sinceCombat < delay || current <= 0f || rate <= 0f) return current;
+            return Mathf.Max(0f, current - rate * dt);
+        }
+
         // Server zieht Mana ab (z. B. geblockter Schaden). Eigene Figur: direkt; fremde: per RPC beim Besitzer.
         // Der gespiegelte Wert sinkt sofort mit, damit weitere Treffer im selben Moment nicht doppelt abbuchen.
         public void SpendFromServer(float amount)
@@ -180,7 +269,7 @@ namespace ElementalBuddies
         {
             if (amount == 0f) return;
             CapBonus += amount;
-            if (amount > 0f && IsLocal) Add(amount);
+            if (amount > 0f && IsLocal && Profile == null) Add(amount); // Wut wird nicht aufgefüllt
             else NotifyChanged();
         }
 
@@ -197,7 +286,7 @@ namespace ElementalBuddies
         {
             CapBonus = 0f;
             RegenBonusPercent = 0f;
-            SetValue(MaxMana);
+            SetValue(Profile != null ? Mathf.Clamp(Profile.StartValue, 0f, MaxMana) : MaxMana);
         }
 
         // ---------------- Netz ----------------

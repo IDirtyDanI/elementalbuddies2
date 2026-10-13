@@ -17,12 +17,13 @@ namespace ElementalBuddies
         Stage4Light,
         TriFusion,   // alle 4 Super-Elementare
         SiegeLevels, // Belagerungsstufen (nach dem ersten Morgengrauen)
+        ChampionBerserker, // Berserker (Erfolg „Blutdurst“, Welle 15)
     }
 
     // Bedingungs-Arten; Parameter stehen in AchievementDefinition (Threshold, Level, Element)
     public enum AchievementCondition
     {
-        ReachWave,             // Welle Threshold erreichen (im Spiel, keine rückwirkende Vergabe)
+        ReachWave,             // Welle Threshold erreichen (im Spiel; neue Wellen-Erfolge werden beim Laden aus der Bestwelle nachgetragen)
         BaseBuddiesAtLevel,    // Threshold Basis-Buddies (Element, -1 = beliebig) gleichzeitig auf Stufe >= Level
         FusionBuddiesOnField,  // Threshold Fusions-Buddies gleichzeitig auf dem Feld (Super-Elementare zählen mit)
         DefeatBoss,            // Threshold Bosse in einem Spiel besiegen

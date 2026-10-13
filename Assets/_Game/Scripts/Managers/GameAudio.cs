@@ -70,7 +70,17 @@ namespace ElementalBuddies
         // Nahkampf-Treffer der Gegner (2026-10-12): Runner-Kralle, Biss (Schwarm/Grabspinne), Hieb (Ritter/Knochenfürst)
         EnemyClaw,
         EnemySnap,
-        EnemyChop
+        EnemyChop,
+        // Berserker (2026-10-13): Axt, Ansturm, Glutsturm, Eisbrecher, Bergsturz, Kampfschrei, volle Wut
+        AxeSwing,
+        AxeHit,
+        ChargeRush,
+        ChargeImpact,
+        EmberSpin,
+        IceBreak,
+        LeapLand,
+        WarRoar,
+        RageFull
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.

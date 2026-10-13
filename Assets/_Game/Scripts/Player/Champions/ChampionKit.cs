@@ -141,14 +141,27 @@ namespace ElementalBuddies
             return cost > 0f ? Mathf.CeilToInt(cost).ToString() : "";
         }
 
-        // Zeile „Mana • Abklingzeit" im Tooltip
+        // Zeile „Mana • Abklingzeit" im Tooltip (bzw. „35 Wut" mit Ressourcen-Profil)
         public virtual string GetCostLine(AbilityId id)
         {
             float cost = GetManaCost(id);
-            string mana = cost > 0f ? $"{Mathf.CeilToInt(cost)} Mana" : "kein Mana";
+            string mana = cost > 0f ? $"{Mathf.CeilToInt(cost)} {ResourceName}" : "kein " + ResourceName;
+            if (Resource != null && cost <= 0f) mana = "keine " + ResourceName + "kosten";
             float cd = Owner != null ? Owner.GetCooldownDuration(id) : GetCooldown(id);
-            return $"{ManaColor}{mana}</color>   •   {Fmt(cd)} s Abklingzeit";
+            return $"{CostColor}{mana}</color>   •   {Fmt(cd)} s Abklingzeit";
         }
+
+        // ---------------- Ressource / Leben ----------------
+
+        // Eigene Ressource statt Mana (z. B. Wut des Berserkers). null = Mana aus GlobalSettings. PlayerMana übernimmt das
+        // Profil beim Champion-Wechsel; Kosten, TrySpend, Netz-Sync und HUD-Leiste bleiben dieselben.
+        public virtual ResourceProfile Resource => null;
+        public string ResourceName => Resource != null ? Resource.Name : "Mana";
+        // HUD-Leiste / Kostenzeilen (Mana: blau)
+        public Color ResourceColor => Resource != null ? Resource.Color : new Color(0.18f, 0.37f, 0.62f);
+        protected string CostColor => Resource != null ? "<color=#" + ColorUtility.ToHtmlStringRGB(Resource.Color) + ">" : ManaColor;
+        // Zusätzliche Max-LP dieses Champions (PlayerAbilities rechnet sie beim Wechsel auf PlayerStats.MaxHP an)
+        public virtual float MaxHealthBonus => 0f;
 
         // Eingehenden Schaden verändern (Block, Schadensreduktion). Rückgabe = verbleibender Schaden.
         public virtual float ModifyIncomingDamage(float amount, Vector3 sourcePosition, bool hasSource) => amount;

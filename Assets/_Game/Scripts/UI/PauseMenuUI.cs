@@ -185,7 +185,7 @@ namespace ElementalBuddies
 
         private Slider _shakeSlider, _numbersSlider;
         private TextMeshProUGUI _shakeValue, _numbersValue;
-        private Toggle _hitStopToggle, _flashToggle, _hintsToggle;
+        private Toggle _hitStopToggle, _flashToggle, _hintsToggle, _minimapToggle;
         private Button _hintReset;
 
         private void BuildFeelRows()
@@ -221,6 +221,8 @@ namespace ElementalBuddies
                     _hintsToggle.onValueChanged.AddListener(v => HintManager.Enabled = v);
                     _hintReset = HintResetButton.Attach(_hintsToggle.transform.parent, OverviewButton != null ? OverviewButton : ResumeButton);
                 }
+                _minimapToggle = CloneToggleRow(FullscreenToggle, "MinimapRow", "Minikarte anzeigen");
+                if (_minimapToggle != null) _minimapToggle.onValueChanged.AddListener(v => MinimapUI.Enabled = v);
             }
             CompactRows();
         }
@@ -317,6 +319,7 @@ namespace ElementalBuddies
             if (_hitStopToggle != null) _hitStopToggle.SetIsOnWithoutNotify(GameFeel.HitStop);
             if (_flashToggle != null) _flashToggle.SetIsOnWithoutNotify(GameFeel.Flash);
             if (_hintsToggle != null) _hintsToggle.SetIsOnWithoutNotify(HintManager.Enabled);
+            if (_minimapToggle != null) _minimapToggle.SetIsOnWithoutNotify(MinimapUI.Enabled);
             HintResetButton.ResetLabel(_hintReset);
         }
 
@@ -680,6 +683,7 @@ namespace ElementalBuddies
             {
                 case ChampionClass.Knight: return "Schwertkämpfer";
                 case ChampionClass.Archer: return "Bogenschütze";
+                case ChampionClass.Berserker: return "Berserker";
                 default: return "Magier";
             }
         }

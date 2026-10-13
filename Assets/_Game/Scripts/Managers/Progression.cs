@@ -139,6 +139,30 @@ namespace ElementalBuddies
                 int rank = Mathf.Min(PlayerPrefs.GetInt(AchievementPrefix + a.Id, 0), MaxRank);
                 if (rank > 0) _achieved[a.Id] = rank;
             }
+            GrantReachedWaves(db);
+        }
+
+        // Wellen-Erfolge, die nach dem Erreichen der Welle neu hinzukamen (z. B. „Blutdurst“ mit dem Berserker),
+        // still aus der gespeicherten Bestwelle ohne Cheats nachtragen – höchste Stufe, auf der sie reicht
+        private static void GrantReachedWaves(AchievementDatabaseSO db)
+        {
+            bool changed = false;
+            foreach (var a in db.Achievements)
+            {
+                if (a == null || string.IsNullOrEmpty(a.Id) || a.Condition != AchievementCondition.ReachWave) continue;
+                int old;
+                _achieved.TryGetValue(a.Id, out old);
+                for (int r = MaxRank; r > old; r--)
+                {
+                    if (PlayerPrefs.GetInt(AchBestWaveKey + "_" + r, 0) < a.Threshold) continue;
+                    _achieved[a.Id] = r;
+                    PlayerPrefs.SetInt(AchievementPrefix + a.Id, r);
+                    Debug.Log($"Erfolge: „{a.Title}“ rückwirkend auf {RankName(r)} vergeben (Bestwelle).");
+                    changed = true;
+                    break;
+                }
+            }
+            if (changed) PlayerPrefs.Save();
         }
 
         // Einmalige Übernahme alter Stände (vor den Stufen): Erfolg = 1 → Normal, Fortschritts-Schlüssel → Normal
@@ -204,8 +228,8 @@ namespace ElementalBuddies
 
         public static bool Grant(string id, int rank = 0) => Grant(Database != null ? Database.Find(id) : null, rank);
 
-        // Alle Erfolge löschen (BestWave des GameManagers bleibt). Keine rückwirkende Vergabe aus der Bestwelle –
-        // Champions & Co. müssen im Spiel erspielt werden.
+        // Alle Erfolge löschen (BestWave des GameManagers bleibt; die Erfolgs-Bestwellen werden mitgelöscht, damit Load
+        // nichts rückwirkend nachträgt) – Champions & Co. müssen dann neu erspielt werden.
         public static void ResetAll()
         {
             var db = Database;
@@ -404,7 +428,8 @@ namespace ElementalBuddies
         // ---------------- Bequeme Abfragen ----------------
 
         public static UnlockId ChampionUnlock(ChampionClass c) =>
-            c == ChampionClass.Knight ? UnlockId.ChampionKnight : c == ChampionClass.Archer ? UnlockId.ChampionArcher : UnlockId.None;
+            c == ChampionClass.Knight ? UnlockId.ChampionKnight : c == ChampionClass.Archer ? UnlockId.ChampionArcher
+            : c == ChampionClass.Berserker ? UnlockId.ChampionBerserker : UnlockId.None;
 
         // Hauptmenü: persistenter Stand der Stufe (rank <= 0 → gewählte Stufe); sessionSnapshot = true für die Spielszene
         public static bool IsChampionUnlocked(ChampionClass c, bool sessionSnapshot = false, int rank = 0) =>

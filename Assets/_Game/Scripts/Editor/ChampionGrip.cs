@@ -19,10 +19,23 @@ namespace ElementalBuddies.EditorTools
         // Muskelwerte (Clip-Kurvennamen, z. B. "Right Arm Down-Up") – leer = kein HoldArm-Layer
         public Dictionary<string, float> ArmPose;
         public AvatarMaskBodyPart[] ArmParts;
+        // Alternativ zu ArmPose: Trage-Clips (Pfade) für Stand/Lauf – HoldArm wird dann ein 1D-Blend über "Speed"
+        // (z. B. Berserker_HoldIdle/HoldRun: Axt mit beiden Händen vor der Brust); Maske = ArmParts
+        public string ArmIdleClip, ArmRunClip;
+        public float ArmRunSpeed = 6f;
+
+        // Zweihand-Griff: linke Faust per IK an den Griffpunkt der rechten Waffe (ChampionTwoHandGrip); null = keiner
+        public TwoHandGrip TwoHand;
 
         // Laufzeit-Komponente ChampionWeaponHold (IK-Tragehaltung + Freiraum Kopf/Hut); null = keine.
         // IK2: zweite Hand (z. B. Ritter: Schwert rechts + Schild links) – eigene Komponente
         public HoldIK IK, IK2;
+    }
+
+    public class TwoHandGrip
+    {
+        public string GripName = "Grip2";
+        public string[] FreeStates = { };
     }
 
     public class HoldIK
@@ -160,11 +173,13 @@ namespace ElementalBuddies.EditorTools
             RemoveHoldLayers(ac);
             if (spec == null) return;
 
-            if (spec.ArmPose != null && spec.ArmPose.Count > 0)
+            Motion holdMotion = null;
+            if (!string.IsNullOrEmpty(spec.ArmIdleClip)) holdMotion = HoldBlend(ac, spec);
+            else if (spec.ArmPose != null && spec.ArmPose.Count > 0) holdMotion = PoseClip(Dir + prefix + "_HoldArm.anim", spec.ArmPose);
+            if (holdMotion != null)
             {
-                var clip = PoseClip(Dir + prefix + "_HoldArm.anim", spec.ArmPose);
                 var mask = Mask(Dir + prefix + "_HoldArm.mask", spec.ArmParts);
-                AddPoseLayer(ac, HoldLayer, clip, mask);
+                AddPoseLayer(ac, HoldLayer, holdMotion, mask);
                 // direkt hinter den Base Layer schieben, damit Aktions-Layer ihn überschreiben
                 var layers = ac.layers;
                 var hold = layers[layers.Length - 1];
@@ -186,7 +201,33 @@ namespace ElementalBuddies.EditorTools
             EditorUtility.SetDirty(ac);
         }
 
-        private static void AddPoseLayer(AnimatorController ac, string name, AnimationClip clip, AvatarMask mask)
+        // Trage-Clips als 1D-Blend (Stand → Lauf über "Speed"); der Blend-Baum liegt als Unter-Asset im Controller
+        private static Motion HoldBlend(AnimatorController ac, HoldSpec spec)
+        {
+            var idle = FirstClip(spec.ArmIdleClip);
+            var run = FirstClip(spec.ArmRunClip);
+            if (idle == null) { Debug.LogWarning("ChampionGrip: Trage-Clip fehlt: " + spec.ArmIdleClip); return null; }
+            if (run == null) return idle;
+            // alten Blend-Baum (vorheriger Bau) entfernen, sonst sammeln sich Unter-Assets an
+            foreach (var o in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(ac)))
+                if (o is BlendTree && o.name == HoldLayer + "Blend") AssetDatabase.RemoveObjectFromAsset(o);
+            var bt = new BlendTree { name = HoldLayer + "Blend", blendType = BlendTreeType.Simple1D, blendParameter = "Speed", useAutomaticThresholds = false, hideFlags = HideFlags.HideInHierarchy };
+            AssetDatabase.AddObjectToAsset(bt, ac);
+            bt.AddChild(idle, 0f);
+            bt.AddChild(idle, 0.5f);
+            bt.AddChild(run, spec.ArmRunSpeed);
+            return bt;
+        }
+
+        private static AnimationClip FirstClip(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+            foreach (var o in AssetDatabase.LoadAllAssetsAtPath(path))
+                if (o is AnimationClip c && !c.name.StartsWith("__preview")) return c;
+            return null;
+        }
+
+        private static void AddPoseLayer(AnimatorController ac, string name, Motion clip, AvatarMask mask)
         {
             ac.AddLayer(name);
             var layers = ac.layers;

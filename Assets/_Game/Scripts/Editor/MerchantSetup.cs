@@ -107,6 +107,32 @@ namespace ElementalBuddies.EditorTools
             new CardDef(AbilityId.LightArrow, AbilityStat.Range, 15),
             new CardDef(AbilityId.LightArrow, AbilityStat.Duration, 25),
             new CardDef(AbilityId.LightArrow, AbilityStat.Cooldown, 12),
+
+            // ---- Berserker ----
+            new CardDef(AbilityId.AxeCleave, AbilityStat.Damage, 20),
+            new CardDef(AbilityId.AxeCleave, AbilityStat.Range, 20),
+            new CardDef(AbilityId.AxeCleave, AbilityStat.Angle, 20),
+            new CardDef(AbilityId.AxeCleave, AbilityStat.Speed, 15),
+            new CardDef(AbilityId.BerserkCharge, AbilityStat.Range, 20),
+            new CardDef(AbilityId.BerserkCharge, AbilityStat.Cooldown, 20),
+            new CardDef(AbilityId.BerserkCharge, AbilityStat.Charges, 1),
+            new CardDef(AbilityId.BerserkCharge, AbilityStat.Damage, 25),
+            new CardDef(AbilityId.EmberStorm, AbilityStat.Damage, 20),
+            new CardDef(AbilityId.EmberStorm, AbilityStat.Area, 15),
+            new CardDef(AbilityId.EmberStorm, AbilityStat.Duration, 25),
+            new CardDef(AbilityId.EmberStorm, AbilityStat.Cooldown, 12),
+            new CardDef(AbilityId.IceBreaker, AbilityStat.Damage, 20),
+            new CardDef(AbilityId.IceBreaker, AbilityStat.Range, 15),
+            new CardDef(AbilityId.IceBreaker, AbilityStat.Duration, 25),
+            new CardDef(AbilityId.IceBreaker, AbilityStat.Cooldown, 12),
+            new CardDef(AbilityId.Landslide, AbilityStat.Damage, 20),
+            new CardDef(AbilityId.Landslide, AbilityStat.Area, 15),
+            new CardDef(AbilityId.Landslide, AbilityStat.Duration, 25),
+            new CardDef(AbilityId.Landslide, AbilityStat.Cooldown, 12),
+            new CardDef(AbilityId.LightFrenzy, AbilityStat.Duration, 25),
+            new CardDef(AbilityId.LightFrenzy, AbilityStat.Heal, 25),
+            new CardDef(AbilityId.LightFrenzy, AbilityStat.ManaCost, 20),
+            new CardDef(AbilityId.LightFrenzy, AbilityStat.Cooldown, 12),
         };
 
         [MenuItem("BuddyTD/Händler/Kartenpool neu erzeugen")]
@@ -144,7 +170,10 @@ namespace ElementalBuddies.EditorTools
                 // Tempo-Karten zeigen in der Vorschau die (kürzere) Zeit – im Text das Tempo nennen
                 if (def.Stat == AbilityStat.Speed && def.Ability == AbilityId.SwordSlash) label = "Kombo-Tempo";
                 if (def.Stat == AbilityStat.Speed && def.Ability == AbilityId.ArrowShot) label = "Feuerrate";
+                if (def.Stat == AbilityStat.Speed && def.Ability == AbilityId.AxeCleave) label = "Kombo-Tempo";
                 card.Title = $"{abilityName}: {AbilityMods.StatName(def.Stat)}";
+                // Berserker: „Manakosten“ heißen Wutkosten
+                if (def.Stat == AbilityStat.ManaCost && cls == ChampionClass.Berserker) card.Title = $"{abilityName}: Wutkosten";
                 card.Description = $"{label} {AbilityMods.FormatValue(def.Stat, def.Value)}";
                 card.Icon = FindAbilityIcon(kit, def.Ability);
                 card.Badge = LoadBadge(def.Stat);

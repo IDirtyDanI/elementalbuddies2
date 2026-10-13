@@ -23,10 +23,12 @@ namespace ElementalBuddies.EditorTools
         {
             var log = new System.Text.StringBuilder();
             var player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Prefabs/Player.prefab");
-            string[] champ = { "Visual_Mage", "Visual_Knight", "Visual_Archer" };
-            string[] champFile = { "mage", "knight", "archer" };
+            string[] champ = { "Visual_Mage", "Visual_Knight", "Visual_Archer", "Visual_Berserker" };
+            string[] champFile = { "mage", "knight", "archer", "berserker" };
             for (int i = 0; i < champ.Length; i++)
             {
+                // Berserker-Platzhalter (Ritter-Modell) nicht als Berserker-Porträt rendern
+                if (champFile[i] == "berserker" && ChampionPlayerSetup.BerserkerIsPlaceholder) continue;
                 var t = player.transform.Find(champ[i]);
                 var cv = t != null ? t.GetComponent<ChampionVisual>() : null;
                 if (cv == null) continue;

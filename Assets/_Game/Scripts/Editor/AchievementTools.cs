@@ -34,13 +34,14 @@ namespace ElementalBuddies.EditorTools
             { "soul_collector", "ach_soulcollector" },
             { "first_night", "ach_survivor" },
             { "dawn", "card_sonnenstrahl" },
+            { "bloodlust", "ach_berserker" },
         };
 
         // Neue PNGs als Sprite (2D and UI) importieren, falls noch nicht geschehen
         private static readonly string[] SpriteIcons =
         {
             "achievement_frame", "achievement_frame_locked", "icon_lock", "icon_trophy",
-            "ach_boss", "ach_bosses_all", "ach_soulcollector", "ach_survivor",
+            "ach_boss", "ach_bosses_all", "ach_soulcollector", "ach_survivor", "ach_berserker",
         };
 
         [MenuItem("BuddyTD/Erfolge/Datenbank anlegen-aktualisieren")]
@@ -71,6 +72,8 @@ namespace ElementalBuddies.EditorTools
             // Sprint 4 (Plan Fesselung E5/E7): früher erster Erfolg und Morgengrauen
             added += Add(db, "first_night", "Erste Nacht", AchievementCondition.ReachWave, 3, 0, -1, UnlockId.None);
             added += Add(db, "dawn", "Morgengrauen", AchievementCondition.SurviveDawn, 1, 0, -1, UnlockId.SiegeLevels);
+            // Vierter Champion: setzt die Reihe W6 Schwertkämpfer / W10 Bogenschütze fort
+            added += Add(db, "bloodlust", "Blutdurst", AchievementCondition.ReachWave, 15, 0, -1, UnlockId.ChampionBerserker);
 
             AddUnlock(db, UnlockId.ChampionKnight, "Schwertkämpfer");
             AddUnlock(db, UnlockId.ChampionArcher, "Bogenschütze");
@@ -81,6 +84,7 @@ namespace ElementalBuddies.EditorTools
             AddUnlock(db, UnlockId.Stage4Light, "Licht Stufe 4 – Sonnenerzengel");
             AddUnlock(db, UnlockId.TriFusion, "Super-Elementare");
             AddUnlock(db, UnlockId.SiegeLevels, "Belagerungsstufen");
+            AddUnlock(db, UnlockId.ChampionBerserker, "Berserker");
 
             AssignIcons(db);
 
@@ -147,7 +151,9 @@ namespace ElementalBuddies.EditorTools
             for (int i = 0; i < AchievementIcons.GetLength(0); i++)
             {
                 var a = db.Find(AchievementIcons[i, 0]);
-                if (a != null && a.Icon == null) a.Icon = Icon(AchievementIcons[i, 1]);
+                // leer → setzen; „Blutdurst“ hatte bis 2026-10-13 den Platzhalter ach_survivor → durch ach_berserker ersetzen
+                bool placeholder = a != null && a.Icon != null && AchievementIcons[i, 0] == "bloodlust" && a.Icon.name == "ach_survivor";
+                if (a != null && (a.Icon == null || placeholder)) a.Icon = Icon(AchievementIcons[i, 1]);
             }
             SetUnlockIcon(db, UnlockId.ChampionKnight, "portrait_champion_knight");
             SetUnlockIcon(db, UnlockId.ChampionArcher, "portrait_champion_archer");
@@ -158,6 +164,7 @@ namespace ElementalBuddies.EditorTools
             SetUnlockIcon(db, UnlockId.Stage4Light, "portrait4_light");
             SetUnlockIcon(db, UnlockId.TriFusion, "portrait_super_vulkan");
             SetUnlockIcon(db, UnlockId.SiegeLevels, "elite_ram");
+            SetUnlockIcon(db, UnlockId.ChampionBerserker, System.IO.File.Exists(IconDir + "portrait_champion_berserker.png") ? "portrait_champion_berserker" : "portrait_champion_knight");
             if (db.MedalFrame == null) db.MedalFrame = Icon("achievement_frame");
             if (db.MedalFrameLocked == null) db.MedalFrameLocked = Icon("achievement_frame_locked");
             if (db.LockIcon == null) db.LockIcon = Icon("icon_lock");
@@ -167,7 +174,12 @@ namespace ElementalBuddies.EditorTools
         private static void SetUnlockIcon(AchievementDatabaseSO db, UnlockId id, string icon)
         {
             foreach (var u in db.Unlocks)
-                if (u != null && u.Id == id && u.Icon == null) u.Icon = Icon(icon);
+            {
+                if (u == null || u.Id != id) continue;
+                // Berserker hatte bis zum eigenen Porträt (2026-10-13) den Platzhalter portrait_champion_knight → ersetzen
+                bool placeholder = id == UnlockId.ChampionBerserker && u.Icon != null && u.Icon.name == "portrait_champion_knight" && icon != u.Icon.name;
+                if (u.Icon == null || placeholder) u.Icon = Icon(icon);
+            }
         }
 
         // ---------------- Popup-Prefab ----------------

@@ -22,6 +22,7 @@ GameObject:
   - component: {fileID: 3674158172168087333}
   - component: {fileID: 1615420693750248697}
   - component: {fileID: 978174050410446703}
+  - component: {fileID: 4158976632451271197}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -46,6 +47,7 @@ Transform:
   - {fileID: 3164890131478716760}
   - {fileID: 6673127104992518371}
   - {fileID: 6138722409013637293}
+  - {fileID: 8582883269771843759}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &1181602933105186767
@@ -243,6 +245,7 @@ MonoBehaviour:
     ScaleParticleTravel: 1
     WallPrefab: {fileID: 3783064027663644335, guid: 17db8f5d19f584c018be6fdd6251bf58, type: 3}
     WallPrefabIsUnitSize: 0
+    WallPrefabLength: 6
     Length: 6
     Height: 2.5
     Thickness: 1
@@ -549,7 +552,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 0
+  GlobalObjectIdHash: 3099082577
   InScenePlacedSourceGlobalObjectIdHash: 0
   m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
@@ -636,6 +639,176 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.PlayerMana
   settings: {fileID: 0}
+--- !u!114 &4158976632451271197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 430299107827163824}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21653cb02a89743d3b2742b4f25464f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BerserkerKit
+  DisplayName: Berserker
+  Definition: {fileID: 11400000, guid: 4fd2f73c9d2e844b2ba491800a170f3b, type: 2}
+  Abilities:
+  - Id: 18
+    Name: Axthieb
+    Icon: {fileID: 21300000, guid: 2733bc7c7e30b44ccbad0cba812d1850, type: 3}
+  - Id: 19
+    Name: Ansturm
+    Icon: {fileID: 21300000, guid: 89e1bcee6a1fe495b80be85ce7892160, type: 3}
+  - Id: 20
+    Name: Glutsturm
+    Icon: {fileID: 21300000, guid: 894d1bdb9fc79433693302972445c046, type: 3}
+  - Id: 21
+    Name: Eisbrecher
+    Icon: {fileID: 21300000, guid: 9add5f7507af7466a8d6a0974fa0312d, type: 3}
+  - Id: 22
+    Name: Bergsturz
+    Icon: {fileID: 21300000, guid: 04f0c8255bef545749fe1c59bac1948c, type: 3}
+  - Id: 23
+    Name: Lichtrausch
+    Icon: {fileID: 21300000, guid: 7514f7b4fe2844d2798fbb0d1c55c43f, type: 3}
+  Rage:
+    Name: Wut
+    Color: {r: 0.66, g: 0.2, b: 0.16, a: 1}
+    Cap: 100
+    StartValue: 0
+    WaveStartMinimum: 25
+    RegenIn: 0
+    RegenOut: 0
+    DecayDelay: 4
+    DecayRate: 8
+    CapBonusScale: 0.5
+  RagePerHit: 3
+  MaxRageHitsPerSwing: 3
+  RagePerChargeHit: 3
+  RagePerDamageTaken: 0.5
+  FrenzyThreshold: 75
+  FrenzySpeedBonus: 0.15
+  RageGlowPrefab: {fileID: 4483426202667740133, guid: 321b6b18588a9491598ac5389c21a69d, type: 3}
+  HealthBonus: 25
+  CleaveDamage: 26
+  FinisherDamage: 48
+  CleaveRange: 2.9
+  CleaveArc: 150
+  CleaveInterval: 0.6
+  FinisherRecovery: 1
+  ComboWindow: 1.2
+  FinisherKnockback: 1.5
+  CleaveHitDelay: 0.18
+  FinisherHitDelay: 0.32
+  HitHeight: 1
+  SlashFxPrefab: {fileID: 8055853707868116502, guid: 185bc94c44b86481b8df20f4d8df72c3, type: 3}
+  HitFxPrefab: {fileID: 3052360932140851688, guid: c4c7665d054f6448e90ecb140d08b759, type: 3}
+  CleaveColor: {r: 1.9, g: 0.6, b: 0.3, a: 1}
+  FinisherColor: {r: 2.2, g: 0.35, b: 0.15, a: 1}
+  ChargeDistance: 6
+  ChargeDuration: 0.3
+  ChargeWidth: 1.2
+  ChargeDamage: 15
+  ChargeKnockback: 1
+  ChargeDamageReduction: 0.4
+  ChargeCooldown: 6
+  ChargeCharges: 1
+  ChargeLockout: 0.4
+  ChargeDustPrefab: {fileID: 4698649229318827565, guid: b8eda6051fac44a9eb9e2615da814193, type: 3}
+  ChargeImpactPrefab: {fileID: 863828134249645799, guid: 738365eac4d464474a482ee4c56592c4, type: 3}
+  EmberStorm:
+    ManaCost: 35
+    Cooldown: 9
+    CastEffectPrefab: {fileID: 3122596830867510243, guid: 1eb40975502824b39943efa4bfad7e5b, type: 3}
+    EffectLifetime: 0
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 3
+    ScaleParticleTravel: 1
+    Duration: 2.5
+    TickInterval: 0.5
+    Radius: 3
+    TickDamage: 14
+    BurnDps: 6
+    BurnDuration: 2
+    MoveMultiplier: 0.7
+    BurnVfxPrefab: {fileID: 4481895208120942333, guid: 9b2f858c065484439a8507ccf83cb5c5, type: 3}
+    LoopFxPrefab: {fileID: 3122596830867510243, guid: 1eb40975502824b39943efa4bfad7e5b, type: 3}
+    ArcFxPrefab: {fileID: 4163798145252318048, guid: 35e6c994712dd45c0b1eefe69f384fcf, type: 3}
+    ArcColor: {r: 2, g: 0.5, b: 0.12, a: 1}
+  IceBreaker:
+    ManaCost: 30
+    Cooldown: 9
+    CastEffectPrefab: {fileID: 7952185606481284358, guid: 2969e126307334fbe9ebc3c05455b1cf, type: 3}
+    EffectLifetime: 2.5
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 7
+    ScaleParticleTravel: 1
+    Length: 7
+    Width: 2
+    Damage: 35
+    FreezeDuration: 1.5
+    ShatterMultiplier: 1.5
+    HitDelay: 0.43
+    FrozenVfxPrefab: {fileID: 2592698230950355078, guid: 4a39c28ab0eae4e2baa0c34042ff2038, type: 3}
+    ShatterFxPrefab: {fileID: 3052360932140851688, guid: c4c7665d054f6448e90ecb140d08b759, type: 3}
+  Landslide:
+    ManaCost: 40
+    Cooldown: 12
+    CastEffectPrefab: {fileID: 4283710211974541788, guid: 3209760846a4842dda6272a1ffa58b45, type: 3}
+    EffectLifetime: 2.5
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 3.5
+    ScaleParticleTravel: 1
+    LeapDistance: 8
+    LeapDuration: 0.5
+    LeapHeight: 2
+    Radius: 3.5
+    Damage: 55
+    StunDuration: 1
+    Knockback: 2
+    StunVfxPrefab: {fileID: 7651933627681563699, guid: e8dcdc109ff9c4c4f978531732e0bfd3, type: 3}
+    WarnFxPrefab: {fileID: 7516696040476298879, guid: bb2d424c486c14d0092c0a38ec004f0d, type: 3}
+  LightFrenzy:
+    ManaCost: 50
+    Cooldown: 18
+    CastEffectPrefab: {fileID: 7963790645304353729, guid: e1b6e4add30eb4ce4bd5dc4fb1dd82c0, type: 3}
+    EffectLifetime: 2.5
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 5
+    ScaleParticleTravel: 1
+    Duration: 8
+    Lifesteal: 0.15
+    LifestealCap: 60
+    AttackSpeedBonus: 0.25
+    BuddyRadius: 8
+    BuddyDamageBonus: 0.15
+    BlindRadius: 5
+    BlindDuration: 1.5
+    BlindSlow: 0.5
+    BlindVfxPrefab: {fileID: 7651933627681563699, guid: e8dcdc109ff9c4c4f978531732e0bfd3, type: 3}
+    AuraPrefab: {fileID: 8000542873644259181, guid: 7cea3ca239c16434788d8a5b31d67e2f, type: 3}
+    BuddyBuffFxPrefab: {fileID: 3054494238844095861, guid: 8918b08a33cdf436cb346a481a70c47d, type: 3}
+  SwingSfx:
+    Clip: {fileID: 8300000, guid: 022635a538c4e4278a1313f9d4a8e31d, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.94, y: 1.06}
+    MinInterval: 0.05
+  FinisherSfx:
+    Clip: {fileID: 8300000, guid: 022635a538c4e4278a1313f9d4a8e31d, type: 3}
+    Volume: 0.75
+    Pitch: {x: 0.82, y: 0.88}
+    MinInterval: 0.05
+  ChargeSfx:
+    Clip: {fileID: 8300000, guid: 37b242c68f07d4b62af4b23430483220, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.2
+  ChargeImpactSfx:
+    Clip: {fileID: 8300000, guid: 510751377168d4725a61df2b3352347a, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.92, y: 1.05}
+    MinInterval: 0.12
 --- !u!1 &6391672169923958274
 GameObject:
   m_ObjectHideFlags: 0
@@ -1605,3 +1778,202 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: ceb0eadaa5a784578a56ea3b7dc1264b, type: 3}
   m_PrefabInstance: {fileID: 6562040161375438600}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &8112741741185580868
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 5517846512824315092}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_Name
+      value: Visual_Berserker
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: aa70de52dd09a483293f4f586ff6a556, type: 2}
+    - target: {fileID: 5866666021909216657, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_CullingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8809038449861377811}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3415902302254934519}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3786528436164428840}
+  m_SourcePrefab: {fileID: 100100000, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+--- !u!95 &2449019251371606741 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+  m_PrefabInstance: {fileID: 8112741741185580868}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &8582883269771843759 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+  m_PrefabInstance: {fileID: 8112741741185580868}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8959725024891404821 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: b8536af0a27ff4a2a831ceed96959422, type: 3}
+  m_PrefabInstance: {fileID: 8112741741185580868}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8809038449861377811
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8959725024891404821}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc9d75f4b4db7443982716953d0d6c4c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ChampionVisual
+  Class: 3
+  Animator: {fileID: 2449019251371606741}
+  RightHandWeapon:
+    Prefab: {fileID: 919132149155446097, guid: dc25fe603b8f547cb974f7a8eeb9697d, type: 3}
+    LocalPosition: {x: 0.0070902384, y: 0.08790767, z: -0.025923789}
+    LocalEuler: {x: 16.978006, y: 172.89903, z: 72.68349}
+    WorldScale: 1
+  LeftHandWeapon:
+    Prefab: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  BackItem:
+    Prefab: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+--- !u!114 &3415902302254934519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8959725024891404821}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6231edd27047451c84d5042a3b014e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ChampionTwoHandGrip
+  Visual: {fileID: 8809038449861377811}
+  GripName: Grip2
+  PalmOffset: {x: -0.00007058872, y: 0.0008791654, z: -0.00025936437}
+  PalmAxis: {x: -0.95807076, y: 0.28476697, z: 0.03175307}
+  FreeStates:
+  - Roar
+  ActionLayers:
+  - UpperBody
+  - FullBody
+  FadeSpeed: 8
+  MaxShoulderAngle: 25
+--- !u!114 &3786528436164428840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8959725024891404821}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e1e882aaaf144ed383f4aa43971ede5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ChampionWeaponHold
+  Visual: {fileID: 8809038449861377811}
+  RightHand: 1
+  Carry: 0
+  IdleCarry: 1
+  HandOnly: 0
+  GripOffset: {x: 0, y: 0, z: 0}
+  FollowBone: 0
+  HipsRest: {x: 0.025675789, y: 0.89508057, z: -0.008346617}
+  HipsFollow: {x: 0.4, y: 1, z: 0.4}
+  GroundClearance: -1
+  GroundEscape: {x: 0.6, y: 0, z: 1}
+  WeaponAxis: {x: 0, y: 1, z: 0}
+  ElbowHint: {x: 0.3, y: -0.3, z: -0.25}
+  WeaponForward: {x: 0, y: 0, z: 0}
+  FollowHipsYaw: 0
+  HipsRestForward: {x: -0.09650042, y: 0.0087022185, z: 0.995295}
+  FollowRestEuler: {x: 0.61853683, y: 5.5258203, z: 358.7857}
+  ActionLayers:
+  - UpperBody
+  - FullBody
+  FadeSpeed: 8
+  States: []
+  WristAngle: {x: 0, y: 180}
+  Clearances:
+  - From: 10
+    To: 55
+    Height: 0.32
+    Radius: 0.2
+    Shorten: 0
+    MoveHand: 0
+  WeaponTop: 0
+  WeaponBottom: 0
+  WeaponRadius: 0.04
+  Segments:
+  - {x: 0, y: -0.12, z: 0}
+  - {x: 0, y: 0.98, z: 0}
+  - {x: -0.24, y: 0.8, z: 0}
+  - {x: 0.24, y: 0.8, z: 0}

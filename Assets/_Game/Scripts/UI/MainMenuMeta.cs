@@ -187,16 +187,20 @@ namespace ElementalBuddies
         public static AchievementDefinition NextGoal(out int cur, out int target)
         {
             cur = target = 0;
-            AchievementDefinition best = null;
+            AchievementDefinition best = null, done = null;
+            int doneC = 0, doneT = 0;
             float bestF = -1f;
             foreach (var a in Progression.All)
             {
                 if (a == null || Progression.IsAchieved(a, 0)) continue;
                 Progression.GetProgress(a, out int c, out int t, 0);
-                if (t > 0 && c >= t) continue; // Ziel schon erfüllt, Vergabe erst im Spiel (keine rückwirkende Vergabe)
+                // Ziel schon erfüllt, Vergabe erst im Spiel (keine rückwirkende Vergabe) – nur nehmen, wenn sonst nichts offen ist
+                // (z. B. neuer Erfolg „Blutdurst“ bei Spielern, die Welle 15 schon erreicht haben: sonst stünde dort fälschlich „Alle Erfolge erreicht“)
+                if (t > 0 && c >= t) { if (done == null) { done = a; doneC = c; doneT = t; } continue; }
                 float f = t > 0 ? c / (float)t : 0f;
                 if (f > bestF) { bestF = f; best = a; cur = c; target = t; }
             }
+            if (best == null && done != null) { best = done; cur = doneC; target = doneT; }
             return best;
         }
 

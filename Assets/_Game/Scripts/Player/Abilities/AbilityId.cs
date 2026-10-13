@@ -26,7 +26,15 @@ namespace ElementalBuddies
         FireArrowRain, // R - Feuerpfeil-Regen
         FrostArrow,    // F - Frostpfeil
         ThornTrap,     // C - Dornenfalle
-        LightArrow     // V - Lichtpfeil
+        LightArrow,    // V - Lichtpfeil
+
+        // Berserker (Klasse 3 – MerchantCardSO.ClassOf/SlotOf rechnen id / 6 bzw. id % 6)
+        AxeCleave,      // LMB - Axthieb (3er-Kombo)
+        BerserkCharge,  // RMB - Ansturm
+        EmberStorm,     // R - Glutsturm
+        IceBreaker,     // F - Eisbrecher
+        Landslide,      // C - Bergsturz
+        LightFrenzy     // V - Lichtrausch
     }
 
     // Tastenbelegung, gleich für alle Champions. Reihenfolge = alte AbilityBar-Reihenfolge (serialisiert).

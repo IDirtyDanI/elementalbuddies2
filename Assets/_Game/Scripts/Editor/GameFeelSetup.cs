@@ -162,6 +162,17 @@ namespace ElementalBuddies.EditorTools
             yield return new Sfx(SfxId.EnemyClaw, 0.36f, 0.04f, PWide, "enemy_claw");
             yield return new Sfx(SfxId.EnemySnap, 0.3f, 0.04f, PWide, "enemy_snap");
             yield return new Sfx(SfxId.EnemyChop, 0.42f, 0.05f, P, "enemy_chop");
+            // Berserker (2026-10-13). Axt/Ansturm spielen über die ChampionSfx-Felder des BerserkerKit (gleiche Clips),
+            // die Ids dienen Zaubern, FeedbackDirector (Axt-Treffer) und der Wut-Anzeige.
+            yield return new Sfx(SfxId.AxeSwing, 0.55f, 0.05f, P, "axe_swing");
+            yield return new Sfx(SfxId.AxeHit, 0.55f, 0.05f, PWide, "axe_hit");
+            yield return new Sfx(SfxId.ChargeRush, 0.55f, 0.2f, P, "charge_rush");
+            yield return new Sfx(SfxId.ChargeImpact, 0.55f, 0.12f, P, "charge_impact");
+            yield return new Sfx(SfxId.EmberSpin, 0.45f, 0.3f, P, "ember_spin"); // je Wirbel-Tick (0,5 s)
+            yield return new Sfx(SfxId.IceBreak, 0.6f, 0.3f, P, "ice_break");
+            yield return new Sfx(SfxId.LeapLand, 0.65f, 0.3f, P, "leap_land");
+            yield return new Sfx(SfxId.WarRoar, 0.7f, 1f, new Vector2(0.97f, 1.03f), "war_roar");
+            yield return new Sfx(SfxId.RageFull, 0.55f, 1f, PFix, "rage_full");
         }
 
         private static void AssignGameAudio(GameAudio ga)
@@ -202,7 +213,7 @@ namespace ElementalBuddies.EditorTools
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (asset == null) continue;
-                bool relevant = asset.GetComponentInChildren<KnightKit>(true) != null || asset.GetComponentInChildren<ArcherKit>(true) != null
+                bool relevant = asset.GetComponentInChildren<KnightKit>(true) != null || asset.GetComponentInChildren<ArcherKit>(true) != null || asset.GetComponentInChildren<BerserkerKit>(true) != null
                                 || asset.GetComponentInChildren<ArrowProjectile>(true) != null;
                 if (!relevant) continue;
                 // Nur Prefabs ändern, die die Komponente selbst besitzen (nicht nur über ein verschachteltes Prefab)
@@ -221,6 +232,14 @@ namespace ElementalBuddies.EditorTools
                     SetSfx(a.ShootSfx, "bow_shot", 0.6f, 0.95f, 1.08f);
                     SetSfx(a.ArrowHitSfx, "bow_hit", 0.55f, 0.92f, 1.1f);
                     SetSfx(a.RollSfx, "dodge_roll", 0.45f, 0.95f, 1.08f);
+                    changed = true;
+                }
+                foreach (var b in root.GetComponentsInChildren<BerserkerKit>(true))
+                {
+                    SetSfx(b.SwingSfx, "axe_swing", 0.6f, 0.94f, 1.06f);
+                    SetSfx(b.FinisherSfx, "axe_swing", 0.75f, 0.82f, 0.88f);
+                    SetSfx(b.ChargeSfx, "charge_rush", 0.6f, 0.95f, 1.05f);
+                    SetSfx(b.ChargeImpactSfx, "charge_impact", 0.55f, 0.92f, 1.05f);
                     changed = true;
                 }
                 foreach (var ap in root.GetComponentsInChildren<ArrowProjectile>(true))

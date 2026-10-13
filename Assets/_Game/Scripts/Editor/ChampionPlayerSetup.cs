@@ -85,9 +85,12 @@ namespace ElementalBuddies.EditorTools
                 archer.BackItem.Prefab = null;
             }
 
+            var berserker = SetupBerserkerVisual(root);
+
             mage.gameObject.SetActive(true);
             knight.gameObject.SetActive(false);
             archer.gameObject.SetActive(false);
+            if (berserker != null) berserker.gameObject.SetActive(false);
 
             // Pfeil-Abschusspunkt am Root (nicht am Knochen)
             var spawn = root.transform.Find("ArrowSpawn");
@@ -381,7 +384,84 @@ namespace ElementalBuddies.EditorTools
                     },
                 },
             },
+            // Berserker: eigenes Modell (BerserkerChampion2.fbx) + Zweihand-Axt (W2_GreatAxe.fbx), sobald beide existieren.
+            // Bis dahin baut EffectiveSpec einen Platzhalter aus Ritter-Modell + Schwert (PlaceholderBerserker).
+            // Haltung: Arme + Rumpf aus den Trage-Clips Berserker_HoldIdle/HoldRun (HoldArm-Layer, Blend über Speed), in allen
+            // Aktionen führt die Animation (Clips aus art-src/heroes2/20_berserker_anims.py, linke Faust schon am Grip2);
+            // ChampionTwoHandGrip hält die linke Faust per IK am Grip2 (außer im Kampfschrei), ChampionWeaponHold nur Freiraum
+            // (Hornhelm) – keine Trage-IK.
+            new ChampionSpec
+            {
+                Class = ChampionClass.Berserker, VisualName = "Visual_Berserker", Controller = "Assets/_Game/Animations/BerserkerVisual.controller",
+                LegacyModel = "KnightChampion.fbx", Model2 = H2 + "BerserkerChampion2.fbx", ClipPrefix = "Berserker", Heroes2Ready = true,
+                // Roll 180 = Blender-Konvention wie beim Schwert (Waffen-+Z zur Handfläche, Schneiden ±X in Schlagrichtung)
+                Right = new WeaponSpec { Prefab = H2 + "Weapons/W2_GreatAxe.fbx", Roll = 180f },
+                Hold = new HoldSpec
+                {
+                    Right = HandPose.Fist, Left = HandPose.Fist,
+                    ArmIdleClip = ChampionGrip.Dir + "Berserker_HoldIdle.fbx", ArmRunClip = ChampionGrip.Dir + "Berserker_HoldRun.fbx",
+                    ArmParts = new[] { AvatarMaskBodyPart.Body, AvatarMaskBodyPart.LeftArm, AvatarMaskBodyPart.RightArm },
+                    TwoHand = new TwoHandGrip { GripName = "Grip2", FreeStates = new[] { "Roar" } },
+                    IK = new HoldIK
+                    {
+                        Carry = false, WristAngle = new Vector2(0f, 180f),
+                        // Stiel (Fuß −0,12 m … Kopf 0,98 m) und Axtblatt (Schneiden ±0,24 m in X um y ≈ 0,8 m)
+                        Segments = new[] { new Vector3(0f, -0.12f, 0f), new Vector3(0f, 0.98f, 0f), new Vector3(-0.24f, 0.8f, 0f), new Vector3(0.24f, 0.8f, 0f) },
+                        WeaponRadius = 0.04f, GroundClearance = -1f,
+                        // Hornhelm: Kopfkapsel mit Hörnern
+                        Clearances = new[] { new ChampionWeaponHold.Clearance { From = HumanBodyBones.Head, Height = 0.32f, Radius = 0.2f } },
+                    },
+                },
+            },
         };
+
+        // Spec, die tatsächlich gebaut wird: Berserker ohne eigenes Modell/Axt → Platzhalter (Ritter-Modell + Schwert,
+        // Ritter-Schwert-IK, Controller BerserkerVisual mit Ritter-Clips). Sobald BerserkerChampion2.fbx und
+        // W2_GreatAxe.fbx da sind, reicht „BuddyTD → Champions → Berserker einrichten“ für den Tausch.
+        public static ChampionSpec EffectiveSpec(ChampionSpec spec)
+        {
+            if (spec == null || spec.Class != ChampionClass.Berserker || spec.UseHeroes2) return spec;
+            var knight = Spec(ChampionClass.Knight);
+            return new ChampionSpec
+            {
+                Class = ChampionClass.Berserker, VisualName = spec.VisualName, Controller = spec.Controller,
+                LegacyModel = spec.LegacyModel, Model2 = knight.Model2, ClipPrefix = spec.ClipPrefix, Heroes2Ready = true,
+                Right = knight.Right,
+                Hold = new HoldSpec { Right = HandPose.Fist, Left = HandPose.Fist, IK = knight.Hold.IK },
+            };
+        }
+
+        public static bool BerserkerIsPlaceholder => !Spec(ChampionClass.Berserker).UseHeroes2;
+
+        // Nur den Berserker auf Player.prefab (Visual + Kit) und seine Vorschau einrichten – die anderen Champions bleiben unberührt.
+        [MenuItem("BuddyTD/Champions/Berserker einrichten")]
+        public static void SetupBerserkerMenu()
+        {
+            ChampionAnimatorBuilder.BuildBerserker();
+            var root = PrefabUtility.LoadPrefabContents(PlayerPrefab);
+            try
+            {
+                var cv = SetupBerserkerVisual(root);
+                if (cv != null) cv.gameObject.SetActive(false);
+                SetupBerserkerKit(root);
+                PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefab);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            UpdatePreviews(ChampionClass.Berserker);
+            AssetDatabase.SaveAssets();
+            Debug.Log("ChampionPlayerSetup: Berserker eingerichtet (" + (BerserkerIsPlaceholder ? "Platzhalter: Ritter-Modell + Schwert" : "BerserkerChampion2 + Axt") + ").");
+        }
+
+        private static ChampionVisual SetupBerserkerVisual(GameObject root)
+        {
+            var spec = EffectiveSpec(Spec(ChampionClass.Berserker));
+            if (spec == null || !System.IO.File.Exists(spec.Model2)) return null;
+            if (AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(spec.Controller) == null) ChampionAnimatorBuilder.BuildBerserker();
+            return SetupHeroes2(root, spec);
+        }
 
         private static ChampionWeaponHold.StateTarget Keep(string state)
         {
@@ -490,6 +570,7 @@ namespace ElementalBuddies.EditorTools
             cv.BackItem = new ChampionVisual.Attachment();
             // Ruhepose der Bezugsknochen (Hüfte, Oberkörper …) für die Trage-IK
             var rest = new System.Collections.Generic.Dictionary<HumanBodyBones, Vector3[]>();
+            Vector3? palm = null, palmAxis = null;
             using (var s = new ChampionPoseSampler(cv, new Vector3(0f, -300f, 0f), false))
             {
                 s.Sample(restPose, 0f);
@@ -502,16 +583,41 @@ namespace ElementalBuddies.EditorTools
                 GripSocket(s, cv.RightHandWeapon, right, true);
                 GripSocket(s, cv.LeftHandWeapon, left, false);
                 FixedSocket(cv.BackItem, back);
+                // Zweihand-Griff: Faustmitte der linken Hand im lokalen Raum des Handknochens
+                if (hold != null && hold.TwoHand != null)
+                {
+                    Vector3 c, ax;
+                    float rad;
+                    var lh = s.Animator.GetBoneTransform(HumanBodyBones.LeftHand);
+                    if (lh != null && ChampionGrip.FitGrip(s.Animator, false, out c, out ax, out rad))
+                    {
+                        palm = lh.InverseTransformPoint(c);
+                        palmAxis = lh.InverseTransformDirection(ax).normalized;
+                    }
+                }
             }
             if (right != null && (right.BindPose || right.Palm)) BindSocket(cv.RightHandWeapon, right, modelPath, HumanBodyBones.RightHand);
             if (left != null && (left.BindPose || left.Palm)) BindSocket(cv.LeftHandWeapon, left, modelPath, HumanBodyBones.LeftHand);
             if (back != null && back.BindPose) BindSocket(cv.BackItem, back, modelPath, HumanBodyBones.UpperChest);
-            ConfigureHold(cv.gameObject, cv, hold, rest);
+            ConfigureHold(cv.gameObject, cv, hold, rest, palm, palmAxis);
         }
 
         // Je HoldIK (IK, IK2) eine ChampionWeaponHold-Komponente; überzählige werden entfernt
-        public static void ConfigureHold(GameObject go, ChampionVisual cv, HoldSpec spec, System.Collections.Generic.Dictionary<HumanBodyBones, Vector3[]> rest)
+        public static void ConfigureHold(GameObject go, ChampionVisual cv, HoldSpec spec, System.Collections.Generic.Dictionary<HumanBodyBones, Vector3[]> rest, Vector3? palmOffset = null, Vector3? palmAxis = null)
         {
+            // Zweihand-Griff (linke Faust an Grip2)
+            var th = go.GetComponent<ChampionTwoHandGrip>();
+            if (spec == null || spec.TwoHand == null) { if (th != null) Object.DestroyImmediate(th); }
+            else
+            {
+                if (th == null) th = go.AddComponent<ChampionTwoHandGrip>();
+                th.Visual = cv;
+                th.GripName = spec.TwoHand.GripName;
+                th.FreeStates = spec.TwoHand.FreeStates ?? new string[0];
+                if (palmOffset.HasValue) th.PalmOffset = palmOffset.Value;
+                if (palmAxis.HasValue) th.PalmAxis = palmAxis.Value;
+            }
+
             var iks = new System.Collections.Generic.List<HoldIK>();
             if (spec != null && spec.IK != null) iks.Add(spec.IK);
             if (spec != null && spec.IK2 != null) iks.Add(spec.IK2);
@@ -595,11 +701,16 @@ namespace ElementalBuddies.EditorTools
         }
 
         // Menü-Vorschauen der Heroes2-Champions: Kind "Model" = Modell (verschachteltes FBX-Prefab) + Controller + ChampionVisual
-        public static void UpdatePreviews()
+        public static void UpdatePreviews() { UpdatePreviews(null); }
+
+        // only = nur diese Klasse (null = alle)
+        public static void UpdatePreviews(ChampionClass? only)
         {
             var player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefab);
-            foreach (var spec in Specs)
+            foreach (var raw in Specs)
             {
+                if (only.HasValue && raw.Class != only.Value) continue;
+                var spec = EffectiveSpec(raw);
                 if (!spec.UseHeroes2) continue;
                 var srcT = player.transform.Find(spec.VisualName);
                 var src = srcT != null ? srcT.GetComponent<ChampionVisual>() : null;
@@ -629,7 +740,9 @@ namespace ElementalBuddies.EditorTools
                     // Ruhewerte der Bezugsknochen vom Player-Visual übernehmen
                     var rest = new System.Collections.Generic.Dictionary<HumanBodyBones, Vector3[]>();
                     foreach (var sh in src.GetComponents<ChampionWeaponHold>()) rest[sh.FollowBone] = new[] { sh.HipsRest, sh.HipsRestForward, sh.FollowRestEuler };
-                    ConfigureHold(go, cv, spec.Hold, rest);
+                    // Faustmitte im Knochenraum ist skalierungsunabhängig → vom Player-Visual übernehmen
+                    var srcGrip = src.GetComponent<ChampionTwoHandGrip>();
+                    ConfigureHold(go, cv, spec.Hold, rest, srcGrip != null ? srcGrip.PalmOffset : (Vector3?)null, srcGrip != null ? srcGrip.PalmAxis : (Vector3?)null);
                     PrefabUtility.SaveAsPrefabAsset(root, path);
                 }
                 finally
@@ -793,10 +906,78 @@ namespace ElementalBuddies.EditorTools
                 if (def == null) continue;
                 if (def.Class == ChampionClass.Mage) mage.Definition = def;
                 else if (def.Class == ChampionClass.Knight) k.Definition = def;
-                else a.Definition = def;
+                else if (def.Class == ChampionClass.Archer) a.Definition = def;
             }
 
+            SetupBerserkerKit(root);
             EditorUtility.SetDirty(root);
+        }
+
+        // ---- Berserker ---- (VFX aus ChampionFxBuilder.BuildBerserker, eigene Sounds und Icons)
+        private static void SetupBerserkerKit(GameObject root)
+        {
+            if (Champ("VFX_AxeCleave") == null) ChampionFxBuilder.BuildBerserker();
+            var mage = root.GetComponent<MageKit>();
+            GameObject burn = mage != null ? mage.FireWave.BurnVfxPrefab : null;
+            GameObject frozen = mage != null ? mage.FrostNova.FrozenVfxPrefab : null;
+            GameObject blind = mage != null ? mage.HolyCircle.BlindVfxPrefab : null;
+
+            var b = Get<BerserkerKit>(root);
+            b.DisplayName = "Berserker";
+            b.SlashFxPrefab = Champ("VFX_AxeCleave");
+            b.HitFxPrefab = Champ("VFX_SwordHit");
+            b.RageGlowPrefab = Champ("VFX_RageGlow");
+            b.ChargeDustPrefab = Champ("VFX_ChargeDust");
+            b.ChargeImpactPrefab = Champ("VFX_ChargeImpact");
+            b.EmberStorm.LoopFxPrefab = Champ("VFX_EmberStorm");
+            b.EmberStorm.CastEffectPrefab = Champ("VFX_EmberStorm");
+            b.EmberStorm.EffectLifetime = 0f; // lebt so lange wie der Wirbel (Spell zerstört ihn)
+            b.EmberStorm.ArcFxPrefab = Champ("VFX_SwordSlash");
+            b.EmberStorm.BurnVfxPrefab = burn;
+            ScaleFx(b.EmberStorm, 3f);
+            b.IceBreaker.CastEffectPrefab = Champ("VFX_IceBreaker");
+            b.IceBreaker.EffectLifetime = 2.5f;
+            b.IceBreaker.FrozenVfxPrefab = frozen;
+            b.IceBreaker.ShatterFxPrefab = Champ("VFX_SwordHit");
+            ScaleFx(b.IceBreaker, 7f);
+            b.Landslide.CastEffectPrefab = Champ("VFX_Landslide");
+            b.Landslide.EffectLifetime = 2.5f;
+            b.Landslide.WarnFxPrefab = Champ("VFX_LandslideWarn");
+            b.Landslide.StunVfxPrefab = blind;
+            ScaleFx(b.Landslide, 3.5f);
+            b.LightFrenzy.CastEffectPrefab = Champ("VFX_WarRoar");
+            b.LightFrenzy.EffectLifetime = 2.5f;
+            b.LightFrenzy.AuraPrefab = Champ("VFX_FrenzyAura");
+            b.LightFrenzy.BuddyBuffFxPrefab = Champ("VFX_FrenzyBuff");
+            b.LightFrenzy.BlindVfxPrefab = blind;
+            ScaleFx(b.LightFrenzy, 5f);
+            // Axt-/Ansturm-Töne: eigene Synthese (art-src/audio/synth_sfx.py, Abschnitt Berserker)
+            b.SwingSfx = Sfx("Generated/axe_swing.wav", 0.6f, 0.94f, 1.06f);
+            b.FinisherSfx = Sfx("Generated/axe_swing.wav", 0.75f, 0.82f, 0.88f);
+            b.ChargeSfx = Sfx("Generated/charge_rush.wav", 0.6f, 0.95f, 1.05f, 0.2f);
+            b.ChargeImpactSfx = Sfx("Generated/charge_impact.wav", 0.55f, 0.92f, 1.05f, 0.12f);
+            // Icons: eigene Blender-Renders (art-src/icons/berserker_icons.py); Rückfall auf Ritter/Bogenschütze, falls die PNGs fehlen
+            b.Abilities = new System.Collections.Generic.List<ChampionKit.AbilityDisplay>
+            {
+                D(AbilityId.AxeCleave, "Axthieb", IconOr("ability_berserker_cleave", "ability_knight_slash")),
+                D(AbilityId.BerserkCharge, "Ansturm", IconOr("ability_berserker_charge", "ability_archer_roll")),
+                D(AbilityId.EmberStorm, "Glutsturm", IconOr("ability_berserker_emberstorm", "ability_knight_flamewhirl")),
+                D(AbilityId.IceBreaker, "Eisbrecher", IconOr("ability_berserker_icebreaker", "ability_knight_froststrike")),
+                D(AbilityId.Landslide, "Bergsturz", IconOr("ability_berserker_landslide", "ability_knight_earthquake")),
+                D(AbilityId.LightFrenzy, "Lichtrausch", IconOr("ability_berserker_lightfrenzy", "ability_knight_lightoath")),
+            };
+            foreach (var g in AssetDatabase.FindAssets("t:ChampionDefinitionSO"))
+            {
+                var def = AssetDatabase.LoadAssetAtPath<ChampionDefinitionSO>(AssetDatabase.GUIDToAssetPath(g));
+                if (def != null && def.Class == ChampionClass.Berserker) b.Definition = def;
+            }
+            b.enabled = false; // PlayerAbilities schaltet das Kit der gewählten Klasse ein
+            EditorUtility.SetDirty(b);
+        }
+
+        private static string IconOr(string wanted, string fallback)
+        {
+            return System.IO.File.Exists(Icons + wanted + ".png") ? wanted : fallback;
         }
     }
 }

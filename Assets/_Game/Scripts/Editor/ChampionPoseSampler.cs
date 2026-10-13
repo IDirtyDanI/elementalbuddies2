@@ -34,7 +34,11 @@ namespace ElementalBuddies.EditorTools
             Root.transform.SetPositionAndRotation(position, Quaternion.identity);
             Root.transform.localScale = source.transform.lossyScale;
             Root.SetActive(true);
-            if (!holds) foreach (var h in Root.GetComponentsInChildren<ChampionWeaponHold>(true)) Object.DestroyImmediate(h);
+            if (!holds)
+            {
+                foreach (var h in Root.GetComponentsInChildren<ChampionWeaponHold>(true)) Object.DestroyImmediate(h);
+                foreach (var h in Root.GetComponentsInChildren<ChampionTwoHandGrip>(true)) Object.DestroyImmediate(h);
+            }
             Visual = Root.GetComponent<ChampionVisual>();
             Animator = Visual.Animator != null ? Visual.Animator : Root.GetComponentInChildren<Animator>(true);
             Visual.Animator = Animator;
@@ -70,6 +74,7 @@ namespace ElementalBuddies.EditorTools
             a.Update(0f);
             // Laufzeit-Korrekturen nach dem Animator (IK-Tragehaltung, Freiraum) wie im Spiel anwenden
             foreach (var h in Root.GetComponentsInChildren<ChampionWeaponHold>()) h.Apply(true);
+            foreach (var h in Root.GetComponentsInChildren<ChampionTwoHandGrip>()) h.Apply(true);
         }
 
         // AnimatorController hinter einem (Override-)Controller (Händler-Figuren nutzen Override-Controller)

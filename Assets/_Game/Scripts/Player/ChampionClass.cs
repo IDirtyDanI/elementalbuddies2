@@ -7,12 +7,19 @@ namespace ElementalBuddies
     {
         Mage,   // Magier: Arkanball / Blink
         Knight, // Schwertkämpfer: Schwerthieb / Schildblock
-        Archer  // Bogenschütze: Pfeilschuss / Rolle
+        Archer, // Bogenschütze: Pfeilschuss / Rolle
+        Berserker // Berserker: Axthieb / Ansturm (Wut statt Mana)
     }
 
     // Überträgt die Champion-Wahl vom Hauptmenü in die Spielszene (statisch + PlayerPrefs als Vorbelegung).
     public static class GameSession
     {
+        // Anzahl der Champions (Enum-Werte) – für Klammern, F6-Wechsel, Menü
+        public static readonly int ChampionCount = System.Enum.GetValues(typeof(ChampionClass)).Length;
+
+        // Ungültige Werte (alte PlayerPrefs, Netz) auf einen gültigen Champion begrenzen
+        public static ChampionClass ClampChampion(int value) => (ChampionClass)Mathf.Clamp(value, 0, ChampionCount - 1);
+
         private const string PrefKey = "champion";
 
         private static bool _loaded;
@@ -25,7 +32,7 @@ namespace ElementalBuddies
                 if (!_loaded)
                 {
                     _loaded = true;
-                    _selected = (ChampionClass)Mathf.Clamp(PlayerPrefs.GetInt(PrefKey, 0), 0, 2);
+                    _selected = ClampChampion(PlayerPrefs.GetInt(PrefKey, 0));
                 }
                 return _selected;
             }

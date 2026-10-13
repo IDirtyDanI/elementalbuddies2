@@ -91,6 +91,7 @@ namespace ElementalBuddies.EditorTools
             var mage = EnsurePreviewPrefab(ChampionClass.Mage);
             var knight = EnsurePreviewPrefab(ChampionClass.Knight);
             var archer = EnsurePreviewPrefab(ChampionClass.Archer);
+            var berserker = EnsurePreviewPrefab(ChampionClass.Berserker);
 
             Sprite arcane = Icon("ability_arcane"), blink = Icon("ability_blink");
             Sprite fire = Icon("emblem_fire"), ice = Icon("emblem_ice"), earth = Icon("emblem_earth"), light = Icon("emblem_light");
@@ -152,8 +153,54 @@ namespace ElementalBuddies.EditorTools
                 };
             });
 
+            WriteChampion(ChampionClass.Berserker, overwrite, "Champion_Berserker", d =>
+            {
+                d.DisplayName = "Berserker";
+                d.Tagline = "Nordmann im Blutrausch";
+                d.Description = "Ein Krieger aus dem Norden, der mit seiner Zweihand-Axt mitten in die Gegnerwellen springt. " +
+                                "Statt Mana treibt ihn die Wut an: Jeder Treffer – ausgeteilt oder eingesteckt – macht ihn stärker.";
+                d.PreviewPrefab = berserker;
+                d.AccentColor = new Color(0.66f, 0.2f, 0.16f); // Blutrot #a8322a
+                var portrait = AssetDatabase.LoadAssetAtPath<Sprite>(IconDir + "portrait_champion_berserker.png");
+                d.Portrait = portrait != null ? portrait : AssetDatabase.LoadAssetAtPath<Sprite>(IconDir + "portrait_champion_knight.png"); // Platzhalter
+                d.Abilities = new List<ChampionDefinitionSO.AbilityInfo>
+                {
+                    Ab("LMB", "Axthieb", "Breiter Axthieb, 3er-Kombo – der Überkopf-Spalter trifft härter. Treffer geben Wut.", arcane, -1),
+                    Ab("RMB", "Ansturm", "Sprint 6 m Richtung Mauszeiger, stößt Gegner zur Seite. 40 % weniger Schaden dabei.", blink, -1),
+                    Ab("R", "Glutsturm", "Wirbel mit glühender Axt: Schaden und Brand um dich herum, während du läufst.", fire, 0),
+                    Ab("F", "Eisbrecher", "Eisstachel-Linie nach vorne: friert ein, eingefrorene Gegner zerschmettern.", ice, 1),
+                    Ab("C", "Bergsturz", "Weitsprung zum Mauszeiger: Aufprall mit Schaden, Betäubung und Rückstoß.", earth, 2),
+                    Ab("V", "Lichtrausch", "Kampfschrei: Lebensraub, schnellere Hiebe, stärkere Buddies, geblendete Gegner.", light, 3),
+                };
+            });
+            RefreshBerserkerArt();
+
             AssetDatabase.SaveAssets();
         }
+
+        // Eigene Berserker-Bilder (Porträt, Fähigkeits-Icons) übernehmen, sobald sie existieren – auch in ein schon
+        // angelegtes Champion_Berserker.asset (dort standen bis 2026-10-13 Platzhalter: Ritter-Porträt, Magier-Icons)
+        private static readonly string[] BerserkerIcons =
+            { "ability_berserker_cleave", "ability_berserker_charge", "ability_berserker_emberstorm", "ability_berserker_icebreaker", "ability_berserker_landslide", "ability_berserker_lightfrenzy" };
+
+        public static void RefreshBerserkerArt()
+        {
+            var def = AssetDatabase.LoadAssetAtPath<ChampionDefinitionSO>(ChampionDir + "Champion_Berserker.asset");
+            if (def == null) return;
+            var portrait = Icon("portrait_champion_berserker");
+            if (portrait != null) def.Portrait = portrait;
+            if (def.Abilities != null)
+                for (int i = 0; i < def.Abilities.Count && i < BerserkerIcons.Length; i++)
+                {
+                    var icon = Icon(BerserkerIcons[i]);
+                    if (icon != null && def.Abilities[i] != null) def.Abilities[i].Icon = icon;
+                }
+            EditorUtility.SetDirty(def);
+        }
+
+        // Nur fehlende Champion-Assets anlegen (z. B. Champion_Berserker + Preview_Berserker), vorhandene bleiben unverändert
+        [MenuItem("BuddyTD/Hauptmenü/Fehlende Champion-Assets anlegen")]
+        public static void CreateMissingChampionAssetsMenu() { CreateChampionAssets(false); }
 
         private static ChampionDefinitionSO.AbilityInfo Ab(string key, string name, string desc, Sprite icon, int element)
         {
@@ -180,6 +227,7 @@ namespace ElementalBuddies.EditorTools
                 AssetDatabase.LoadAssetAtPath<ChampionDefinitionSO>(ChampionDir + "Champion_Mage.asset"),
                 AssetDatabase.LoadAssetAtPath<ChampionDefinitionSO>(ChampionDir + "Champion_Knight.asset"),
                 AssetDatabase.LoadAssetAtPath<ChampionDefinitionSO>(ChampionDir + "Champion_Archer.asset"),
+                AssetDatabase.LoadAssetAtPath<ChampionDefinitionSO>(ChampionDir + "Champion_Berserker.asset"),
             };
         }
 
@@ -344,11 +392,12 @@ namespace ElementalBuddies.EditorTools
             const float radius = 1.45f;
             const float pedScale = 0.8f;
             var pedestals = new List<MenuChampionStage.Pedestal>();
-            ChampionClass[] order = { ChampionClass.Mage, ChampionClass.Knight, ChampionClass.Archer };
-            for (int i = 0; i < 3; i++)
+            ChampionClass[] order = { ChampionClass.Mage, ChampionClass.Knight, ChampionClass.Archer, ChampionClass.Berserker };
+            float step = 360f / order.Length;
+            for (int i = 0; i < order.Length; i++)
             {
-                // Winkel 180° = vorne (zur Kamera), Reihenfolge im Uhrzeigersinn
-                float a = 180f + i * 120f;
+                // Winkel 180° = vorne (zur Kamera), Reihenfolge im Uhrzeigersinn (4 Sockel: 90°-Schritte)
+                float a = 180f + i * step;
                 var ped = new GameObject("Pedestal_" + order[i]).transform;
                 ped.SetParent(carousel, false);
                 ped.localPosition = new Vector3(Mathf.Sin(a * Mathf.Deg2Rad), 0f, Mathf.Cos(a * Mathf.Deg2Rad)) * radius;
@@ -443,7 +492,9 @@ namespace ElementalBuddies.EditorTools
             var scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(2400f, 1350f);
-            scaler.matchWidthOrHeight = 0.5f;
+            // an der Höhe ausrichten: bei Breitbild (21:9) bleibt die Spalte 1350 hoch (Karten, Schwierigkeit, Knöpfe
+            // überlappen nicht); 16:9 unverändert, bei 16:10/4:3 wird es nur schmaler (Platz in der Mitte reicht)
+            scaler.matchWidthOrHeight = 1f;
             canvasGo.AddComponent<GraphicRaycaster>();
             var ui = canvasGo.AddComponent<MainMenuUI>();
             ui.Champions = defs;
@@ -468,11 +519,17 @@ namespace ElementalBuddies.EditorTools
             Place(chooseHdr.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(84f, -262f), new Vector2(700f, 56f));
 
             var cards = new List<MainMenuUI.Card>();
+            int count = 0;
+            foreach (var d in defs) if (d != null) count++;
+            // Ab 4 Karten enger und flacher, damit die Spalte über der Schwierigkeits-Zeile (y 462–514) endet:
+            // 4. Karte unten bei −820 (Referenz 1350 hoch → 530 über dem Rand), auch ausgewählt (×1,06) frei
+            float cardStep = count > 3 ? 124f : 168f;
+            _cardHeight = count > 3 ? 118f : 150f;
             for (int i = 0; i < defs.Length; i++)
             {
                 var def = defs[i];
                 if (def == null) continue;
-                cards.Add(BuildCard(root, def, i, new Vector2(80f, -330f - i * 168f)));
+                cards.Add(BuildCard(root, def, i, new Vector2(80f, -330f - i * cardStep)));
             }
             ui.Cards = cards.ToArray();
             ui.CardNormalSprite = UISprite("slot_card");
@@ -505,10 +562,12 @@ namespace ElementalBuddies.EditorTools
             ui.Fader = cg;
         }
 
+        private static float _cardHeight = 150f;
+
         private static MainMenuUI.Card BuildCard(Transform parent, ChampionDefinitionSO def, int index, Vector2 pos)
         {
             var card = new MainMenuUI.Card { Class = def.Class };
-            var rt = Rect("Card_" + def.Class, parent, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), pos, new Vector2(540f, 150f));
+            var rt = Rect("Card_" + def.Class, parent, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), pos, new Vector2(540f, _cardHeight));
             card.Frame = Img(rt, UISprite("slot_card"), Color.white, true);
             var btn = rt.gameObject.AddComponent<Button>();
             btn.targetGraphic = card.Frame;
@@ -849,7 +908,7 @@ namespace ElementalBuddies.EditorTools
             if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
         }
 
-        private const string KeyHintText = "←/→ oder 1–3: Champion wechseln   ·   Q/E: Schwierigkeit   ·   Enter: Spielen   ·   Esc: zurück";
+        private const string KeyHintText = "←/→ oder 1–4: Champion wechseln   ·   Q/E: Schwierigkeit   ·   Enter: Spielen   ·   Esc: zurück";
 
         private static void BuildAchievementsPanel(Transform root, MainMenuUI ui)
         {

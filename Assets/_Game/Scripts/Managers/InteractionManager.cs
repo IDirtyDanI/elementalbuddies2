@@ -86,6 +86,8 @@ namespace ElementalBuddies
 
         void Update()
         {
+            ReleaseButtonFocus();
+
             // Pause-Menü offen -> keine Eingaben (ESC übernimmt der PauseManager)
             if (PauseManager.IsPaused) return;
 
@@ -96,7 +98,21 @@ namespace ElementalBuddies
             UpdateGhost();
         }
 
-        private bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
+        // #161: Ein per Mausklick gedrückter HUD-Button (Bauleiste, Welle starten, Verkaufen, Reroll …) behält sonst den
+        // EventSystem-Fokus. Der StandaloneInputModule der Spielszene löst dann bei Leertaste (Legacy-Achse „Submit“ =
+        // Enter/Space, Space ist zugleich Jump) dessen onClick erneut aus -> Bau-Modus statt Sprung; WASD (Achsen
+        // Horizontal/Vertical) wandert per Auto-Navigation sogar zu Nachbar-Buttons. Im Spiel gibt es keine gewollte
+        // Tastatur-Navigation (Pause-Menü-Buttons haben Navigation None), also Button-Fokus sofort wieder lösen.
+        // Eingabefelder/Slider bleiben unberührt.
+        private static void ReleaseButtonFocus()
+        {
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            if (es == null || es.alreadySelecting) return;
+            var selected = es.currentSelectedGameObject;
+            if (selected != null && selected.GetComponent<UnityEngine.UI.Button>() != null) es.SetSelectedGameObject(null);
+        }
+
+        private bool IsGameOver =>GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
 
         // Lokale Eingabe gesperrt (nur dieser Rechner): Pause-Menü, eigenes Kartenfenster (Wellen-Draft/Händler) oder
         // Solo-Zeitstopp. Ersetzt die frühere Prüfung auf Time.timeScale (im Koop gibt es keine globale Pause).
@@ -448,7 +464,8 @@ namespace ElementalBuddies
         private readonly Dictionary<Vector2Int, bool> _reachCache = new Dictionary<Vector2Int, bool>();
         private UnityEngine.AI.NavMeshPath _reachPath;
 
-        private bool IsReachableByEnemies(Vector3 position, bool useCache = true)
+        // Auch von FusionManager genutzt (Ausweichplatz des Fusions-Ergebnisses, ohne Cache)
+        public bool IsReachableByEnemies(Vector3 position, bool useCache = true)
         {
             var nexus = Nexus.Instance;
             if (nexus == null) return true;

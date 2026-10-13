@@ -33,6 +33,8 @@ namespace ElementalBuddies
         public RectTransform TopHud;
         [Tooltip("Abstand der Pfeilmitte zur Unterkante der TopBar, Canvas-Einheiten.")]
         public float TopHudPadding = 46f;
+        [Tooltip("Abstand der Pfeilmitte zur Minimap oben links (MinimapUI), Canvas-Einheiten.")]
+        public float MinimapPadding = 40f;
 
         [Header("Ziele")]
         [Tooltip("Wie lange nach dem Öffnen ein Portal angezeigt wird (s).")]
@@ -196,6 +198,7 @@ namespace ElementalBuddies
             float tx = Mathf.Abs(localDir.x) > 1e-5f ? halfW / Mathf.Abs(localDir.x) : float.PositiveInfinity;
             float ty = Mathf.Abs(localDir.y) > 1e-5f ? (localDir.y > 0f ? halfUp : halfH) / Mathf.Abs(localDir.y) : float.PositiveInfinity;
             Vector2 pos = areaCenter + localDir * Mathf.Min(tx, ty);
+            pos = AvoidMinimap(pos);
 
             SetVisible(ch, true);
             ch.Arrow.anchoredPosition = ToAnchored(ch.Arrow, pos);
@@ -222,6 +225,25 @@ namespace ElementalBuddies
                 ch.TargetIcon.enabled = icon != null;
                 ch.TargetIcon.rectTransform.anchoredPosition = ToAnchored(ch.TargetIcon.rectTransform, labelPos + Vector2.up * 30f);
             }
+        }
+
+        // Pfeil am Rand oben links würde auf der Minimap liegen → am Rand entlang neben bzw. unter sie schieben
+        // (kürzerer Weg gewinnt)
+        private Vector2 AvoidMinimap(Vector2 pos)
+        {
+            var mm = MinimapUI.Instance;
+            if (mm == null || !mm.IsShown || mm.Rect == null) return pos;
+            mm.Rect.GetWorldCorners(_corners);
+            Vector2 min = _area.InverseTransformPoint(_corners[0]);
+            Vector2 max = _area.InverseTransformPoint(_corners[2]);
+            min -= Vector2.one * MinimapPadding;
+            max += Vector2.one * MinimapPadding;
+            if (pos.x < min.x || pos.x > max.x || pos.y < min.y || pos.y > max.y) return pos;
+            float toRight = max.x - pos.x;
+            float toBelow = pos.y - min.y;
+            if (toRight <= toBelow) pos.x = max.x;
+            else pos.y = min.y;
+            return pos;
         }
 
         // Lokale Position im Bereich → anchoredPosition des Elements (berücksichtigt beliebige Anchors)

@@ -264,6 +264,9 @@ namespace ElementalBuddies
         // Lebende Bosse in Spawn-Reihenfolge (für die Boss-HP-Leiste)
         private static readonly System.Collections.Generic.List<EnemyBrain> _activeBosses = new System.Collections.Generic.List<EnemyBrain>();
         public static System.Collections.Generic.IReadOnlyList<EnemyBrain> ActiveBosses => _activeBosses;
+        // Alle aktiven Gegner (Server und Clients) – für die Minimap, ohne FindObjectsByType pro Takt
+        private static readonly System.Collections.Generic.List<EnemyBrain> _all = new System.Collections.Generic.List<EnemyBrain>();
+        public static System.Collections.Generic.IReadOnlyList<EnemyBrain> All => _all;
         public bool IsBoss => Config != null && Config.IsBoss;
         public string DisplayName => Config != null && !string.IsNullOrEmpty(Config.DisplayName) ? Config.DisplayName : name;
 
@@ -304,6 +307,7 @@ namespace ElementalBuddies
             _shieldbearers.Clear();
             _playerSourceDepth = 0;
             _activeBosses.Clear();
+            _all.Clear();
             _meleeSfxWindowStart = -1f;
             _meleeSfxCount = 0;
         }
@@ -364,8 +368,19 @@ namespace ElementalBuddies
             }
         }
 
+        void OnEnable()
+        {
+            if (!_all.Contains(this)) _all.Add(this);
+        }
+
+        void OnDisable()
+        {
+            _all.Remove(this);
+        }
+
         void OnDestroy()
         {
+            _all.Remove(this);
             _activeBosses.Remove(this);
             _shieldbearers.Remove(this);
         }

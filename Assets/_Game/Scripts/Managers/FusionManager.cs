@@ -8,7 +8,8 @@ namespace ElementalBuddies
     // verschmelzen in der Bauphase gegen Seelensplitter zu einem Fusions-Buddy in der Mitte. Rezepte sind reine Daten (Recipes).
     // Tri-Fusion (Super-Elementare, TriRecipes): (a) 2er-Fusion + Basis-Buddy genau auf TriFusionLevel des fehlenden Elements,
     // (b) drei Basis-Buddies genau auf TriFusionLevel mit drei verschiedenen Elementen. Nähe: alle Zutaten paarweise <= FusionRange
-    // (damit ist die Option symmetrisch – egal, welche Zutat ausgewählt ist). Ergebnis im Schwerpunkt auf dem Boden.
+    // (damit ist die Option symmetrisch – egal, welche Zutat ausgewählt ist). Ergebnis im Schwerpunkt auf dem Boden – ist der belegt
+    // (anderer Buddy, Wand, Gebäude), auf dem nächsten freien Platz (Zutaten-Plätze, Ringe um den Schwerpunkt; FindFusionSpot).
     // Liegt auf dem Managers-Objekt. Achtung: Die Rezept-Listen in der Szene überschreiben die Code-Defaults.
     // Mehrspieler: Das Info-Panel ruft RequestFuse (lokale Vorprüfung mit den eigenen Meta-Freischaltungen) -> NetGame.RequestFuse
     // -> Server: ServerFuse prüft erneut, zahlt aus der Teamkasse, despawnt die Zutaten, spawnt das Ergebnis (Prefab, auch
@@ -483,7 +484,7 @@ namespace ElementalBuddies
             var eco = EconomyManager.Instance;
             if (eco != null && cost > 0f && !eco.TrySpendShards(cost)) return null;
 
-            Vector3 pos = GroundCentroid(a.transform.position, b.transform.position);
+            Vector3 pos = FindFusionSpot(recipe.ResultConfig.Prefab, a, b, null);
             float paid = ParentPaid(a) + ParentPaid(b) + cost;
             ulong builder = a.BuilderClientId;
 
@@ -563,9 +564,7 @@ namespace ElementalBuddies
             var eco = EconomyManager.Instance;
             if (eco != null && cost > 0f && !eco.TrySpendShards(cost)) return null;
 
-            Vector3 pos = c != null
-                ? GroundCentroid(a.transform.position, b.transform.position, c.transform.position)
-                : GroundCentroid(a.transform.position, b.transform.position);
+            Vector3 pos = FindFusionSpot(recipe.ResultConfig.Prefab, a, b, c);
             float paid = ParentPaid(a) + ParentPaid(b) + (c != null ? ParentPaid(c) : 0f) + cost;
             ulong builder = a.BuilderClientId;
 
@@ -639,6 +638,138 @@ namespace ElementalBuddies
         }
 
         // Schwerpunkt auf Bodenhöhe (Raycast auf FloorLayer), sonst mittlere Höhe
+        // ---------------- Platz für das Ergebnis (#163) ----------------
+
+        [Header("Platz für das Ergebnis")]
+        [Tooltip("Max. Suchradius um den Schwerpunkt, falls dort schon etwas steht (Buddy, Wand, Gebäude, Nexus).")]
+        public float SpotSearchRadius = 4f;
+        [Tooltip("Abstand der Suchringe/-punkte in m.")]
+        public float SpotSearchStep = 0.5f;
+        [Tooltip("Zusätzlicher Freiraum um den Collider des Ergebnisses.")]
+        public float SpotClearance = 0.05f;
+        [Tooltip("Platzbedarf (Radius), wenn das Ergebnis-Prefab keinen Collider hat (z. B. Laufzeit-Platzhalter).")]
+        public float DefaultFootprint = 0.85f;
+
+        private readonly Collider[] _spotHits = new Collider[16];
+        private readonly List<Vector3> _spotCandidates = new List<Vector3>(256);
+
+        // Nur Server, VOR RemoveIngredients: freier Platz für das Ergebnis. Reihenfolge: Schwerpunkt der Zutaten, dann
+        // Zutaten-Plätze und Punkte auf Ringen um den Schwerpunkt – jeweils der nächstgelegene zuerst. Gültig = Boden darunter,
+        // kein Collider (Hindernis-Layer inkl. Buddies/Nexus/Gebäude + Steinwall) im Platzbedarf des Ergebnisses (die Zutaten
+        // selbst zählen nicht, sie verschwinden), bei Ausweichplätzen zusätzlich: Gegner erreichen den Platz (Bau-Regel).
+        // Kein freier Platz -> Schwerpunkt (altes Verhalten).
+        private Vector3 FindFusionSpot(GameObject resultPrefab, ElementalBuddy a, ElementalBuddy b, ElementalBuddy c)
+        {
+            Vector3 centroid = c != null
+                ? GroundCentroid(a.transform.position, b.transform.position, c.transform.position)
+                : GroundCentroid(a.transform.position, b.transform.position);
+            var im = InteractionManager.Instance;
+            if (im == null) return centroid;
+
+            float radius = Footprint(resultPrefab) + SpotClearance;
+            float height = Mathf.Max(radius * 2f + 0.2f, FootprintHeight(resultPrefab));
+            int mask = im.ObstacleLayer.value | StoneWall.BlockMask;
+
+            _spotCandidates.Clear();
+            _spotCandidates.Add(a.transform.position);
+            _spotCandidates.Add(b.transform.position);
+            if (c != null) _spotCandidates.Add(c.transform.position);
+            float step = Mathf.Max(0.2f, SpotSearchStep);
+            for (float r = step; r <= SpotSearchRadius + 0.001f; r += step)
+            {
+                int n = Mathf.Max(6, Mathf.CeilToInt(2f * Mathf.PI * r / step));
+                for (int i = 0; i < n; i++)
+                {
+                    float ang = (i + (r / step) * 0.5f) * Mathf.PI * 2f / n; // Ringe gegeneinander versetzt
+                    _spotCandidates.Add(centroid + new Vector3(Mathf.Cos(ang) * r, 0f, Mathf.Sin(ang) * r));
+                }
+            }
+            Vector3 c0 = centroid;
+            _spotCandidates.Sort((p, q) => HorizontalSqr(p, c0).CompareTo(HorizontalSqr(q, c0)));
+            _spotCandidates.Insert(0, centroid);
+
+            for (int i = 0; i < _spotCandidates.Count; i++)
+            {
+                Vector3 p = _spotCandidates[i];
+                if (im.FloorLayer.value != 0)
+                {
+                    if (!Physics.Raycast(p + Vector3.up * 20f, Vector3.down, out RaycastHit hit, 50f, im.FloorLayer.value, QueryTriggerInteraction.Ignore))
+                        continue; // kein Boden
+                    p.y = hit.point.y;
+                }
+                if (IsSpotBlocked(p, radius, height, mask, a, b, c)) continue;
+                // Schwerpunkt wie bisher ohne Erreichbarkeits-Prüfung; Ausweichplätze nur, wo auch gebaut werden dürfte
+                if (i > 0 && !im.IsReachableByEnemies(p, false)) continue;
+                return p;
+            }
+            return centroid;
+        }
+
+        private static float HorizontalSqr(Vector3 p, Vector3 q)
+        {
+            float dx = p.x - q.x, dz = p.z - q.z;
+            return dx * dx + dz * dz;
+        }
+
+        // Kapsel über dem Bodenpunkt (knapp darüber, damit der Boden selbst nicht zählt); Zutaten werden ignoriert
+        private bool IsSpotBlocked(Vector3 p, float radius, float height, int mask, ElementalBuddy a, ElementalBuddy b, ElementalBuddy c)
+        {
+            Vector3 bottom = p + Vector3.up * (radius + 0.05f);
+            Vector3 top = p + Vector3.up * Mathf.Max(radius + 0.05f, height - radius);
+            int count = Physics.OverlapCapsuleNonAlloc(bottom, top, radius, _spotHits, mask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                var owner = _spotHits[i].GetComponentInParent<ElementalBuddy>();
+                if (owner != null && (owner == a || owner == b || owner == c)) continue;
+                return true;
+            }
+            return false;
+        }
+
+        // Horizontaler Platzbedarf (Radius) aus den Collidern des Prefabs (Asset, daher aus Größe/Skalierung statt bounds)
+        private float Footprint(GameObject prefab)
+        {
+            float best = 0f;
+            if (prefab != null)
+            {
+                foreach (var col in prefab.GetComponentsInChildren<Collider>(true))
+                {
+                    if (col.isTrigger) continue;
+                    Vector3 s = col.transform.lossyScale;
+                    float sxz = Mathf.Max(Mathf.Abs(s.x), Mathf.Abs(s.z));
+                    float r = 0f;
+                    Vector3 center = Vector3.zero;
+                    if (col is CapsuleCollider cap) { r = cap.radius * sxz; center = cap.center; }
+                    else if (col is SphereCollider sph) { r = sph.radius * Mathf.Max(sxz, Mathf.Abs(s.y)); center = sph.center; }
+                    else if (col is BoxCollider box) { r = Mathf.Max(box.size.x * Mathf.Abs(s.x), box.size.z * Mathf.Abs(s.z)) * 0.5f; center = box.center; }
+                    else r = DefaultFootprint;
+                    Vector3 off = col.transform.TransformPoint(center) - prefab.transform.position;
+                    off.y = 0f;
+                    best = Mathf.Max(best, r + off.magnitude);
+                }
+            }
+            return best > 0.01f ? best : DefaultFootprint;
+        }
+
+        // Höhe der Collider des Prefabs über dem Fußpunkt (für die Prüf-Kapsel), mind. 1.5 m
+        private static float FootprintHeight(GameObject prefab)
+        {
+            float top = 1.5f;
+            if (prefab == null) return top;
+            foreach (var col in prefab.GetComponentsInChildren<Collider>(true))
+            {
+                if (col.isTrigger) continue;
+                float h = 0f;
+                float sy = Mathf.Abs(col.transform.lossyScale.y);
+                if (col is CapsuleCollider cap) h = cap.center.y * sy + cap.height * 0.5f * sy;
+                else if (col is BoxCollider box) h = (box.center.y + box.size.y * 0.5f) * sy;
+                else if (col is SphereCollider sph) h = (sph.center.y + sph.radius) * sy;
+                h += col.transform.position.y - prefab.transform.position.y;
+                top = Mathf.Max(top, h);
+            }
+            return top;
+        }
+
         private static Vector3 GroundCentroid(params Vector3[] points)
         {
             Vector3 mid = Vector3.zero;

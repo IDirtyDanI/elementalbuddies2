@@ -203,9 +203,19 @@ namespace ElementalBuddies
                 if (match && ActiveVisual == null) ActiveVisual = v;
             }
 
+            // Ressource (Mana/Wut) und Lebens-Bonus des Champions
+            if (Mana != null) Mana.ApplyProfile(kit.Resource);
+            if (_stats != null && !Mathf.Approximately(kit.MaxHealthBonus, _appliedHealthBonus))
+            {
+                _stats.AddMaxHPBonus(kit.MaxHealthBonus - _appliedHealthBonus);
+                _appliedHealthBonus = kit.MaxHealthBonus;
+            }
+
             kit.OnActivated();
             if (notify) OnChampionChanged?.Invoke(kit.Class);
         }
+
+        private float _appliedHealthBonus;
 
         // Ausgefallene Figur (PlayerAvatar): Modell aus-/einblenden, laufende Fähigkeiten beenden
         private bool _downedVisual;
@@ -360,18 +370,22 @@ namespace ElementalBuddies
                 case AbilityId.FireWave:
                 case AbilityId.FlameWhirl:
                 case AbilityId.FireArrowRain:
+                case AbilityId.EmberStorm:
                     return 0;
                 case AbilityId.FrostNova:
                 case AbilityId.FrostStrike:
                 case AbilityId.FrostArrow:
+                case AbilityId.IceBreaker:
                     return 1;
                 case AbilityId.StoneWall:
                 case AbilityId.Earthquake:
                 case AbilityId.ThornTrap:
+                case AbilityId.Landslide:
                     return 2;
                 case AbilityId.HolyCircle:
                 case AbilityId.LightOath:
                 case AbilityId.LightArrow:
+                case AbilityId.LightFrenzy:
                     return 3;
                 default:
                     return -1;

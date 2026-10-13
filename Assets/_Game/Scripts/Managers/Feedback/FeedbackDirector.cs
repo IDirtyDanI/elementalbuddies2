@@ -201,10 +201,13 @@ namespace ElementalBuddies
 
         private void PlayChampionImpact(Vector3 pos, bool lethal)
         {
+            // aktive Klasse der eigenen Figur (folgt auch Wechseln im Lauf, z. B. Dev-Taste F6); sonst Netz-/Menü-Wahl
+            var pa = PlayerAbilities.Instance;
             var av = PlayerAvatar.Local;
-            var champ = av != null ? av.Champion : GameSession.SelectedChampion;
+            var champ = pa != null && pa.ActiveKit != null ? pa.ActiveClass : av != null ? av.Champion : GameSession.SelectedChampion;
             // Pfeil- und Arkanball-Einschläge haben eigene Sounds (ArcherKit/ArrowProjectile, ArcaneBall); das Schwert nicht
             if (champ == ChampionClass.Knight) GameAudio.Play(SfxId.SwordHit, pos);
+            else if (champ == ChampionClass.Berserker) GameAudio.Play(SfxId.AxeHit, pos);
             else if (champ == ChampionClass.Mage) GameAudio.Play(SfxId.EnemyHit, pos);
             if (lethal) GameAudio.Play(SfxId.HeavyImpact, pos);
         }

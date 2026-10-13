@@ -15,16 +15,17 @@ namespace ElementalBuddies
 
         // Server → ein Client: eigene Kartenauswahl (Indizes in UpgradeManager.AllUpgrades)
         // rerolls/skipShards: verfügbare Gratis-Neuwürfe und Splitter fürs Überspringen
-        public static void SendUpgradeOffer(ulong clientId, int serial, int[] cards, int rerolls, int skipShards)
+        // rerollCost: Splitter-Preis des nächsten bezahlten Neuwurfs (greift, wenn keine Gratis-Neuwürfe übrig sind)
+        public static void SendUpgradeOffer(ulong clientId, int serial, int[] cards, int rerolls, int skipShards, int rerollCost)
         {
-            if (Ready) Instance.UpgradeOfferRpc(serial, cards, rerolls, skipShards, Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
-            else if (clientId == Net.LocalClientId && UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards, rerolls, skipShards);
+            if (Ready) Instance.UpgradeOfferRpc(serial, cards, rerolls, skipShards, rerollCost, Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
+            else if (clientId == Net.LocalClientId && UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards, rerolls, skipShards, rerollCost);
         }
 
         [Rpc(SendTo.SpecifiedInParams)]
-        private void UpgradeOfferRpc(int serial, int[] cards, int rerolls, int skipShards, RpcParams p)
+        private void UpgradeOfferRpc(int serial, int[] cards, int rerolls, int skipShards, int rerollCost, RpcParams p)
         {
-            if (UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards, rerolls, skipShards);
+            if (UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards, rerolls, skipShards, rerollCost);
         }
 
         // Client → Server: Karte gewählt (card = Index) bzw. UpgradeManager.SkipCode / RerollCode

@@ -66,6 +66,16 @@ namespace ElementalBuddies
             }
         }
 
+        // Champion-Bonus auf die Max-LP (z. B. Berserker +25). Auf allen Rechnern gleich; die LP wachsen/schrumpfen mit
+        // (Clients überschreibt der Server-Wert ohnehin).
+        public void AddMaxHPBonus(float delta)
+        {
+            if (Mathf.Approximately(delta, 0f)) return;
+            MaxHP = Mathf.Max(1f, MaxHP + delta);
+            if (!_isDead) CurrentHP = Mathf.Clamp(CurrentHP + Mathf.Max(0f, delta), 0f, MaxHP);
+            OnHealthChanged?.Invoke();
+        }
+
         // Heilung nur auf dem Server (Clients: No-Op, der Wert kommt über das Netz)
         public void Heal(float amount)
         {
@@ -137,6 +147,7 @@ namespace ElementalBuddies
             {
                 case ChampionClass.Knight: return "Der Schwertkämpfer ist gefallen";
                 case ChampionClass.Archer: return "Der Bogenschütze ist gefallen";
+                case ChampionClass.Berserker: return "Der Berserker ist gefallen";
                 default: return "Der Zauberer ist gefallen";
             }
         }

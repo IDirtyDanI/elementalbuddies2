@@ -189,6 +189,15 @@ namespace ElementalBuddies
                 float centerX = parent.InverseTransformPoint(_ribbon.position).x;
                 maxW = Mathf.Max(_ribbonBaseWidth, Mathf.Min(maxW, 2f * (objLeft - centerX - 16f)));
             }
+            var minimap = MinimapUI.Instance;
+            if (parent != null && minimap != null && minimap.IsShown && minimap.Rect != null)
+            {
+                // ebenso links nur bis neben die Minimap (oben links unter der TopBar, gleiche Höhe wie das Banner)
+                minimap.Rect.GetWorldCorners(_corners);
+                float mapRight = parent.InverseTransformPoint(_corners[2]).x;
+                float centerX = parent.InverseTransformPoint(_ribbon.position).x;
+                maxW = Mathf.Max(_ribbonBaseWidth, Mathf.Min(maxW, 2f * (centerX - mapRight - 16f)));
+            }
             float width = Mathf.Clamp(pref + 2f * inset + 8f, _ribbonBaseWidth, maxW);
             Text.enableAutoSizing = pref + 2f * inset + 8f > width; // nur wenn der Bildschirm nicht reicht
             _ribbon.sizeDelta = new Vector2(width, _ribbon.sizeDelta.y);

@@ -37322,6 +37322,9 @@ MonoBehaviour:
   CardPrefab: {fileID: 1971434496766266994, guid: 995c217f2103d35469c20323ad2bb46f, type: 3}
   RerollButton: {fileID: 0}
   SkipButton: {fileID: 0}
+  ShardIcon: {fileID: 0}
+  ShardPriceColor: {r: 0.851, g: 0.722, b: 1, a: 1}
+  UnaffordableColor: {r: 0.78, g: 0.15, b: 0.12, a: 1}
 --- !u!114 &429126308
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -85098,6 +85101,9 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 7e429fdaa06d14a05b458aa7b9364f41, type: 3}
   - {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
   - {fileID: 21300000, guid: 21a989a888e3f462691b04f407000f2d, type: 3}
+  - {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
+  WaveTextMaxWidth: 380
+  WaveTextRightInset: 40
 --- !u!114 &1103239703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -104770,6 +104776,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   StartRerolls: 1
+  DraftRerollBaseCost: 25
+  DraftRerollCostStep: 15
   SkipShardsBase: 10
   SkipShardsPerWave: 2
   RareChanceStart: 0.22
@@ -105261,6 +105269,60 @@ MonoBehaviour:
     Volume: 0.42
     Pitch: {x: 0.95, y: 1.05}
     MinInterval: 0.05
+  - Id: 61
+    Clips:
+    - {fileID: 8300000, guid: 022635a538c4e4278a1313f9d4a8e31d, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 62
+    Clips:
+    - {fileID: 8300000, guid: 21f7683fecda34529a2b9d9a1186db58, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 63
+    Clips:
+    - {fileID: 8300000, guid: 37b242c68f07d4b62af4b23430483220, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.2
+  - Id: 64
+    Clips:
+    - {fileID: 8300000, guid: 510751377168d4725a61df2b3352347a, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.12
+  - Id: 65
+    Clips:
+    - {fileID: 8300000, guid: d6e0b9bfeae1643e78b6905e71015ea5, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 66
+    Clips:
+    - {fileID: 8300000, guid: 74ae9535942654efeb5bd0fa73057d17, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 67
+    Clips:
+    - {fileID: 8300000, guid: c4832dbc7724a4cd0979a68fc75fc990, type: 3}
+    Volume: 0.65
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 68
+    Clips:
+    - {fileID: 8300000, guid: d1137d9b7e55c4f2bb7ac4a85788867a, type: 3}
+    Volume: 0.7
+    Pitch: {x: 0.97, y: 1.03}
+    MinInterval: 1
+  - Id: 69
+    Clips:
+    - {fileID: 8300000, guid: e56651d72237f4669b0e7c776f789808, type: 3}
+    Volume: 0.55
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
   MusicClip: {fileID: 0}
   MusicVolume: 0.2
   MusicFadeIn: 2
@@ -105385,6 +105447,10 @@ MonoBehaviour:
   LinkMaterial: {fileID: 0}
   LinkColor: {r: 0.85, g: 0.7, b: 1, a: 0.9}
   LinkArcHeight: 1.5
+  SpotSearchRadius: 4
+  SpotSearchStep: 0.5
+  SpotClearance: 0.05
+  DefaultFootprint: 0.85
 --- !u!114 &1357329340
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -105469,6 +105535,30 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 007628239a0e846288f832c40c702dbe, type: 2}
   - {fileID: 11400000, guid: 9ed0e03b9f72048a9b4fa19e2ae1e503, type: 2}
   - {fileID: 11400000, guid: f6250f2a4e93347c9a5971620e83d647, type: 2}
+  - {fileID: 11400000, guid: d8d0d7da0339c4f7ab9ab425cc5bbf84, type: 2}
+  - {fileID: 11400000, guid: 869a1edcdc6334479b449e6d954ed751, type: 2}
+  - {fileID: 11400000, guid: d9d183f5e4c6d4c9196813418956a952, type: 2}
+  - {fileID: 11400000, guid: e7027bc0ddafa45048254c53f760ff93, type: 2}
+  - {fileID: 11400000, guid: 8eb23872b2c6948a38505202ff72efc5, type: 2}
+  - {fileID: 11400000, guid: 60dd949b0129849b89119de8027c006b, type: 2}
+  - {fileID: 11400000, guid: 4903c5ac9b0c1409dbca4e64644510a9, type: 2}
+  - {fileID: 11400000, guid: cbff99382660e42bb8d1c66b9e7beaf0, type: 2}
+  - {fileID: 11400000, guid: f041f81f187a148b8bb7a0bb803bdf9b, type: 2}
+  - {fileID: 11400000, guid: d361c441872c74b5699f7668cd6275e0, type: 2}
+  - {fileID: 11400000, guid: 93d4825ae40094502a4c3ea67111cdbb, type: 2}
+  - {fileID: 11400000, guid: 4f5a1ca2c3ae6480ab0111d358b6886c, type: 2}
+  - {fileID: 11400000, guid: 46562a81dba244b3ea1c30fa7a425dba, type: 2}
+  - {fileID: 11400000, guid: fdddfaf7429a147b292fadbcf6076799, type: 2}
+  - {fileID: 11400000, guid: f88753706b5754962a96aa8972432f8e, type: 2}
+  - {fileID: 11400000, guid: 152a7bfdd337d4517a2279756493bd10, type: 2}
+  - {fileID: 11400000, guid: c695fc42c56be452d9c2ed78a71b9e19, type: 2}
+  - {fileID: 11400000, guid: 42b29c942cb4d4cf798cf2136f135ff1, type: 2}
+  - {fileID: 11400000, guid: 444769d5d42fb4812b4a11a0b492994f, type: 2}
+  - {fileID: 11400000, guid: 11afbcb57f19e47d9a8fbd9d88949e4f, type: 2}
+  - {fileID: 11400000, guid: e8a44dbad7c274e04ac135ad809d1eed, type: 2}
+  - {fileID: 11400000, guid: 1a9e027be2196469d8fbb89b933b0209, type: 2}
+  - {fileID: 11400000, guid: 50da2791dea2e44da9ae148928d26b42, type: 2}
+  - {fileID: 11400000, guid: 9a546f1714c784afc8e93751c581858a, type: 2}
   CardsOffered: 3
   ExtraCardBaseCost: 60
   ExtraCardCostStep: 30
@@ -118732,6 +118822,9 @@ MonoBehaviour:
   LabelOffset: 55
   SpriteAngleOffset: -90
   OnScreenMargin: 0.03
+  TopHud: {fileID: 0}
+  TopHudPadding: 46
+  MinimapPadding: 40
   PortalHighlightDuration: 6
   PortalColor: {r: 0.75, g: 0.35, b: 1, a: 1}
   TintWithElement: 1
@@ -134294,6 +134387,8 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 00af7c33e46934479a0af2745f7829ab, type: 3}
   - {fileID: 21300000, guid: 89e78796b6ecd44738bc8aa2fb2c758e, type: 3}
   PortalIcon: {fileID: 21300000, guid: 372dbf6ad8d6048b0bf59beb60e4285f, type: 3}
+  TextInset: 100
+  ScreenMargin: 60
 --- !u!225 &1875146788
 CanvasGroup:
   m_ObjectHideFlags: 0

@@ -29,7 +29,7 @@ namespace ElementalBuddies
         public readonly NetworkVariable<float> Gold = new NetworkVariable<float>(
             0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-        public ChampionClass ChampionClass => (ChampionClass)Mathf.Clamp(Champion.Value, 0, 2);
+        public ChampionClass ChampionClass => GameSession.ClampChampion(Champion.Value);
         public string DisplayName => PlayerName.Value.ToString();
         public bool IsLocal => IsOwner;
 
@@ -99,7 +99,7 @@ namespace ElementalBuddies
             string n = playerName.ToString().Trim();
             if (string.IsNullOrEmpty(n)) n = "Spieler " + (Slot + 1);
             PlayerName.Value = new FixedString64Bytes(n);
-            Champion.Value = Mathf.Clamp(champion, 0, 2);
+            Champion.Value = (int)GameSession.ClampChampion(champion);
         }
 
         // Champion-Wahl in der Lobby (vom Besitzer aufgerufen)
@@ -109,7 +109,7 @@ namespace ElementalBuddies
         }
 
         [Rpc(SendTo.Server)]
-        private void SetChampionRpc(int champion) => Champion.Value = Mathf.Clamp(champion, 0, 2);
+        private void SetChampionRpc(int champion) => Champion.Value = (int)GameSession.ClampChampion(champion);
 
         public void RequestReady(bool ready)
         {

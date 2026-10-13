@@ -43,6 +43,7 @@ namespace ElementalBuddies
             {
                 case 1: return ChampionClass.Knight;
                 case 2: return ChampionClass.Archer;
+                case 3: return ChampionClass.Berserker;
                 default: return ChampionClass.Mage;
             }
         }

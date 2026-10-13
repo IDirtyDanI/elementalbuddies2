@@ -19,6 +19,7 @@ namespace ElementalBuddies
         };
 
         public Vector2 ListOrigin = new Vector2(24f, -130f); // Canvas-Einheiten ab oben links
+        public float MinimapGap = 14f;                  // Abstand unter der Minimap (MinimapUI), falls sie oben links sitzt
         public float RowHeight = 64f;
         public float RowWidth = 330f;
         public float NameTagHeight = 2.6f;               // Weltmeter über dem Fußpunkt
@@ -96,6 +97,12 @@ namespace ElementalBuddies
             bool show = Net.IsMultiplayer;
             if (_canvas.gameObject.activeSelf != show) _canvas.gameObject.SetActive(show);
             if (!show) return;
+
+            // Liste unter die Minimap schieben (gleiche Canvas-Skalierung → gleiche Einheiten)
+            var mm = MinimapUI.Instance;
+            float listY = mm != null && mm.Occupies ? Mathf.Min(ListOrigin.y, -(mm.BottomOffset + MinimapGap)) : ListOrigin.y;
+            var origin = new Vector2(ListOrigin.x, listY);
+            if (_list.anchoredPosition != origin) _list.anchoredPosition = origin;
 
             // Mitspieler (alle außer der eigenen Figur), Reihenfolge nach Beitritt
             _others.Clear();

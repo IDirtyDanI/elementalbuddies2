@@ -101,6 +101,9 @@ namespace ElementalBuddies
             var team = GetComponent<TeamHUD>();
             if (team == null) team = gameObject.AddComponent<TeamHUD>();
             team.Setup(ShardText != null ? ShardText.font : null, ChampionPortraits);
+
+            // Runde Minimap oben links unter der Top-Bar (baut sich zur Laufzeit in den HUD-Canvas)
+            MinimapUI.Create(this);
         }
 
         void OnDestroy()
@@ -172,8 +175,29 @@ namespace ElementalBuddies
             {
                 ManaSlider.maxValue = max;
                 ManaSlider.value = current;
+                ApplyResourceLook(m);
             }
-            if (ManaText != null) ManaText.text = $"{Mathf.FloorToInt(current)}/{Mathf.FloorToInt(max)}";
+            if (ManaText != null)
+                ManaText.text = m.HasProfile
+                    ? $"{m.ResourceName} {Mathf.FloorToInt(current)}/{Mathf.FloorToInt(max)}"
+                    : $"{Mathf.FloorToInt(current)}/{Mathf.FloorToInt(max)}";
+        }
+
+        // Berserker: Mana-Leiste wird zur roten Wut-Leiste (Farbe aus dem Ressourcen-Profil), sonst Originalfarbe
+        private Image _manaFill;
+        private Color _manaFillDefault;
+        private bool _manaFillCached;
+        private void ApplyResourceLook(PlayerMana m)
+        {
+            if (!_manaFillCached)
+            {
+                _manaFillCached = true;
+                _manaFill = ManaSlider.fillRect != null ? ManaSlider.fillRect.GetComponent<Image>() : null;
+                if (_manaFill != null) _manaFillDefault = _manaFill.color;
+            }
+            if (_manaFill == null) return;
+            Color target = m.HasProfile ? m.Profile.Color : _manaFillDefault;
+            if (_manaFill.color != target) _manaFill.color = target;
         }
 
         private void UpdateShards()

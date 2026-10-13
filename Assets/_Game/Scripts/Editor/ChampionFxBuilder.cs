@@ -50,11 +50,40 @@ namespace ElementalBuddies.EditorTools
             Save("VFX_ThornSnap", ThornSnap);
             Save("VFX_LightBeam", LightBeam);
 
+            BuildBerserkerFx();
+
             // Schwert, Schild, Bogen, Stab kommen als Blender-Modelle (Models/Characters/Weapons); nur der Köcher ist Platzhalter
             Save("Weapon_Quiver", Quiver);
 
             AssetDatabase.SaveAssets();
             Debug.Log("ChampionFxBuilder: Champion-Effekte, Pfeile, Falle und Platzhalter-Waffen gebaut (" + Dir + ").");
+        }
+
+        // Nur die Berserker-Effekte bauen (die anderen Prefabs bleiben unberührt)
+        [MenuItem("BuddyTD/Champions/Berserker-Effekte bauen")]
+        public static void BuildBerserker()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/_Game/VFX/Prefabs/Champions"))
+                AssetDatabase.CreateFolder("Assets/_Game/VFX/Prefabs", "Champions");
+            EnsureSlashTexture();
+            BuildBerserkerFx();
+            AssetDatabase.SaveAssets();
+            Debug.Log("ChampionFxBuilder: Berserker-Effekte gebaut (" + Dir + ").");
+        }
+
+        private static void BuildBerserkerFx()
+        {
+            Save("VFX_AxeCleave", AxeCleave);
+            Save("VFX_RageGlow", RageGlow);
+            Save("VFX_ChargeDust", ChargeDust);
+            Save("VFX_ChargeImpact", ChargeImpact);
+            Save("VFX_EmberStorm", EmberStorm);
+            Save("VFX_IceBreaker", IceBreaker);
+            Save("VFX_Landslide", Landslide);
+            Save("VFX_LandslideWarn", LandslideWarn);
+            Save("VFX_WarRoar", WarRoar);
+            Save("VFX_FrenzyAura", FrenzyAura);
+            Save("VFX_FrenzyBuff", FrenzyBuff);
         }
 
         public static GameObject Load(string name)
@@ -473,6 +502,159 @@ namespace ElementalBuddies.EditorTools
             var v = up.velocityOverLifetime; v.enabled = true; v.space = ParticleSystemSimulationSpace.Local; v.y = new ParticleSystem.MinMaxCurve(1.2f, 2f);
             var mm = up.main; mm.simulationSpace = ParticleSystemSimulationSpace.Local;
             ColorLife(up, Fade(Color.white, Color.white));
+        }
+
+        // ---------------- Berserker ----------------
+
+        // Akzent Blutrot (#a8322a) und Glut
+        private static readonly Color Blood = new Color(0.66f, 0.2f, 0.16f);
+        private static readonly Color Ember = new Color(1f, 0.38f, 0.1f);
+
+        // Axt-Bogen: breiter als der Schwertbogen (Farbe setzt das Kit)
+        private static void AxeCleave(GameObject go)
+        {
+            go.AddComponent<MeshFilter>();
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = SlashAdd;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            var fx = go.AddComponent<SlashArcFx>();
+            fx.Radius = 2.9f; fx.Width = 1.1f; fx.Angle = 150f;
+        }
+
+        // Raserei (ab 75 Wut): aufsteigende Glut + rotes Glimmen am Körper (Schleife, lokal)
+        private static void RageGlow(GameObject go)
+        {
+            var em = PS(go.transform, "Embers", new Vector3(0, 0.9f, 0), SoftAdd, new Vector2(0.6f, 1f), new Vector2(0.05f, 0.1f), Ember, 40, true);
+            Rate(em, 16f); Sphere(em, 0.45f); Speed(em, 0.2f, 0.5f); Gravity(em, -0.25f);
+            ColorLife(em, Fade(new Color(1f, 0.8f, 0.4f), Blood));
+            var gl = PS(go.transform, "Glow", new Vector3(0, 1f, 0), SoftAdd, new Vector2(0.6f, 0.6f), new Vector2(1.6f, 1.9f), new Color(0.9f, 0.18f, 0.08f, 0.22f), 6, true);
+            Rate(gl, 6f); ColorLife(gl, Fade(Color.white, Color.white, 1f, 0.3f, 0.6f));
+            var m = gl.main; m.simulationSpace = ParticleSystemSimulationSpace.Local;
+        }
+
+        // Ansturm: Staubspur hinter dem Berserker + Schlieren
+        private static void ChargeDust(GameObject go)
+        {
+            var d = PS(go.transform, "Dust", new Vector3(0, 0.15f, 0), DustAlpha, new Vector2(0.6f, 0.9f), new Vector2(0.6f, 1.1f), new Color(0.65f, 0.55f, 0.42f, 0.75f), 40);
+            Burst(d, 22); Cone(d, 35f, 0.4f, new Vector3(0f, 180f, 0f)); Speed(d, 2f, 4f); Drag(d, 3f); Spin(d, 60f);
+            SizeLife(d, 0.6f, 1.6f); ColorLife(d, Fade(Color.white, Color.white, 0.85f, 0.05f, 0.4f));
+            var streak = PS(go.transform, "Streaks", new Vector3(0, 0.8f, 0), SoftAdd, new Vector2(0.2f, 0.3f), new Vector2(0.06f, 0.1f), new Color(1f, 0.55f, 0.35f, 0.7f), 16);
+            Burst(streak, 10); Cone(streak, 12f, 0.4f, Vector3.zero); Speed(streak, 10f, 14f); Stretch(streak, 5f);
+        }
+
+        // Ende des Ansturms: Stoß-Ring + Staub
+        private static void ChargeImpact(GameObject go)
+        {
+            var ring = PS(go.transform, "Ring", new Vector3(0, 0.08f, 0), RingAdd, new Vector2(0.35f, 0.35f), new Vector2(3.2f, 3.2f), new Color(1f, 0.5f, 0.3f, 0.8f), 2);
+            Burst(ring, 1); Flat(ring); SizeLife(ring, 0.2f, 1f); ColorLife(ring, Fade(Color.white, Color.white, 1f, 0.05f, 0.3f));
+            var dust = PS(go.transform, "Dust", new Vector3(0, 0.2f, 0), DustAlpha, new Vector2(0.6f, 1f), new Vector2(0.6f, 1.1f), new Color(0.6f, 0.5f, 0.38f, 0.8f), 30);
+            Burst(dust, 18); Ring(dust, 0.4f); Speed(dust, 3f, 5f); Drag(dust, 4f);
+            SizeLife(dust, 0.6f, 1.5f); ColorLife(dust, Fade(Color.white, Color.white, 0.85f, 0.05f, 0.5f));
+        }
+
+        // Glutsturm: Feuer-Tornado als Schleife (lokal am Spieler), gebaut für Radius 3 (EffectAuthoredSize 3)
+        private static void EmberStorm(GameObject go)
+        {
+            var fl = PS(go.transform, "FlameRing", new Vector3(0, 0.5f, 0), FlameAdd, new Vector2(0.35f, 0.55f), new Vector2(0.5f, 0.9f), new Color(1f, 0.55f, 0.18f), 160, true);
+            Rate(fl, 90f); Ring(fl, 1.6f, 0.5f); Speed(fl, 0f, 0f);
+            var vel = fl.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.Local;
+            vel.x = new ParticleSystem.MinMaxCurve(0f); vel.z = new ParticleSystem.MinMaxCurve(0f);
+            vel.orbitalY = new ParticleSystem.MinMaxCurve(9f); vel.y = new ParticleSystem.MinMaxCurve(1.2f);
+            vel.radial = new ParticleSystem.MinMaxCurve(1.6f);
+            var m1 = fl.main; m1.simulationSpace = ParticleSystemSimulationSpace.Local;
+            ColorLife(fl, Fade(new Color(1f, 0.85f, 0.4f), new Color(0.9f, 0.18f, 0.05f), 1f, 0.05f, 0.5f));
+            SizeLife(fl, 1f, 0.4f);
+            var em = PS(go.transform, "Embers", new Vector3(0, 0.6f, 0), SoftAdd, new Vector2(0.6f, 1f), new Vector2(0.05f, 0.1f), Ember, 120, true);
+            Rate(em, 50f); Ring(em, 2.4f, 0.6f); Speed(em, 0.5f, 1.5f); Gravity(em, -0.3f);
+            var v2 = em.velocityOverLifetime; v2.enabled = true; v2.space = ParticleSystemSimulationSpace.Local;
+            v2.x = new ParticleSystem.MinMaxCurve(0f); v2.y = new ParticleSystem.MinMaxCurve(0f); v2.z = new ParticleSystem.MinMaxCurve(0f);
+            v2.orbitalY = new ParticleSystem.MinMaxCurve(5f);
+            var m2 = em.main; m2.simulationSpace = ParticleSystemSimulationSpace.Local;
+            ColorLife(em, Fade(Color.white, new Color(1f, 0.3f, 0.05f)));
+            var sc = PS(go.transform, "Scorch", new Vector3(0, 0.05f, 0), RingAdd, new Vector2(0.6f, 0.6f), new Vector2(6f, 6f), new Color(1f, 0.4f, 0.1f, 0.55f), 4, true);
+            Rate(sc, 2f); Flat(sc); ColorLife(sc, Fade(Color.white, Color.white, 1f, 0.2f, 0.6f));
+            var m3 = sc.main; m3.simulationSpace = ParticleSystemSimulationSpace.Local;
+            AddLight(go.transform, new Vector3(0, 1f, 0), Ember, 3f, 6f);
+        }
+
+        // Eisbrecher: Stachel-Linie (Variante von VFX_FrostStrike) entlang +Z, 7 m × 2 m (EffectAuthoredSize 7)
+        private static void IceBreaker(GameObject go)
+        {
+            var shardMat = AssetDatabase.LoadAssetAtPath<Material>(VfxMat + "VFX_Ice_Shard.mat");
+            for (int i = 0; i < 5; i++)
+            {
+                var sh = PS(go.transform, "Spikes" + i, Vector3.zero, shardMat, new Vector2(0.9f, 1.2f), new Vector2(0.55f + i * 0.08f, 1f + i * 0.12f), Color.white, 20);
+                Burst(sh, 6, i * 0.05f);
+                var s = sh.shape; s.enabled = true; s.shapeType = ParticleSystemShapeType.Box;
+                s.position = new Vector3(0f, 0f, 0.8f + i * 1.45f); s.scale = new Vector3(1.6f, 0.05f, 1.3f);
+                Speed(sh, 0f, 0f);
+                MeshParticles(sh, IceShardMesh);
+                var m = sh.main; m.startRotationX = new ParticleSystem.MinMaxCurve(-0.35f, 0.35f); m.startRotationZ = new ParticleSystem.MinMaxCurve(-0.35f, 0.35f);
+                SizeCurve(sh, new Keyframe(0f, 0f), new Keyframe(0.12f, 1.1f), new Keyframe(0.2f, 1f), new Keyframe(0.8f, 1f), new Keyframe(1f, 0f));
+            }
+            var mist = PS(go.transform, "FrostMist", new Vector3(0, 0.3f, 3.5f), SmokeAlpha, new Vector2(0.8f, 1.2f), new Vector2(0.8f, 1.4f), new Color(0.85f, 0.95f, 1f, 0.55f), 30);
+            Burst(mist, 18); var ms = mist.shape; ms.enabled = true; ms.shapeType = ParticleSystemShapeType.Box; ms.scale = new Vector3(1.8f, 0.3f, 7f);
+            Speed(mist, 0.3f, 1f); Drag(mist, 2f); SizeLife(mist, 0.6f, 1.5f); ColorLife(mist, Fade(Color.white, Color.white, 0.8f));
+            var gl = PS(go.transform, "Glints", new Vector3(0, 0.6f, 3.5f), StarAdd, new Vector2(0.3f, 0.6f), new Vector2(0.15f, 0.3f), Ice, 30);
+            Burst(gl, 20, 0.05f); var gs = gl.shape; gs.enabled = true; gs.shapeType = ParticleSystemShapeType.Box; gs.scale = new Vector3(2f, 0.8f, 7f);
+            ColorLife(gl, Fade(Color.white, Color.white));
+        }
+
+        // Bergsturz: Erdbeben-Effekt (Staubring, Brocken, Krater) + glühender Kraterrand, gebaut für Radius 3,5
+        private static void Landslide(GameObject go)
+        {
+            Earthquake(go);
+            var glow = PS(go.transform, "CraterGlow", new Vector3(0, 0.07f, 0), RingAdd, new Vector2(0.8f, 0.8f), new Vector2(7f, 7f), new Color(0.9f, 0.3f, 0.12f, 0.6f), 2);
+            Burst(glow, 1); Flat(glow); SizeLife(glow, 0.5f, 1f); ColorLife(glow, Fade(Color.white, Color.white, 1f, 0.05f, 0.5f));
+            AddLight(go.transform, new Vector3(0, 1f, 0), Ember, 4f, 7f).gameObject.AddComponent<LightFade>().Duration = 0.6f;
+        }
+
+        // Warnring am Landepunkt (Durchmesser 7 m = Radius 3,5), pulsierend
+        private static void LandslideWarn(GameObject go)
+        {
+            var ring = PS(go.transform, "Warn", new Vector3(0, 0.06f, 0), RingAdd, new Vector2(0.3f, 0.3f), new Vector2(7f, 7f), new Color(1f, 0.3f, 0.15f, 0.8f), 6, true);
+            Rate(ring, 8f); Flat(ring); SizeLife(ring, 1.05f, 0.85f); ColorLife(ring, Fade(Color.white, Color.white, 1f, 0.2f, 0.6f));
+            var m = ring.main; m.simulationSpace = ParticleSystemSimulationSpace.Local; m.prewarm = false;
+            var inner = PS(go.transform, "Inner", new Vector3(0, 0.05f, 0), SoftAdd, new Vector2(0.4f, 0.4f), new Vector2(4f, 4f), new Color(1f, 0.35f, 0.15f, 0.25f), 4, true);
+            Rate(inner, 5f); Flat(inner); ColorLife(inner, Fade(Color.white, Color.white, 1f, 0.3f, 0.6f));
+            var m2 = inner.main; m2.simulationSpace = ParticleSystemSimulationSpace.Local;
+        }
+
+        // Kampfschrei: Druckwelle (Blend-Radius 5 m), gold-rote Funken, Licht
+        private static void WarRoar(GameObject go)
+        {
+            var ring = PS(go.transform, "Shockwave", new Vector3(0, 0.1f, 0), RingAdd, new Vector2(0.5f, 0.5f), new Vector2(10f, 10f), new Color(1f, 0.55f, 0.25f, 0.9f), 2);
+            Burst(ring, 1); Flat(ring); SizeLife(ring, 0.1f, 1f); ColorLife(ring, Fade(Color.white, Color.white, 1f, 0.05f, 0.5f));
+            var ring2 = PS(go.transform, "Shockwave2", new Vector3(0, 1.2f, 0), RingAdd, new Vector2(0.4f, 0.4f), new Vector2(6f, 6f), new Color(1f, 0.8f, 0.4f, 0.7f), 2);
+            Burst(ring2, 1, 0.05f); Flat(ring2); SizeLife(ring2, 0.15f, 1f); ColorLife(ring2, Fade(Color.white, Color.white, 1f, 0.05f, 0.5f));
+            var sp = PS(go.transform, "Sparks", new Vector3(0, 1.2f, 0), SparkAdd, new Vector2(0.4f, 0.7f), new Vector2(0.06f, 0.12f), new Color(1f, 0.7f, 0.35f), 60);
+            Burst(sp, 40); Sphere(sp, 0.4f); Speed(sp, 5f, 10f); Drag(sp, 3f); Stretch(sp, 3f);
+            ColorLife(sp, Fade(Color.white, Blood));
+            AddLight(go.transform, new Vector3(0, 2f, 0), new Color(1f, 0.6f, 0.3f), 5f, 9f).gameObject.AddComponent<LightFade>().Duration = 0.8f;
+        }
+
+        // Lichtrausch-Aura am Spieler (Schleife, gold-rot)
+        private static void FrenzyAura(GameObject go)
+        {
+            var ring = PS(go.transform, "FeetRing", new Vector3(0, 0.06f, 0), RingAdd, new Vector2(1f, 1f), new Vector2(2.4f, 2.4f), new Color(1f, 0.45f, 0.2f, 0.55f), 4, true);
+            Rate(ring, 2f); Flat(ring); ColorLife(ring, Fade(Color.white, Color.white, 1f, 0.3f, 0.6f));
+            var m = ring.main; m.simulationSpace = ParticleSystemSimulationSpace.Local;
+            var up = PS(go.transform, "Motes", new Vector3(0, 0.2f, 0), SoftAdd, new Vector2(0.8f, 1.2f), new Vector2(0.05f, 0.1f), new Color(1f, 0.65f, 0.3f), 40, true);
+            Rate(up, 20f); Ring(up, 0.55f); Speed(up, 0f, 0f);
+            // alle drei Achsen im selben Kurvenmodus (TwoConstants), sonst warnt Unity „Particle Velocity curves must all be in the same mode“
+            var v = up.velocityOverLifetime; v.enabled = true; v.space = ParticleSystemSimulationSpace.Local;
+            v.x = new ParticleSystem.MinMaxCurve(0f, 0f); v.y = new ParticleSystem.MinMaxCurve(1.4f, 2.2f); v.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            var mm = up.main; mm.simulationSpace = ParticleSystemSimulationSpace.Local;
+            ColorLife(up, Fade(new Color(1f, 0.9f, 0.5f), Blood));
+        }
+
+        // Kurzer Buff-Glanz am Buddy
+        private static void FrenzyBuff(GameObject go)
+        {
+            var st = PS(go.transform, "Sparkles", new Vector3(0, 0.8f, 0), StarAdd, new Vector2(0.5f, 0.9f), new Vector2(0.15f, 0.28f), new Color(1f, 0.7f, 0.35f), 30);
+            Burst(st, 16); Sphere(st, 0.6f); Speed(st, 0.5f, 1.5f); Gravity(st, -0.4f);
+            ColorLife(st, Fade(Color.white, Color.white));
         }
 
         // ---------------- Bogenschütze ----------------

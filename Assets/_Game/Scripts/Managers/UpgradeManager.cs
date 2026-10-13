@@ -25,6 +25,10 @@ namespace ElementalBuddies
         [Header("Draft (Plan Fesselung D2/D5/D6)")]
         [Tooltip("Gratis-Neuwürfe zu Beginn des Runs (pro Spieler); jeder Boss-Kill gibt allen einen weiteren.")]
         public int StartRerolls = 1;
+        [Tooltip("Ohne Gratis-Neuwurf kostet Neu würfeln Seelensplitter (Teamkasse): Basis + Schritt · bisherige bezahlte Würfe " +
+                 "dieser Kartenwahl (Standard 25, 40, 55 … wie beim Händler). Zähler beginnt mit jeder Kartenwahl neu.")]
+        public int DraftRerollBaseCost = 25;
+        public int DraftRerollCostStep = 15;
         [Tooltip("Überspringen gibt SkipShardsBase + SkipShardsPerWave · Welle Seelensplitter (× Einkommen der Schwierigkeit).")]
         public float SkipShardsBase = 10f;
         public float SkipShardsPerWave = 2f;
@@ -55,6 +59,8 @@ namespace ElementalBuddies
         public event System.Action<UpgradeDefinitionSO> OnUpgradePicked;
         // Irgendein Spieler hat eine Karte bekommen (alle Rechner): Client-Id, Karte
         public event System.Action<ulong, UpgradeDefinitionSO> OnAnyUpgradePicked;
+        // Nur Server: ein Spieler hat neu gewürfelt – Client-Id, bezahlte Splitter (0 = Gratis-Neuwurf)
+        public event System.Action<ulong, int> OnServerRerolled;
 
         // Bisher gewählte Karten des lokalen Spielers (in Wahl-Reihenfolge, Mehrfachwahl möglich)
         private readonly List<UpgradeDefinitionSO> _picked = new List<UpgradeDefinitionSO>();
@@ -66,6 +72,11 @@ namespace ElementalBuddies
         public bool IsChoosing { get; private set; }
         // Zur offenen Auswahl: verfügbare Gratis-Neuwürfe und Splitter fürs Überspringen (vom Server)
         public int OfferRerolls { get; private set; }
+        // Preis des nächsten bezahlten Neuwurfs in Seelensplittern (gilt nur, wenn OfferRerolls == 0)
+        public int OfferRerollCost { get; private set; }
+        // Lokal: Neu würfeln jetzt möglich (Gratis-Neuwurf übrig oder genug Splitter in der Teamkasse)?
+        public bool CanAffordReroll => OfferRerolls > 0 ||
+            (EconomyManager.Instance != null && EconomyManager.Instance.CanAfford(OfferRerollCost));
         public int OfferSkipShards { get; private set; }
         // Neu würfeln angefragt, Antwort steht aus (UI sperrt die Knöpfe)
         public bool IsRerollPending { get; private set; }
@@ -81,6 +92,7 @@ namespace ElementalBuddies
             public bool Pending; // wartet, bis der Händlerladen des Spielers zu ist
             public int Serial;
             public int Rerolls = -1; // −1 = noch nicht gesetzt (StartRerolls)
+            public int PaidRerolls;  // bezahlte Neuwürfe dieser Kartenwahl (Preisstaffel, je Kartenwahl neu)
         }
         private readonly Dictionary<ulong, DraftState> _drafts = new Dictionary<ulong, DraftState>();
         private int _serialCounter;
@@ -159,6 +171,9 @@ namespace ElementalBuddies
 
         private int RerollsOf(DraftState st) => st.Rerolls < 0 ? StartRerolls : st.Rerolls;
 
+        // Preis des nächsten bezahlten Neuwurfs nach paidSoFar bezahlten Würfen dieser Kartenwahl (25, 40, 55 …)
+        public int DraftRerollPrice(int paidSoFar) => GoldRules.RerollPrice(paidSoFar, DraftRerollBaseCost, DraftRerollCostStep);
+
         public int SkipShards(int waveNumber)
         {
             var wm = WaveManager.Instance;
@@ -222,6 +237,7 @@ namespace ElementalBuddies
                 return;
             }
             st.Pending = false;
+            st.PaidRerolls = 0; // neue Kartenwahl → Preisstaffel von vorn
 
             var selection = GetRandomUpgrades(CardsPerDraft, clientId);
             st.Offer.Clear();
@@ -244,7 +260,8 @@ namespace ElementalBuddies
 
         private void SendOffer(ulong clientId, DraftState st)
         {
-            NetGame.SendUpgradeOffer(clientId, st.Serial, st.Offer.ToArray(), RerollsOf(st), SkipShards(CompletedWave));
+            NetGame.SendUpgradeOffer(clientId, st.Serial, st.Offer.ToArray(), RerollsOf(st), SkipShards(CompletedWave),
+                DraftRerollPrice(st.PaidRerolls));
         }
 
         // Server: Laden des Spielers geschlossen → wartenden Draft zeigen. true, wenn einer wartete.
@@ -266,21 +283,10 @@ namespace ElementalBuddies
             if (IsGameOver) { st.Open = false; return; }
             if (cardIndex == RerollCode)
             {
-                // Neu würfeln: neue drei Karten (möglichst ohne die bisherigen), neue Nummer
-                if (RerollsOf(st) > 0)
-                {
-                    st.Rerolls = RerollsOf(st) - 1;
-                    var avoid = new List<UpgradeDefinitionSO>();
-                    foreach (int i in st.Offer) avoid.Add(GetUpgrade(i));
-                    var fresh = GetRandomUpgrades(CardsPerDraft, clientId, avoid);
-                    st.Offer.Clear();
-                    foreach (var up in fresh)
-                    {
-                        int idx = IndexOfUpgrade(up);
-                        if (idx >= 0) st.Offer.Add(idx);
-                    }
-                    st.Serial = ++_serialCounter;
-                }
+                // Neu würfeln: neue drei Karten (möglichst ohne die bisherigen), neue Nummer.
+                // Zuerst Gratis-Neuwürfe, danach gegen Seelensplitter aus der Teamkasse (Preis steigt je Kartenwahl).
+                // Abgelehnt (zu teuer / keine Karten) → dasselbe Angebot erneut, der Client gibt die Knöpfe wieder frei.
+                ServerReroll(clientId, st);
                 SendOffer(clientId, st);
                 return;
             }
@@ -304,6 +310,34 @@ namespace ElementalBuddies
             st.Offer.Clear();
             NetGame.BroadcastApplyUpgrade(clientId, cardIndex);
             if (MerchantManager.Instance != null) MerchantManager.Instance.ServerOnDraftFinished(clientId);
+        }
+
+        private void ServerReroll(ulong clientId, DraftState st)
+        {
+            bool free = RerollsOf(st) > 0;
+            int price = free ? 0 : DraftRerollPrice(st.PaidRerolls);
+            if (!free && (EconomyManager.Instance == null || !EconomyManager.Instance.CanAfford(price))) return;
+
+            var avoid = new List<UpgradeDefinitionSO>();
+            foreach (int i in st.Offer) avoid.Add(GetUpgrade(i));
+            var fresh = new List<int>();
+            foreach (var up in GetRandomUpgrades(CardsPerDraft, clientId, avoid))
+            {
+                int idx = IndexOfUpgrade(up);
+                if (idx >= 0) fresh.Add(idx);
+            }
+            if (fresh.Count == 0) return; // nichts zu ziehen → nichts abbuchen
+
+            if (free) st.Rerolls = RerollsOf(st) - 1;
+            else
+            {
+                if (!EconomyManager.Instance.TrySpendShards(price)) return;
+                st.PaidRerolls++;
+            }
+            st.Offer.Clear();
+            st.Offer.AddRange(fresh);
+            st.Serial = ++_serialCounter;
+            OnServerRerolled?.Invoke(clientId, price);
         }
 
         // Server: hat dieser Spieler noch eine offene oder wartende Auswahl?
@@ -375,13 +409,21 @@ namespace ElementalBuddies
         // ======================= Client: Auswahl =======================
 
         // Server-Angebot empfangen → Auswahl zeigen
-        public void ClientReceiveOffer(int serial, int[] cards, int rerolls = 0, int skipShards = 0)
+        public void ClientReceiveOffer(int serial, int[] cards, int rerolls = 0, int skipShards = 0, int rerollCost = 0)
         {
+            bool wasPending = IsRerollPending;
             IsRerollPending = false;
             OfferRerolls = rerolls;
             OfferSkipShards = skipShards;
+            OfferRerollCost = rerollCost;
             if (IsGameOver || cards == null) return;
             if (serial == _localClosedSerial) return; // bereits gewählt
+            if (IsChoosing && serial == _localSerial)
+            {
+                // Dasselbe Angebot zurück = Neuwurf abgelehnt (z. B. Mitspieler hat die Splitter gerade ausgegeben)
+                if (wasPending) ToastUI.Show(CanAffordReroll ? "Keine anderen Karten zum Neu würfeln" : "Nicht genug Seelensplitter zum Neu würfeln");
+                return;
+            }
             _localOffer.Clear();
             foreach (int idx in cards)
             {
@@ -413,7 +455,7 @@ namespace ElementalBuddies
         // Von der UI: Karten neu würfeln (Fenster bleibt offen, der Server schickt ein neues Angebot)
         public void RequestReroll()
         {
-            if (PauseManager.IsPaused || !IsChoosing || IsRerollPending || OfferRerolls <= 0) return;
+            if (PauseManager.IsPaused || !IsChoosing || IsRerollPending || !CanAffordReroll) return;
             IsRerollPending = true;
             NetGame.RequestSelectUpgrade(_localSerial, RerollCode);
         }

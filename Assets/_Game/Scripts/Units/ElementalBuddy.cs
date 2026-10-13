@@ -470,7 +470,17 @@ namespace ElementalBuddies
         public virtual float GetRangeAtLevel(int level) => Config != null ? Config.Range * LevelMultiplier(RangeBonusPerLevel, level) : 0f;
 
         // inkl. Phönix-Aura (nur hier, nicht in GetDamageAtLevel -> kein Doppelzählen in Subklassen/Anzeige)
-        public float EffectiveDamage => GetDamageAtLevel(_level) * PhoenixBuddy.GetDamageMultiplier(this);
+        public float EffectiveDamage => GetDamageAtLevel(_level) * PhoenixBuddy.GetDamageMultiplier(this) * TimedDamageMultiplier;
+
+        // Zeitlich begrenzter Schadens-Bonus (Lichtrausch des Berserkers). Kein Stapeln: der stärkere/längere gewinnt.
+        private float _timedDamageBonus, _timedDamageUntil;
+        public float TimedDamageMultiplier => Time.time < _timedDamageUntil ? 1f + _timedDamageBonus : 1f;
+        public void AddTimedDamageBuff(float bonus, float duration)
+        {
+            if (Time.time >= _timedDamageUntil) _timedDamageBonus = 0f;
+            _timedDamageBonus = Mathf.Max(_timedDamageBonus, bonus);
+            _timedDamageUntil = Mathf.Max(_timedDamageUntil, Time.time + duration);
+        }
         // inkl. Feuerrate-Aura eines Luft-Buddys in der Nähe
         public float EffectiveFireRate => GetFireRateAtLevel(_level) * AirBuddy.GetFireRateMultiplier(this);
         public float EffectiveRange => GetRangeAtLevel(_level);

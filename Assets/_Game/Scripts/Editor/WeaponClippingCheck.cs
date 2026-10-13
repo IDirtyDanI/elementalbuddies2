@@ -259,6 +259,10 @@ namespace ElementalBuddies.EditorTools
                 {
                     foreach (var b in RightHandBones)
                         w.Excluded.Add(right ? b : (HumanBodyBones)System.Enum.Parse(typeof(HumanBodyBones), b.ToString().Replace("Right", "Left")));
+                    // Zweihand-Waffe (Berserker-Axt): die zweite Faust umschließt den Stiel bestimmungsgemäß
+                    if (right && a.GetComponent<ChampionTwoHandGrip>() != null)
+                        foreach (var b in RightHandBones)
+                            w.Excluded.Add((HumanBodyBones)System.Enum.Parse(typeof(HumanBodyBones), b.ToString().Replace("Right", "Left")));
                     // Schild: Armriemen liegt bestimmungsgemäß am Unterarm
                     if (shield)
                         w.Excluded.Add(right ? HumanBodyBones.RightLowerArm : HumanBodyBones.LeftLowerArm);

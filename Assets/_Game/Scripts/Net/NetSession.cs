@@ -65,12 +65,38 @@ namespace ElementalBuddies
         public bool GameStarted { get; private set; }
 
         private bool _shuttingDown;
+        private bool _handlingLoss;   // Rückweg ins Menü nach Verbindungsverlust läuft
+        private bool _quitting;       // Anwendung/Play-Mode endet → kein Szenenwechsel mehr
+        private string _pendingReason; // genauerer Grund (z. B. Transportfehler), bevor der Stopp gemeldet wird
 
         void Awake()
         {
             if (_instance != null && _instance != this) { Destroy(gameObject); return; }
             _instance = this;
             DontDestroyOnLoad(gameObject);
+            Application.quitting += HandleQuitting;
+        }
+
+        void OnDestroy()
+        {
+            if (_instance == this) Application.quitting -= HandleQuitting;
+        }
+
+        private void HandleQuitting() => _quitting = true;
+
+        // Netcode fährt beim Beenden selbst herunter (im Editor schon bei „Exiting Play Mode“, also VOR
+        // Application.quitting; im Build in seinem OnApplicationQuit) – das ist kein Verbindungsverlust.
+        void OnApplicationQuit() => _quitting = true;
+
+        private bool IsQuitting
+        {
+            get
+            {
+#if UNITY_EDITOR
+                if (!UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return true;
+#endif
+                return _quitting;
+            }
         }
 
         // ---------------- NetworkManager ----------------
@@ -103,6 +129,10 @@ namespace ElementalBuddies
             nm.OnClientDisconnectCallback += HandleClientDisconnected;
             nm.OnServerStopped -= HandleServerStopped;
             nm.OnServerStopped += HandleServerStopped;
+            nm.OnClientStopped -= HandleClientStopped;
+            nm.OnClientStopped += HandleClientStopped;
+            nm.OnTransportFailure -= HandleTransportFailure;
+            nm.OnTransportFailure += HandleTransportFailure;
         }
 
         private void ApproveConnection(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
@@ -138,19 +168,82 @@ namespace ElementalBuddies
             {
                 string reason = string.IsNullOrEmpty(nm.DisconnectReason) ? "Verbindung zum Host verloren." : nm.DisconnectReason;
                 _ = HandleLostConnection(reason);
+                return;
             }
+            // Host: ein Mitspieler ist weg. Netcode entfernt dessen Spielfigur und NetPlayer selbst,
+            // die Partie läuft für die übrigen Spieler weiter (Bereit-Stimmen: NetGame.Waves).
+            if (nm.IsServer && nm.IsListening && !nm.ShutdownInProgress && !_shuttingDown && clientId != nm.LocalClientId && GameStarted && ToastUI.Instance != null)
+                ToastUI.Show("Ein Mitspieler hat die Partie verlassen.");
         }
 
-        private void HandleServerStopped(bool wasHost) { }
+        // Transport kaputt (z. B. Relay-Allokation ungültig nach >10 s ohne Lebenszeichen). Netcode fährt danach
+        // selbst herunter → OnClientStopped/OnServerStopped meldet den Verlust.
+        private void HandleTransportFailure()
+        {
+            Debug.LogWarning("[Net] Transportfehler – Netcode wird beendet.");
+            _pendingReason = Mode == NetMode.Online
+                ? "Verbindung zum Relay-Server verloren."
+                : "Netzwerkfehler – Verbindung verloren.";
+        }
+
+        // Netcode wurde beendet, ohne dass wir es angestoßen haben (Transportfehler beim Host, Sitzung vom
+        // Multiplayer-Dienst beendet, …). Ohne diese Behandlung bleibt die Spielszene samt HUD stehen, während
+        // Netcode alle Gegner, Spielfiguren und Buddys entfernt hat (#162).
+        private void HandleServerStopped(bool wasHost) => HandleUnexpectedStop(true);
+        private void HandleClientStopped(bool wasHost) => HandleUnexpectedStop(wasHost);
+
+        private void HandleUnexpectedStop(bool asHost)
+        {
+            // IsBusy: Raum erstellen/beitreten läuft noch – Fehler meldet JoinOnlineAsync/HostOnlineAsync selbst
+            if (_shuttingDown || _handlingLoss || IsQuitting || IsBusy) return;
+            string reason = _pendingReason;
+            _pendingReason = null;
+            if (string.IsNullOrEmpty(reason))
+            {
+                var nm = NetworkManager.Singleton;
+                string nmReason = nm != null ? nm.DisconnectReason : null;
+                reason = asHost
+                    ? "Die Netzwerkverbindung wurde unerwartet beendet."
+                    : (string.IsNullOrEmpty(nmReason) || nmReason.Contains("was shutdown") ? "Verbindung zum Host verloren." : nmReason);
+            }
+            Debug.LogWarning("[Net] Netcode unerwartet beendet (" + (asHost ? "Host" : "Client") + "): " + reason);
+            _ = HandleLostConnection(reason);
+        }
 
         private async Task HandleLostConnection(string reason)
         {
-            if (_shuttingDown) return;
-            LastDisconnectReason = reason;
-            OnDisconnected?.Invoke(reason);
-            await ShutdownAsync();
-            if (SceneManager.GetActiveScene().name != GameSession.MenuScene)
-                SceneManager.LoadScene(GameSession.MenuScene);
+            if (_shuttingDown || _handlingLoss || IsQuitting) return;
+            _handlingLoss = true;
+            try
+            {
+                LastDisconnectReason = reason;
+                ResetLocalState();
+                OnDisconnected?.Invoke(reason);
+                // Sitzung im Hintergrund verlassen: ohne Internet kann LeaveAsync lange hängen – der Rückweg ins
+                // Menü darf darauf nicht warten (sonst bleibt die leere Spielszene stehen).
+                var s = Session;
+                Session = null;
+                if (s != null) _ = LeaveSessionQuietly(s);
+                await ShutdownAsync();
+                if (!IsQuitting && SceneManager.GetActiveScene().name != GameSession.MenuScene)
+                    SceneManager.LoadScene(GameSession.MenuScene);
+            }
+            finally { _handlingLoss = false; }
+        }
+
+        private static async Task LeaveSessionQuietly(ISession s)
+        {
+            try { await s.LeaveAsync(); }
+            catch (Exception e) { Debug.LogWarning("[Net] Raum verlassen (nach Verbindungsverlust): " + e.Message); }
+        }
+
+        // Lokale Pausen-/Zeitzustände zurücksetzen, damit das Menü nicht eingefroren startet
+        private static void ResetLocalState()
+        {
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
 
         // ---------------- Einzelspieler ----------------
@@ -332,6 +425,7 @@ namespace ElementalBuddies
         // Verbindung beenden und ins Hauptmenü wechseln (Host schließt damit den Raum für alle)
         public async void LeaveToMenu()
         {
+            ResetLocalState();
             await ShutdownAsync();
             SceneManager.LoadScene(GameSession.MenuScene);
         }
@@ -358,6 +452,7 @@ namespace ElementalBuddies
                 Mode = NetMode.None;
                 RoomCode = null;
                 GameStarted = false;
+                _pendingReason = null;
                 _shuttingDown = false;
             }
         }
@@ -385,7 +480,7 @@ namespace ElementalBuddies
                     case "-netjoin": join = next; break;
                     case "-netplayers": if (int.TryParse(next, out int n)) AutoStartPlayers = n; break;
                     case "-netname": if (next != null) NetPlayer.LocalPlayerName = next; break;
-                    case "-netchampion": if (int.TryParse(next, out int c)) GameSession.SelectedChampion = (ChampionClass)Mathf.Clamp(c, 0, 2); break;
+                    case "-netchampion": if (int.TryParse(next, out int c)) GameSession.SelectedChampion = GameSession.ClampChampion(c); break;
                 }
             }
             if (hostFlag)

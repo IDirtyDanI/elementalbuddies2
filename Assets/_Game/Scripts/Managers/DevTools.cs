@@ -109,7 +109,7 @@ namespace ElementalBuddies
             if (kb.f6Key.wasPressedThisFrame && PlayerAbilities.Instance != null)
             {
                 var pa = PlayerAbilities.Instance;
-                var next = (ChampionClass)(((int)pa.ActiveClass + 1) % 3);
+                var next = (ChampionClass)(((int)pa.ActiveClass + 1) % GameSession.ChampionCount);
                 DevSetChampion(next);
                 ToastUI.Show("Champion: " + PauseMenuUI.ChampionName(next));
             }

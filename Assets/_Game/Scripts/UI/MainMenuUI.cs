@@ -277,6 +277,7 @@ namespace ElementalBuddies
                 else if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) Select(ClassAt(0), false);
                 else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) Select(ClassAt(1), false);
                 else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) Select(ClassAt(2), false);
+                else if (kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame) Select(ClassAt(3), false);
                 return;
             }
 
@@ -306,13 +307,14 @@ namespace ElementalBuddies
             if (kb.qKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() - 1); return; }
             if (kb.eKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() + 1); return; }
 
-            // Champion per Tastatur wechseln: ←/→, A/D oder 1–3
+            // Champion per Tastatur wechseln: ←/→, A/D oder 1–4
             int idx = IndexOf(_selected);
             if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) Select(ClassAt(idx - 1), false);
             else if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) Select(ClassAt(idx + 1), false);
             else if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) Select(ClassAt(0), false);
             else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) Select(ClassAt(1), false);
             else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) Select(ClassAt(2), false);
+            else if (kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame) Select(ClassAt(3), false);
         }
 
         // Alle Bedienelemente müssen Raycasts empfangen (Absicherung, falls die Szene ohne Raycast-Ziele gebaut wurde)
@@ -1232,8 +1234,8 @@ namespace ElementalBuddies
 
         private void HandleNetDisconnected(string reason)
         {
-            NetSession.LastDisconnectReason = null; // wird hier direkt angezeigt
             if (this == null) return;
+            NetSession.LastDisconnectReason = null; // wird hier direkt angezeigt
             _loading = false;
             ResetFader();
             if (_view != NetView.Main) SetView(NetView.Main);

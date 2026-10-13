@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38f39af1130d840989f14c0c0a5b0604, type: 3}
+  m_Name: Champion_Berserker
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ChampionDefinitionSO
+  Class: 3
+  DisplayName: Berserker
+  Tagline: Nordmann im Blutrausch
+  Description: "Ein Krieger aus dem Norden, der mit seiner Zweihand-Axt mitten in
+    die Gegnerwellen springt. Statt Mana treibt ihn die Wut an: Jeder Treffer \u2013
+    ausgeteilt oder eingesteckt \u2013 macht ihn st\xE4rker."
+  Portrait: {fileID: 21300000, guid: e2dd2762c0c06406b8f7e1a5feacec6a, type: 3}
+  PreviewPrefab: {fileID: 617640379047419935, guid: 440c3080437af406e8118fea24ef0aa9, type: 3}
+  AccentColor: {r: 0.66, g: 0.2, b: 0.16, a: 1}
+  Abilities:
+  - Key: LMB
+    Name: Axthieb
+    Description: "Breiter Axthieb, 3er-Kombo \u2013 der \xDCberkopf-Spalter trifft
+      h\xE4rter. Treffer geben Wut."
+    Icon: {fileID: 21300000, guid: 2733bc7c7e30b44ccbad0cba812d1850, type: 3}
+    Element: -1
+  - Key: RMB
+    Name: Ansturm
+    Description: "Sprint 6 m Richtung Mauszeiger, st\xF6\xDFt Gegner zur Seite. 40
+      % weniger Schaden dabei."
+    Icon: {fileID: 21300000, guid: 89e1bcee6a1fe495b80be85ce7892160, type: 3}
+    Element: -1
+  - Key: R
+    Name: Glutsturm
+    Description: "Wirbel mit gl\xFChender Axt: Schaden und Brand um dich herum, w\xE4hrend
+      du l\xE4ufst."
+    Icon: {fileID: 21300000, guid: 894d1bdb9fc79433693302972445c046, type: 3}
+    Element: 0
+  - Key: F
+    Name: Eisbrecher
+    Description: 'Eisstachel-Linie nach vorne: friert ein, eingefrorene Gegner zerschmettern.'
+    Icon: {fileID: 21300000, guid: 9add5f7507af7466a8d6a0974fa0312d, type: 3}
+    Element: 1
+  - Key: C
+    Name: Bergsturz
+    Description: "Weitsprung zum Mauszeiger: Aufprall mit Schaden, Bet\xE4ubung und
+      R\xFCcksto\xDF."
+    Icon: {fileID: 21300000, guid: 04f0c8255bef545749fe1c59bac1948c, type: 3}
+    Element: 2
+  - Key: V
+    Name: Lichtrausch
+    Description: "Kampfschrei: Lebensraub, schnellere Hiebe, st\xE4rkere Buddies,
+      geblendete Gegner."
+    Icon: {fileID: 21300000, guid: 7514f7b4fe2844d2798fbb0d1c55c43f, type: 3}
+    Element: 3

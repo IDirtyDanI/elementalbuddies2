@@ -48,6 +48,7 @@ namespace ElementalBuddies
                 }
             }
             go.name = "StormCloud";
+            StormCloudSeeThrough.Attach(go); // durchsichtig, wenn die eigene Figur darunter/dahinter ist (lokal)
 
             var cloud = go.AddComponent<StormCloud>();
             cloud._radius = owner.CloudRadius;

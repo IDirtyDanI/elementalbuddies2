@@ -22,9 +22,10 @@ namespace ElementalBuddies.EditorTools
         {
             BuildKnight();
             BuildArcher();
+            BuildBerserkerController();
             ApplyHolds();
             AssetDatabase.SaveAssets();
-            Debug.Log("ChampionAnimatorBuilder: KnightVisual.controller und ArcherVisual.controller gebaut.");
+            Debug.Log("ChampionAnimatorBuilder: KnightVisual.controller, ArcherVisual.controller und BerserkerVisual.controller gebaut.");
         }
 
         // ---------------- Schwertkämpfer ----------------
@@ -99,14 +100,107 @@ namespace ElementalBuddies.EditorTools
             EditorUtility.SetDirty(ac);
         }
 
+        // ---------------- Berserker ----------------
+
+        // Nur den Berserker-Controller bauen (+ Hand-/Arm-Layer), ohne die anderen Controller anzufassen
+        [MenuItem("BuddyTD/Champions/Berserker-Animator bauen")]
+        public static void BuildBerserker()
+        {
+            BuildBerserkerController();
+            var spec = ChampionPlayerSetup.EffectiveSpec(ChampionPlayerSetup.Spec(ChampionClass.Berserker));
+            var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(spec.Controller);
+            if (ac != null && spec.UseHeroes2) ChampionGrip.ApplyHoldLayers(ac, spec.Hold, spec.ClipPrefix);
+            AssetDatabase.SaveAssets();
+        }
+
+        // Zustände = Trigger aus BerserkerKit.GetAnimTrigger. Clips: eigene Berserker-Clips (Animations/Heroes2 oder im
+        // Modell BerserkerChampion2.fbx), sonst Ritter-Clips als Platzhalter. Neu bauen tauscht die Clips automatisch.
+        private static void BuildBerserkerController()
+        {
+            var ac = CopyBase("BerserkerVisual");
+            foreach (var n in new[] { "Cleave1", "Cleave2", "Cleave3", "Charge", "IceBreak", "LeapSlam", "Roar" })
+                ac.AddParameter(n, AnimatorControllerParameterType.Trigger);
+            ac.AddParameter("Spinning", AnimatorControllerParameterType.Bool);
+
+            var upper = UpperLayer(ac);
+            var empty = upper.defaultState;
+            AddOr(upper, empty, "Cleave1", BerserkerClip("Berserker_Cleave1"), 1f, 0.7f, Clip(H2Anim + "Knight2_Slash1.fbx", "Knight2_Slash1"), 0.85f);
+            AddOr(upper, empty, "Cleave2", BerserkerClip("Berserker_Cleave2"), 1f, 0.7f, Clip(H2Anim + "Knight2_Slash2.fbx", "Knight2_Slash2"), 0.85f);
+            AddOr(upper, empty, "Cleave3", BerserkerClip("Berserker_Cleave3"), 1f, 0.75f, Clip(H2Anim + "Knight2_Slash3.fbx", "Knight2_Slash3"), 0.85f);
+            foreach (var cs in upper.states)
+                if (cs.state.name.StartsWith("Cleave"))
+                    foreach (var t in cs.state.transitions) t.interruptionSource = TransitionInterruptionSource.Destination;
+            AddOr(upper, empty, "Roar", BerserkerClip("Berserker_Roar"), 1f, 0.85f, Clip(KnightFbx, "Knight_LightOath"), 1.1f);
+
+            var full = FullBodyLayer(ac);
+            var fEmpty = full.defaultState;
+            // Ansturm: ohne eigenen Clip leerer Zustand (Lauf-Animation läuft weiter)
+            AddOr(full, fEmpty, "Charge", BerserkerClip("Berserker_Charge"), 1f, 0.9f, null, 1f);
+            AddOr(full, fEmpty, "IceBreak", BerserkerClip("Berserker_GroundSlam"), 1f, 0.85f, Clip(KnightFbx, "Knight_FrostStrike"), 1.2f);
+            AddOr(full, fEmpty, "LeapSlam", BerserkerClip("Berserker_LeapSlam"), 1f, 0.9f, Clip(KnightFbx, "Knight_Earthquake"), 0.8f);
+
+            // Glutsturm: Bool-gesteuerte Schleife
+            // Clip-Name aus art-src/heroes2/20_berserker_anims.py: "Berserker_SpinLoop" (ältere Schreibweise mit "_Spin_Loop" als Rückfall)
+            var spinClip = BerserkerClip("Berserker_SpinLoop") ?? BerserkerClip("Berserker_Spin_Loop") ?? Clip(KnightFbx, "Knight_FlameWhirl");
+            var spin = full.AddState("Spinning", new Vector3(300, 420, 0));
+            spin.motion = spinClip;
+            var toSpin = full.AddAnyStateTransition(spin);
+            toSpin.AddCondition(AnimatorConditionMode.If, 0f, "Spinning");
+            toSpin.duration = 0.08f;
+            toSpin.canTransitionToSelf = false;
+            var fromSpin = spin.AddTransition(fEmpty);
+            fromSpin.AddCondition(AnimatorConditionMode.IfNot, 0f, "Spinning");
+            fromSpin.duration = 0.15f;
+            fromSpin.hasExitTime = false;
+            EditorUtility.SetDirty(ac);
+        }
+
+        // Eigener Clip, sonst Platzhalter (Tempo placeholderSpeed)
+        private static void AddOr(AnimatorStateMachine sm, AnimatorState empty, string state, AnimationClip own, float speed, float exitTime, AnimationClip placeholder, float placeholderSpeed)
+        {
+            if (own != null) Action(sm, empty, state, own, state, speed, exitTime);
+            else if (placeholder != null) Action(sm, empty, state, placeholder, state, placeholderSpeed, 0.85f);
+            else
+            {
+                // Kein Clip: leerer Zustand (Bewegung der unteren Layer bleibt sichtbar), Trigger läuft ins Leere
+                var s = sm.AddState(state, new Vector3(550, 60 * sm.states.Length, 0));
+                var t = sm.AddAnyStateTransition(s);
+                t.AddCondition(AnimatorConditionMode.If, 0f, state);
+                t.duration = 0.06f;
+                var back = s.AddTransition(empty);
+                back.hasExitTime = true;
+                back.exitTime = 0f;
+                back.duration = 0.1f;
+            }
+        }
+
+        // Berserker-Clip suchen: Animations/Heroes2/<name>.fbx, dann im Modell, dann irgendwo unter den Heroes2-Ordnern
+        private static AnimationClip BerserkerClip(string name)
+        {
+            var c = Clip(H2Anim + name + ".fbx", null);
+            if (c != null) return c;
+            c = Clip("Assets/_Game/Models/Characters/Heroes2/BerserkerChampion2.fbx", name);
+            if (c != null) return c;
+            foreach (var g in AssetDatabase.FindAssets(name + " t:AnimationClip", new[] { "Assets/_Game/Animations", "Assets/_Game/Models/Characters/Heroes2" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(g);
+                c = Clip(path, name);
+                if (c != null) return c;
+                foreach (var o in AssetDatabase.LoadAllAssetsAtPath(path))
+                    if (o is AnimationClip ac && ac.name == name) return ac;
+            }
+            return null;
+        }
+
         // ---------------- Hände/Arme (Heroes2) ----------------
 
         // Hands-/HoldArm-Layer für alle Champions mit Heroes2-Modell (Finger-Rig) setzen, bei Alt-Modellen entfernen.
         // Ändert nur die Layer, nicht die Aktions-States (GUIDs der Controller bleiben).
         public static void ApplyHolds()
         {
-            foreach (var spec in ChampionPlayerSetup.Specs)
+            foreach (var raw in ChampionPlayerSetup.Specs)
             {
+                var spec = ChampionPlayerSetup.EffectiveSpec(raw); // Berserker ohne eigenes Modell: Platzhalter (Ritter)
                 var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(spec.Controller);
                 if (ac == null) continue;
                 if (spec.UseHeroes2) ChampionGrip.ApplyHoldLayers(ac, spec.Hold, spec.ClipPrefix);
