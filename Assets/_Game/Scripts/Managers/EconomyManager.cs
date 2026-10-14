@@ -284,15 +284,10 @@ namespace ElementalBuddies
             return false;
         }
 
-        // Baukosten in Seelensplittern (inkl. Kampf-Aufschlag)
+        // Baukosten in Seelensplittern. Früher ×CombatSurcharge in der Welle; seit Bauen nur noch zwischen den Wellen geht
+        // (InteractionManager.CanBuildNow), gilt immer der Grundpreis. Bleibt als zentrale Stelle für künftige Kostenregeln.
         public float GetBuildingCost(float baseCost)
         {
-            if (settings == null) return baseCost;
-
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.Combat)
-            {
-                return baseCost * settings.CombatSurcharge;
-            }
             return baseCost;
         }
         

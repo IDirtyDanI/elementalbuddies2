@@ -28,7 +28,6 @@ namespace ElementalBuddies
     {
         public UnitType Type;
         public float CostOutCombat;
-        public float CostInCombat => CostOutCombat * CombatSurcharge; // Read-only property
         public float Range;
         public float FireRate; // Attacks per second
         public float Damage;
@@ -43,7 +42,7 @@ namespace ElementalBuddies
                  "Ziele ausgelegt und gegen einzelne Bosse mit viel Leben sonst zu schwach (Balancing-Modell, Strategie „fusion“).")]
         public float BossDamageMultiplier = 1f;
 
-        // Reference to global settings for surcharge calculation
+        // Referenz auf die globalen Einstellungen (früher für den Kampf-Aufschlag CostInCombat)
         private GlobalSettingsSO _globalSettings;
         public GlobalSettingsSO GlobalSettings
         {
@@ -59,19 +58,6 @@ namespace ElementalBuddies
                     }
                 }
                 return _globalSettings;
-            }
-        }
-
-        // Helper for combat surcharge (used in CostInCombat calculation)
-        protected float CombatSurcharge
-        {
-            get
-            {
-                if (GlobalSettings != null)
-                {
-                    return GlobalSettings.CombatSurcharge;
-                }
-                return 1.0f; // Default if settings not found
             }
         }
     }

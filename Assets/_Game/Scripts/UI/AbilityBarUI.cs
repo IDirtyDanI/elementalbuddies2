@@ -6,7 +6,8 @@ using TMPro;
 
 namespace ElementalBuddies
 {
-    // Fähigkeitenleiste unten links: LMB, RMB, R, F, C, V – Inhalt kommt vom aktiven Champion (ChampionKit).
+    // Fähigkeitenleiste unten links: Standard LMB, RMB, R, F, C, V – Inhalt kommt vom aktiven Champion (ChampionKit).
+    // Die Tasten-Plaketten folgen der Spieler-Belegung (KeyBindings): Maus-Symbol für Links-/Rechtsklick, sonst Kürzel.
     // Zeigt Abklingzeit (Radial + Sekunden), Mana-Kosten, Sperre, Mana-Mangel, Puls beim Freischalten,
     // Aufblitzen beim Wirken, Aufladungs-Punkte (z. B. Rolle) und einen Leuchtrahmen für gehaltene/aktive Fähigkeiten (Block).
     public class AbilityBarUI : MonoBehaviour
@@ -17,7 +18,7 @@ namespace ElementalBuddies
             [FormerlySerializedAs("Ability")]
             [Tooltip("Taste dieses Slots. Welche Fähigkeit darauf liegt, bestimmt der aktive Champion.")]
             public AbilitySlot Binding;
-            [Tooltip("Shown in KeyText. Empty = default key for the slot.")]
+            [Tooltip("Veraltet: Die Plakette zeigt seit der Tastaturbelegung immer die aktuelle Taste (KeyBindings).")]
             public string KeyLabel;
 
             public RectTransform Root;
@@ -88,15 +89,64 @@ namespace ElementalBuddies
             {
                 if (s.Root != null) s.BaseScale = s.Root.localScale;
                 if (s.Icon != null) s.DefaultIcon = s.Icon.sprite;
-                if (s.KeyText != null) s.KeyText.text = string.IsNullOrEmpty(s.KeyLabel) ? DefaultKey(s.Binding) : s.KeyLabel;
                 if (s.CastHighlight != null) SetAlpha(s.CastHighlight, 0f);
+                CacheBadgeSprite(s);
             }
+            RefreshKeys();
+            KeyBindings.OnBindingsChanged += RefreshKeys;
             TryBind();
         }
 
         void OnDestroy()
         {
+            KeyBindings.OnBindingsChanged -= RefreshKeys;
             Unbind();
+        }
+
+        // ---------------- Tasten-Plaketten (Belegung) ----------------
+
+        // Plakette = Image-Elternteil von KeyText („Key“): mouse_left / mouse_right (Text aus) oder hotkey_badge + Kürzel
+        private Sprite _mouseLeft, _mouseRight, _keyBadge;
+        private float _keyFontSize = 20f;
+
+        private void CacheBadgeSprite(Slot s)
+        {
+            var badge = s.KeyText != null ? s.KeyText.transform.parent.GetComponent<Image>() : null;
+            if (badge == null || badge.sprite == null) return;
+            string n = badge.sprite.name;
+            if (n.Contains("mouse_left")) _mouseLeft = badge.sprite;
+            else if (n.Contains("mouse_right")) _mouseRight = badge.sprite;
+            else if (_keyBadge == null)
+            {
+                _keyBadge = badge.sprite;
+                _keyFontSize = s.KeyText.fontSize;
+            }
+        }
+
+        public void RefreshKeys()
+        {
+            foreach (var s in Slots)
+            {
+                if (s.KeyText == null) continue;
+                var id = KeyBindings.OfSlot(s.Binding);
+                string path = KeyBindings.EffectivePath(id);
+                var badge = s.KeyText.transform.parent.GetComponent<Image>();
+                Sprite mouse = KeyBindings.SamePath(path, "<Mouse>/leftButton") ? _mouseLeft
+                             : KeyBindings.SamePath(path, "<Mouse>/rightButton") ? _mouseRight : null;
+                if (badge != null && mouse != null)
+                {
+                    badge.sprite = mouse;
+                    s.KeyText.gameObject.SetActive(false);
+                    continue;
+                }
+                if (badge != null && _keyBadge != null) badge.sprite = _keyBadge;
+                s.KeyText.gameObject.SetActive(true);
+                s.KeyText.text = KeyBindings.Short(id);
+                s.KeyText.enableAutoSizing = true;
+                s.KeyText.fontSizeMax = _keyFontSize;
+                s.KeyText.fontSizeMin = 9f;
+                s.KeyText.textWrappingMode = TextWrappingModes.NoWrap;
+            }
         }
 
         private void TryBind()

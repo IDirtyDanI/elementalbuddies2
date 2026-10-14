@@ -157,6 +157,10 @@ MonoBehaviour:
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEuler: {x: 0, y: 0, z: 0}
     WorldScale: 0.84210527
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
 --- !u!114 &8426557890998643719
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -180,6 +184,11 @@ MonoBehaviour:
   - FullBody
   FadeSpeed: 8
   MaxShoulderAngle: 25
+  SlideMin: -0.2
+  SlideMax: 0.12
+  TwistToForearm: 0.5
+  ElbowFromWrist: 1
+  Iterations: 3
 --- !u!114 &7084336267494467427
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -40,6 +40,9 @@ namespace ElementalBuddies
             if (Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame) return;
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
             if (InteractionManager.Instance != null && InteractionManager.Instance.EscapeConsumedThisFrame) return;
+            // Esc bricht gerade das Neubelegen einer Taste ab bzw. schließt nur die Tastaturbelegung
+            if (KeyBindings.InputConsumed) return;
+            if (IsPaused && PauseMenuUI.Active != null && PauseMenuUI.Active.TryCloseKeysPage()) return;
             TogglePause();
         }
 

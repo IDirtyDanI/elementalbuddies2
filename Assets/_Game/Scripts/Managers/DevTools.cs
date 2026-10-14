@@ -1,6 +1,15 @@
+// Entwickler-Cheats nur im Editor und in Development-Builds (#190). In Release-Builds bleiben nur die serialisierten
+// Felder (test.unity behält seine Werte, keine Missing-Warnungen); Logik, F-Tasten und Overlay fehlen ganz, die
+// Komponente entfernt sich in Awake selbst und CheatsActive ist immer false.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#define EB_DEVTOOLS
+#endif
+
 using System.Collections;
 using UnityEngine;
+#if EB_DEVTOOLS
 using UnityEngine.InputSystem;
+#endif
 
 namespace ElementalBuddies
 {
@@ -29,7 +38,6 @@ namespace ElementalBuddies
         public bool ShowHelp = true;
         [Tooltip("F9 spawnt reihum den nächsten Boss am nächstgelegenen offenen Portal.")]
         public System.Collections.Generic.List<EnemyConfigSO> DevBossConfigs = new System.Collections.Generic.List<EnemyConfigSO>();
-        private int _bossCursor;
 
         [Header("Erfolge")]
         [Tooltip("Erfolge auch vergeben, wenn Cheats aktiv sind (nur zum Testen).")]
@@ -37,20 +45,23 @@ namespace ElementalBuddies
         [Tooltip("Im Spiel alle Meta-Freischaltungen (Champions, Fusionen, Stufe 4, Super-Elementare) aktiv – nur diese Session, nichts wird gespeichert.")]
         public bool UnlockAllContent = false;
 
+#if !EB_DEVTOOLS
+        // Release-Build: keine Cheats, keine Tasten, kein Overlay – die Komponente entfernt sich selbst
+        public bool CheatsActive => false;
+
+        void Awake()
+        {
+            Enabled = false;
+            enabled = false;
+            Destroy(this);
+        }
+#else
         // Irgendein spielverändernder Cheat aktiv? (sperrt die Vergabe von Erfolgen, siehe AchievementManager)
         public bool CheatsActive => Enabled && (GodMode || UnlimitedResources || UnlimitedBuddies || InvulnerableNexus || UnlockAllSpells || UnlockAllContent || StartWave > 1);
 
         private const float ShardReserve = 9999f;
         private GUIStyle _box, _label;
-
-        void Awake()
-        {
-#if !UNITY_EDITOR
-            // Im Spieler-Build nie aktiv – unabhängig von der Inspector-Einstellung
-            Enabled = false;
-            enabled = false;
-#endif
-        }
+        private int _bossCursor;
 
         // Nur der Host (bzw. Einzelspieler) darf Cheats nutzen
         private bool Active => Enabled && Net.IsServer;
@@ -243,5 +254,6 @@ namespace ElementalBuddies
             GUI.Box(new Rect(12, y, 520, 236), GUIContent.none, _box);
             GUI.Label(new Rect(22, y + 6, 510, 231), text, _label);
         }
+#endif
     }
 }

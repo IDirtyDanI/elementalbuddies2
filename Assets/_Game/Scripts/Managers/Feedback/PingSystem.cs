@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace ElementalBuddies
 {
-    // Ping-System (Plan „Fesselung“ G1): Taste G oder mittlere Maustaste setzt eine Welt-Markierung an der Maus.
+    // Ping-System (Plan „Fesselung“ G1): Aktion „Ping“ (Standard G oder mittlere Maustaste, belegbar über KeyBindings) setzt eine Welt-Markierung an der Maus.
     // Kontext aus der Umgebung: Gegner in der Nähe → „Gefahr!“, Schrein/Händler → „Hierher!“, sonst „Hier bauen“.
     // Im Koop geht der Ping über NetGame an alle (mit Spielernamen). Liegt auf dem Managers-Objekt (FeedbackDirector).
     // Pings außerhalb des Bildes zeigt eine Randmarke in Ping-Farbe. Linien-Material: Resources/PingLine.mat (im Build sicher dabei).
@@ -21,6 +21,7 @@ namespace ElementalBuddies
 
         public static PingSystem Instance { get; private set; }
         private float _nextLocal;
+        private InputAction _pingAction;
         private Camera _cam;
         private TMP_FontAsset _font;
         private readonly List<Marker> _markers = new List<Marker>();
@@ -128,10 +129,11 @@ namespace ElementalBuddies
 
         private void HandleInput()
         {
-            var kb = Keyboard.current;
             var mouse = Mouse.current;
-            if (kb == null || mouse == null) return;
-            bool pressed = kb.gKey.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame;
+            if (mouse == null) return;
+            if (_pingAction == null) _pingAction = KeyBindings.Action("Ping");
+            // Aktion „Ping“ (Standard G + Mausrad-Klick, belegbar); aktiv, solange die eigene Figur Eingaben hat
+            bool pressed = _pingAction != null && _pingAction.WasPressedThisFrame();
             if (!pressed || Time.unscaledTime < _nextLocal) return;
             if (PauseManager.IsPaused || InteractionManager.LocalInputBlocked) return;
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;

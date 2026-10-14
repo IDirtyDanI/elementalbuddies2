@@ -54,7 +54,6 @@ namespace ElementalBuddies
             _game = GameManager.Instance;
             _startTime = Time.unscaledTime;
             Build();
-            if (_waves != null) _waves.OnWaveStart += HandleWaveStart;
             Shrine.OnAnyShrineAwakened += HandleShrine;
             Merchant.OnAnyMerchantActivated += HandleMerchant;
             EnemyBrain.OnBossSpawned += HandleBoss;
@@ -64,7 +63,6 @@ namespace ElementalBuddies
 
         void OnDisable()
         {
-            if (_waves != null) _waves.OnWaveStart -= HandleWaveStart;
             Shrine.OnAnyShrineAwakened -= HandleShrine;
             Merchant.OnAnyMerchantActivated -= HandleMerchant;
             EnemyBrain.OnBossSpawned -= HandleBoss;
@@ -93,11 +91,8 @@ namespace ElementalBuddies
 
         // ---------------- Auslöser ----------------
 
-        private void HandleWaveStart()
-        {
-            if (_waves != null && _waves.UpcomingWaveNumber >= 2 && ElementalBuddy.ActiveCount == 0)
-                Show("build", BuildText, () => ElementalBuddy.ActiveCount > 0);
-        }
+        // Bau-Tipp kommt nur noch aus Poll (Bauphase ohne Buddies): Buddies lassen sich in der Welle nicht mehr platzieren,
+        // der frühere Auslöser beim Wellenstart hätte zum Bauen aufgefordert, wenn es nicht geht.
 
         private void HandleShrine(Shrine s) =>
             Show("shrine", "Ein <b>Schrein</b> ist erwacht! Stell dich in seinen Kreis, bis er eingenommen ist – das schaltet einen neuen Element-Zauber frei.");
@@ -123,7 +118,32 @@ namespace ElementalBuddies
             HideNow();
         }
 
-        private const string BuildText = "Bau <b>Buddies</b> mit den Tasten <b>1–4</b> (oder unten anklicken) und klick auf den Boden. Sie verteidigen die Stadt für dich.";
+        // Texte mit Tasten nennen die aktuelle Belegung (KeyBindings), Standard 1–4 bzw. WASD/LMB/RMB/R/F/C/V
+        private static string BuildText =>
+            $"Bau <b>Buddies</b> mit {BuildKeys()} (oder unten anklicken) und klick auf den Boden. Sie verteidigen die Stadt für dich – platzieren geht nur zwischen den Wellen.";
+
+        private static string BuildKeys()
+        {
+            string a = KeyBindings.Short(BindId.Build1), b = KeyBindings.Short(BindId.Build2),
+                   c = KeyBindings.Short(BindId.Build3), d = KeyBindings.Short(BindId.Build4);
+            if (a == "1" && b == "2" && c == "3" && d == "4") return "den Tasten <b>1–4</b>";
+            return $"den Tasten <b>{a}, {b}, {c}</b> und <b>{d}</b>";
+        }
+
+        private static string MoveText()
+        {
+            string spells = $"{KeyBindings.Name(BindId.SpellFire)}, {KeyBindings.Name(BindId.SpellIce)}, {KeyBindings.Name(BindId.SpellEarth)} und {KeyBindings.Name(BindId.SpellLight)}";
+            return $"Willkommen! Bewege dich mit <b>{KeyBindings.MoveKeys()}</b>, greif mit <b>{Click(BindId.Primary)}</b> an. Deine Fähigkeiten liegen auf {Click(BindId.Secondary)}, {spells}.";
+        }
+
+        // „Linksklick“/„Rechtsklick“ für die Maustasten, sonst der Tastenname („Taste Q“, „Leertaste“)
+        private static string Click(BindId id)
+        {
+            string p = KeyBindings.EffectivePath(id);
+            if (KeyBindings.SamePath(p, "<Mouse>/leftButton")) return "Linksklick";
+            if (KeyBindings.SamePath(p, "<Mouse>/rightButton")) return "Rechtsklick";
+            return KeyBindings.Long(id);
+        }
 
         // Zustände, die man nur durch Nachsehen erkennt (alle 0,5 s)
         private void Poll()
@@ -133,7 +153,7 @@ namespace ElementalBuddies
             bool building = _waves != null && !_waves.IsWaveActive;
 
             if (since > 2f)
-                Show("move", "Willkommen! Bewege dich mit <b>WASD</b>, greif mit der <b>linken Maustaste</b> an. Deine Fähigkeiten liegen auf Rechtsklick, R, F, C und V.");
+                Show("move", MoveText());
             if (since > 4f && building && ElementalBuddy.ActiveCount == 0)
                 Show("build", BuildText, () => ElementalBuddy.ActiveCount > 0);
             if (building && ElementalBuddy.ActiveCount > 0 && _waves != null && _waves.UpcomingWaveNumber == 1)
@@ -151,7 +171,7 @@ namespace ElementalBuddies
                 Show("lowhp", "<b>Wenig Leben!</b> Zieh dich kurz zurück – Licht-Buddies heilen dich, und am Wellenende füllt es sich wieder.");
             var nexus = Nexus.Instance;
             if (nexus != null && nexus.MaxHP > 0f && nexus.CurrentHP < nexus.MaxHP * 0.85f)
-                Show("nexus", "Der <b>Nexus</b> wird angegriffen! Fällt er, ist der Run vorbei. Bau Buddies an die Wege, auf denen Gegner durchkommen.");
+                Show("nexus", "Der <b>Nexus</b> wird angegriffen! Fällt er, ist der Run vorbei. Bau nach der Welle Buddies an die Wege, auf denen Gegner durchkommen.");
         }
 
         private static bool CanAffordUpgrade()

@@ -244,7 +244,7 @@ namespace ElementalBuddies
                 var av = PlayerAvatar.Local;
                 var pa = av != null && av.Abilities != null ? av.Abilities : PlayerAbilities.Instance;
                 string ability = pa != null ? pa.GetElementAbilityName(i) : ElementInfo.AbilityName(i);
-                Show($"{ability} erlernt! (Taste {ElementInfo.AbilityKey(i)})", ElementIcon(i));
+                Show($"{ability} erlernt! ({ElementInfo.AbilityKey(i)})", ElementIcon(i));
             }
             Show($"{ElementInfo.Name(i)}-Buddies: +{Mathf.RoundToInt(s.BuddyDamageBonus * 100f)} % Schaden", ElementIcon(i));
         }

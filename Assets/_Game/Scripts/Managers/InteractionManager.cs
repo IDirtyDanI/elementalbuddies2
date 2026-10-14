@@ -54,6 +54,7 @@ namespace ElementalBuddies
 
             _mainCamera = Camera.main;
 
+            if (inputAsset == null) inputAsset = KeyBindings.Asset; // gemeinsames Asset inkl. Spieler-Belegung
             if (inputAsset != null)
             {
                 var map = inputAsset.FindActionMap("Player");
@@ -87,6 +88,10 @@ namespace ElementalBuddies
         void Update()
         {
             ReleaseButtonFocus();
+
+            // Welle startet (oder Game Over), während noch ein Bau-Ghost aktiv ist -> Platzieren abbrechen (Ghost +
+            // Reichweite weg). Steht vor der Pause-Prüfung: im Koop kann die Welle bei offenem Pause-Menü starten.
+            if (_selectedUnitConfig != null && !CanBuildNow) Deselect();
 
             // Pause-Menü offen -> keine Eingaben (ESC übernimmt der PauseManager)
             if (PauseManager.IsPaused) return;
@@ -264,6 +269,11 @@ namespace ElementalBuddies
             _selectedRange.Show(SelectedBuddy.transform, SelectedBuddy.EffectiveRange, color);
         }
 
+        // Buddies platzieren nur zwischen den Wellen (wie Aufwerten/Fusion; früher im Kampf mit 25 % Aufschlag). Spielzustand,
+        // auf Clients über NetGame.Waves (ApplyRemoteState) gespiegelt; der Server prüft in ValidatePlacement erneut.
+        public static bool CanBuildNow => ElementalBuddy.IsUpgradePhase;
+        public const string BuildPhaseText = "Buddies nur zwischen den Wellen platzieren.";
+
         // Verkaufen nur in der Bauphase (Spielzustand; lokale Sperren prüft SellSelected zusätzlich)
         public bool CanSellNow =>
             GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.Building;
@@ -318,7 +328,7 @@ namespace ElementalBuddies
             SelectUnit(index);
         }
 
-        // Aktuelle Baukosten in Seelensplittern (inkl. Kampf-Aufschlag); -1 bei ungültigem Index
+        // Aktuelle Baukosten in Seelensplittern; -1 bei ungültigem Index
         public float GetCurrentCost(int index)
         {
             if (UnitConfigs == null || index < 0 || index >= UnitConfigs.Count || UnitConfigs[index] == null) return -1f;
@@ -344,6 +354,11 @@ namespace ElementalBuddies
             if (_selectedUnitConfig == config)
             {
                 Deselect();
+            }
+            else if (!CanBuildNow)
+            {
+                // In der Welle keine Bau-Auswahl (Hotkey 1–4; die Bauleiste ist dann ausgeblendet) – still ignorieren,
+                // ein Hinweis bei jedem Tastendruck stört im Kampf
             }
             else
             {
@@ -439,6 +454,7 @@ namespace ElementalBuddies
             // Safety first
             if (config == null || EconomyManager.Instance == null) return "Bauen nicht möglich.";
             if (IsGameOver) return "Das Spiel ist vorbei.";
+            if (!CanBuildNow) return BuildPhaseText; // nur Spieler-Bauen; Fusion/Phönix spawnen über eigene Server-Pfade
 
             // Check Buddy Slots
             if (BuddySlotManager.Instance != null && !BuddySlotManager.Instance.HasFreeSlot) return "Alle Buddy-Plätze sind belegt.";

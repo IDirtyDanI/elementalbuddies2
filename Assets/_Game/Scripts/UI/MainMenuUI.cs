@@ -230,16 +230,27 @@ namespace ElementalBuddies
             RefreshDifficulty();
             Select(start, true);
             MainMenuMeta.Attach(this); // Nächstes Ziel, Belagerungsstufe, Kodex (Plan Fesselung E3/E4/E6)
+            KeyBindingsMenu.Attach(this); // Einstellungen → Tastaturbelegung
         }
 
         void OnEnable()
         {
             Progression.OnProgressChanged += HandleProgressChanged;
+            KeyBindings.OnBindingsChanged += HandleBindingsChanged;
         }
 
         void OnDisable()
         {
             Progression.OnProgressChanged -= HandleProgressChanged;
+            KeyBindings.OnBindingsChanged -= HandleBindingsChanged;
+        }
+
+        // Tastaturbelegung geändert → Tasten in der Fähigkeitenliste des Detail-Panels neu beschriften
+        private void HandleBindingsChanged()
+        {
+            if (!_initialized) return;
+            var def = Def(_selected);
+            if (def != null) FillAbilities(def);
         }
 
         // Erfolge geändert (z. B. Editor-Menü "Alle freischalten") → Sperren und Erfolge-Seite aktualisieren
@@ -281,6 +292,8 @@ namespace ElementalBuddies
                 return;
             }
 
+            // Tastaturbelegung offen oder Taste wird gerade neu belegt: Esc/Enter/Q/E gehören dorthin
+            if (KeyBindingsMenu.HandleKeys(kb)) return;
             if (SettingsPanel != null && SettingsPanel.activeSelf)
             {
                 if (kb.escapeKey.wasPressedThisFrame) ShowSettings(false);
@@ -452,7 +465,17 @@ namespace ElementalBuddies
                     icon.sprite = ab.Icon;
                 }
                 var key = FindChild<TextMeshProUGUI>(row.transform, "Key");
-                if (key != null) key.text = ab.Key;
+                // Asset-Kürzel („LMB“, „R“ …) = Standard-Taste des Slots → aktuelle Belegung anzeigen
+                if (key != null)
+                {
+                    key.text = AbilitySlots.TryParseDefaultKey(ab.Key, out var slot) ? AbilitySlots.ShortKey(slot) : ab.Key;
+                    if (!key.enableAutoSizing)
+                    {
+                        key.fontSizeMax = key.fontSize;
+                        key.fontSizeMin = 10f;
+                        key.enableAutoSizing = true;
+                    }
+                }
                 var title = FindChild<TextMeshProUGUI>(row.transform, "Name");
                 if (title != null)
                 {

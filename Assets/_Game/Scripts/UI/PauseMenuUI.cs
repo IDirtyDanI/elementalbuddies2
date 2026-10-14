@@ -40,8 +40,12 @@ namespace ElementalBuddies
         private PauseManager _pause;
         private readonly List<GameObject> _rows = new List<GameObject>();
 
+        // Aktives Pause-Menü der Szene (PauseManager fragt hier, ob Esc nur die Belegungs-Seite schließt)
+        public static PauseMenuUI Active { get; private set; }
+
         void Start()
         {
+            Active = this;
             _pause = PauseManager.Instance != null ? PauseManager.Instance : FindFirstObjectByType<PauseManager>();
             if (_pause != null) _pause.OnPauseChanged += HandlePauseChanged;
 
@@ -63,6 +67,7 @@ namespace ElementalBuddies
 
         void OnDestroy()
         {
+            if (Active == this) Active = null;
             if (_pause != null) _pause.OnPauseChanged -= HandlePauseChanged;
         }
 
@@ -142,6 +147,7 @@ namespace ElementalBuddies
 
         private void ShowPage(bool overview)
         {
+            if (_keysPage != null) _keysPage.SetActive(false);
             if (OverviewPage != null) OverviewPage.SetActive(overview);
             if (SettingsPage != null) SettingsPage.SetActive(!overview);
             SetTab(OverviewButtonImage, overview);
@@ -178,7 +184,138 @@ namespace ElementalBuddies
                 });
             }
             BuildFeelRows();
+            BuildKeyBindings();
             SyncSettings();
+        }
+
+        // ---------------- Tastaturbelegung (Unterseite der Einstellungen, zur Laufzeit gebaut) ----------------
+
+        private GameObject _keysPage;
+
+        public bool KeysPageOpen => _keysPage != null && _keysPage.activeSelf;
+
+        // Knopf „Tastaturbelegung“ oben rechts auf der Einstellungs-Seite; Seite mit Liste, Meldungszeile,
+        // „Alle zurücksetzen“ und „Zurück“ (→ Einstellungen)
+        private void BuildKeyBindings()
+        {
+            if (SettingsPage == null) return;
+            var template = OverviewButton != null ? OverviewButton : ResumeButton;
+            if (template == null) return;
+            var settings = (RectTransform)SettingsPage.transform;
+
+            var open = MakePageButton(template, settings, "KeyBindingsButton", "Tastaturbelegung", new Vector2(300f, 50f));
+            var ort = (RectTransform)open.transform;
+            ort.anchorMin = ort.anchorMax = ort.pivot = new Vector2(1f, 1f);
+            ort.anchoredPosition = new Vector2(0f, 2f);
+            open.onClick.AddListener(ShowKeys);
+
+            _keysPage = new GameObject("KeyBindingsPage", typeof(RectTransform));
+            var page = (RectTransform)_keysPage.transform;
+            page.SetParent(settings.parent, false);
+            page.anchorMin = settings.anchorMin;
+            page.anchorMax = settings.anchorMax;
+            page.pivot = settings.pivot;
+            page.anchoredPosition = settings.anchoredPosition;
+            page.sizeDelta = settings.sizeDelta;
+
+            var header = settings.Find("Header");
+            TMP_FontAsset titleFont = null;
+            if (header != null)
+            {
+                var h = Instantiate(header.gameObject, page, false);
+                h.name = "Header";
+                var ht = h.GetComponent<TextMeshProUGUI>();
+                if (ht != null) { ht.text = "Tastaturbelegung"; titleFont = ht.font; }
+            }
+            var line = settings.Find("Line");
+            if (line != null) Instantiate(line.gameObject, page, false).name = "Line";
+
+            var hint = settings.Find("Hint");
+            TextMeshProUGUI status = null;
+            if (hint != null)
+            {
+                var sgo = Instantiate(hint.gameObject, page, false);
+                sgo.name = "Status";
+                status = sgo.GetComponent<TextMeshProUGUI>();
+                var srt = status.rectTransform;
+                srt.offsetMin = new Vector2(0f, srt.offsetMin.y);
+                srt.offsetMax = new Vector2(-470f, srt.offsetMax.y);
+                srt.sizeDelta = new Vector2(srt.sizeDelta.x, 56f);
+                srt.anchoredPosition = new Vector2(srt.anchoredPosition.x, 4f);
+                status.textWrappingMode = TextWrappingModes.Normal;
+                status.enableAutoSizing = true;
+                status.fontSizeMax = status.fontSize;
+                status.fontSizeMin = 15f;
+                status.alignment = TextAlignmentOptions.Left;
+            }
+
+            var area = KeyBindingsView.CreateScroll(page, "Scroll", out var scroll);
+            var art = (RectTransform)scroll.transform;
+            art.anchorMin = Vector2.zero;
+            art.anchorMax = Vector2.one;
+            art.offsetMin = new Vector2(0f, 72f);
+            art.offsetMax = new Vector2(0f, -62f);
+
+            var reset = MakePageButton(template, page, "ResetAllButton", "Alle zurücksetzen", new Vector2(250f, 54f));
+            var rrt = (RectTransform)reset.transform;
+            rrt.anchorMin = rrt.anchorMax = rrt.pivot = new Vector2(1f, 0f);
+            rrt.anchoredPosition = new Vector2(-200f, 6f);
+            var back = MakePageButton(template, page, "BackButton", "Zurück", new Vector2(190f, 54f));
+            var bkrt = (RectTransform)back.transform;
+            bkrt.anchorMin = bkrt.anchorMax = bkrt.pivot = new Vector2(1f, 0f);
+            bkrt.anchoredPosition = new Vector2(0f, 6f);
+            back.onClick.AddListener(() => ShowPage(false));
+
+            // Schrift der Einstellungs-Zeilen (Fallback: Übersicht)
+            var rowLabel = SfxSlider != null ? SfxSlider.transform.parent.Find("Label") : null;
+            var body = rowLabel != null && rowLabel.GetComponent<TextMeshProUGUI>() != null ? rowLabel.GetComponent<TextMeshProUGUI>().font
+                     : StatsText != null ? StatsText.font : null;
+            var view = KeyBindingsView.Create(_keysPage, area, template, titleFont, body, status);
+            reset.onClick.AddListener(view.ResetAll);
+            _keysPage.SetActive(false);
+        }
+
+        private static Button MakePageButton(Button template, RectTransform parent, string name, string text, Vector2 size)
+        {
+            var go = Instantiate(template.gameObject, parent, false);
+            go.name = name;
+            var le = go.GetComponent<LayoutElement>();
+            if (le != null) le.ignoreLayout = true;
+            ((RectTransform)go.transform).sizeDelta = size;
+            var b = go.GetComponent<Button>();
+            b.onClick = new Button.ButtonClickedEvent();
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            var t = go.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (t != null)
+            {
+                t.text = text;
+                t.fontSizeMax = Mathf.Min(t.fontSize, 26f);
+                t.fontSizeMin = 16f;
+                t.enableAutoSizing = true;
+            }
+            return b;
+        }
+
+        private void ShowKeys()
+        {
+            if (_keysPage == null) return;
+            if (OverviewPage != null) OverviewPage.SetActive(false);
+            if (SettingsPage != null) SettingsPage.SetActive(false);
+            _keysPage.SetActive(true);
+            SetTab(OverviewButtonImage, false);
+            SetTab(SettingsButtonImage, true);
+            var scroll = _keysPage.GetComponentInChildren<ScrollRect>(true);
+            Canvas.ForceUpdateCanvases();
+            if (scroll != null) scroll.verticalNormalizedPosition = 1f;
+            if (UnityEngine.EventSystems.EventSystem.current != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+        }
+
+        // Esc auf der Belegungs-Seite: zurück zu den Einstellungen statt das Spiel fortzusetzen
+        public bool TryCloseKeysPage()
+        {
+            if (!KeysPageOpen) return false;
+            ShowPage(false);
+            return true;
         }
 
         // ---------------- Game Feel (Zeilen werden zur Laufzeit aus den vorhandenen Zeilen geklont) ----------------

@@ -37,7 +37,7 @@ namespace ElementalBuddies
         LightFrenzy     // V - Lichtrausch
     }
 
-    // Tastenbelegung, gleich für alle Champions. Reihenfolge = alte AbilityBar-Reihenfolge (serialisiert).
+    // Fähigkeits-Slots, gleich für alle Champions (Tasten belegbar, KeyBindings). Reihenfolge = alte AbilityBar-Reihenfolge (serialisiert).
     public enum AbilitySlot
     {
         Primary,   // Linke Maustaste
@@ -64,8 +64,14 @@ namespace ElementalBuddies
             return (AbilitySlot)(UnityEngine.Mathf.Clamp(elementIndex, 0, 3) + 2);
         }
 
-        // Kurzbeschriftung für die Leiste
-        public static string ShortKey(AbilitySlot slot)
+        // Kurzbeschriftung der aktuellen Belegung (HUD-Plakette, Pause-Übersicht), z. B. „LMT“, „R“, „Leer“
+        public static string ShortKey(AbilitySlot slot) => KeyBindings.Short(KeyBindings.OfSlot(slot));
+
+        // Ausgeschrieben für Tooltips: „Linke Maustaste“, „Taste R“, „Leertaste“
+        public static string KeyName(AbilitySlot slot) => KeyBindings.Long(KeyBindings.OfSlot(slot));
+
+        // Standard-Kürzel wie in den ChampionDefinitionSO-Assets („LMB“, „RMB“, „R“ …) – nur zum Zuordnen, nicht zur Anzeige
+        public static string DefaultKey(AbilitySlot slot)
         {
             switch (slot)
             {
@@ -78,15 +84,17 @@ namespace ElementalBuddies
             }
         }
 
-        // Ausgeschrieben für Tooltips / Pause-Übersicht
-        public static string KeyName(AbilitySlot slot)
+        // Asset-Kürzel („LMB“ …) → Slot
+        public static bool TryParseDefaultKey(string key, out AbilitySlot slot)
         {
-            switch (slot)
-            {
-                case AbilitySlot.Primary: return "Linke Maustaste";
-                case AbilitySlot.Secondary: return "Rechte Maustaste";
-                default: return "Taste " + ShortKey(slot);
-            }
+            for (int i = 0; i < Count; i++)
+                if (string.Equals(DefaultKey((AbilitySlot)i), key, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    slot = (AbilitySlot)i;
+                    return true;
+                }
+            slot = AbilitySlot.Primary;
+            return false;
         }
     }
 }

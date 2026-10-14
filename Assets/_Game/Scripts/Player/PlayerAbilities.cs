@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace ElementalBuddies
 {
-    // Klassen-unabhängiger Kern der Spieler-Fähigkeiten: Eingabe (Slots LMB/RMB/R/F/C/V), Abklingzeiten,
+    // Klassen-unabhängiger Kern der Spieler-Fähigkeiten: Eingabe (Slots, Standard LMB/RMB/R/F/C/V – belegbar über KeyBindings), Abklingzeiten,
     // Aufladungen, Mana, Element-Freischaltung (Schreine) und Events. Was eine Taste tut, liefert das
     // aktive ChampionKit (MageKit, KnightKit, ArcherKit – je eine Komponente auf dem Player).
     [RequireComponent(typeof(PlayerController))]
@@ -249,13 +249,26 @@ namespace ElementalBuddies
                 return;
             }
 
+            // Standard: Grundangriff = linke, Mobilität = rechte Maustaste, Zauber R/F/C/V – frei belegbar (KeyBindings)
+            HandleSlot(AbilitySlot.Primary, _controller.Skill6Action, ClickConsumed(_controller.Skill6Action));
+            HandleSlot(AbilitySlot.Secondary, _controller.SkillEAction, ClickConsumed(_controller.SkillEAction));
+            HandleSlot(AbilitySlot.Fire, _controller.SpellFireAction, ClickConsumed(_controller.SpellFireAction));
+            HandleSlot(AbilitySlot.Ice, _controller.SpellIceAction, ClickConsumed(_controller.SpellIceAction));
+            HandleSlot(AbilitySlot.Earth, _controller.SpellEarthAction, ClickConsumed(_controller.SpellEarthAction));
+            HandleSlot(AbilitySlot.Light, _controller.SpellLightAction, ClickConsumed(_controller.SpellLightAction));
+        }
+
+        // Liegt die Fähigkeit auf Links-/Rechtsklick, gehört der Klick evtl. dem Bauen/Auswählen bzw. der UI
+        // (InteractionManager.WouldConsume*). Auf Tastatur-Tasten gibt es diese Teilung nicht.
+        private static bool ClickConsumed(InputAction action)
+        {
+            if (!Pressed(action)) return false;
             var im = InteractionManager.Instance;
-            HandleSlot(AbilitySlot.Primary, _controller.Skill6Action, im != null && Pressed(_controller.Skill6Action) && im.WouldConsumeLeftClick()); // Linke Maustaste
-            HandleSlot(AbilitySlot.Secondary, _controller.SkillEAction, im != null && Pressed(_controller.SkillEAction) && im.WouldConsumeRightClick()); // Rechte Maustaste
-            HandleSlot(AbilitySlot.Fire, _controller.SpellFireAction, false);   // R
-            HandleSlot(AbilitySlot.Ice, _controller.SpellIceAction, false);     // F
-            HandleSlot(AbilitySlot.Earth, _controller.SpellEarthAction, false); // C
-            HandleSlot(AbilitySlot.Light, _controller.SpellLightAction, false); // V
+            var mouse = Mouse.current;
+            if (im == null || mouse == null) return false;
+            if (mouse.leftButton.wasPressedThisFrame && KeyBindings.Uses(action, mouse.leftButton) && im.WouldConsumeLeftClick()) return true;
+            if (mouse.rightButton.wasPressedThisFrame && KeyBindings.Uses(action, mouse.rightButton) && im.WouldConsumeRightClick()) return true;
+            return false;
         }
 
         private void HandleSlot(AbilitySlot slot, InputAction action, bool consumed)
@@ -284,17 +297,20 @@ namespace ElementalBuddies
             {
                 if (!consumed) TryCast(id);
             }
-            else if (slot == AbilitySlot.Primary && ActiveKit.AutoRepeatPrimary && action.IsPressed() && !IsPointerBusy())
+            else if (slot == AbilitySlot.Primary && ActiveKit.AutoRepeatPrimary && action.IsPressed() && !IsPointerBusy(action))
             {
                 // Gehaltener Grundangriff: erneut auslösen, sobald bereit (still, kein Locked-Toast)
                 if (IsAvailable(id)) TryCast(id);
             }
         }
 
-        private static bool IsPointerBusy()
+        // Gehaltener Grundangriff auf der linken Maustaste: pausieren, solange der Zeiger über UI/Buddy/Ghost ist
+        private static bool IsPointerBusy(InputAction action)
         {
             var im = InteractionManager.Instance;
-            return im != null && im.WouldConsumeLeftClick();
+            var mouse = Mouse.current;
+            if (im == null || mouse == null || !mouse.leftButton.isPressed || !KeyBindings.Uses(action, mouse.leftButton)) return false;
+            return im.WouldConsumeLeftClick();
         }
 
         private void ReleaseAllHolds()

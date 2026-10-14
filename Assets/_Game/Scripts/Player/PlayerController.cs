@@ -44,10 +44,11 @@ namespace ElementalBuddies
         public InputAction Skill6Action { get; private set; } // Renamed from SkillQAction
         public InputAction SkillEAction { get; private set; }
         public InputAction JumpAction { get; private set; } // New Jump Action
-        public InputAction SpellFireAction { get; private set; }  // R - Flammenwelle
-        public InputAction SpellIceAction { get; private set; }   // F - Frostnova
-        public InputAction SpellEarthAction { get; private set; } // C - Steinwall
-        public InputAction SpellLightAction { get; private set; } // V - Heiliger Kreis
+        // Standard R/F/C/V, frei belegbar (KeyBindings)
+        public InputAction SpellFireAction { get; private set; }  // Feuer-Fähigkeit
+        public InputAction SpellIceAction { get; private set; }   // Eis-Fähigkeit
+        public InputAction SpellEarthAction { get; private set; } // Erd-Fähigkeit
+        public InputAction SpellLightAction { get; private set; } // Licht-Fähigkeit
 
         // Last mouse point on the floor (world space). Falls back to a point in front of the player.
         public Vector3 AimPoint => _hasAimPoint ? _aimPoint : transform.position + transform.forward * 5f;
@@ -80,6 +81,16 @@ namespace ElementalBuddies
         [Header("Jump Settings")]
         public float JumpForce = 8.0f;
         public float Gravity = -9.81f;
+        [Tooltip("Konstante Abwärtsgeschwindigkeit am Boden (m/s). Hält isGrounded bei jeder Bildrate stabil – " +
+                 "vorher lag der Schwerkraft-Schritt bei ~200 fps unter minMoveDistance und isGrounded flackerte (#188).")]
+        public float GroundStickVelocity = -2f;
+        [Tooltip("Coyote-Time: so lange nach dem Verlassen des Bodens darf noch gesprungen werden (s).")]
+        public float CoyoteTime = 0.1f;
+        [Tooltip("Sprungpuffer: ein Tastendruck so kurz vor der Landung löst den Sprung bei Bodenkontakt aus (s).")]
+        public float JumpBufferTime = 0.1f;
+
+        private float _lastGroundedTime = float.NegativeInfinity;
+        private float _jumpPressedTime = float.NegativeInfinity;
 
         // Exposed for visuals/animation
         public bool IsGrounded => _characterController != null && _characterController.isGrounded;
@@ -88,12 +99,16 @@ namespace ElementalBuddies
         void Awake()
         {
             _characterController = GetComponent<CharacterController>();
+            // Jeder noch so kleine Schritt soll wirken (sonst verwirft Move ihn bei hoher Bildrate und isGrounded flackert)
+            if (_characterController != null) _characterController.minMoveDistance = 0f;
             _avatar = GetComponent<PlayerAvatar>();
             _stats = GetComponent<PlayerStats>();
             _mainCamera = Camera.main;
             // Absicherung: ohne gesetzte Boden-Ebene träfe der Maus-Raycast nichts (Zielen tot)
             if (FloorLayer.value == 0) FloorLayer = LayerMask.GetMask("Floor");
 
+            // Gemeinsames Asset mit den Spieler-Overrides (KeyBindings); das Inspector-Feld zeigt auf dasselbe Asset
+            if (inputAsset == null) inputAsset = KeyBindings.Asset;
             if (inputAsset != null)
             {
                 var map = inputAsset.FindActionMap(actionMapName);
@@ -206,24 +221,37 @@ namespace ElementalBuddies
             Vector2 input = MovementLocked ? Vector2.zero : MoveAction.ReadValue<Vector2>();
             Vector3 moveInput = new Vector3(input.x, 0, input.y);
 
-            // Ground check for jumping
+            float now = Time.time;
+            float dt = Time.deltaTime;
+
+            // Bodenkontakt (aus dem letzten Move): konstante Andruck-Geschwindigkeit statt 0 + g·dt – sonst ist der
+            // Schritt pro Frame bei hoher Bildrate winzig und isGrounded flackert (#188)
             if (_characterController.isGrounded)
             {
-                _playerVelocity.y = 0f; // Reset vertical velocity when grounded
-
-                if (!MovementLocked && JumpAction != null && JumpAction.WasPressedThisFrame())
-                {
-                    _playerVelocity.y = JumpForce;
-                    Jumped?.Invoke();
-                }
+                _lastGroundedTime = now;
+                if (_playerVelocity.y < 0f) _playerVelocity.y = GroundStickVelocity;
             }
 
-            // Apply gravity
-            _playerVelocity.y += Gravity * Time.deltaTime;
+            // Sprung: Tastendruck puffern (JumpBufferTime), kurz nach Verlassen des Bodens noch erlaubt (CoyoteTime)
+            if (MovementLocked) _jumpPressedTime = float.NegativeInfinity;
+            else if (JumpAction != null && JumpAction.WasPressedThisFrame()) _jumpPressedTime = now;
+
+            if (!MovementLocked && now - _jumpPressedTime <= JumpBufferTime && now - _lastGroundedTime <= CoyoteTime)
+            {
+                _playerVelocity.y = JumpForce;
+                _jumpPressedTime = float.NegativeInfinity;
+                _lastGroundedTime = float.NegativeInfinity; // kein zweiter Sprung im Coyote-Fenster
+                Jumped?.Invoke();
+            }
+
+            // Schwerkraft, Höhe mit der mittleren Geschwindigkeit des Frames (Trapez) → Sprungbogen unabhängig von der Bildrate
+            float vyStart = _playerVelocity.y;
+            _playerVelocity.y += Gravity * dt;
+            float vyMean = 0.5f * (vyStart + _playerVelocity.y);
 
             // Apply movement input (Absolute / World Space)
             Vector3 movement = moveInput * (MoveSpeed * SpeedMultiplier * SlowMultiplier);
-            Vector3 delta = (movement + _playerVelocity) * Time.deltaTime;
+            Vector3 delta = movement * dt + Vector3.up * (vyMean * dt);
 
             // Rückstoß (ease-out)
             if (_pushRemaining > 0f)

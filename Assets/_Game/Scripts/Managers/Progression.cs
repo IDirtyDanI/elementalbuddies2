@@ -379,7 +379,7 @@ namespace ElementalBuddies
             foreach (UnlockId id in Enum.GetValues(typeof(UnlockId)))
                 if (IsUnlockedPersistent(id, _snapshotRank)) _session.Add(id);
             _snapshotUnlockAll = false;
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             // DevTools.UnlockAllContent schon vor DevTools.Update berücksichtigen (Champion-Wahl in Awake)
             var dev = UnityEngine.Object.FindFirstObjectByType<DevTools>();
             _snapshotUnlockAll = dev != null && dev.Enabled && dev.UnlockAllContent;

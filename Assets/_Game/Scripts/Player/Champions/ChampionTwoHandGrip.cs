@@ -3,10 +3,14 @@ using UnityEngine;
 namespace ElementalBuddies
 {
     // Zweihand-Griff (Berserker-Axt): führt die freie linke Faust nach dem Animator und nach ChampionWeaponHold
-    // (Freiraum/Handgelenk der Waffenhand) per Zwei-Knochen-IK auf den zweiten Griffpunkt der Waffe (Kind-Empty "Grip2").
-    // Die Clips haben die Faust schon am Stiel – die IK gleicht nur Retargeting-/Korrektur-Abweichungen aus.
-    // Ellenbogen-Ebene und Handdrehung bleiben aus der Animation. In FreeStates (z. B. Kampfschrei: Hand lässt los)
-    // wird die IK weich ausgeblendet.
+    // (Freiraum/Handgelenk der Waffenhand) per Zwei-Knochen-IK an den Stiel beim zweiten Griffpunkt (Kind-Empty "Grip2").
+    // Die Clips (art-src/heroes2/20_berserker_anims.py) haben die Faust schon am Stiel und das Handgelenk natürlich
+    // gehalten – die IK gleicht nur die Retargeting-Abweichung (~4–14 cm) aus, ohne das Handgelenk zu verbiegen:
+    // Hand relativ zum Unterarm bleibt wie im Clip, die Faust-Röhre wird mit kleinster Drehung auf den Stiel gelegt,
+    // der Ellenbogen folgt passend, Rest-Verdrehung teilen Unterarm und Handgelenk. Die Faust darf wie beim echten
+    // Zweihand-Griff am Stiel gleiten (SlideMin/SlideMax; die Clips nutzen −0,18…+0,12 m, hier etwas mehr Spiel für das
+    // Retargeting) und wird nur quer zum Stiel nachgezogen. In FreeStates (Kampfschrei: Hand lässt los) wird die IK
+    // weich ausgeblendet.
     [DefaultExecutionOrder(110)]
     public class ChampionTwoHandGrip : MonoBehaviour
     {
@@ -25,6 +29,15 @@ namespace ElementalBuddies
         [Tooltip("Reicht der gestreckte Arm nicht bis zum Griff (Haltungen an der Reichweitengrenze, Retargeting-Abweichung), " +
                  "zieht das Schlüsselbein die Schulter bis zu so vielen Grad nach.")]
         public float MaxShoulderAngle = 25f;
+        [Tooltip("Gleitbereich der Faust am Stiel relativ zum Griffpunkt (m, entlang der Waffenachse; 0/0 = fester Punkt).")]
+        public float SlideMin = -0.2f;
+        public float SlideMax = 0.12f;
+        [Tooltip("Anteil der durch die IK zusätzlich entstehenden Handgelenk-Verdrehung, den der Unterarm übernimmt (0..1).")]
+        [Range(0f, 1f)] public float TwistToForearm = 0.5f;
+        [Tooltip("Ellenbogen so legen, dass der Unterarm zum Handgelenk-wie-im-Clip passt (sonst animierte Ellenbogen-Lage).")]
+        public bool ElbowFromWrist = true;
+        [Tooltip("IK-Durchläufe (Hand folgt dem korrigierten Unterarm).")]
+        public int Iterations = 3;
 
         private float _weight = 1f;
         private Transform _grip;
@@ -61,23 +74,74 @@ namespace ElementalBuddies
             var hand = anim.GetBoneTransform(HumanBodyBones.LeftHand);
             if (upper == null || lower == null || hand == null) return;
 
-            // Faust-Röhre am Stiel ausrichten (kleinste Drehung, Richtung wie animiert), dann die Hand so verschieben,
-            // dass die Faustmitte auf dem Griffpunkt liegt
-            Quaternion rot = hand.rotation;
-            if (PalmAxis.sqrMagnitude > 1e-8f)
+            // Ausgangspose (Animation) merken: Gewicht < 1 blendet am Ende je Knochen zwischen Animation und Lösung
+            var shoulder = anim.GetBoneTransform(HumanBodyBones.LeftShoulder);
+            Quaternion shA = shoulder != null ? shoulder.localRotation : Quaternion.identity;
+            Quaternion upA = upper.localRotation, loA = lower.localRotation, haA = hand.localRotation;
+
+            // Handgelenk wie im Clip (dort natürlich gehalten: Beugung/Abknickung relativ zum Unterarm) – die IK soll es
+            // nicht verbiegen. Bis 2026-10-14 behielt sie die Welt-Drehung der Hand bei und drehte nur den Arm: jede
+            // Korrektur des Arms landete als Knick im Handgelenk.
+            Quaternion relAnim = Quaternion.Inverse(lower.rotation) * hand.rotation;
+            Vector3 foreLocal = Quaternion.Inverse(lower.rotation) * (hand.position - lower.position).normalized;
+            float foreLen = (hand.position - lower.position).magnitude;
+            Vector3 palmLocal = Vector3.Scale(PalmOffset, hand.lossyScale);
+            Vector3 shaftDir = weapon.up;
+            for (int it = 0; it < Mathf.Max(1, Iterations); it++)
             {
-                Vector3 axNow = rot * PalmAxis.normalized;
-                Vector3 shaft = weapon.up;
-                if (Vector3.Dot(axNow, shaft) < 0f) shaft = -shaft;
-                rot = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(axNow, shaft), _weight) * rot;
+                // natürliche Hand zum aktuellen Unterarm, Faust-Röhre mit kleinster Drehung auf den Stiel
+                Quaternion rot = lower.rotation * relAnim;
+                if (PalmAxis.sqrMagnitude > 1e-8f)
+                {
+                    // Daumenseite immer zum Axtkopf (+Achse) wie in den Clips – kein Umklappen, wenn die Röhre
+                    // zwischendurch quer steht
+                    rot = Quaternion.FromToRotation(rot * PalmAxis.normalized, shaftDir) * rot;
+                }
+                // Faustmitte auf den nächsten Punkt des Griffbereichs (gleitet längs, wird nur quer nachgezogen)
+                Vector3 palmOff = rot * palmLocal;
+                float slide = Mathf.Clamp(Vector3.Dot(hand.position + palmOff - _grip.position, shaftDir), SlideMin, SlideMax);
+                Vector3 want = _grip.position + shaftDir * slide - palmOff;
+                // Ellenbogen so um die Schulter-Hand-Achse legen, dass der Unterarm dorthin zeigt, wo er bei
+                // Handgelenk-wie-im-Clip läge
+                Vector3 foreWant = (rot * Quaternion.Inverse(relAnim)) * foreLocal;
+                Vector3 hint = ElbowFromWrist ? want - foreWant * foreLen
+                                              : lower.position + (lower.position - (upper.position + hand.position) * 0.5f);
+                if (it == 0) ReachWithShoulder(anim, upper, lower, hand, want, ref hint);
+                ChampionWeaponHold.TwoBoneIK(upper, lower, hand, want, hint);
+                hand.rotation = rot;
             }
-            Vector3 palm = hand.position + rot * Vector3.Scale(PalmOffset, hand.lossyScale);
-            Vector3 want = hand.position + (_grip.position - palm) * _weight;
-            // Ellenbogen-Hinweis: animierte Ellenbogen-Lage (weg von der Schulter-Hand-Achse) beibehalten
-            Vector3 hint = lower.position + (lower.position - (upper.position + hand.position) * 0.5f);
-            ReachWithShoulder(anim, upper, lower, hand, want, ref hint);
-            ChampionWeaponHold.TwoBoneIK(upper, lower, hand, want, hint);
-            hand.rotation = rot;
+            // Verdrehung, die die Ausrichtung am Stiel zusätzlich ins Handgelenk gebracht hat, an den Unterarm abgeben
+            // (Unterarm-Drehung statt verdrehtem Handgelenk; die Hand behält ihre Welt-Drehung)
+            if (TwistToForearm > 0f)
+            {
+                Quaternion d = Quaternion.Inverse(relAnim) * (Quaternion.Inverse(lower.rotation) * hand.rotation);
+                Vector3 axL = Quaternion.Inverse(relAnim) * foreLocal;   // Unterarmachse im Raum der Clip-Hand
+                float tw = TwistAngle(d, axL);
+                Quaternion hRot = hand.rotation;
+                lower.rotation = lower.rotation * Quaternion.AngleAxis(tw * TwistToForearm, foreLocal);
+                hand.rotation = hRot;
+            }
+            if (_weight < 0.999f)
+            {
+                if (shoulder != null) shoulder.localRotation = Quaternion.Slerp(shA, shoulder.localRotation, _weight);
+                upper.localRotation = Quaternion.Slerp(upA, upper.localRotation, _weight);
+                lower.localRotation = Quaternion.Slerp(loA, lower.localRotation, _weight);
+                hand.localRotation = Quaternion.Slerp(haA, hand.localRotation, _weight);
+            }
+        }
+
+        // Drehwinkel (Grad, mit Vorzeichen) der Drehung q um die Achse axis (Swing-Twist-Zerlegung)
+        private static float TwistAngle(Quaternion q, Vector3 axis)
+        {
+            axis.Normalize();
+            Vector3 v = new Vector3(q.x, q.y, q.z);
+            Vector3 p = Vector3.Dot(v, axis) * axis;
+            var t = new Quaternion(p.x, p.y, p.z, q.w);
+            float m = Mathf.Sqrt(t.x * t.x + t.y * t.y + t.z * t.z + t.w * t.w);
+            if (m < 1e-6f) return 0f;
+            float ang = 2f * Mathf.Atan2(Vector3.Dot(new Vector3(t.x, t.y, t.z) / m, axis), t.w / m) * Mathf.Rad2Deg;
+            if (ang > 180f) ang -= 360f; else if (ang < -180f) ang += 360f;
+            return ang;
         }
 
         // Ziel außerhalb der Armlänge: Schlüsselbein in kleinen Schritten zum Ziel drehen, bis es reicht (max. MaxShoulderAngle)
@@ -97,7 +161,7 @@ namespace ElementalBuddies
                 angle = a;
                 if ((s + Quaternion.AngleAxis(a, axis) * u - want).magnitude <= reach) break;
             }
-            Quaternion q = Quaternion.AngleAxis(angle * _weight, axis);
+            Quaternion q = Quaternion.AngleAxis(angle, axis);
             Vector3 elbowOff = hint - shoulder.position;
             shoulder.rotation = q * shoulder.rotation;
             hint = shoulder.position + q * elbowOff;

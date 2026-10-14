@@ -58,7 +58,6 @@ namespace ElementalBuddies
         public static readonly string[] ShrineNames = { "Feuer-Schrein", "Eis-Schrein", "Erd-Schrein", "Licht-Schrein" };
         // Magier-Namen als Fallback; klassenabhängig über PlayerAbilities.GetElementAbilityName
         public static readonly string[] AbilityNames = { "Flammenwelle", "Frostnova", "Steinwall", "Heiliger Kreis" };
-        public static readonly string[] AbilityKeys = { "R", "F", "C", "V" };
         public static readonly Color[] Colors =
         {
             new Color(1f, 0.45f, 0.15f),   // Feuer
@@ -71,7 +70,8 @@ namespace ElementalBuddies
         public static string Name(int i) => Names[Clamp(i)];
         public static string ShrineName(int i) => ShrineNames[Clamp(i)];
         public static string AbilityName(int i) => AbilityNames[Clamp(i)];
-        public static string AbilityKey(int i) => AbilityKeys[Clamp(i)];
+        // Aktuelle Belegung der Element-Fähigkeit (Standard R/F/C/V), ausgeschrieben: „Taste R“
+        public static string AbilityKey(int i) => KeyBindings.Long(KeyBindings.SpellOf(Clamp(i)));
         public static Color GetColor(int i) => Colors[Clamp(i)];
     }
 }

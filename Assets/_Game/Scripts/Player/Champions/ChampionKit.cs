@@ -201,7 +201,10 @@ namespace ElementalBuddies
                 if (a != null && a.Id == id && a.Icon != null) return a.Icon;
             if (Definition != null)
             {
-                string key = KeyOf(id);
+                // Asset-Kürzel sind die Standard-Tasten („LMB“, „R“ …), unabhängig von der Spieler-Belegung
+                string key = "";
+                for (int i = 0; i < AbilitySlots.Count; i++)
+                    if (GetAbility((AbilitySlot)i) == id) { key = AbilitySlots.DefaultKey((AbilitySlot)i); break; }
                 foreach (var info in Definition.Abilities)
                     if (info != null && info.Icon != null && (info.Name == GetName(id) || info.Key == key)) return info.Icon;
             }

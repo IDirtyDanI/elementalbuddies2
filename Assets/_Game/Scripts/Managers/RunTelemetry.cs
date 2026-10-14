@@ -269,7 +269,7 @@ namespace ElementalBuddies
 
         private static bool CheatsActive()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             var dev = FindFirstObjectByType<DevTools>();
             return dev != null && dev.isActiveAndEnabled && dev.CheatsActive;
 #else

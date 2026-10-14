@@ -17,7 +17,8 @@ namespace ElementalBuddies
         public float ShardsPerKill = 6f; // Splitter-Kopfgeld pro getötetem Gegner
         public float WaveBonusShardsBase = 40f; // Wellen-Bonus nach Welle 1
         public float WaveBonusShardsPerWave = 2f; // + pro weiterer abgeschlossener Welle
-        public float CombatSurcharge = 1.25f; // Multiplikator (25% = 1.25)
+        [Tooltip("Nicht mehr genutzt: Buddies lassen sich nur noch zwischen den Wellen platzieren, der frühere Kampf-Aufschlag (×1,25) entfällt.")]
+        public float CombatSurcharge = 1.25f;
         public float RefundRatio = 0.7f; // 70% Rückerstattung
 
         [Header("Seelensplitter – Drop-Abnahme im Spätspiel")]

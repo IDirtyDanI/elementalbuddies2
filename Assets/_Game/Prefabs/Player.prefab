@@ -1943,6 +1943,11 @@ MonoBehaviour:
   - FullBody
   FadeSpeed: 8
   MaxShoulderAngle: 25
+  SlideMin: -0.2
+  SlideMax: 0.12
+  TwistToForearm: 0.5
+  ElbowFromWrist: 1
+  Iterations: 3
 --- !u!114 &3786528436164428840
 MonoBehaviour:
   m_ObjectHideFlags: 0
