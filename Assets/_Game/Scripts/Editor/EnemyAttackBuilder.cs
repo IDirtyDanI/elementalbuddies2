@@ -11,6 +11,7 @@ namespace ElementalBuddies.EditorTools
     //  2. Controller <Typ>Attack.controller: Running ↔ Idle über Moving, Attack per Any-State-Trigger
     //  3. Controller an Runner/Swarm/Knight.prefab (RunnerVisual.controller bleibt unverändert)
     //  4. Config-Werte: AttackWindup = Trefferframe, AttackInterval, Trefferton – auch Grabspinne und Knochenfürst
+    //     (Knochenfürst: eigener Clip BoneLord_Attack.fbx im Attack-State von BossBoneLordVisual.controller)
     //  5. Block-Funken/-Ton des Schwertkämpfers (Player.prefab) auf Einzelhiebe abgestimmt
     // Menü: BuddyTD → Gegner → Nahkampf-Angriffe einrichten. Mehrfach ausführbar (Controller behalten ihre GUID).
     // Die Sounds (SfxId.EnemyClaw/EnemySnap/EnemyChop) danach über BuddyTD → Game Feel → Nur Sounds zuweisen.
@@ -24,9 +25,12 @@ namespace ElementalBuddies.EditorTools
         private const string SpiderBiteClip = "Assets/_Game/Animations/GraveSpider_Bite.anim";
         private const string PlayerPrefab = "Assets/_Game/Prefabs/Player.prefab";
 
-        // Knochenfürst: Klinge im Clip „Sword Outward Slash“ (2,03 s) bei ~0,9 s, Attack-State Tempo 1,6 (BossBuilder) → ~0,56 s
+        // Knochenfürst (seit 2026-10-15 eigener Clip BoneLord_Attack, art-src/enemy_attacks, ersetzt Mixamo „Sword Outward
+        // Slash“): Bihänder-Schräghieb 1,2 s, Treffer bei 0,55 s, Attack-State Tempo 1 → Windup = Trefferzeit (unverändert 0,55)
         public const float BoneLordWindup = 0.55f;
         public const float BoneLordInterval = 1.6f;
+        public const float BoneLordExit = 0.85f;   // Ausstieg nach 1,02 s (Überblendung 0,2 s), vor dem nächsten Hieb nach 1,6 s
+        public const string BoneLordController = "Assets/_Game/Animations/Bosses/BossBoneLordVisual.controller";
         // Grabspinne: Biss-Clip 0,45 s, Zubeißen am Clip-Ende → State-Tempo 0,45 / 0,25 = 1,8
         public const float SpiderWindup = 0.25f;
         public const float SpiderInterval = 1f;
@@ -77,6 +81,11 @@ namespace ElementalBuddies.EditorTools
             SetConfig("GraveSpider", SpiderWindup, SpiderInterval, SfxId.EnemySnap, log);
             TuneSpiderBite(log);
             SetConfig("Bosses/BossBoneLord", BoneLordWindup, BoneLordInterval, SfxId.EnemyChop, log);
+            if (avatar != null)
+            {
+                var boneClip = ImportAttack(AnimDir + "BoneLord_Attack.fbx", "BoneLord_Attack", avatar, log);
+                if (boneClip != null) TuneBoneLordAttack(boneClip, log);
+            }
             TuneKnightBlock(log);
 
             AssetDatabase.SaveAssets();
@@ -304,6 +313,32 @@ namespace ElementalBuddies.EditorTools
             log.AppendLine(found
                 ? string.Format(System.Globalization.CultureInfo.InvariantCulture, "  Grabspinne: Biss {0:0.00} s × Tempo {1:0.00} → Zubeißen bei {2:0.00} s", bite.length, speed, bite.length / speed)
                 : "  Grabspinne: kein State mit " + SpiderBiteClip);
+        }
+
+        // Knochenfürst: eigener Hieb-Clip in den Attack-State von BossBoneLordVisual.controller (Tempo 1, Ausstieg BoneLordExit);
+        // der Rest des Boss-Controllers (BossBuilder) bleibt unangetastet
+        private static void TuneBoneLordAttack(AnimationClip clip, StringBuilder log)
+        {
+            var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(BoneLordController);
+            if (ac == null)
+            {
+                log.AppendLine("  Knochenfürst: " + BoneLordController + " fehlt (erst „Bosse neu bauen“)");
+                return;
+            }
+            bool found = false;
+            foreach (var s in ac.layers[0].stateMachine.states)
+            {
+                if (s.state.name != "Attack") continue;
+                found = true;
+                s.state.motion = clip;
+                s.state.speed = 1f;
+                foreach (var t in s.state.transitions)
+                    if (t.hasExitTime) t.exitTime = BoneLordExit;
+            }
+            EditorUtility.SetDirty(ac);
+            log.AppendLine(found
+                ? string.Format(System.Globalization.CultureInfo.InvariantCulture, "  Knochenfürst: Attack = {0} ({1:0.00} s, Tempo 1, Treffer {2:0.00} s, Ausstieg {3:0.00})", clip.name, clip.length, BoneLordWindup, BoneLordExit)
+                : "  Knochenfürst: kein Attack-State in " + BoneLordController);
         }
 
         // ---------------- 5. Schildblock ----------------

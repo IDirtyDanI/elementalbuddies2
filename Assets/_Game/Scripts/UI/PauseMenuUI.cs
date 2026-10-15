@@ -527,14 +527,15 @@ namespace ElementalBuddies
                 _rows.Add(row);
 
                 var icon = FindChild<Image>(row.transform, "Icon");
+                var cardIcon = card.LocalIcon;
                 if (icon != null)
                 {
-                    icon.gameObject.SetActive(card.Icon != null);
-                    if (card.Icon != null) icon.sprite = card.Icon;
+                    icon.gameObject.SetActive(cardIcon != null);
+                    if (cardIcon != null) icon.sprite = cardIcon;
                 }
 
                 var title = FindChild<TextMeshProUGUI>(row.transform, "Title");
-                if (title != null) title.text = card.Title;
+                if (title != null) title.text = card.LocalTitle;
 
                 var count = FindChild<TextMeshProUGUI>(row.transform, "Count");
                 if (count != null)
@@ -547,7 +548,7 @@ namespace ElementalBuddies
                 if (desc != null)
                 {
                     string effect = EffectLine(card, n);
-                    string text = card.Description ?? "";
+                    string text = card.LocalDescription ?? "";
                     if (!string.IsNullOrEmpty(effect))
                         text += (text.Length > 0 ? "\n" : "") + $"<color={Green}>{effect}</color>";
                     desc.text = text;
@@ -558,7 +559,8 @@ namespace ElementalBuddies
             foreach (var kv in merchantCards)
             {
                 var card = kv.Key;
-                int n = kv.Value;
+                int n = kv.Value; // Kartenwert-Vielfache: normale Karte 1, verfluchte MerchantManager.CurseMultiplier
+                int cursed = mm != null ? mm.GetPickedCursedCount(card) : 0;
                 var row = Instantiate(CardRowTemplate, CardsContainer);
                 row.name = "MerchantRow_" + card.name;
                 row.SetActive(true);
@@ -571,7 +573,7 @@ namespace ElementalBuddies
                     if (card.Icon != null) icon.sprite = card.Icon;
                 }
                 var title = FindChild<TextMeshProUGUI>(row.transform, "Title");
-                if (title != null) title.text = card.Title;
+                if (title != null) title.text = cursed > 0 ? $"{card.Title} <color=#8e3a92>(verflucht)</color>" : card.Title;
                 var count = FindChild<TextMeshProUGUI>(row.transform, "Count");
                 if (count != null)
                 {
@@ -614,7 +616,11 @@ namespace ElementalBuddies
             if (card.StatToBuff == StatType.ShardGain)
                 return $"Gesamt: Splitter-Ausbeute {Signed(n * card.Value, "0.#")} %";
 
-            string stat = StatName(card) + TargetSuffix(card.Target);
+            var cls = UpgradeDefinitionSO.LocalClass;
+            string stat = StatName(card, cls) + TargetSuffix(card.Target);
+            // Berserker: Mana-Obergrenzen-Karten wirken anteilig auf die Wut-Obergrenze (ResourceProfile.CapBonusScale)
+            if (card.StatToBuff == StatType.ManaCap && !card.IsPercentage && PlayerMana.Local != null && PlayerMana.Local.HasProfile)
+                return $"Gesamt: {Signed(n * card.Value * PlayerMana.Local.Profile.CapBonusScale, "0.#")} {stat}";
             if (card.StatToBuff == StatType.Cooldown)
             {
                 float total = (1f - Mathf.Pow(1f - Mathf.Clamp(card.Value, 0f, 90f) / 100f, n)) * 100f;
@@ -632,21 +638,34 @@ namespace ElementalBuddies
             return $"Gesamt: {Signed(n * card.Value, "0.#")}{StatUnit(card.StatToBuff)} {stat}";
         }
 
-        private static string StatName(UpgradeDefinitionSO card)
+        private static string StatName(UpgradeDefinitionSO card, ChampionClass cls)
         {
+            bool rage = cls == ChampionClass.Berserker;
             switch (card.StatToBuff)
             {
                 case StatType.Damage: return card.Target == UpgradeTarget.Player ? "Fähigkeitsschaden" : "Schaden";
                 case StatType.Cooldown: return "Abklingzeit";
-                case StatType.Mobility: return "Mobilität";
+                case StatType.Mobility: return MobilityName(cls);
                 case StatType.Range: return "Reichweite";
                 case StatType.FireRate: return "Feuerrate";
                 case StatType.Health: return "Max. Leben";
                 case StatType.Speed: return "Lauftempo";
-                case StatType.ManaRegen: return "Mana-Regeneration";
-                case StatType.ManaCap: return "Max. Mana";
+                case StatType.ManaRegen: return rage ? "Wutaufbau" : "Mana-Regeneration";
+                case StatType.ManaCap: return rage ? "Max. Wut" : "Max. Mana";
                 case StatType.ShardGain: return "Splitter-Ausbeute";
                 default: return "";
+            }
+        }
+
+        // Was die Mobilitäts-Karte („Ausweichkunst“) bei der Klasse verbessert
+        private static string MobilityName(ChampionClass cls)
+        {
+            switch (cls)
+            {
+                case ChampionClass.Knight: return "Block-Ausdauer";
+                case ChampionClass.Archer: return "Rollweite";
+                case ChampionClass.Berserker: return "Ansturm-/Sprungweite";
+                default: return "Blink-Reichweite";
             }
         }
 
@@ -706,7 +725,7 @@ namespace ElementalBuddies
                     sb.Append("Abklingzeiten: ").Append(Colored(Num(abilities.CooldownMultiplier * 100f, "0") + " %", abilities.CooldownMultiplier < cdBase)).Append($" ({Signed((abilities.CooldownMultiplier - cdBase) * 100f, "0")} %)").Append('\n');
                 float mobBase = um != null ? um.BaseMobilityMultiplier : 1f;
                 if (!Same(abilities.MobilityMultiplier, mobBase))
-                    sb.Append("Mobilität: ").Append(Colored(Num(abilities.MobilityMultiplier * 100f, "0") + " %", abilities.MobilityMultiplier > mobBase)).Append($" ({Signed((abilities.MobilityMultiplier - mobBase) * 100f, "0")} %)").Append('\n');
+                    sb.Append(MobilityName(abilities.ActiveClass)).Append(": ").Append(Colored(Num(abilities.MobilityMultiplier * 100f, "0") + " %", abilities.MobilityMultiplier > mobBase)).Append($" ({Signed((abilities.MobilityMultiplier - mobBase) * 100f, "0")} %)").Append('\n');
             }
 
             var local = PlayerAvatar.Local;
@@ -724,6 +743,18 @@ namespace ElementalBuddies
             if (mana != null)
             {
                 var eco = mana;
+                if (eco.HasProfile)
+                {
+                    // Berserker: Wut statt Mana (Obergrenze mit Karten-Anteil, Aufbau-Faktor aus Regenerations-Karten)
+                    string rn = eco.ResourceName;
+                    sb.Append(StatLine("Max. " + rn, eco.MaxMana, eco.Profile.Cap, "0", "")).Append('\n');
+                    float gain = eco.GainFactor;
+                    string g = Colored(Num(gain * 100f, "0") + " %", gain > 1.0001f);
+                    if (!Same(gain, 1f)) g += $" ({Signed((gain - 1f) * 100f, "0")} %)";
+                    sb.Append(rn).Append("aufbau: ").Append(g).Append('\n');
+                }
+                else
+                {
                 float baseCap = eco.BaseManaCap > 0f ? eco.BaseManaCap : eco.MaxMana;
                 sb.Append(StatLine("Max. Mana", eco.MaxMana, baseCap, "0", "")).Append('\n');
 
@@ -736,6 +767,7 @@ namespace ElementalBuddies
                     regen += $" (Basis {Num(eco.BaseRegenOut, "0.#")} / {Num(eco.BaseRegenIn, "0.#")}{pct})";
                 }
                 sb.Append("Mana-Regeneration: ").Append(regen).Append('\n');
+                }
 
             }
             var economy = EconomyManager.Instance;

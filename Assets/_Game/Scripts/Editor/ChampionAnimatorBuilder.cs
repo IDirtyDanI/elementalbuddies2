@@ -42,16 +42,13 @@ namespace ElementalBuddies.EditorTools
             var upper = UpperLayer(ac);
             var empty = upper.defaultState;
             // Schwerthiebe: eigene Blender-Clips (art-src/heroes2/17_knight_slash_anims.py, Echtzeit 30 fps, Treffer passend zu
-            // KnightKit.SlashHitDelay/FinisherHitDelay); Mixamo-Clips nur noch als Rückfall, falls die FBX fehlen
+            // KnightKit.SlashHitDelay/FinisherHitDelay)
             var s1 = Clip(H2Anim + "Knight2_Slash1.fbx", "Knight2_Slash1");
             var s2 = Clip(H2Anim + "Knight2_Slash2.fbx", "Knight2_Slash2");
             var s3 = Clip(H2Anim + "Knight2_Slash3.fbx", "Knight2_Slash3");
-            if (s1 != null) Action(upper, empty, "Slash1", s1, "Slash1", 1f, 0.7f);
-            else Action(upper, empty, "Slash1", Clip(Mixamo + "X Bot@Stable Sword Inward Slash (1).fbx", null), "Slash1", 1.9f, 0.55f);
-            if (s2 != null) Action(upper, empty, "Slash2", s2, "Slash2", 1f, 0.7f);
-            else Action(upper, empty, "Slash2", Clip(Mixamo + "X Bot@Stable Sword Outward Slash (1).fbx", null), "Slash2", 1.9f, 0.55f);
-            if (s3 != null) Action(upper, empty, "Slash3", s3, "Slash3", 1f, 0.72f);
-            else Action(upper, empty, "Slash3", Clip(Mixamo + "X Bot@Thrust Slash (1).fbx", null), "Slash3", 2.4f, 0.5f);
+            Action(upper, empty, "Slash1", s1, "Slash1", 1f, 0.7f);
+            Action(upper, empty, "Slash2", s2, "Slash2", 1f, 0.7f);
+            Action(upper, empty, "Slash3", s3, "Slash3", 1f, 0.72f);
             // Kombo: der nächste Hieb darf das Ausblenden nach Empty unterbrechen (sonst wartet der Trigger bis zum Ende
             // der Überblendung und die Klinge hinkt Treffer/Bogen-VFX hinterher)
             foreach (var cs in upper.states)
@@ -154,7 +151,25 @@ namespace ElementalBuddies.EditorTools
             fromSpin.AddCondition(AnimatorConditionMode.IfNot, 0f, "Spinning");
             fromSpin.duration = 0.15f;
             fromSpin.hasExitTime = false;
+            ApplyBerserkerJumps(ac);
             EditorUtility.SetDirty(ac);
+        }
+
+        // Berserker-Sprung (2026-10-15, #174): eigene Bein-Clips Berserker_JumpStart/InAir/JumpLand statt der StarterAssets-
+        // Clips im Base Layer (Rumpf/Arme überschreibt weiter der HoldArm-Layer). Die StarterAssets-Beine zogen die Knie in
+        // das untere Stielende der Axt. Ohne eigene Clips bleibt der kopierte Sprung. Gibt die Zahl der getauschten States zurück.
+        public static int ApplyBerserkerJumps(AnimatorController ac)
+        {
+            int n = 0;
+            foreach (var kv in new[] { new[] { "JumpStart", "Berserker_JumpStart" }, new[] { "InAir", "Berserker_InAir" }, new[] { "JumpLand", "Berserker_JumpLand" } })
+            {
+                var clip = BerserkerClip(kv[1]);
+                if (clip == null) continue;
+                foreach (var cs in ac.layers[0].stateMachine.states)
+                    if (cs.state.name == kv[0] && cs.state.motion != clip) { cs.state.motion = clip; n++; }
+            }
+            if (n > 0) EditorUtility.SetDirty(ac);
+            return n;
         }
 
         // Eigener Clip, sonst Platzhalter (Tempo placeholderSpeed)

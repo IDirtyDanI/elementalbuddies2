@@ -118,6 +118,9 @@ MonoBehaviour:
     m_Bits: 256
   JumpForce: 8
   Gravity: -9.81
+  GroundStickVelocity: -2
+  CoyoteTime: 0.1
+  JumpBufferTime: 0.1
   FallRecoverDepth: 8
 --- !u!114 &4379008303335661780
 MonoBehaviour:
@@ -675,6 +678,7 @@ MonoBehaviour:
   Rage:
     Name: Wut
     Color: {r: 0.66, g: 0.2, b: 0.16, a: 1}
+    Icon: {fileID: 21300000, guid: 4a12910c89c8e4713ade821ff7f68d39, type: 3}
     Cap: 100
     StartValue: 0
     WaveStartMinimum: 25

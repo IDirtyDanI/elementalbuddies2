@@ -90,7 +90,8 @@ namespace ElementalBuddies
             return best;
         }
 
-        // Dev-Modus: nächsten geplanten Schrein sofort erwecken (unabhängig von der Welle)
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Dev-Modus: nächsten geplanten Schrein sofort erwecken (unabhängig von der Welle); nur Editor/Development-Build (#194)
         public bool DevAwakenNext()
         {
             if (!Net.IsServer) return false;
@@ -101,6 +102,7 @@ namespace ElementalBuddies
             _scheduledWave.Remove(next);
             return true;
         }
+#endif
 
         private void HandleWaveStart()
         {

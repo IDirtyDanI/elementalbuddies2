@@ -334,6 +334,8 @@ namespace ElementalBuddies
         private bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
 
         // ---------------- Dev-Modus ----------------
+        // Nur Editor/Development-Build (#194) – einziger Aufrufer ist DevTools, das im Release-Build ebenfalls fehlt.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
 
         // Springt (nur zwischen den Wellen) direkt zu einer Welle; Portale werden entsprechend geöffnet
         public void DevSetStartWave(int waveNumber)
@@ -351,6 +353,7 @@ namespace ElementalBuddies
             foreach (var e in FindObjectsByType<EnemyBrain>(FindObjectsSortMode.None))
                 if (e != null) e.TakeDamage(999999f);
         }
+#endif
 
         private void HandleGameOver(string reason)
         {

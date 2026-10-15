@@ -529,8 +529,7 @@ namespace ElementalBuddies.EditorTools
             Transform cover = Child(root, "Abdeckung");
             ReplaceModel(cover, $"{StandModelFolder}/Stand_Abdeckung.fbx", "Modell", Vector3.zero, 1f);
 
-            // Figur hinter der Theke, Blick +Z: Heroes2-Modell Merchant2_<Typ>.fbx (1,80 m, Skalierung 1) mit Requisite in der Hand,
-            // sonst das alte Merchant_<Typ>.fbx (Skalierung 0,76) – siehe MerchantFigures
+            // Figur hinter der Theke, Blick +Z: Heroes2-Modell Merchant2_<Typ>.fbx (1,80 m, Skalierung 1) mit Requisite in der Hand – siehe MerchantFigures
             Transform fig = Child(root, "Figur");
             fig.localPosition = new Vector3(0f, 0f, -0.4f);
             fig.localRotation = Quaternion.identity;

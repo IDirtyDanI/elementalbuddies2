@@ -31,6 +31,9 @@ namespace ElementalBuddies
         // Wert als Text, z. B. "+20 %"
         public string ValueText => AbilityMods.FormatValue(Stat, Value);
 
+        // Wert × times als Text (verfluchte Karte: times = MerchantManager.CurseMultiplier), z. B. "+60 %"
+        public string ValueTextTimes(float times) => AbilityMods.FormatValue(Stat, Value * times);
+
         public static AbilitySlot SlotOf(AbilityId id)
         {
             // Reihenfolge im Enum: je Klasse 6 Fähigkeiten in Slot-Reihenfolge (LMB, RMB, R, F, C, V)
@@ -49,9 +52,12 @@ namespace ElementalBuddies
         }
 
         // Wirkung anwenden (PlayerAbilities.Mods)
-        public void Apply(PlayerAbilities abilities)
+        public void Apply(PlayerAbilities abilities) => Apply(abilities, 1f);
+
+        // times: Vielfaches des Kartenwerts (verfluchte Karte = MerchantManager.CurseMultiplier), ein einziger Eintrag
+        public void Apply(PlayerAbilities abilities, float times)
         {
-            if (abilities != null) abilities.Mods.Add(Ability, Stat, Value);
+            if (abilities != null) abilities.Mods.Add(Ability, Stat, Value * times);
         }
     }
 }

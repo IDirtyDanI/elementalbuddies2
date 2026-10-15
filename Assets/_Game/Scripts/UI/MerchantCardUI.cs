@@ -106,7 +106,7 @@ namespace ElementalBuddies
                 var brt = (RectTransform)banner.transform;
                 brt.SetParent(transform, false);
                 brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 1f);
-                brt.sizeDelta = new Vector2(150f, 30f);
+                brt.sizeDelta = new Vector2(190f, 30f);
                 brt.anchoredPosition = new Vector2(0f, 2f);
                 var bimg = banner.GetComponent<Image>();
                 bimg.color = CurseColor;
@@ -117,7 +117,7 @@ namespace ElementalBuddies
                 label.rectTransform.anchorMax = Vector2.one;
                 label.rectTransform.sizeDelta = Vector2.zero;
                 if (TitleText != null) label.font = TitleText.font;
-                label.text = "VERFLUCHT";
+                label.text = $"VERFLUCHT · ×{MerchantManager.CurseMultiplier}";
                 label.fontSize = 17f;
                 label.characterSpacing = 6f;
                 label.alignment = TextAlignmentOptions.Center;
@@ -140,16 +140,25 @@ namespace ElementalBuddies
             if (TitleText != null) TitleText.text = data.Title;
             if (DescriptionText != null)
             {
-                // Verflucht: doppelte Wirkung in der Vorschau, dazu der Nachteil
-                string preview = curse != MerchantCurse.None ? MerchantManager.PreviewValues(data, 2f) : MerchantManager.PreviewValues(data);
-                string text = data.Description ?? "";
+                // Verflucht: dreifacher Wert groß im Text (normaler Wert klein daneben), Vorschau mit ×3, dazu der Nachteil
+                float times = MerchantManager.CurseFactor(curse);
+                string preview = MerchantManager.PreviewValues(data, times);
+                string text = MerchantManager.DescriptionWithValue(data, curse);
                 if (!string.IsNullOrEmpty(preview)) text += (text.Length > 0 ? "\n" : "") + $"<color={PreviewColor}>{preview}</color>";
                 if (curse != MerchantCurse.None)
-                    text += $"\n<color=#6a1b6e><b>×2</b> · Fluch: {MerchantCurses.Short(curse)}</color>";
+                {
+                    text += $"\n<color=#6a1b6e>Fluch: {MerchantCurses.Short(curse)}</color>";
+                    // Reduktions-Untergrenze (höchstens −75 %): ehrlich anzeigen, falls der volle Wert nicht wirkt
+                    if (!MerchantManager.FullyEffective(data, PlayerAbilities.Instance, data.Value * times))
+                        text += $"\n<size=80%><color=#6a1b6e>Untergrenze: höchstens −{Mathf.RoundToInt((1f - AbilityMods.MinReductionFactor) * 100f)} % insgesamt</color></size>";
+                }
                 DescriptionText.text = text;
                 DescriptionText.enableAutoSizing = true;
-                DescriptionText.fontSizeMin = 14f;
-                DescriptionText.fontSizeMax = Mathf.Max(18f, DescriptionText.fontSizeMax > 0f ? Mathf.Min(DescriptionText.fontSizeMax, 24f) : 22f);
+                // verfluchte Karte hat eine Zeile mehr (Nachteil) – darf etwas kleiner werden, statt unter den Knopf zu laufen
+                DescriptionText.fontSizeMin = curse != MerchantCurse.None ? 12f : 14f;
+                DescriptionText.fontSizeMax = curse != MerchantCurse.None
+                    ? 19f // vier bis fünf Zeilen (Wert, „×3 durch Fluch · statt …“, Vorschau, Nachteil) über dem Knopf
+                    : 24f; // Karten-UI wird wiederverwendet: nach einer verfluchten Karte wieder voller Wert
             }
             if (IconImage != null && data.Icon != null) IconImage.sprite = data.Icon;
             if (BadgeImage != null)

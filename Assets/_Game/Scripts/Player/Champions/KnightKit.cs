@@ -95,7 +95,9 @@ namespace ElementalBuddies
         public float SlashIntervalEff => SlashInterval / ModFactor(AbilityId.SwordSlash, AbilityStat.Speed);
         public float FinisherRecoveryEff => FinisherRecovery / ModFactor(AbilityId.SwordSlash, AbilityStat.Speed);
         public float BlockAngleEff => Mathf.Min(360f, Mod(AbilityId.ShieldBlock, AbilityStat.Angle, BlockAngle));
-        public float ManaPerBlockedDamageEff => Mod(AbilityId.ShieldBlock, AbilityStat.ManaCost, ManaPerBlockedDamage);
+        // Wellenkarte „Ausweichkunst“ (Ritter-Variante „Eiserner Wille“): MobilityMultiplier +20 % → 20 % mehr Schaden pro Mana
+        public float ManaPerBlockedDamageEff => Mod(AbilityId.ShieldBlock, AbilityStat.ManaCost, ManaPerBlockedDamage)
+                                                / Mathf.Max(0.1f, Owner != null ? Owner.MobilityMultiplier : 1f);
         public float BlockMoveMultiplierEff => Mathf.Min(1f, BlockMoveMultiplier * ModFactor(AbilityId.ShieldBlock, AbilityStat.Speed));
         public float BlockBreakCooldownEff => BlockBreakCooldown * ModFactor(AbilityId.ShieldBlock, AbilityStat.Cooldown);
 

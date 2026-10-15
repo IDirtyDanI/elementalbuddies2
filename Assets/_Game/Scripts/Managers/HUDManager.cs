@@ -195,9 +195,49 @@ namespace ElementalBuddies
                 _manaFill = ManaSlider.fillRect != null ? ManaSlider.fillRect.GetComponent<Image>() : null;
                 if (_manaFill != null) _manaFillDefault = _manaFill.color;
             }
-            if (_manaFill == null) return;
-            Color target = m.HasProfile ? m.Profile.Color : _manaFillDefault;
-            if (_manaFill.color != target) _manaFill.color = target;
+            if (_manaFill != null)
+            {
+                Color target = m.HasProfile ? m.Profile.Color : _manaFillDefault;
+                if (_manaFill.color != target) _manaFill.color = target;
+            }
+            ApplyResourceIcon(m);
+        }
+
+        // Symbol links neben der Leiste: Mana-Tropfen bzw. Profil-Symbol (Berserker: Wut, #169)
+        [Tooltip("Symbol neben der Mana-Leiste (leer: Kind-Objekt „ManaIcon“ im HUD wird gesucht).")]
+        public Image ManaIcon;
+        private Sprite _manaIconDefault;
+        private bool _manaIconCached;
+        private void ApplyResourceIcon(PlayerMana m)
+        {
+            if (!_manaIconCached)
+            {
+                _manaIconCached = true;
+                if (ManaIcon == null)
+                {
+                    // Szene: „ManaIcon“ sitzt neben der Leiste im selben HUD-Zweig
+                    for (Transform t = ManaSlider.transform; t != null && ManaIcon == null; t = t.parent)
+                    {
+                        var found = FindDeep(t, "ManaIcon");
+                        if (found != null) ManaIcon = found.GetComponent<Image>();
+                    }
+                }
+                if (ManaIcon != null) _manaIconDefault = ManaIcon.sprite;
+            }
+            if (ManaIcon == null) return;
+            Sprite target = m.HasProfile && m.Profile.Icon != null ? m.Profile.Icon : _manaIconDefault;
+            if (ManaIcon.sprite != target) ManaIcon.sprite = target;
+        }
+
+        private static Transform FindDeep(Transform root, string name)
+        {
+            if (root.name == name) return root;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var r = FindDeep(root.GetChild(i), name);
+                if (r != null) return r;
+            }
+            return null;
         }
 
         private void UpdateShards()

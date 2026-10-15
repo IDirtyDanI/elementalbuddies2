@@ -274,7 +274,11 @@ namespace ElementalBuddies
 
         private void HandleMerchantCardPicked(MerchantCardSO card)
         {
-            Show($"Gekauft: {card.Title} ({card.ValueText})", card.Icon);
+            var mm = MerchantManager.Instance;
+            int mult = mm != null ? mm.LastPickMultiplier : 1;
+            Show(mult > 1
+                ? $"Gekauft: {card.Title} ({card.ValueTextTimes(mult)}, ×{mult} durch Fluch)"
+                : $"Gekauft: {card.Title} ({card.ValueText})", card.Icon);
         }
     }
 }

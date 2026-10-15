@@ -26,3 +26,9 @@ MonoBehaviour:
   Rarity: 0
   Affinity: 5
   MaxPicks: 0
+  Classes: 15
+  Variants:
+  - Class: 3
+    Title: "Unb\xE4ndiger Zorn"
+    Description: Deine maximale Wut steigt um 50.
+    Icon: {fileID: 21300000, guid: b25a3f21855ad4bada925a9db129fff5, type: 3}

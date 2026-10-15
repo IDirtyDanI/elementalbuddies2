@@ -166,12 +166,12 @@ namespace ElementalBuddies.EditorTools
             return sb.ToString();
         }
 
-        // Figur unter "Figur" aufbauen (Kind "Modell"); liefert den Animator. Fallback: altes Modell (Merchant_<Typ>.fbx, 0,76).
+        // Figur unter "Figur" aufbauen (Kind "Modell"); liefert den Animator. Ohne Heroes2-Modell (Merchant2_<Typ>.fbx) keine Figur –
+        // die alten Merchant_<Typ>.fbx sind seit 2026-10-15 gelöscht (#89).
         public static Animator Build(Transform fig, MerchantKind kind, StringBuilder log)
         {
             string key = kind.ToString();
-            bool h2 = Available(kind);
-            string path = h2 ? ModelPath(kind) : MerchantSetup.FigureModelFolder + "/Merchant_" + key + ".fbx";
+            string path = ModelPath(kind);
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (asset == null) { log.AppendLine("MerchantFigures: Modell fehlt: " + path); return null; }
 
@@ -187,7 +187,7 @@ namespace ElementalBuddies.EditorTools
             model.name = "Modell";
             model.transform.localPosition = Vector3.zero;
             model.transform.localRotation = Quaternion.identity;
-            model.transform.localScale = Vector3.one * (h2 ? Scale : 0.76f);
+            model.transform.localScale = Vector3.one * Scale;
             foreach (var c in model.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
 
             var anim = model.GetComponent<Animator>();
@@ -197,14 +197,6 @@ namespace ElementalBuddies.EditorTools
             anim.updateMode = AnimatorUpdateMode.UnscaledTime; // jubelt auch, während die Kartenauswahl das Spiel pausiert
 
             var cv = model.GetComponent<ChampionVisual>();
-            if (!h2)
-            {
-                anim.runtimeAnimatorController = MerchantSetup.EnsureFigureController();
-                if (cv != null) Object.DestroyImmediate(cv);
-                foreach (var h in model.GetComponents<ChampionWeaponHold>()) Object.DestroyImmediate(h);
-                log.AppendLine(key + ": altes Modell (Heroes2 fehlt)");
-                return anim;
-            }
 
             var spec = Spec(kind);
             anim.runtimeAnimatorController = Override(kind, spec);

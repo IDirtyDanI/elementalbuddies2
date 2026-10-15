@@ -127,7 +127,7 @@ namespace ElementalBuddies
         }
 
         private void HandleEarned(float amount) => ShardsEarned += Mathf.Max(0f, amount);
-        private void HandleUpgrade(UpgradeDefinitionSO card) { if (card != null) AddCard(card.Title); }
+        private void HandleUpgrade(UpgradeDefinitionSO card) { if (card != null) AddCard(card.LocalTitle); }
         private void HandleMerchantCard(MerchantCardSO card) { if (card != null) AddCard(card.Title); }
         private void HandleFused(FusionBuddy f) => Fusions++;
 

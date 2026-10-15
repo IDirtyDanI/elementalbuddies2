@@ -11,6 +11,8 @@ namespace ElementalBuddies
         public string Name = "Wut";
         [Tooltip("Farbe der HUD-Leiste und der Kostenzeilen.")]
         public Color Color = new Color(0.66f, 0.2f, 0.16f);
+        [Tooltip("HUD-Symbol links neben der Leiste (statt des Mana-Tropfens), z. B. icon_rage.")]
+        public Sprite Icon;
         public float Cap = 100f;
         [Tooltip("Wert beim Champion-Wechsel / Spielstart.")]
         public float StartValue = 0f;

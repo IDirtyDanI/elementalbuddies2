@@ -701,6 +701,8 @@ namespace ElementalBuddies
         public static bool IsDraftable(UpgradeDefinitionSO up, ulong clientId)
         {
             if (up == null) return false;
+            // nur Karten, die für die Champion-Klasse des Spielers etwas bewirken (2026-10-15)
+            if (!up.AppliesTo(ChampionClassOf(clientId))) return false;
             var slots = BuddySlotManager.Instance;
             if (up.StatToBuff == StatType.BuddySlot && slots != null && slots.IsAtCap) return false;
             // Deckel pro Run und Spieler (z. B. Beschwörerband höchstens 6×)
@@ -710,6 +712,20 @@ namespace ElementalBuddies
                 foreach (var p in Instance.GetPickedUpgrades(clientId))
                     if (CardEffects.IsBuildCard(p)) return false;
             return true;
+        }
+
+        // Champion-Klasse eines Spielers (Server: Figur des Spielers; ohne Figur die lokale bzw. die Menü-Wahl)
+        public static ChampionClass ChampionClassOf(ulong clientId)
+        {
+            var a = PlayerAvatar.ByClientId(clientId);
+            if (a != null)
+            {
+                if (a.Abilities != null && a.Abilities.ActiveKit != null) return a.Abilities.ActiveClass;
+                return a.Champion;
+            }
+            var pa = PlayerAbilities.Instance;
+            if (pa != null && pa.ActiveKit != null) return pa.ActiveClass;
+            return GameSession.SelectedChampion;
         }
 
         // Wie oft der lokale Spieler diese Karte in diesem Run schon gewählt hat

@@ -387,7 +387,11 @@ namespace ElementalBuddies
 
         private void HandleMerchantCard(MerchantCardSO card)
         {
-            if (_row != null && card != null) _row.MerchantBought = Append(_row.MerchantBought, card.name);
+            if (_row == null || card == null) return;
+            // verfluchte Käufe mit Vielfachem markieren, z. B. „Knight_SwordSlash_Damage×3“
+            var mm = MerchantManager.Instance;
+            int mult = mm != null ? mm.LastPickMultiplier : 1;
+            _row.MerchantBought = Append(_row.MerchantBought, mult > 1 ? card.name + "×" + mult : card.name);
         }
 
         private void HandleFused(FusionBuddy f)

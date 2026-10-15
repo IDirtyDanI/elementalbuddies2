@@ -26,3 +26,22 @@ MonoBehaviour:
   Rarity: 0
   Affinity: 5
   MaxPicks: 3
+  Classes: 15
+  Variants:
+  - Class: 0
+    Title: 
+    Description: Dein Blink reicht 20 % weiter.
+    Icon: {fileID: 0}
+  - Class: 2
+    Title: 
+    Description: Deine Rolle reicht 20 % weiter.
+    Icon: {fileID: 0}
+  - Class: 1
+    Title: Eiserner Wille
+    Description: "Dein Schildblock h\xE4lt l\xE4nger: Pro Mana wehrst du 20 % mehr
+      Schaden ab."
+    Icon: {fileID: 21300000, guid: 76fc98310a63440d19de426c29c64ad3, type: 3}
+  - Class: 3
+    Title: Sturmlauf
+    Description: Ansturm und Bergsturz-Sprung reichen 20 % weiter.
+    Icon: {fileID: 21300000, guid: 664e79de43b9449018399e806327b202, type: 3}

@@ -43,6 +43,11 @@ namespace ElementalBuddies
         public int CurseFromWave = 13;
         [Tooltip("Wahrscheinlichkeit pro Ladenbesuch bzw. Neu würfeln, dass eine offene Karte verflucht ist.")]
         [Range(0f, 1f)] public float CurseChance = 0.35f;
+
+        // Verfluchte Karte wirkt mit dem dreifachen Kartenwert (2026-10-15, Nutzerwunsch; bis dahin ×2 – das war nicht
+        // besser als die normale Karte zweimal zu kaufen). Gilt für Wirkung, Kartentext, Vorschau, Toast und Pause-Übersicht.
+        public const int CurseMultiplier = 3;
+        public static float CurseFactor(MerchantCurse curse) => curse != MerchantCurse.None ? CurseMultiplier : 1f;
         public int RerollCostStep = 15;
 
         [Header("Gold")]
@@ -84,6 +89,12 @@ namespace ElementalBuddies
         // Gekaufte Karten des lokalen Spielers
         private readonly List<MerchantCardSO> _picked = new List<MerchantCardSO>();
         public IReadOnlyList<MerchantCardSO> PickedCards => _picked;
+        // Kartenwert-Vielfache je Karte (normal 1, verflucht CurseMultiplier) und Anzahl verfluchter Käufe
+        private readonly Dictionary<MerchantCardSO, int> _pickedUnits = new Dictionary<MerchantCardSO, int>();
+        private readonly Dictionary<MerchantCardSO, int> _pickedCursed = new Dictionary<MerchantCardSO, int>();
+        // Vielfaches der zuletzt gekauften Karte (für Toast/Statistik in OnCardPicked)
+        public int LastPickMultiplier { get; private set; } = 1;
+        public MerchantCurse LastPickCurse { get; private set; }
 
         public event System.Action<Merchant, List<MerchantCardSO>> OnCardsOffered;
         // Eigene Karte gekauft (lokaler Spieler)
@@ -397,7 +408,7 @@ namespace ElementalBuddies
                 st.Curse.Add(0);
                 pool.RemoveAt(idx);
             }
-            RollCurse(st);
+            RollCurse(st, clientId);
             if (st.Offer.Count == 0)
             {
                 Debug.LogWarning($"MerchantManager: keine Karten für {ClassOf(clientId)} beim {MerchantInfo.Name((MerchantKind)kind)}.");
@@ -492,7 +503,7 @@ namespace ElementalBuddies
                 st.Curse[i] = 0;
                 pool.RemoveAt(idx);
             }
-            RollCurse(st);
+            RollCurse(st, clientId);
             SendShop(clientId, st);
         }
 
@@ -548,16 +559,14 @@ namespace ElementalBuddies
         }
 
         // Champion-Klasse eines Spielers (für den Kartenpool)
-        private static ChampionClass ClassOf(ulong clientId)
+        private static ChampionClass ClassOf(ulong clientId) => UpgradeManager.ChampionClassOf(clientId);
+
+        // Fähigkeiten (Modifikatoren) eines Spielers – wie ApplyBoughtCard
+        private static PlayerAbilities AbilitiesOf(ulong clientId)
         {
-            var a = PlayerAvatar.ByClientId(clientId);
-            if (a != null)
-            {
-                if (a.Abilities != null && a.Abilities.ActiveKit != null) return a.Abilities.ActiveClass;
-                return a.Champion;
-            }
-            var pa = PlayerAbilities.Instance;
-            return pa != null ? pa.ActiveClass : ChampionClass.Mage;
+            var avatar = PlayerAvatar.ByClientId(clientId);
+            if (avatar != null) return avatar.Abilities;
+            return PlayerAvatar.All.Count == 0 && clientId == Net.LocalClientId ? PlayerAbilities.Instance : null;
         }
 
         // Kartenindizes (in Cards) für Händler kind und Klasse cls
@@ -576,14 +585,22 @@ namespace ElementalBuddies
         public MerchantCardSO GetCard(int index) => index >= 0 && index < Cards.Count ? Cards[index] : null;
 
         // Server: höchstens eine offene Karte verfluchen (ab CurseFromWave, Wahrscheinlichkeit CurseChance)
-        private void RollCurse(ShopState st)
+        private void RollCurse(ShopState st, ulong clientId)
         {
             var wm = WaveManager.Instance;
             int wave = wm != null ? wm.UpcomingWaveNumber : 1;
             if (wave < CurseFromWave || st.Curse.Contains(1) || st.Curse.Contains(2) || st.Curse.Contains(3)) return;
             if (Random.value >= CurseChance) return;
+            // nur Karten, deren dreifacher Wert nicht an der Reduktions-Untergrenze verpufft (z. B. Schildblock-Sperre −30 % ×3)
+            var abilities = AbilitiesOf(clientId);
             var open = new List<int>();
-            for (int i = 0; i < st.Offer.Count; i++) if (!st.Bought[i]) open.Add(i);
+            for (int i = 0; i < st.Offer.Count; i++)
+            {
+                if (st.Bought[i]) continue;
+                var card = GetCard(st.Offer[i]);
+                if (card != null && !FullyEffective(card, abilities, card.Value * CurseMultiplier)) continue;
+                open.Add(i);
+            }
             if (open.Count == 0) return;
             st.Curse[open[Random.Range(0, open.Count)]] = 1 + Random.Range(0, MerchantCurses.Count);
         }
@@ -724,11 +741,12 @@ namespace ElementalBuddies
             var avatar = PlayerAvatar.ByClientId(clientId);
             PlayerAbilities abilities = avatar != null ? avatar.Abilities : null;
             if (abilities == null && PlayerAvatar.All.Count == 0 && clientId == Net.LocalClientId) abilities = PlayerAbilities.Instance;
-            card.Apply(abilities);
-            // Verfluchte Karte: doppelte Wirkung; der Nachteil trifft nur den Käufer (auf jedem Rechner eingetragen)
+            // Verfluchte Karte: dreifache Wirkung (ein Eintrag Value × CurseMultiplier); der Nachteil trifft nur den Käufer
+            // (auf jedem Rechner eingetragen)
+            int mult = curse > 0 ? CurseMultiplier : 1;
+            card.Apply(abilities, mult);
             if (curse > 0)
             {
-                card.Apply(abilities);
                 MerchantCurses.Apply(clientId, (MerchantCurse)curse, abilities);
                 if (clientId == Net.LocalClientId)
                 {
@@ -736,10 +754,23 @@ namespace ElementalBuddies
                     GameAudio.Play(GameAudio.Has(SfxId.Curse) ? SfxId.Curse : SfxId.NexusAlarm);
                 }
             }
-            Debug.Log($"MerchantManager: Spieler {clientId} kauft '{card.Title}' ({card.Ability} {card.Stat} {card.Value}).");
+            Debug.Log($"MerchantManager: Spieler {clientId} kauft '{card.Title}' ({card.Ability} {card.Stat} {card.Value}" +
+                      (curse > 0 ? $" ×{mult}, Fluch {(MerchantCurse)curse}" : "") + ").");
 
             bool local = clientId == Net.LocalClientId;
-            if (local) _picked.Add(card);
+            LastPickMultiplier = mult;
+            LastPickCurse = (MerchantCurse)curse;
+            if (local)
+            {
+                _picked.Add(card);
+                _pickedUnits.TryGetValue(card, out int u);
+                _pickedUnits[card] = u + mult;
+                if (curse > 0)
+                {
+                    _pickedCursed.TryGetValue(card, out int c);
+                    _pickedCursed[card] = c + 1;
+                }
+            }
             OnAnyCardPicked?.Invoke(clientId, card);
             if (local) OnCardPicked?.Invoke(card);
         }
@@ -779,24 +810,39 @@ namespace ElementalBuddies
             return Badges != null && i < Badges.Length ? Badges[i] : null;
         }
 
-        // Gekaufte Karten zusammengefasst (Reihenfolge der ersten Wahl)
+        // Gekaufte Karten zusammengefasst (Reihenfolge der ersten Wahl). Wert = Kartenwert-Vielfache: eine normale Karte
+        // zählt 1, eine verfluchte CurseMultiplier (Gesamtwirkung = Value × Wert).
         public List<KeyValuePair<MerchantCardSO, int>> GetPickedSummary()
         {
             var order = new List<MerchantCardSO>();
-            var counts = new Dictionary<MerchantCardSO, int>();
             foreach (var c in _picked)
-            {
-                if (c == null) continue;
-                if (counts.TryGetValue(c, out int n)) counts[c] = n + 1;
-                else
-                {
-                    counts[c] = 1;
-                    order.Add(c);
-                }
-            }
+                if (c != null && !order.Contains(c)) order.Add(c);
             var list = new List<KeyValuePair<MerchantCardSO, int>>();
-            foreach (var c in order) list.Add(new KeyValuePair<MerchantCardSO, int>(c, counts[c]));
+            foreach (var c in order)
+                list.Add(new KeyValuePair<MerchantCardSO, int>(c, _pickedUnits.TryGetValue(c, out int u) ? u : 1));
             return list;
+        }
+
+        // Wie oft der lokale Spieler diese Karte verflucht gekauft hat
+        public int GetPickedCursedCount(MerchantCardSO card) => card != null && _pickedCursed.TryGetValue(card, out int n) ? n : 0;
+
+        // Kartentext mit Wert: verflucht → großer ×3-Wert, daneben klein der normale Wert („statt +20 %“)
+        public static string DescriptionWithValue(MerchantCardSO card, MerchantCurse curse)
+        {
+            string desc = card.Description ?? "";
+            if (curse == MerchantCurse.None) return desc;
+            string normal = card.ValueText;
+            string cursed = $"<b><size=125%><color=#6a1b6e>{card.ValueTextTimes(CurseMultiplier)}</color></size></b>\n<size=80%><color=#6a1b6e>×{CurseMultiplier} durch Fluch</color> · statt {normal}</size>";
+            return desc.Contains(normal) ? desc.Replace(normal, cursed) : (desc.Length > 0 ? desc + "\n" : "") + cursed;
+        }
+
+        // Reduktions-Werte (Abklingzeit, Manakosten) haben eine Untergrenze (AbilityMods.MinReductionFactor = höchstens
+        // −75 %). true, wenn value zusätzlich zu den vorhandenen Karten ganz wirkt.
+        public static bool FullyEffective(MerchantCardSO card, PlayerAbilities abilities, float value)
+        {
+            if (card == null || AbilityMods.KindOf(card.Stat) != AbilityStatKind.Reduction) return true;
+            float have = abilities != null ? abilities.Mods.Sum(card.Ability, card.Stat) : 0f;
+            return have + value <= (1f - AbilityMods.MinReductionFactor) * 100f + 0.001f;
         }
 
         // "Schwerthieb-Reichweite: 2.6 → 3.1 m" – Wert jetzt und nach (zusätzlichem) Wert value.

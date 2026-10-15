@@ -22,7 +22,8 @@ namespace ElementalBuddies
         // Obergrenze erreicht → keine Slot-Karten mehr im Wellen-Draft
         public bool IsAtCap => MaxSlots >= Cap;
 
-        // Nur Server (Dev-Modus des Hosts)
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Nur Server (Dev-Modus des Hosts); nur Editor/Development-Build (#194)
         public void SetUnlimited(bool value)
         {
             if (!Net.IsServer || Unlimited == value) return;
@@ -30,6 +31,7 @@ namespace ElementalBuddies
             PushToNet();
             OnSlotsChanged?.Invoke();
         }
+#endif
 
         public event Action OnSlotsChanged;
 

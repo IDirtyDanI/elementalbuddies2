@@ -24,7 +24,8 @@ namespace ElementalBuddies.EditorTools
         private const string SpriteDir = "Assets/_Game/UI/Sprites/";
         private const string IconDir = "Assets/_Game/UI/Icons/";
         private const string FontDir = "Assets/_Game/UI/Fonts/";
-        private const string PlaceholderModel = "Assets/3D Models/player/Character_output (4).fbx";
+        // Platzhalter bis ChampionPlayerSetup.UpdatePreviews das echte Modell einsetzt (früher Meshy-Zauberer aus dem FunProject, gelöscht 2026-10-15)
+        private const string PlaceholderModel = "Assets/_Game/Models/Characters/Heroes2/MageChampion2.fbx";
         private const string PlaceholderController = "Assets/_Game/Animations/PlayerVisual.controller";
 
         // Farben des Pergament-&-Holz-Stils
@@ -469,7 +470,7 @@ namespace ElementalBuddies.EditorTools
             // --- Musik (GameAudio der Menü-Szene; die Spielszene hat ihr eigenes, beim Laden wird dieses zerstört) ---
             var audioGo = new GameObject("MenuAudio");
             var ga = audioGo.AddComponent<GameAudio>();
-            ga.MusicClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Game/Audio/Game Music Intro.mp3");
+            ga.MusicClip = null; // Menümusik setzt der MusicDirector (MetaSetup); „Game Music Intro.mp3“ (FunProject) ist gelöscht
             ga.MusicVolume = 0.25f;
             ga.MusicFadeIn = 2.5f;
             ga.Voices = 2;

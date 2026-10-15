@@ -10,16 +10,12 @@ namespace ElementalBuddies.EditorTools
     {
         private const string PlayerPrefab = "Assets/_Game/Prefabs/Player.prefab";
         private const string Models = "Assets/_Game/Models/Characters/";
-        private const string Weapons = "Assets/_Game/Models/Characters/Weapons/";
         private const string Icons = "Assets/_Game/UI/Icons/";
         private const string Audio = "Assets/_Game/Audio/";
         private const string Vfx = "Assets/_Game/VFX/Prefabs/";
 
-        // Einheitliche Modell-Skalierung (Blender-Figuren ~2.1–2.4 m → ~1.8 m wie der bisherige Magier)
-        public const float ModelScale = 0.76f;
         // Füße auf der Unterkante des CharacterControllers (center 0, height 2)
         public const float FootY = -1f;
-        private const string IdleClip = "Assets/StarterAssets/ThirdPersonController/Character/Animations/Stand--Idle.anim.fbx";
 
         [MenuItem("BuddyTD/Champion-Player einrichten")]
         public static void Setup()
@@ -52,39 +48,11 @@ namespace ElementalBuddies.EditorTools
             if (old != null) Object.DestroyImmediate(old.gameObject);
 
             ChampionVisual mage, knight, archer;
-            Vector3 fwd = Vector3.forward, up = Vector3.up, right = Vector3.right;
 
-            // Neue Modelle (Heroes2), sobald Modell + alle Waffen vorhanden sind; sonst die alten Chibi-Modelle als Fallback
-            var ms = Spec(ChampionClass.Mage);
-            if (ms.UseHeroes2) mage = SetupHeroes2(root, ms);
-            else
-            {
-                mage = Visual(root, ms.VisualName, Models + ms.LegacyModel, ChampionClass.Mage, ms.Controller, ModelScale);
-                // Stab: senkrecht
-                Socket(mage, mage.RightHandWeapon, HumanBodyBones.RightHand, Weapons + "Staff.fbx", Quaternion.LookRotation(fwd, up), Vector3.zero);
-            }
-
-            var ks = Spec(ChampionClass.Knight);
-            if (ks.UseHeroes2) knight = SetupHeroes2(root, ks);
-            else
-            {
-                knight = Visual(root, ks.VisualName, Models + ks.LegacyModel, ChampionClass.Knight, ks.Controller, ModelScale);
-                // Schwert: Klinge (+Y) schräg nach vorne oben, Schneide (X) senkrecht
-                Vector3 blade = (fwd + up * 0.35f).normalized;
-                Socket(knight, knight.RightHandWeapon, HumanBodyBones.RightHand, Weapons + "Sword.fbx", Quaternion.LookRotation(right, blade), Vector3.zero);
-                // Schild: Vorderseite (+Z, Blender −Y) nach vorne
-                Socket(knight, knight.LeftHandWeapon, HumanBodyBones.LeftHand, Weapons + "Shield.fbx", Quaternion.LookRotation(fwd, up), new Vector3(-0.05f, 0.1f, 0.12f));
-            }
-
-            var ars = Spec(ChampionClass.Archer);
-            if (ars.UseHeroes2) archer = SetupHeroes2(root, ars);
-            else
-            {
-                archer = Visual(root, ars.VisualName, Models + ars.LegacyModel, ChampionClass.Archer, ars.Controller, ModelScale);
-                // Bogen: senkrecht (+Y), Wölbung (−X) nach vorne
-                Socket(archer, archer.LeftHandWeapon, HumanBodyBones.LeftHand, Weapons + "Bow.fbx", Quaternion.LookRotation(right, up), Vector3.zero);
-                archer.BackItem.Prefab = null;
-            }
+            // Heroes2-Modelle (die alten Chibi-Modelle/-Waffen als Fallback sind seit 2026-10-15 gelöscht, #89)
+            mage = SetupRequired(root, Spec(ChampionClass.Mage));
+            knight = SetupRequired(root, Spec(ChampionClass.Knight));
+            archer = SetupRequired(root, Spec(ChampionClass.Archer));
 
             var berserker = SetupBerserkerVisual(root);
 
@@ -132,44 +100,12 @@ namespace ElementalBuddies.EditorTools
             return cv;
         }
 
-        // Waffe so ausrichten, dass sie in der Idle-Pose (StarterAssets Idle) die gewünschte Weltrotation hat und im Handteller sitzt.
-        // Gemessen an einer temporären, per AnimationMode gesampelten Szenen-Instanz des Modells.
-        private static void Socket(ChampionVisual cv, ChampionVisual.Attachment a, HumanBodyBones boneId, string prefabPath, Quaternion worldRot, Vector3 extraOffset)
+        // Heroes2-Visual eines Champions; fehlen Modell oder Waffen, bricht die Einrichtung ab (kein Chibi-Fallback mehr)
+        private static ChampionVisual SetupRequired(GameObject root, ChampionSpec spec)
         {
-            a.Prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            a.WorldScale = ModelScale;
-            var model = PrefabUtility.GetCorrespondingObjectFromSource(cv.gameObject);
-            if (model == null) return;
-
-            var temp = (GameObject)Object.Instantiate(model);
-            temp.hideFlags = HideFlags.HideAndDontSave;
-            temp.transform.SetPositionAndRotation(new Vector3(0f, -300f, 0f), Quaternion.identity);
-            temp.transform.localScale = Vector3.one * ModelScale;
-            var anim = temp.GetComponent<Animator>();
-            AnimationClip idle = null;
-            foreach (var o in AssetDatabase.LoadAllAssetsAtPath(IdleClip))
-                if (o is AnimationClip && !o.name.StartsWith("__preview")) idle = (AnimationClip)o;
-            bool sampled = false;
-            try
-            {
-                if (idle != null)
-                {
-                    if (!AnimationMode.InAnimationMode()) { AnimationMode.StartAnimationMode(); sampled = true; }
-                    AnimationMode.SampleAnimationClip(temp, idle, 1f);
-                }
-                var bone = anim != null ? anim.GetBoneTransform(boneId) : null;
-                if (bone == null) return;
-                // Handteller: zwischen Handgelenk und Mittelfinger-Grundgelenk
-                var finger = anim.GetBoneTransform(boneId == HumanBodyBones.RightHand ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal);
-                Vector3 palm = finger != null ? Vector3.Lerp(bone.position, finger.position, 0.55f) : bone.position;
-                a.LocalEuler = (Quaternion.Inverse(bone.rotation) * worldRot).eulerAngles;
-                a.LocalPosition = Quaternion.Inverse(bone.rotation) * (palm - bone.position + extraOffset);
-            }
-            finally
-            {
-                if (sampled) AnimationMode.StopAnimationMode();
-                Object.DestroyImmediate(temp);
-            }
+            if (!spec.UseHeroes2)
+                throw new System.InvalidOperationException("ChampionPlayerSetup: Heroes2-Modell oder -Waffe fehlt für " + spec.Class + " (" + spec.Model2 + ").");
+            return SetupHeroes2(root, spec);
         }
 
         // ---------------- Heroes2 (detaillierte Modelle, 6 Köpfe, Finger-Rig) ----------------
@@ -201,7 +137,7 @@ namespace ElementalBuddies.EditorTools
         public class ChampionSpec
         {
             public ChampionClass Class;
-            public string VisualName, Controller, LegacyModel, Model2, ClipPrefix;
+            public string VisualName, Controller, Model2, ClipPrefix;
             public WeaponSpec Right, Left, Back;
             public HoldSpec Hold;
             // Freigabe des neuen Modells (erst nach Griff-/Clipping-Abnahme setzen); false = altes Modell bleibt
@@ -229,7 +165,7 @@ namespace ElementalBuddies.EditorTools
             new ChampionSpec
             {
                 Class = ChampionClass.Mage, VisualName = "Visual_Mage", Controller = "Assets/_Game/Animations/PlayerVisual.controller",
-                LegacyModel = "MageChampion.fbx", Model2 = H2 + "MageChampion2.fbx", ClipPrefix = "Mage", Heroes2Ready = true,
+                Model2 = H2 + "MageChampion2.fbx", ClipPrefix = "Mage", Heroes2Ready = true,
                 Right = new WeaponSpec { Prefab = H2 + "Weapons/W2_MageStaff.fbx" },
                 Hold = new HoldSpec
                 {
@@ -267,7 +203,7 @@ namespace ElementalBuddies.EditorTools
             new ChampionSpec
             {
                 Class = ChampionClass.Knight, VisualName = "Visual_Knight", Controller = "Assets/_Game/Animations/KnightVisual.controller",
-                LegacyModel = "KnightChampion.fbx", Model2 = H2 + "KnightChampion2.fbx", ClipPrefix = "Knight", Heroes2Ready = true,
+                Model2 = H2 + "KnightChampion2.fbx", ClipPrefix = "Knight", Heroes2Ready = true,
                 // Roll 180: Waffen-+Z zur Handfläche (Blender-Konvention: T-Pose-Weltrotation Euler(90,0,0)) – Schwertschneiden in
                 // Unterarm-Ebene, Schild-Vorderseite (−Z) auf der Handrücken-Seite
                 Right = new WeaponSpec { Prefab = H2 + "Weapons/W2_Sword.fbx", Roll = 180f },
@@ -334,7 +270,7 @@ namespace ElementalBuddies.EditorTools
             new ChampionSpec
             {
                 Class = ChampionClass.Archer, VisualName = "Visual_Archer", Controller = "Assets/_Game/Animations/ArcherVisual.controller",
-                LegacyModel = "ArcherChampion.fbx", Model2 = H2 + "ArcherChampion2.fbx", ClipPrefix = "Archer", Heroes2Ready = true,
+                Model2 = H2 + "ArcherChampion2.fbx", ClipPrefix = "Archer", Heroes2Ready = true,
                 // Bogen: Roll 180 = Blender-Konvention (oberer Wurfarm zur Daumenseite, Sehne +X zur Schulter, Pfeilrichtung −X);
                 // −30° zusätzlich, damit die (starre) Sehne innen am Unterarm vorbeiläuft statt durch ihn
                 Left = new WeaponSpec { Prefab = H2 + "Weapons/W2_Bow.fbx", Roll = 150f },
@@ -394,7 +330,7 @@ namespace ElementalBuddies.EditorTools
             new ChampionSpec
             {
                 Class = ChampionClass.Berserker, VisualName = "Visual_Berserker", Controller = "Assets/_Game/Animations/BerserkerVisual.controller",
-                LegacyModel = "KnightChampion.fbx", Model2 = H2 + "BerserkerChampion2.fbx", ClipPrefix = "Berserker", Heroes2Ready = true,
+                Model2 = H2 + "BerserkerChampion2.fbx", ClipPrefix = "Berserker", Heroes2Ready = true,
                 // Roll 180 = Blender-Konvention wie beim Schwert (Waffen-+Z zur Handfläche, Schneiden ±X in Schlagrichtung)
                 Right = new WeaponSpec { Prefab = H2 + "Weapons/W2_GreatAxe.fbx", Roll = 180f },
                 Hold = new HoldSpec
@@ -426,7 +362,7 @@ namespace ElementalBuddies.EditorTools
             return new ChampionSpec
             {
                 Class = ChampionClass.Berserker, VisualName = spec.VisualName, Controller = spec.Controller,
-                LegacyModel = spec.LegacyModel, Model2 = knight.Model2, ClipPrefix = spec.ClipPrefix, Heroes2Ready = true,
+                Model2 = knight.Model2, ClipPrefix = spec.ClipPrefix, Heroes2Ready = true,
                 Right = knight.Right,
                 Hold = new HoldSpec { Right = HandPose.Fist, Left = HandPose.Fist, IK = knight.Hold.IK },
             };

@@ -54803,21 +54803,25 @@ MonoBehaviour:
     Portrait: {fileID: 1034672208}
     NameText: {fileID: 1129081847}
     CostText: {fileID: 1487476650}
+    HotkeyText: {fileID: 0}
   - Button: {fileID: 952104975}
     Frame: {fileID: 952104976}
     Portrait: {fileID: 1184278747}
     NameText: {fileID: 1248056636}
     CostText: {fileID: 74401547}
+    HotkeyText: {fileID: 0}
   - Button: {fileID: 1024040494}
     Frame: {fileID: 1024040495}
     Portrait: {fileID: 292794387}
     NameText: {fileID: 1966471239}
     CostText: {fileID: 557953771}
+    HotkeyText: {fileID: 0}
   - Button: {fileID: 1457263772}
     Frame: {fileID: 1457263773}
     Portrait: {fileID: 1278730361}
     NameText: {fileID: 1119282087}
     CostText: {fileID: 802600169}
+    HotkeyText: {fileID: 0}
   DisplayNames:
   - Feuer
   - Eis
@@ -54828,6 +54832,8 @@ MonoBehaviour:
   DisabledSprite: {fileID: 21300000, guid: 362abd4412c06458ca544a28811e63a2, type: 3}
   CostAffordable: {r: 0.24, g: 0.15, b: 0.08, a: 1}
   CostTooExpensive: {r: 0.62, g: 0.12, b: 0.1, a: 1}
+  FadeSpeed: 4
+  HiddenDrop: 40
 --- !u!114 &797969360
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -85114,6 +85120,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
   - {fileID: 21300000, guid: 21a989a888e3f462691b04f407000f2d, type: 3}
   - {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
+  ManaIcon: {fileID: 0}
   WaveTextMaxWidth: 380
   WaveTextRightInset: 40
 --- !u!114 &1103239703

@@ -53,6 +53,19 @@ namespace ElementalBuddies
         Champion
     }
 
+    // Für welche Champion-Klassen eine Wellenkarte gezogen werden kann (Bit = 1 << (int)ChampionClass).
+    // Standard: alle. Gefiltert in UpgradeManager.IsDraftable pro Spieler (Server).
+    [System.Flags]
+    public enum ChampionClassMask
+    {
+        None = 0,
+        Mage = 1 << 0,
+        Knight = 1 << 1,
+        Archer = 1 << 2,
+        Berserker = 1 << 3,
+        All = Mage | Knight | Archer | Berserker
+    }
+
     // Sonderwirkungen jenseits einfacher Werte (D3/D4); Werte in CardEffects. Nur hinten anhängen (serialisiert).
     public enum CardEffect
     {

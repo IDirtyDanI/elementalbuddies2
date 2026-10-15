@@ -262,11 +262,14 @@ namespace ElementalBuddies
             if (!_waitReason.Value.Equals(r)) _waitReason.Value = r;
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Nur DevTools setzt das Flag (#194); im Release-Build bleibt _hostCheats immer false
         public void ServerSetHostCheats(bool active)
         {
             if (!IsSpawned || !IsServer || _hostCheats.Value == active) return;
             _hostCheats.Value = active;
         }
+#endif
 
         private void HandleReadyListChanged(NetworkListEvent<ulong> change) => OnReadyChanged?.Invoke();
 

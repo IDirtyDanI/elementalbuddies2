@@ -32,10 +32,10 @@ namespace ElementalBuddies
         public void Setup(UpgradeDefinitionSO data)
         {
             _data = data;
-            if (TitleText) TitleText.text = data.Title;
+            if (TitleText) TitleText.text = data.LocalTitle; // Klassen-Variante (z. B. Wut statt Mana beim Berserker)
             if (DescriptionText)
             {
-                string desc = data.Description;
+                string desc = data.LocalDescription;
                 var kws = data.KeywordList;
                 if (kws.Length > 0)
                     desc += $"\n<size=78%><color=#{ColorUtility.ToHtmlStringRGB(RarityColor(data.Rarity) * 0.8f)}>{string.Join(" · ", kws)}</color></size>";
@@ -48,7 +48,8 @@ namespace ElementalBuddies
                 DescriptionText.fontSizeMin = 13f;
                 DescriptionText.fontSizeMax = 22f;
             }
-            if (IconImage && data.Icon) IconImage.sprite = data.Icon;
+            var icon = data.LocalIcon;
+            if (IconImage && icon) IconImage.sprite = icon;
 
             BuildRarity(data.Rarity);
             bool combo = UpgradeManager.Instance != null && UpgradeManager.Instance.IsCombo(data);

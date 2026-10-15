@@ -153,10 +153,77 @@ namespace ElementalBuddies.EditorTools
             }
             AssetDatabase.SaveAssets();
 
+            SetupClassVariants();
+
             // Sounds + VFX (Kartenaufdecken, Splitterfrost, Elite-Aura) und FeedbackDirector
             GameFeelSetup.SetupAll();
             SetupScene(created);
             Debug.Log($"DraftSetup: fertig ({created.Count} neue Karten).");
+        }
+
+        // ---------------- Karten pro Klasse (2026-10-15) ----------------
+        // Wellen-Karten zeigen pro Champion-Klasse passende Texte/Icons (UpgradeDefinitionSO.Variants) und können per
+        // UpgradeDefinitionSO.Classes für Klassen ausgeblendet werden. Icons: art-src/icons/class_card_icons.py.
+        // Zusätzlich bekommt das Wut-Profil des Berserkers sein HUD-Symbol (icon_rage statt Mana-Tropfen, #169).
+        [MenuItem("BuddyTD/Karten/Klassen-Varianten und Wut-Symbol einrichten")]
+        public static void SetupClassVariants()
+        {
+            ImportIcons();
+            ImportSprite(IconDir + "icon_rage.png");
+
+            // Mana-Karten: beim Berserker Wut (Obergrenze wirkt mit ResourceProfile.CapBonusScale = 0,5, Regeneration
+            // erhöht den Wutaufbau um denselben Prozentsatz – PlayerMana.GainFactor)
+            Variants(UpgradeDir + "PlayerManaboost.asset", ChampionClassMask.All,
+                V(ChampionClass.Berserker, "Unbändiger Zorn", "Deine maximale Wut steigt um 50.", "card_wutbrunnen"));
+            Variants(UpgradeDir + "PlayerManaRegen.asset", ChampionClassMask.All,
+                V(ChampionClass.Berserker, "Blutrausch", "Du baust 100 % schneller Wut auf.", "card_wutaufbau"));
+            // Mobilitäts-Karte (PlayerAbilities.MobilityMultiplier): Blink (MageKit), Rolle (ArcherKit), Ansturm + Bergsturz-
+            // Sprung (BerserkerKit/LandslideSpell), beim Ritter Mana pro geblocktem LP ÷ Faktor (KnightKit)
+            Variants(DraftDir + "PlayerMobility.asset", ChampionClassMask.All,
+                V(ChampionClass.Mage, null, "Dein Blink reicht 20 % weiter.", null),
+                V(ChampionClass.Archer, null, "Deine Rolle reicht 20 % weiter.", null),
+                V(ChampionClass.Knight, "Eiserner Wille", "Dein Schildblock hält länger: Pro Mana wehrst du 20 % mehr Schaden ab.", "card_ausweichkunst_knight"),
+                V(ChampionClass.Berserker, "Sturmlauf", "Ansturm und Bergsturz-Sprung reichen 20 % weiter.", "card_ausweichkunst_berserker"));
+            AssetDatabase.SaveAssets();
+
+            // Wut-Symbol im Ressourcen-Profil des Berserkers (Player.prefab)
+            const string playerPath = "Assets/_Game/Prefabs/Player.prefab";
+            var rage = AssetDatabase.LoadAssetAtPath<Sprite>(IconDir + "icon_rage.png");
+            var root = PrefabUtility.LoadPrefabContents(playerPath);
+            try
+            {
+                var kit = root.GetComponentInChildren<BerserkerKit>(true);
+                if (kit != null && kit.Rage != null && kit.Rage.Icon != rage)
+                {
+                    kit.Rage.Icon = rage;
+                    PrefabUtility.SaveAsPrefabAsset(root, playerPath);
+                }
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+            Debug.Log("DraftSetup: Klassen-Varianten und Wut-Symbol eingerichtet.");
+        }
+
+        private static UpgradeDefinitionSO.ClassVariant V(ChampionClass cls, string title, string desc, string icon) =>
+            new UpgradeDefinitionSO.ClassVariant { Class = cls, Title = title, Description = desc, Icon = icon != null ? LoadIcon(icon) : null };
+
+        private static void Variants(string path, ChampionClassMask classes, params UpgradeDefinitionSO.ClassVariant[] variants)
+        {
+            var up = AssetDatabase.LoadAssetAtPath<UpgradeDefinitionSO>(path);
+            if (up == null) { Debug.LogWarning("DraftSetup: fehlt " + path); return; }
+            up.Classes = classes;
+            up.Variants = variants;
+            EditorUtility.SetDirty(up);
+        }
+
+        private static void ImportSprite(string path)
+        {
+            var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (imp == null || (imp.textureType == TextureImporterType.Sprite && imp.spriteImportMode == SpriteImportMode.Single)) return;
+            imp.textureType = TextureImporterType.Sprite;
+            imp.spriteImportMode = SpriteImportMode.Single;
+            imp.alphaIsTransparency = true;
+            imp.mipmapEnabled = false;
+            imp.SaveAndReimport();
         }
 
         private static void ImportIcons()
