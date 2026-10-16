@@ -249,6 +249,10 @@ namespace ElementalBuddies
                 sb.Append($"<b>Seelensplitter</b> {Num(rs.ShardsEarned)} verdient");
                 if (rs.EarlyStarts > 0) sb.Append($" (davon {Num(rs.EarlyCallBonusTotal)} durch {rs.EarlyStarts}× früh gestartet)");
                 sb.Append('\n');
+                // Kartenladen nach der Welle (#462): gekaufte Karten ohne die Gratis-Karte, lokaler Spieler (wie die übrigen Zeilen)
+                sb.Append(rs.DraftCardsBought > 0
+                    ? $"<b>Karten gekauft</b> {rs.DraftCardsBought} ({Num(rs.DraftCardShards)} Seelensplitter)\n"
+                    : "<b>Karten gekauft</b> keine\n");
                 sb.Append($"<b>Buddies</b> {rs.BuddiesBuilt} gebaut");
                 if (rs.Fusions > 0) sb.Append($" · {rs.Fusions} Fusionen");
                 sb.Append('\n');

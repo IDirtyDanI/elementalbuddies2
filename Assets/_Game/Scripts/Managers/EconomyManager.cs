@@ -170,12 +170,23 @@ namespace ElementalBuddies
             }
         }
 
-        // Wellenende: alle noch liegenden Seelensplitter fliegen zur nächsten lebenden Spielfigur (Server entscheidet)
+        // Wellenende: alle noch liegenden Seelensplitter fliegen zur nächsten lebenden Spielfigur (Server entscheidet).
+        // #461 (2026-10-16): Ihr Wert wird hier sofort gutgeschrieben – nach Wellenbonus und Zinsen (WaveManager.EndWave),
+        // vor dem Anteil der Kartenwahl (UpgradeManager.PresentUpgrades). So ist nach dem Wellenende alles ausgebbar;
+        // der Betrag pro Welle bleibt gleich, nur der Zeitpunkt ist früher. Der Einflug ist danach reine Optik.
+        public float LastRecallCredit { get; private set; }
         private void RecallShards()
         {
+            LastRecallCredit = 0f;
             if (!Net.IsServer) return;
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
-            ShardPickup.RecallAll();
+            float credit = ShardPickup.RecallAll();
+            LastRecallCredit = credit;
+            if (credit > 0f)
+            {
+                EarnShards(credit);
+                Debug.Log($"EconomyManager: Rückruf am Wellenende +{credit:F1} Seelensplitter gutgeschrieben (Kasse {CurrentShards:F1})");
+            }
         }
 
         // Welle gestartet / geschafft -> Fallback-Mana auffüllen (PlayerMana füllt sich selbst auf)

@@ -482,8 +482,9 @@ namespace ElementalBuddies
             _currentHP = 0f;
             _activeBosses.Remove(this);
             PlayDeathVisual();
-            OnEnemyDeath?.Invoke();
+            // Erst OnEnemyKilled (Drop, Statistik), dann OnEnemyDeath (Wellenzähler → ggf. Wellenende), wie auf dem Server
             OnEnemyKilled?.Invoke(this);
+            OnEnemyDeath?.Invoke();
             PlayDeathSfx();
         }
 
@@ -1356,8 +1357,10 @@ namespace ElementalBuddies
                 // Clients zuerst informieren (RPC kommt zuverlässig vor der Despawn-Nachricht an)
                 if (_net != null) _net.ServerKilled();
                 PlayDeathVisual();
-                OnEnemyDeath?.Invoke();
+                // #461: Erst OnEnemyKilled (Splitter-Drop, Boss-Gratis-Neuwurf, Statistik), dann OnEnemyDeath (Wellenzähler).
+                // Vorher endete die Welle beim letzten Kill, BEVOR dessen Drop entstand – er fehlte im Rückruf und im Anteil.
                 OnEnemyKilled?.Invoke(this);
+                OnEnemyDeath?.Invoke();
                 PlayDeathSfx();
                 if (shatter) CardEffects.Shatter(this); // Splitterfrost-Karte
                 Despawn();

@@ -43,6 +43,7 @@ namespace ElementalBuddies
         private float _popT;
         private bool _magnet;
         private bool _recall;
+        private bool _credited;         // Wert schon beim Rückruf gutgeschrieben (Einflug nur noch Optik)
         private float _speed;
         private float _bobPhase;
         private int _tier = -1;
@@ -58,16 +59,22 @@ namespace ElementalBuddies
             _nextPlayerSearch = 0f;
         }
 
-        // Nur Server: Alle liegenden Drops fliegen zur jeweils nächsten lebenden Spielfigur (z. B. am Wellenende)
-        public static void RecallAll()
+        // Nur Server: Alle liegenden Drops fliegen zur jeweils nächsten lebenden Spielfigur (z. B. am Wellenende).
+        // #461 (2026-10-16): Ihr Wert wird SOFORT gutgeschrieben (Rückgabe = Summe, der Aufrufer bucht sie in die Teamkasse),
+        // damit er im Anteil der folgenden Kartenwahl steckt. Der Einflug ist danach reine Optik und läuft auch bei
+        // angehaltener Spielzeit (Kartenwahl/Laden, ungeskaliert) – nur das Pause-Menü und Game Over halten ihn an.
+        public static float RecallAll()
         {
-            if (!Net.IsServer) return;
+            if (!Net.IsServer) return 0f;
+            var own = new List<ShardPickup>();
             foreach (var p in _all)
             {
                 if (p == null || p._replica) continue;
                 p._magnet = true;
                 p._recall = true;
+                own.Add(p);
             }
+            return ShardRecall.CreditAll(own, d => d.Value, d => d._credited, d => d._credited = true);
         }
 
         // Nur Server: Drop am Todesort erzeugen (bzw. in einen nahen Drop einrechnen); Clients bekommen ihn per RPC
@@ -257,6 +264,12 @@ namespace ElementalBuddies
             (Net.CanPauseTime && (PauseManager.IsPaused || Time.timeScale <= 0f)) ||
             (GameManager.Instance != null && GameManager.Instance.IsGameOver);
 
+        // Rückruf-Drops fliegen auch bei timeScale 0 (Kartenwahl, Laden) weiter – angehalten nur durch das Pause-Menü
+        // (Solo) und Game Over (#461)
+        private static bool RecallBlocked =>
+            (Net.CanPauseTime && PauseManager.IsPaused) ||
+            (GameManager.Instance != null && GameManager.Instance.IsGameOver);
+
         // Server: nächstes Ziel (lebende Spielfigur) innerhalb maxDist (XZ); ohne Netz-Figuren Fallback auf den Tag "Player"
         private static Transform FindTarget(Vector3 from, float maxDist, out PlayerAvatar avatar)
         {
@@ -288,8 +301,9 @@ namespace ElementalBuddies
 
         void Update()
         {
-            if (Blocked) return;
-            float dt = Time.deltaTime;
+            if (_recall ? RecallBlocked : Blocked) return;
+            // Rückruf: Echtzeit (die Kartenwahl hält die Spielzeit an), gedeckelt gegen Ruckler
+            float dt = _recall ? Mathf.Min(Time.unscaledDeltaTime, 0.1f) : Time.deltaTime;
 
             // Herausspringen (Bogen)
             if (_popT < 1f && !_magnet)
@@ -346,13 +360,13 @@ namespace ElementalBuddies
             transform.Rotate(0f, 90f * dt, 0f, Space.World);
         }
 
-        // Nur Server: Gutschrift in die Teamkasse, Meldung an die Clients
+        // Nur Server: Gutschrift in die Teamkasse (außer schon beim Rückruf gutgeschrieben), Meldung an die Clients
         private void Collect()
         {
             if (Value <= 0f || _replica) return;
-            float v = Value;
+            float v = ShardRecall.CreditOnCollect(Value, _credited);
             Value = 0f;
-            if (EconomyManager.Instance != null) EconomyManager.Instance.EarnShards(v);
+            if (v > 0f && EconomyManager.Instance != null) EconomyManager.Instance.EarnShards(v);
             ulong collector = _targetAvatar != null ? _targetAvatar.OwnerClientId : Net.LocalClientId;
             if (NetGame.Ready) NetGame.Instance.ServerShardCollected(Id, collector);
             PlayCollectFx();
@@ -363,7 +377,13 @@ namespace ElementalBuddies
         {
             GameAudio.PlayChain(SfxId.ShardPickup, transform.position); // Kette: steigende Tonleiter
             if (_settings != null && _settings.ShardCollectEffect != null)
-                Destroy(Instantiate(_settings.ShardCollectEffect, transform.position, Quaternion.identity), 3f);
+            {
+                var fx = Instantiate(_settings.ShardCollectEffect, transform.position, Quaternion.identity);
+                // Einflug während der Kartenwahl (timeScale 0): Effekt in Echtzeit abspielen statt eingefroren
+                if (Time.timeScale <= 0f)
+                    foreach (var ps in fx.GetComponentsInChildren<ParticleSystem>(true)) { var m = ps.main; m.useUnscaledTime = true; }
+                Destroy(fx, 3f);
+            }
         }
 
         void OnDestroy()
