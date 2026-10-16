@@ -13,6 +13,10 @@ namespace ElementalBuddies
         [Tooltip("Nahkampf: DPS (Schaden pro Hieb = AttackDamage × AttackInterval). Fernkampf: Schaden pro Schuss.")]
         public float AttackDamage;
 
+        [Header("Rolle (Map-Theme)")]
+        [Tooltip("Rolle in der Wellenlogik; ein EnemyThemeSO tauscht je Rolle die Config (Walddorf-Plan).")]
+        public EnemyRole Role = EnemyRole.Runner;
+
         [Header("Gegnertyp")]
         [Tooltip("Schadensreduktion (0.3 = 30 % weniger Schaden). Fluch ignoriert die Rüstung.")]
         [Range(0f, 0.9f)] public float Armor;
@@ -46,6 +50,17 @@ namespace ElementalBuddies
         public bool MeleeHitSound;
         public SfxId MeleeHitSfx = SfxId.EnemyHit;
 
+        [Header("Klänge (optional, nur Ton – Walddorf 2026-10-16)")]
+        [Tooltip("Ton beim Angriff: Fernkampf beim Abschuss (nach AttackWindup), Nahkampf/Flieger beim Ausholen bzw. Sturzflug-Beginn.")]
+        public bool AttackSound;
+        public SfxId AttackSfx = SfxId.EnemyHit;
+        [Tooltip("Eigener Todeslaut statt des Knochenbruchs (SfxId.EnemyDeath).")]
+        public bool DeathSound;
+        public SfxId DeathSfx = SfxId.EnemyDeath;
+        [Tooltip("Ruf beim Erscheinen (z. B. Wolfsheulen). Die MinInterval des GameAudio-Eintrags drosselt Rudel/Gruppen auf einen Ruf.")]
+        public bool SpawnSound;
+        public SfxId SpawnSfx = SfxId.EliteSpawn;
+
         [Header("Boss")]
         [Tooltip("Boss: Ankündigung, Boss-HP-Leiste (BossHealthBarUI). Fähigkeiten über BossBrain am Prefab.")]
         public bool IsBoss;
@@ -61,5 +76,20 @@ namespace ElementalBuddies
         public Sprite Icon;
         [Tooltip("Kurzer Hinweis in der Wellenvorschau, z. B. „Fernkampf – greift Buddies an“.")]
         public string PreviewHint = "";
+
+        [Header("Flieger (Walddorf-Plan)")]
+        [Tooltip("Fliegt direkt aufs Ziel (FlyingMotor statt NavMesh), Trefferkapsel bis zum Boden, Bodenschatten.")]
+        public bool IsFlyer;
+        [Tooltip("Flughöhe über dem Boden (m).")]
+        public float FlyHeight = 2f;
+        [Tooltip("Abstand über Hindernissen (Dächer, Mauern, Bäume) in m.")]
+        public float ObstacleClearance = 1.5f;
+        [Tooltip("Herabstoßen: Höhe über dem Untergrund beim Treffer (mindestens Zielmitte), m.")]
+        public float DiveHeight = 0.8f;
+
+        [Header("Tod (optional)")]
+        [Tooltip("> 0: Beim Tod löst sich das Modell, spielt den Animator-Trigger „Die“ so lange (s) und verschwindet dann " +
+                 "(Flieger stürzen dabei ab). 0 = wie bisher sofort weg.")]
+        public float DeathClipDuration = 0f;
     }
 }

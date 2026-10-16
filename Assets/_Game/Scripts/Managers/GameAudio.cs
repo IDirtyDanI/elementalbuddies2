@@ -80,7 +80,24 @@ namespace ElementalBuddies
         IceBreak,
         LeapLand,
         WarRoar,
-        RageFull
+        RageFull,
+        // Walddorf (2026-10-16, Etappe 3): Ork, Goblin, Wolf, Waldspinne, Mini-Wyvern, Riesen-Fledermaus (art-src/audio,
+        // Abschnitt „Walddorf“); zugeordnet über EnemyConfigSO (Treffer/Angriff/Tod/Spawn) bzw. EnemyThemeSO.BossSpawnSfx
+        OrkGrunt,
+        OrkDeath,
+        OrkWarcry,
+        GoblinStab,
+        GoblinScreech,
+        GoblinBowShot,
+        WolfHowl,
+        WolfBite,
+        WolfYelp,
+        SpiderBite,
+        SpiderDeath,
+        WyvernScreech,
+        WingFlap,
+        BatScreech,
+        BatFlap
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.

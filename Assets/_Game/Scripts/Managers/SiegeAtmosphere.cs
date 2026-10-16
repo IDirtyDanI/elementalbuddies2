@@ -145,7 +145,7 @@ namespace ElementalBuddies
         private float _dawn, _dawnTarget, _tint, _tintTarget;
         private Color _tintColor = Color.red;
 
-        // Sonnenaufgang über der belagerten Stadt (true) bzw. zurück in die Nacht (false)
+        // Sonnenaufgang über der belagerten Siedlung (true) bzw. zurück in die Nacht (false)
         public void SetDawn(bool on) => _dawnTarget = on ? 1f : 0f;
 
         // Ereignis-Färbung (z. B. Blutmond rot); strength 0 = aus
@@ -158,7 +158,7 @@ namespace ElementalBuddies
         private AtmosphereKey DawnKey()
         {
             var k = Dusk;
-            k.SunEuler = new Vector3(9f, 95f, 0f);
+            k.SunEuler = MapContext.Current.DawnSunEuler; // Stadt: (9, 95, 0) = Osten
             k.SunColor = new Color(1f, 0.66f, 0.42f);
             k.SunIntensity = 1.15f;
             k.ShadowStrength = 0.8f;

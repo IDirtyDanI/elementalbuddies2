@@ -30,6 +30,7 @@ namespace ElementalBuddies
         private static readonly Dictionary<EnemyConfigSO, int> _firstWave = new Dictionary<EnemyConfigSO, int>();
         private static int _scannedUpTo;
         private static WaveManager _scannedFor;
+        private static EnemyThemeSO _scannedTheme; // BuildWave liefert die Configs des Map-Themes (Dorf: Goblins …)
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
@@ -37,6 +38,7 @@ namespace ElementalBuddies
             _firstWave.Clear();
             _scannedUpTo = 0;
             _scannedFor = null;
+            _scannedTheme = null;
         }
 
         private const int BossLookahead = 8;
@@ -95,7 +97,7 @@ namespace ElementalBuddies
                 Merchant forced = Net.IsServer && mm.ForceKind && MerchantManager.IsAvailable(mm.ForcedKind) ? mm.GetMerchant(mm.ForcedKind) : null;
                 p.Events.Add(forced != null && forced.State == MerchantState.Geschlossen
                     ? $"Der {forced.DisplayName} öffnet seinen Stand {forced.LocationPhrase}"
-                    : "Ein Händler öffnet seinen Stand vor der Stadtmauer");
+                    : "Ein Händler öffnet seinen Stand " + MapContext.Current.OutsideWallPhrase);
             }
             // Wellen-Ereignis (C5)
             var ev = wm.EventFor(wave);
@@ -146,11 +148,13 @@ namespace ElementalBuddies
         // Erste Auftrittswelle je Gegnertyp bis einschließlich maxWave (ohne Rampe: Anzahl > 0 genügt)
         private static void ScanFirstWaves(WaveManager wm, int maxWave)
         {
-            if (_scannedFor != wm)
+            var theme = wm.ActiveTheme;
+            if (_scannedFor != wm || _scannedTheme != theme)
             {
                 _firstWave.Clear();
                 _scannedUpTo = 0;
                 _scannedFor = wm;
+                _scannedTheme = theme;
             }
             for (int w = _scannedUpTo + 1; w <= maxWave; w++)
             {
@@ -162,6 +166,9 @@ namespace ElementalBuddies
             }
             _scannedUpTo = Mathf.Max(_scannedUpTo, maxWave);
         }
+
+        // Flieger (Rolle Flyer) – für ein Flieger-Symbol in der Vorschau
+        public static bool IsFlyer(EnemyConfigSO c) => c != null && c.Role == EnemyRole.Flyer;
 
         // Anzeigename eines Gegnertyps (DisplayName, sonst Asset-Name)
         public static string NameOf(EnemyConfigSO c) =>

@@ -119,7 +119,7 @@ namespace ElementalBuddies
             if (ReasonText != null)
             {
                 if (_reasonDefault == null) _reasonDefault = ReasonText.text;
-                ReasonText.text = "<color=#b5651d><b>Morgengrauen!</b></color>\nDie Stadt hat die Nacht überstanden.";
+                ReasonText.text = "<color=#b5651d><b>Morgengrauen!</b></color>\n" + MapContext.Current.DawnVictoryLine + ".";
             }
             string where = diff != null ? diff.DisplayName : "";
             if (level > 0) where += $" · Belagerungsstufe {level}";
@@ -128,8 +128,8 @@ namespace ElementalBuddies
             {
                 bool next = level < SiegeLevels.Max && SiegeLevels.HighestWon >= level && SiegeLevels.Unlocked;
                 BestText.text = next
-                    ? $"<color=#2e6b2e><b>Belagerungsstufe {level + 1} – „{SiegeLevels.Names[level + 1]}“ freigeschaltet!</b></color>"
-                    : level >= SiegeLevels.Max ? "<b>Die höchste Belagerungsstufe ist gemeistert!</b>" : "Weiter geht es endlos – wie lange hält die Stadt?";
+                    ? $"<color=#2e6b2e><b>Belagerungsstufe {level + 1} – „{SiegeLevels.Name(level + 1)}“ freigeschaltet!</b></color>"
+                    : level >= SiegeLevels.Max ? "<b>Die höchste Belagerungsstufe ist gemeistert!</b>" : "Weiter geht es endlos – wie lange hält " + MapContext.Current.SettlementNoun + "?";
             }
             ShowEarnedAchievements();
             ShowRecap(SiegeLevels.DawnWave);

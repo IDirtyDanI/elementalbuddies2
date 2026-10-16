@@ -66,11 +66,10 @@ namespace ElementalBuddies
             return result;
         }
 
-        // Grobe Breite eines Gegners (NavMeshAgent-Radius), damit breite Gegner leichter getroffen werden
+        // Grobe Breite eines Gegners (Motor-Radius: NavMeshAgent bzw. Flieger-Körper), damit breite Gegner leichter getroffen werden
         public static float EnemyRadius(EnemyBrain enemy)
         {
-            var agent = enemy != null ? enemy.GetComponent<UnityEngine.AI.NavMeshAgent>() : null;
-            return agent != null ? agent.radius * enemy.transform.lossyScale.x : 0.4f;
+            return enemy != null ? enemy.BodyRadius : 0.4f;
         }
 
         public static float HorizontalDistance(Vector3 a, Vector3 b)

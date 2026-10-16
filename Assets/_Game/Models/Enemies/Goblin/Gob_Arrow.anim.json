@@ -1,0 +1,27 @@
+{
+ "model": "Gob_Arrow",
+ "rig": "None",
+ "materials": [
+  {
+   "name": "Enemy_Wood",
+   "hex": "#865934",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Claw",
+   "hex": "#2f2622",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Rope",
+   "hex": "#b29464",
+   "emission": 0.0
+  },
+  {
+   "name": "Ork_Cloth",
+   "hex": "#7d2a22",
+   "emission": 0.0
+  }
+ ],
+ "tris": 82
+}

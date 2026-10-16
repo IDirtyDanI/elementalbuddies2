@@ -10,11 +10,13 @@ namespace ElementalBuddies.EditorTools
     //  2. Anzeigenamen + Vorschau-Hinweise der Gegnertypen
     //  3. Neuheiten entzerren: Grabspinne ab Welle 7 (Ernte-Welle nach dem ersten Boss) statt 6
     // Menü: BuddyTD → Game Feel → Sprint 2 einrichten (Vorschau, Icons).
+    // Walddorf (C-Theme): Namen/Hinweise/Icons für alle Gegner-Themes (Untote, Dorf, Flieger); nur Icons + Texte ohne
+    // Szenenänderung über BuddyTD → Walddorf → Gegner-Namen und -Icons (alle Themes).
     public static class PacingSetup
     {
         private const string IconDir = "Assets/_Game/UI/Icons/";
         private const string ConfigDir = "Assets/ScriptableObjects/Configs/";
-        private const string GameScene = "Assets/test.unity";
+        private const string GameScene = MapEditorUtil.CityScenePath; // Stadt (Walddorf P0: eine Konstante)
         private const int Size = 128, Super = 4;
 
         private struct EnemyInfo
@@ -23,6 +25,7 @@ namespace ElementalBuddies.EditorTools
             public EnemyInfo(string asset, string name, string hint) { Asset = asset; Name = name; Hint = hint; }
         }
 
+        // Asset-Pfad relativ zu ConfigDir ohne „.asset“; Name null = DisplayName nicht anfassen (Stadt-Bosse: BossBuilder)
         private static readonly EnemyInfo[] Enemies =
         {
             new EnemyInfo("Runner", "Skelett-Läufer", "Läuft direkt zum Nexus"),
@@ -33,10 +36,51 @@ namespace ElementalBuddies.EditorTools
             new EnemyInfo("Bosses/BossBoneLord", null, "Nahkampf-Boss: Bodenstampfer – aus den roten Flächen gehen"),
             new EnemyInfo("Bosses/BossNecromancer", null, "Beschwört Diener und heilt sie – zuerst ausschalten"),
             new EnemyInfo("Bosses/BossDeathHunter", null, "Fernkampf-Boss mit Pfeilhagel – in Bewegung bleiben"),
+            // Flieger (Configs von C-Flieger; fehlen sie, wird übersprungen)
+            new EnemyInfo("Flyer_Bat", "Riesen-Fledermaus", "Fliegt über Häuser und Buddies direkt zum Nexus – stößt zum Angriff herab"),
+            new EnemyInfo("Flyer_Wyvern", "Mini-Wyvern", "Fliegt über Häuser und Buddies direkt zum Nexus – stößt zum Angriff herab"),
+            // Walddorf-Theme (gleiche Rollen und Werte wie die Untoten, ThemeSetup)
+            new EnemyInfo("Forest/Goblin_Pluenderer", "Goblin-Plünderer", "Läuft direkt zum Nexus"),
+            new EnemyInfo("Forest/Wolf", "Wolf", "Viele, schnell und schwach – Flächenschaden hilft"),
+            new EnemyInfo("Forest/Goblin_Bogenschuetze", "Goblin-Bogenschütze", "Fernkampf – beschießt Buddies"),
+            new EnemyInfo("Forest/Ork_Krieger", "Ork-Krieger", "Gepanzert (−Schaden), greift Buddies im Weg an"),
+            new EnemyInfo("Forest/Waldspinne", "Waldspinne", "Jagt Buddies – Erde-Buddy lenkt sie per Spott ab"),
+            new EnemyInfo("Forest/Ork_Kriegsherr", "Ork-Kriegsherr", "Nahkampf-Boss: Kriegsstampfer – aus den roten Flächen gehen"),
+            new EnemyInfo("Forest/Goblin_Schamane", "Goblin-Schamane", "Beschwört Diener und heilt sie – zuerst ausschalten"),
+            new EnemyInfo("Forest/Ork_Faehrtenmeister", "Ork-Fährtenmeister", "Fernkampf-Boss mit Speerhagel – in Bewegung bleiben"),
+            new EnemyInfo("Forest/Ork_Rammbock", "Ork-Rammbock", null),
         };
+
+        // Name/Hinweis aus der Tabelle auf eine Config schreiben (ThemeSetup beim Anlegen der Dorf-Configs)
+        public static bool ApplyText(EnemyConfigSO cfg, string assetPath)
+        {
+            if (cfg == null || string.IsNullOrEmpty(assetPath)) return false;
+            string rel = assetPath.StartsWith(ConfigDir) ? assetPath.Substring(ConfigDir.Length) : assetPath;
+            if (rel.EndsWith(".asset")) rel = rel.Substring(0, rel.Length - 6);
+            foreach (var e in Enemies)
+            {
+                if (e.Asset != rel) continue;
+                if (!string.IsNullOrEmpty(e.Name)) cfg.DisplayName = e.Name;
+                if (e.Hint != null) cfg.PreviewHint = e.Hint;
+                return true;
+            }
+            return false;
+        }
 
         [MenuItem("BuddyTD/Game Feel/Sprint 2 einrichten (Vorschau, Icons)")]
         public static void SetupAll()
+        {
+            SetupEnemyTexts(true);
+            SpreadNovelties();
+            Debug.Log("PacingSetup: fertig.");
+        }
+
+        // Namen, Hinweise und Icons aller Gegner-Themes – ohne Szenenänderung. Untoten-Icons werden nur neu gerendert,
+        // wenn sie fehlen (sonst bleiben die PNGs byte-gleich); Dorf- und Flieger-Icons immer (Platzhalter → Modelle).
+        [MenuItem("BuddyTD/Walddorf/Gegner-Namen und -Icons (alle Themes)")]
+        public static void SetupEnemyTextsMenu() => SetupEnemyTexts(false);
+
+        public static void SetupEnemyTexts(bool rerenderUndead)
         {
             Directory.CreateDirectory(IconDir);
             foreach (var e in Enemies)
@@ -44,10 +88,20 @@ namespace ElementalBuddies.EditorTools
                 var cfg = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(ConfigDir + e.Asset + ".asset");
                 if (cfg == null) { Debug.LogWarning("PacingSetup: Config fehlt: " + e.Asset); continue; }
                 if (!string.IsNullOrEmpty(e.Name)) cfg.DisplayName = e.Name;
-                cfg.PreviewHint = e.Hint;
-                if (cfg.Prefab != null)
+                if (e.Hint != null) cfg.PreviewHint = e.Hint;
+                // Dorf-Configs, deren Prefab noch das Untoten-Prefab ist (Platzhalter fehlt), behalten das Untoten-Icon
+                bool borrowedPrefab = e.Asset.StartsWith("Forest/") && cfg.Prefab != null
+                                      && !AssetDatabase.GetAssetPath(cfg.Prefab).Contains("/Forest/");
+                string file = "icon_enemy_" + Path.GetFileName(e.Asset).ToLowerInvariant() + ".png";
+                bool themed = e.Asset.StartsWith("Forest/") || e.Asset.StartsWith("Flyer_");
+                bool skipRender = !rerenderUndead && !themed && File.Exists(IconDir + file);
+                if (e.Asset.StartsWith("Flyer_") && cfg.Prefab != null)
                 {
-                    string file = "icon_enemy_" + Path.GetFileName(e.Asset).ToLowerInvariant() + ".png";
+                    // Flieger: eigene Icon-Kamera (schräg von oben, volle Spannweite) aus FlyerPlaceholderBuilder (#376)
+                    FlyerPlaceholderBuilder.RenderIcon(cfg, new System.Text.StringBuilder());
+                }
+                else if (cfg.Prefab != null && !borrowedPrefab && !skipRender)
+                {
                     RenderIcon(cfg.Prefab, IconDir + file);
                     AssetDatabase.ImportAsset(IconDir + file);
                     var imp = AssetImporter.GetAtPath(IconDir + file) as TextureImporter;
@@ -64,8 +118,6 @@ namespace ElementalBuddies.EditorTools
                 EditorUtility.SetDirty(cfg);
             }
             AssetDatabase.SaveAssets();
-            SpreadNovelties();
-            Debug.Log("PacingSetup: fertig.");
         }
 
         // Grabspinne (neuer Buddy-Jäger) nicht in der ersten Boss-Welle, sondern in der ruhigeren Ernte-Welle danach

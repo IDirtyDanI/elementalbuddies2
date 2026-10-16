@@ -23,6 +23,7 @@ MonoBehaviour:
   BaseHP: 480
   Speed: 1.7
   AttackDamage: 14
+  Role: 8
   Armor: 0.1
   BountyMultiplier: 20
   VisualScale: 1.9
@@ -35,9 +36,16 @@ MonoBehaviour:
   ProjectileSpeed: 20
   AttackWindup: 0.35
   ProjectileSpawnHeight: -0.3
+  MeleeHitSound: 0
+  MeleeHitSfx: 21
   IsBoss: 1
   DisplayName: "Totenj\xE4ger"
   ControlResistance: 0.6
   ThemeColor: {r: 0.6, g: 0.2, b: 1, a: 1}
   Icon: {fileID: 21300000, guid: 61fc27d2875404de386e888be3b77af1, type: 3}
   PreviewHint: "Fernkampf-Boss mit Pfeilhagel \u2013 in Bewegung bleiben"
+  IsFlyer: 0
+  FlyHeight: 2
+  ObstacleClearance: 1.5
+  DiveHeight: 0.8
+  DeathClipDuration: 0

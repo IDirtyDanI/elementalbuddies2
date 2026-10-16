@@ -19,7 +19,8 @@ namespace ElementalBuddies
         private static readonly string[] Sad = { "Nein…", "Freund!", "Oh nein!", "Wir rächen dich!" };
         private static readonly string[] Cheer = { "Hurra!", "Geschafft!", "Gewonnen!", "Ha!" };
         private static readonly string[] Fused = { "Gemeinsam!", "Zusammen stark!", "Wow!" };
-        private static readonly string[] WaveStart = { "Auf sie!", "Ich bin bereit!", "Kommt nur!", "Für die Stadt!" };
+        // Letzter Eintrag = Schlachtruf der Map (MapDefinitionSO.BattleCry, Stadt: „Für die Stadt!“)
+        private static readonly string[] WaveStart = { "Auf sie!", "Ich bin bereit!", "Kommt nur!", null };
         private static readonly string[] Relief = { "Puh!", "Das war knapp!", "Gerade so!" };
 
         // Element-Farben der Blasen-Schrift (Feuer, Eis, Erde, Licht)
@@ -102,7 +103,7 @@ namespace ElementalBuddies
         {
             if (Random.value > 0.35f || ElementalBuddy.ActiveCount == 0) return;
             var b = ElementalBuddy.Active[Random.Range(0, ElementalBuddy.ActiveCount)];
-            Say(b, Pick(WaveStart), SfxId.BuddyHappy, true);
+            Say(b, Pick(WaveStart) ?? MapContext.Current.BattleCry, SfxId.BuddyHappy, true);
         }
 
         // Knapp gerettet: Nexus unter 35 % am Wellenende → der Buddy am nächsten zum Nexus atmet auf

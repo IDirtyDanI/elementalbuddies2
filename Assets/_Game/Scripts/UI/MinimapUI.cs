@@ -54,6 +54,8 @@ namespace ElementalBuddies
         public float EliteSize = 10f;
         public float BossSize = 16f;
         public float RamSize = 14f;
+        [Tooltip("Flieger: Dreieck in Flugrichtung (Walddorf-Plan).")]
+        public float FlyerSize = 11f;
         public float BuddySize = 9f;
         public float LocalPlayerSize = 26f;
         public float MatePlayerSize = 21f;
@@ -91,7 +93,7 @@ namespace ElementalBuddies
             public int Used;
         }
         private Layer _portals, _shrines, _merchants, _nexus, _buddies, _enemies, _bosses, _mates, _localHalo, _local;
-        private Sprite _dot, _ring, _diamond, _square, _stall, _arrow, _nexusIcon;
+        private Sprite _dot, _ring, _diamond, _square, _stall, _arrow, _nexusIcon, _triangle;
 
         // Für TeamHUD/ToastUI/OffscreenIndicatorUI
         public RectTransform Rect => _root;
@@ -118,6 +120,9 @@ namespace ElementalBuddies
             var go = new GameObject("Minimap", typeof(RectTransform));
             go.transform.SetParent(canvas.transform, false);
             var mm = go.AddComponent<MinimapUI>();
+            var map = MapContext.Current; // Kartenausschnitt der Map (Stadt: Mitte 0/0, Radius 68)
+            mm.WorldCenter = map.MinimapCenter;
+            mm.WorldRadius = map.MinimapRadius;
             TMP_FontAsset font = hud.WaveText != null ? hud.WaveText.font : hud.ShardText != null ? hud.ShardText.font : null;
             mm.Build(canvas, font);
             return mm;
@@ -159,6 +164,7 @@ namespace ElementalBuddies
             _diamond = MakeShapeSprite("mm_diamond", 64, SdDiamond);
             _square = MakeShapeSprite("mm_square", 64, SdSquare);
             _stall = MakeShapeSprite("mm_stall", 64, SdStall);
+            _triangle = MakeShapeSprite("mm_triangle", 64, SdTriangle);
             var offscreen = FindFirstObjectByType<OffscreenIndicatorUI>(FindObjectsInactive.Include);
             _arrow = offscreen != null && offscreen.ArrowImage != null ? offscreen.ArrowImage.sprite : null;
             if (_arrow == null) _arrow = MakeShapeSprite("mm_arrow", 64, SdArrow);
@@ -242,7 +248,7 @@ namespace ElementalBuddies
             Texture2D tex = null;
             try { tex = RenderMapTexture(WorldCenter, WorldRadius, TextureSize); }
             catch (System.Exception e) { Debug.LogWarning("Minimap: Karte konnte nicht gerendert werden – einfache Karte. " + e.Message); }
-            if (tex == null) tex = BuildFallbackTexture(256, WorldCenter, WorldRadius);
+            if (tex == null) tex = BuildFallbackTexture(256, WorldCenter, WorldRadius, MapContext.Current.WallHalfSize);
             Own(tex);
             _map.texture = tex;
             _map.color = Color.white;
@@ -396,10 +402,13 @@ namespace ElementalBuddies
                     Place(Next(_bosses, _square), e.transform.position, RamSize, RamColor);
                 else if (e.IsBoss)
                     Place(Next(_bosses, _dot), e.transform.position, BossSize, BossColor);
+                else if (e.IsFlyer)
+                    Place(Next(_enemies, _triangle), e.transform.position, e.IsElite ? FlyerSize * 1.3f : FlyerSize,
+                        e.IsElite ? EliteColor : EnemyColor, MinimapMath.HeadingToRotation(e.transform.forward));
                 else if (e.IsElite)
-                    Place(Next(_enemies), e.transform.position, EliteSize, EliteColor);
+                    Place(Next(_enemies, _dot), e.transform.position, EliteSize, EliteColor);
                 else
-                    Place(Next(_enemies), e.transform.position, EnemySize, EnemyColor);
+                    Place(Next(_enemies, _dot), e.transform.position, EnemySize, EnemyColor);
             }
             End(_enemies); End(_bosses);
         }
@@ -487,7 +496,9 @@ namespace ElementalBuddies
                 var desc = new RenderTextureDescriptor(size, size, RenderTextureFormat.ARGB32, 24) { msaaSamples = 4, sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear };
                 rt = RenderTexture.GetTemporary(desc);
                 cam.targetTexture = rt;
-                cam.Render();
+                bool prevFog = RenderSettings.fog;
+                RenderSettings.fog = false; // Kartenbild ohne Nebel (#313)
+                try { cam.Render(); } finally { RenderSettings.fog = prevFog; }
                 cam.targetTexture = null;
 
                 var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "MinimapMap", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
@@ -536,8 +547,8 @@ namespace ElementalBuddies
             return sum / (n * n) > 0.02f;
         }
 
-        // Ersatzkarte ohne Rendern: Wiese, Weg-Kreuz zum Nexus, Mauerring ±35 m
-        public static Texture2D BuildFallbackTexture(int size, Vector2 center, float radius)
+        // Ersatzkarte ohne Rendern: Wiese, Siedlung, Mauerring ±wallHalf (Stadt: ±35 m)
+        public static Texture2D BuildFallbackTexture(int size, Vector2 center, float radius, float wallHalf = 35f)
         {
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "MinimapFallback", wrapMode = TextureWrapMode.Clamp };
             var px = new Color32[size * size];
@@ -550,9 +561,9 @@ namespace ElementalBuddies
                     Vector3 w = MinimapMath.MapToWorld(new Vector2(x + 0.5f - size * 0.5f, y + 0.5f - size * 0.5f), center, radius, size * 0.5f);
                     float ax = Mathf.Abs(w.x), az = Mathf.Abs(w.z);
                     Color c = grass * (0.92f + 0.08f * Mathf.PerlinNoise(w.x * 0.15f, w.z * 0.15f));
-                    if (ax < 35f && az < 35f) c = town;
+                    if (ax < wallHalf && az < wallHalf) c = town;
                     float wd = Mathf.Max(ax, az);
-                    if (wd > 34f && wd < 36f) c = wall;
+                    if (wd > wallHalf - 1f && wd < wallHalf + 1f) c = wall;
                     px[y * size + x] = c;
                 }
             tex.SetPixels32(px);
@@ -622,6 +633,13 @@ namespace ElementalBuddies
             float roof = Mathf.Max(-(y + 0.02f), (y - 0.95f + 0.95f * Mathf.Abs(x)) * 0.72f);
             return Mathf.Min(body, roof);
         }
+        // Flieger: Dreieck mit Spitze nach oben (gedreht in Flugrichtung)
+        private static float SdTriangle(float x, float y)
+        {
+            float side = (Mathf.Abs(x) * 0.894f + (y - 0.9f) * 0.447f);
+            return Mathf.Max(side, -(y + 0.75f));
+        }
+
         // Ersatz-Pfeil nach oben (falls OffscreenIndicatorUI fehlt)
         private static float SdArrow(float x, float y)
         {

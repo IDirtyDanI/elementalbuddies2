@@ -17,7 +17,8 @@ namespace ElementalBuddies
     {
         public static GameManager Instance { get; private set; }
 
-        private const string BestWaveKey = "BestWave";
+        // Rekord-Schlüssel je Map (Stadt: Präfix leer = alter Schlüssel „BestWave“)
+        private static string BestWaveKey => MapContext.Current.RecordKeyPrefix + "BestWave";
 
         public GameState CurrentState { get; private set; } = GameState.Building;
         public bool IsGameOver => CurrentState == GameState.GameOver;

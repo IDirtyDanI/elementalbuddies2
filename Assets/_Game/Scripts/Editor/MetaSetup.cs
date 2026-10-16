@@ -12,7 +12,7 @@ namespace ElementalBuddies.EditorTools
     // Menü: BuddyTD → Game Feel → Sprint 4 einrichten (Meta, Kodex).
     public static class MetaSetup
     {
-        private const string GameScene = "Assets/test.unity";
+        private const string GameScene = MapEditorUtil.CityScenePath; // Stadt (Walddorf P0: eine Konstante)
         private const string IconDir = "Assets/_Game/UI/Icons/";
         private const string CodexPath = "Assets/Resources/CodexDatabase.asset";
         private const string MenuScene = "Assets/Scenes/MainMenu.unity";
@@ -138,18 +138,9 @@ namespace ElementalBuddies.EditorTools
             }
             db.Entries.Clear();
 
-            // Gegner und Bosse in Reihenfolge des ersten Auftretens
-            var enemies = new List<EnemyConfigSO>();
-            if (wm != null)
-            {
-                for (int w = 1; w <= 40; w++)
-                {
-                    var wave = wm.BuildWave(w);
-                    if (wave == null) continue;
-                    foreach (var g in wave.EnemiesToSpawn)
-                        if (g != null && g.EnemyType != null && g.Count > 0 && !enemies.Contains(g.EnemyType)) enemies.Add(g.EnemyType);
-                }
-            }
+            // Gegner und Bosse in Reihenfolge des ersten Auftretens – für jedes Gegner-Theme aller Maps (Walddorf-Plan):
+            // zuerst die Stadt (Untote + Riesen-Fledermaus), dann die Themes der übrigen Maps (nur neue Configs)
+            var enemies = CollectEnemies(wm);
             foreach (var e in enemies)
                 db.Entries.Add(new CodexDatabaseSO.Entry
                 {
@@ -221,6 +212,35 @@ namespace ElementalBuddies.EditorTools
             }
             EditorUtility.SetDirty(db);
             Debug.Log($"MetaSetup: Kodex mit {db.Entries.Count} Einträgen.");
+        }
+
+        // Gegner-Configs der Wellen 1–40 je Theme (WaveManager.BuildWave mit ThemeOverride); Reihenfolge: Maps nach Order
+        public static List<EnemyConfigSO> CollectEnemies(WaveManager wm)
+        {
+            var enemies = new List<EnemyConfigSO>();
+            if (wm == null) return enemies;
+            MapRegistry.Reload();
+            var themes = new List<EnemyThemeSO>();
+            foreach (var map in MapRegistry.All)
+                if (map != null && !themes.Contains(map.Theme)) themes.Add(map.Theme);
+            if (themes.Count == 0) themes.Add(null); // ohne Map-Assets: Wellen-Configs wie bisher
+            var prev = wm.ThemeOverride;
+            try
+            {
+                foreach (var theme in themes)
+                {
+                    wm.ThemeOverride = theme;
+                    for (int w = 1; w <= 40; w++)
+                    {
+                        var wave = wm.BuildWave(w);
+                        if (wave == null) continue;
+                        foreach (var g in wave.EnemiesToSpawn)
+                            if (g != null && g.EnemyType != null && g.Count > 0 && !enemies.Contains(g.EnemyType)) enemies.Add(g.EnemyType);
+                    }
+                }
+            }
+            finally { wm.ThemeOverride = prev; }
+            return enemies;
         }
 
         private static Sprite FusionPortrait(FusionElement e)

@@ -133,7 +133,8 @@ namespace ElementalBuddies
         // Schadensreduktion 0..0.9 aus der Config (Fluch ignoriert sie)
         public float Armor => Config != null ? Mathf.Clamp(Config.Armor, 0f, 0.9f) : 0f;
 
-        private NavMeshAgent _agent;
+        private IEnemyMotor _motor;
+        private FlyingMotor _flyer; // nur Flieger (Config.IsFlyer)
         private float _maxHP;
         private float _slowPercent;
         private float _slowUntil;
@@ -195,6 +196,7 @@ namespace ElementalBuddies
         private Collider _swingBlocker;
         private ElementalBuddy _swingBuddy;
         private PlayerStats _swingPlayer;
+        private float _attackSfxTime = -1f;             // Fernkampf-Abschusston (Config.AttackSound) nach AttackWindup
         private float _remoteSwingSfxTime = -1f;        // Client: Trefferton nach dem Ausholen (aus dem Angriffs-RPC)
         // Trefferton global begrenzt (50 Schwarm-Skelette sollen nicht 50-mal gleichzeitig klappern)
         private const int MeleeSfxPerWindow = 3;
@@ -319,24 +321,79 @@ namespace ElementalBuddies
             _prefabScale = transform.localScale;
         }
 
+        // ---------------- Bewegung (Motor) ----------------
+
+        // Flieger (Walddorf-Plan): FlyingMotor statt NavMesh, Trefferkapsel, Schatten, horizontale Reichweiten
+        public bool IsFlyer => Config != null && Config.IsFlyer;
+        // Bewegungsbaustein: NavAgentMotor (bisheriger NavMeshAgent, Bodengegner) oder FlyingMotor
+        public IEnemyMotor Motor
+        {
+            get
+            {
+                EnsureMotor();
+                return _motor;
+            }
+        }
+        public FlyingMotor Flyer
+        {
+            get
+            {
+                EnsureMotor();
+                return _flyer;
+            }
+        }
+        // Körperradius in Weltmetern (Trefferbreite, z. B. Linien-Fähigkeiten)
+        public float BodyRadius => Motor != null ? Motor.Radius : 0.4f;
+
+        // Sofort anhalten (Festhalten, z. B. Weltenbaum-Wurzeln): Tempo 0 bis zum nächsten UpdateSpeed
+        public void HaltMotor()
+        {
+            var m = Motor;
+            if (m == null || !m.IsReady) return;
+            m.Speed = 0f;
+            m.Velocity = Vector3.zero;
+        }
+
+        // Motor einmalig wählen (Start; vorher z. B. aus Freeze/Stun). Config muss gesetzt sein (WaveManager setzt sie
+        // direkt nach Instantiate, Clients haben sie aus dem Prefab).
+        private void EnsureMotor()
+        {
+            if (_motor != null) return;
+            var agent = GetComponent<NavMeshAgent>();
+            if (IsFlyer)
+            {
+                if (agent != null && agent.enabled) agent.enabled = false; // bleibt als Komponente (RequireComponent)
+                _flyer = GetComponent<FlyingMotor>();
+                if (_flyer == null) _flyer = gameObject.AddComponent<FlyingMotor>();
+                _flyer.Init(this, Config);
+                _motor = _flyer;
+                if (GetComponent<FlyerHurtbox>() == null) gameObject.AddComponent<FlyerHurtbox>();
+                if (GetComponent<FlyerShadow>() == null) gameObject.AddComponent<FlyerShadow>();
+            }
+            else _motor = new NavAgentMotor(agent);
+        }
+
+        // Abstand für Aggro/Reichweite: Flieger horizontal (schweben über dem Ziel), Bodengegner wie bisher 3D
+        private float UnitDistance(Vector3 a, Vector3 b) => IsFlyer ? HorizontalDistance(a, b) : Vector3.Distance(a, b);
+
         void Start()
         {
-            _agent = GetComponent<NavMeshAgent>();
+            EnsureMotor();
 
             if (Config != null)
             {
                 if (_currentHP <= 0) _currentHP = Config.BaseHP;
-                _agent.speed = Config.Speed * _speedFactor;
+                _motor.Speed = Config.Speed * _speedFactor;
                 _baseSpeed = Config.Speed * _speedFactor;
             }
             else
             {
                 if (_currentHP <= 0) _currentHP = 60f;
-                _agent.speed = 3.5f;
+                _motor.Speed = 3.5f;
                 _baseSpeed = 3.5f;
             }
             if (_maxHP <= 0f) _maxHP = _currentHP;
-            if (IsRemote && _agent.enabled) _agent.enabled = false; // Clients: Position kommt vom Server
+            if (IsRemote) _motor.DisableSimulation(); // Clients: Position kommt vom Server
 
             // Gegnertyp-Größe (vor der HP-Bar, die ihre Höhe beim Binden misst); Skalierung wird nicht synchronisiert
             if (Config != null && Config.VisualScale > 0f && !Mathf.Approximately(Config.VisualScale, 1f))
@@ -366,6 +423,8 @@ namespace ElementalBuddies
                 if (!_activeBosses.Contains(this)) _activeBosses.Add(this);
                 OnBossSpawned?.Invoke(this);
             }
+            // Ruf beim Erscheinen (Walddorf: Wolfsheulen, Flieger-Schrei) – lokal auf allen Rechnern, Drosselung über GameAudio
+            if (Config != null && Config.SpawnSound && !_isDead) GameAudio.Play(Config.SpawnSfx, transform.position);
         }
 
         void OnEnable()
@@ -422,9 +481,35 @@ namespace ElementalBuddies
             _isDead = true;
             _currentHP = 0f;
             _activeBosses.Remove(this);
+            PlayDeathVisual();
             OnEnemyDeath?.Invoke();
             OnEnemyKilled?.Invoke(this);
-            GameAudio.Play(SfxId.EnemyDeath, transform.position);
+            PlayDeathSfx();
+        }
+
+        // Todeslaut: eigener Ton der Config (Walddorf) oder wie bisher der Knochenbruch
+        private void PlayDeathSfx()
+        {
+            if (Config != null && Config.DeathSound) GameAudio.PlayPitched(Config.DeathSfx, transform.position, Random.Range(0.95f, 1.05f));
+            else GameAudio.Play(SfxId.EnemyDeath, transform.position);
+        }
+
+        // Optionaler Tod-Clip (Config.DeathClipDuration > 0 und Animator-Trigger „Die“ an einem Kind-Modell): Modell
+        // lösen, Clip als reine Optik abspielen (EnemyCorpse), Flieger stürzen ab. Der Gegner verschwindet wie bisher sofort.
+        private static readonly int DieHash = Animator.StringToHash("Die");
+        private void PlayDeathVisual()
+        {
+            if (Config == null || Config.DeathClipDuration <= 0f || _animator == null || !_animator.isActiveAndEnabled) return;
+            Transform model = _animator.transform;
+            if (model == transform) return;
+            bool hasDie = false;
+            foreach (var p in _animator.parameters)
+                if (p.nameHash == DieHash && p.type == AnimatorControllerParameterType.Trigger) { hasDie = true; break; }
+            if (!hasDie) return;
+            model.SetParent(null, true);
+            _animator.speed = 1f;
+            _animator.SetTrigger(DieHash);
+            model.gameObject.AddComponent<EnemyCorpse>().Init(Config.DeathClipDuration, IsFlyer);
         }
 
         // Angriffs-Takt für Optik ohne Animator (z. B. RamVisual: Rammbalken) – Server und Clients, unabhängig vom Animator
@@ -434,6 +519,12 @@ namespace ElementalBuddies
         public void PlayAttackTrigger()
         {
             OnAttackVisual?.Invoke();
+            // Angriffston der Config (Walddorf): Fernkampf beim Abschuss (nach AttackWindup), sonst sofort (Ausholen/Sturzflug)
+            if (Config != null && Config.AttackSound)
+            {
+                if (IsRanged && Config.AttackWindup > 0f) _attackSfxTime = Time.time + Config.AttackWindup;
+                else GameAudio.PlayPitched(Config.AttackSfx, transform.position, Random.Range(0.95f, 1.05f));
+            }
             // Client: Trefferton des Nahkampf-Hiebs nach dem Ausholen nachspielen (Server spielt ihn in ResolveSwing).
             // Kein eigenes RPC für den Treffer – die Clients kennen AttackWindup aus der Config.
             if (IsRemote && UsesMeleeSwings && Config != null && Config.MeleeHitSound) _remoteSwingSfxTime = Time.time + MeleeWindup;
@@ -520,6 +611,11 @@ namespace ElementalBuddies
 
         void Update()
         {
+            if (_attackSfxTime >= 0f && Time.time >= _attackSfxTime)
+            {
+                _attackSfxTime = -1f;
+                if (!_isDead && !IsFrozen && !IsStunned && Config != null) GameAudio.PlayPitched(Config.AttackSfx, transform.position, Random.Range(0.95f, 1.05f));
+            }
             if (IsRemote)
             {
                 RemoteUpdate();
@@ -533,7 +629,7 @@ namespace ElementalBuddies
         {
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver)
             {
-                if (_agent.isOnNavMesh && !_agent.isStopped) _agent.isStopped = true;
+                if (_motor.IsReady && !_motor.IsStopped) _motor.IsStopped = true;
                 _shotPending = false;
                 CancelSwing();
                 UpdateAnimator(0f);
@@ -546,14 +642,14 @@ namespace ElementalBuddies
                 CancelSwing();        // ebenso ein laufender Nahkampf-Hieb
                 UpdateAnimator(0f);
                 _wasFrozen = true;
-                if (_agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
+                if (_motor.IsReady) { _motor.IsStopped = true; _motor.Velocity = Vector3.zero; }
                 return;
             }
             if (_wasFrozen)
             {
                 _wasFrozen = false;
                 _stuckTimer = 0f;
-                if (_agent.isOnNavMesh && !_knockedBack) _agent.isStopped = false;
+                if (_motor.IsReady && !_knockedBack) _motor.IsStopped = false;
             }
 
             // Boss-Zauber: steht still, kein Grundangriff (Neustart des Agents über _wasFrozen)
@@ -565,14 +661,14 @@ namespace ElementalBuddies
                 _stuckTimer = 0f;
                 _noProgressTimer = 0f;
                 UpdateAnimator(0f);
-                if (_agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
+                if (_motor.IsReady) { _motor.IsStopped = true; _motor.Velocity = Vector3.zero; }
                 return;
             }
 
             // Rückstoß: Bewegung und Angriff kurz unterbrochen
             if (_knockedBack)
             {
-                if (_agent.isOnNavMesh) _agent.isStopped = true;
+                if (_motor.IsReady) _motor.IsStopped = true;
                 _stuckTimer = 0f;
                 _shotPending = false;
                 CancelSwing();
@@ -585,7 +681,7 @@ namespace ElementalBuddies
             HandleAntiCheese();
             HandleStraggler();
             HandleAttack();
-            UpdateAnimator(_agent.velocity.magnitude);
+            UpdateAnimator(_motor.Velocity.magnitude);
         }
 
         private void UpdateAnimator(float speed)
@@ -615,12 +711,15 @@ namespace ElementalBuddies
             _noProgressTimer = 0f;
             var wm = WaveManager.Instance;
             if (wm == null || !wm.TryGetRescuePosition(out Vector3 pos)) return;
-            if (!NavMesh.SamplePosition(pos, out NavMeshHit hit, 4f, NavMesh.AllAreas)) return;
+            Vector3 rescue;
+            if (NavMesh.SamplePosition(pos, out NavMeshHit hit, 4f, NavMesh.AllAreas)) rescue = hit.position;
+            else if (IsFlyer) rescue = pos; // Flieger brauchen kein NavMesh
+            else return;
 
             Debug.LogWarning($"EnemyBrain: {name} hing bei {transform.position} fest – zurück an ein Portal.");
             ForcedTarget = null;
-            _agent.Warp(hit.position);
-            _progressPos = hit.position;
+            _motor.Warp(rescue);
+            _progressPos = IsFlyer ? transform.position : rescue;
             _stuckTimer = 0f;
         }
 
@@ -631,7 +730,8 @@ namespace ElementalBuddies
             if (Elite == EliteAffix.Ram && Nexus.Instance != null) return Nexus.Instance.transform;
             if (_tauntTarget != null && _tauntTarget.gameObject.activeInHierarchy) return _tauntTarget;
 
-            ElementalBuddy buddy = GetBuddyTarget();
+            // Flieger ignorieren Buddies (überfliegen sie); Spott wirkt weiter (oben)
+            ElementalBuddy buddy = IsFlyer ? null : GetBuddyTarget();
             bool hunter = Config != null && Config.HuntsBuddies;
             if (hunter && buddy != null) return buddy.transform;
 
@@ -640,7 +740,7 @@ namespace ElementalBuddies
             if (player != null)
             {
                 float aggro = ForcedTarget != null ? Mathf.Max(PlayerAggroRadius, ForcedTargetPlayerAggroRadius) : PlayerAggroRadius;
-                float playerDist = Vector3.Distance(transform.position, player.position);
+                float playerDist = UnitDistance(transform.position, player.position);
                 if (playerDist <= aggro) return player;
             }
 
@@ -794,7 +894,7 @@ namespace ElementalBuddies
             if (buddy != null)
                 return HorizontalDistance(transform.position, buddy.GetClosestPoint(transform.position)) <= UnitAttackRange + extra;
 
-            return Vector3.Distance(transform.position, target.position) < UnitAttackRange + extra;
+            return UnitDistance(transform.position, target.position) < UnitAttackRange + extra;
         }
 
         // Fernkampf: freie Schusslinie zum Ziel? Prüft nur den Steinwall-Layer (Linecast vom Abschusspunkt zum
@@ -832,14 +932,21 @@ namespace ElementalBuddies
             // Anti-Cheese-Hiebe gegen einen Blocker nicht – der Gegner steckt dort ohnehin fest.
             if ((_swingPending && !_swingVsBlocker) || Time.time < _swingHoldUntil)
             {
-                if (_agent.isOnNavMesh && _agent.hasPath) _agent.ResetPath();
+                if (_motor.IsReady && _motor.HasPath) _motor.ResetPath();
+                return;
+            }
+
+            if (IsFlyer && target != ForcedTarget && IsInAttackRange(target))
+            {
+                // Flieger: in Reichweite schweben (nicht auf das Ziel setzen); Kreisbogen nach dem Treffer fliegt der Motor
+                if (_motor.HasPath) _motor.ResetPath();
                 return;
             }
 
             if (target == ForcedTarget && IsInAttackRange(target))
             {
                 // Angekommen: am Ziel stehen bleiben (z. B. im Schrein-Kreis → blockiert den Fortschritt)
-                if (_agent.isOnNavMesh && _agent.hasPath) _agent.ResetPath();
+                if (_motor.IsReady && _motor.HasPath) _motor.ResetPath();
                 return;
             }
 
@@ -847,14 +954,14 @@ namespace ElementalBuddies
             {
                 // Fernkämpfer: in Reichweite und freier Schusslinie stehen bleiben und schießen
                 // (Steinwall dazwischen → weiterlaufen, die Wand ist aus dem NavMesh geschnitten)
-                if (_agent.isOnNavMesh && _agent.hasPath) _agent.ResetPath();
+                if (_motor.IsReady && _motor.HasPath) _motor.ResetPath();
                 return;
             }
 
             if (Elite == EliteAffix.Ram && IsInAttackRange(target))
             {
                 // Ramme (lang, Pivot in der Mitte): vor dem Nexus anhalten statt sich hineinzuschieben, Bug zum Nexus
-                if (_agent.isOnNavMesh && _agent.hasPath) _agent.ResetPath();
+                if (_motor.IsReady && _motor.HasPath) _motor.ResetPath();
                 FaceTowards(target);
                 return;
             }
@@ -876,9 +983,9 @@ namespace ElementalBuddies
         private Vector3 _requestedDest;
         private void RequestDestination(Vector3 dest)
         {
-            if ((_agent.pathPending || _agent.hasPath) && (dest - _requestedDest).sqrMagnitude < 0.25f) return;
+            if ((_motor.PathPending || _motor.HasPath) && (dest - _requestedDest).sqrMagnitude < 0.25f) return;
             _requestedDest = dest;
-            _agent.SetDestination(dest);
+            _motor.SetDestination(dest);
         }
 
         // Anti-Cheese-Suchradius: 2,5 m, bei großen Gegnern (Ramme, 4,6 m lang) Collider-Halbausdehnung + 1,2 m.
@@ -901,6 +1008,13 @@ namespace ElementalBuddies
 
         private void HandleAntiCheese()
         {
+            // Flieger können nicht blockiert werden (überfliegen Buddies und Steinwall) – kein Anti-Cheese
+            if (IsFlyer)
+            {
+                _stuckTimer = 0f;
+                return;
+            }
+
             // Laufender Anti-Cheese-Hieb: Zähler bleibt stehen (nach dem Hieb sofort der nächste, solange er feststeckt)
             if (_swingPending && _swingVsBlocker) return;
 
@@ -911,7 +1025,7 @@ namespace ElementalBuddies
                 return;
             }
 
-            if (_agent.velocity.magnitude < 0.1f && !_agent.pathPending && (_agent.hasPath || NearestPlayer() != null || Nexus.Instance != null))
+            if (_motor.Velocity.magnitude < 0.1f && !_motor.PathPending && (_motor.HasPath || NearestPlayer() != null || Nexus.Instance != null))
             {
                 _stuckTimer += Time.deltaTime;
             }
@@ -1026,7 +1140,7 @@ namespace ElementalBuddies
             }
             if (!IsInAttackRange(target)) return;
             // Im Stand dreht der Agent nicht selbst
-            if (Time.time < _swingHoldUntil || _agent.velocity.sqrMagnitude < 0.04f) FaceTowards(target);
+            if (Time.time < _swingHoldUntil || _motor.Velocity.sqrMagnitude < 0.04f) FaceTowards(target);
             if (Time.time < _nextAttackTime) return;
             StartSwing(target, null);
         }
@@ -1045,14 +1159,23 @@ namespace ElementalBuddies
             _swingPlayer = _swingBuddy == null ? target.GetComponent<PlayerStats>() : null;
             _swingHitTime = now + windup;
             _nextAttackTime = now + AttackInterval;
-            if (!_swingVsBlocker)
+            if (!_swingVsBlocker && _flyer != null)
+            {
+                // Flieger: Herabstoßen während des Ausholens, nach dem Treffer fliegt der Motor einen Kreisbogen
+                _swingHoldUntil = now + windup;
+                bool nexus = IsNexus(target);
+                Vector3 aim = nexus ? Nexus.Instance.GetClosestPoint(transform.position) : target.position;
+                _flyer.BeginDive(aim, nexus ? float.NegativeInfinity : target.position.y, windup);
+                if (_motor.HasPath) _motor.ResetPath();
+            }
+            else if (!_swingVsBlocker)
             {
                 // stehen bleiben bis kurz nach dem Treffer: min(0,6 × Intervall; Windup + 0,35 s), mindestens bis zum Treffer
                 _swingHoldUntil = now + Mathf.Max(windup, Mathf.Min(AttackInterval * 0.6f, windup + SwingRecovery));
-                if (_agent.isOnNavMesh)
+                if (_motor.IsReady)
                 {
-                    if (_agent.hasPath) _agent.ResetPath();
-                    _agent.velocity = Vector3.zero;
+                    if (_motor.HasPath) _motor.ResetPath();
+                    _motor.Velocity = Vector3.zero;
                 }
             }
             // Angriffs-Animation immer (Clients per RPC; dort startet auch der Trefferton nach AttackWindup)
@@ -1084,6 +1207,7 @@ namespace ElementalBuddies
             _swingBlocker = null;
             _swingBuddy = null;
             _swingPlayer = null;
+            if (_flyer != null && !blocker) _flyer.EndDive(valid ? t : null, valid && IsNexus(t));
             if (!valid) return;
 
             PlayMeleeHitSfx();
@@ -1109,6 +1233,7 @@ namespace ElementalBuddies
         private void CancelSwing()
         {
             if (!_swingPending) return;
+            if (_flyer != null) _flyer.CancelDive();
             _swingPending = false;
             _swingVsBlocker = false;
             _swingTarget = null;
@@ -1228,9 +1353,10 @@ namespace ElementalBuddies
                 bool shatter = IsFrozen;
                 // Clients zuerst informieren (RPC kommt zuverlässig vor der Despawn-Nachricht an)
                 if (_net != null) _net.ServerKilled();
+                PlayDeathVisual();
                 OnEnemyDeath?.Invoke();
                 OnEnemyKilled?.Invoke(this);
-                GameAudio.Play(SfxId.EnemyDeath, transform.position);
+                PlayDeathSfx();
                 if (shatter) CardEffects.Shatter(this); // Splitterfrost-Karte
                 Despawn();
             }
@@ -1271,10 +1397,10 @@ namespace ElementalBuddies
             if (IsWet) duration *= 2f; // Nass + Frost: friert doppelt so lange ein
             duration *= ControlFactor;
             _freeze = FreezeEffect.Apply(gameObject, duration, vfxPrefab);
-            if (_agent != null && _agent.isOnNavMesh)
+            if (_motor != null && _motor.IsReady)
             {
-                _agent.isStopped = true;
-                _agent.velocity = Vector3.zero;
+                _motor.IsStopped = true;
+                _motor.Velocity = Vector3.zero;
             }
         }
 
@@ -1287,11 +1413,11 @@ namespace ElementalBuddies
             duration *= ControlFactor;
             _stunUntil = Mathf.Max(_stunUntil, Time.time + duration);
             if (vfxPrefab != null) BlindEffect.Apply(gameObject, duration, vfxPrefab);
-            if (_agent == null) _agent = GetComponent<NavMeshAgent>();
-            if (_agent != null && _agent.isOnNavMesh)
+            EnsureMotor();
+            if (_motor != null && _motor.IsReady)
             {
-                _agent.isStopped = true;
-                _agent.velocity = Vector3.zero;
+                _motor.IsStopped = true;
+                _motor.Velocity = Vector3.zero;
             }
         }
 
@@ -1326,7 +1452,7 @@ namespace ElementalBuddies
             if (_isDead || distance <= 0f) return;
             direction.y = 0f;
             if (direction.sqrMagnitude < 0.0001f) return;
-            if (_agent == null) _agent = GetComponent<NavMeshAgent>();
+            EnsureMotor();
             if (_knockbackRoutine != null) StopCoroutine(_knockbackRoutine);
             _knockbackRoutine = StartCoroutine(KnockbackRoutine(direction.normalized, distance, Mathf.Max(0.01f, duration)));
         }
@@ -1334,7 +1460,7 @@ namespace ElementalBuddies
         private IEnumerator KnockbackRoutine(Vector3 dir, float distance, float duration)
         {
             _knockedBack = true;
-            if (_agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
+            if (_motor.IsReady) { _motor.IsStopped = true; _motor.Velocity = Vector3.zero; }
 
             float t = 0f;
             float done = 0f;
@@ -1345,14 +1471,14 @@ namespace ElementalBuddies
                 float eased = 1f - (1f - k) * (1f - k); // ease-out: schneller Stoß, weiches Abbremsen
                 float step = (eased - done) * distance;
                 done = eased;
-                if (_agent.isOnNavMesh) _agent.Move(dir * step);
+                if (_motor.IsReady) _motor.Move(dir * step);
                 yield return null;
             }
 
             _knockedBack = false;
             _knockbackRoutine = null;
             _stuckTimer = 0f;
-            if (_agent.isOnNavMesh && !IsFrozen && !IsStunned && !IsCasting) _agent.isStopped = false;
+            if (_motor.IsReady && !IsFrozen && !IsStunned && !IsCasting) _motor.IsStopped = false;
         }
 
         // Horizontale Richtung entgegen der aktuellen Laufrichtung (z. B. für Rückstoß „den Weg zurück“)
@@ -1361,13 +1487,13 @@ namespace ElementalBuddies
             get
             {
                 Vector3 v = Vector3.zero;
-                if (_agent != null)
+                if (_motor != null)
                 {
-                    v = _agent.velocity;
+                    v = _motor.Velocity;
                     v.y = 0f;
-                    if (v.sqrMagnitude < 0.01f && _agent.isOnNavMesh && _agent.hasPath)
+                    if (v.sqrMagnitude < 0.01f && _motor.IsReady && _motor.HasPath)
                     {
-                        v = _agent.steeringTarget - transform.position;
+                        v = _motor.SteeringTarget - transform.position;
                         v.y = 0f;
                     }
                 }
@@ -1385,7 +1511,7 @@ namespace ElementalBuddies
         private void UpdateSpeed()
         {
             float slow = Time.time < _slowUntil ? _slowPercent : 0f;
-            _agent.speed = _baseSpeed * (1f - slow);
+            _motor.Speed = _baseSpeed * (1f - slow);
         }
 
         public void Taunt(Transform target, float duration)
@@ -1411,8 +1537,8 @@ namespace ElementalBuddies
             _castUntil = Mathf.Max(_castUntil, Time.time + Mathf.Max(0f, duration));
             _shotPending = false;
             CancelSwing(); // kein Grundangriff-Hieb während des Zaubers
-            if (_agent == null) _agent = GetComponent<NavMeshAgent>();
-            if (_agent != null && _agent.isOnNavMesh) { _agent.isStopped = true; _agent.velocity = Vector3.zero; }
+            EnsureMotor();
+            if (_motor != null && _motor.IsReady) { _motor.IsStopped = true; _motor.Velocity = Vector3.zero; }
         }
 
         // Sperre vorzeitig aufheben (abgebrochener Zauber)

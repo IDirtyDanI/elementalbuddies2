@@ -75,12 +75,7 @@ namespace ElementalBuddies
         {
             if (!Net.IsServer || enemy == null || enemy.IsDead || duration <= 0f) return; // nur Server
             enemy.ApplySlow(1f, duration);
-            var agent = enemy.GetComponent<NavMeshAgent>();
-            if (agent != null && agent.isOnNavMesh)
-            {
-                agent.speed = 0f;
-                agent.velocity = Vector3.zero;
-            }
+            enemy.HaltMotor(); // NavMeshAgent bzw. Flieger: Tempo 0, sofort stehen
         }
 
         // Boden unter einem Punkt (Gegner, Spieler, Buddies, Trigger ignoriert); Fallback = Punkt

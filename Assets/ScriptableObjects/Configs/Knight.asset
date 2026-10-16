@@ -23,6 +23,7 @@ MonoBehaviour:
   BaseHP: 170
   Speed: 2.5
   AttackDamage: 22
+  Role: 2
   Armor: 0.5
   BountyMultiplier: 3
   VisualScale: 1.2
@@ -43,3 +44,8 @@ MonoBehaviour:
   ThemeColor: {r: 1, g: 1, b: 1, a: 1}
   Icon: {fileID: 21300000, guid: c99290369966647f5909db8f83a5dc36, type: 3}
   PreviewHint: "Gepanzert (\u2212Schaden), greift Buddies im Weg an"
+  IsFlyer: 0
+  FlyHeight: 2
+  ObstacleClearance: 1.5
+  DiveHeight: 0.8
+  DeathClipDuration: 0

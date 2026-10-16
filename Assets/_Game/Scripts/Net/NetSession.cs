@@ -399,7 +399,7 @@ namespace ElementalBuddies
 
         // ---------------- Spielablauf ----------------
 
-        // Host: lädt die Spielszene für alle Verbundenen
+        // Host: lädt die Spielszene der gewählten Map (GameSession.MapId) für alle Verbundenen
         public void StartGame()
         {
             var nm = NetworkManager.Singleton;
@@ -410,16 +410,19 @@ namespace ElementalBuddies
             {
                 try { host.IsLocked = true; _ = host.SavePropertiesAsync(); } catch (Exception e) { Debug.LogWarning("[Net] Raum sperren: " + e.Message); }
             }
+            Debug.Log("[Net] Spielstart: Map " + GameSession.MapId + " → Szene " + GameSession.GameScene);
             nm.SceneManager.LoadScene(GameSession.GameScene, LoadSceneMode.Single);
         }
 
-        // Host: Spielszene neu laden (Neustart für alle)
+        // Host: Spielszene neu laden (Neustart für alle) – die aktive Szene, also dieselbe Map wie bisher
         public void RestartGame()
         {
             var nm = NetworkManager.Singleton;
             if (nm == null || !nm.IsServer) return;
             foreach (var p in NetPlayer.All) p.ResetForNewRun();
-            nm.SceneManager.LoadScene(GameSession.GameScene, LoadSceneMode.Single);
+            string scene = SceneManager.GetActiveScene().name;
+            if (string.IsNullOrEmpty(scene) || scene == GameSession.MenuScene) scene = GameSession.GameScene;
+            nm.SceneManager.LoadScene(scene, LoadSceneMode.Single);
         }
 
         // Verbindung beenden und ins Hauptmenü wechseln (Host schließt damit den Raum für alle)
@@ -480,6 +483,7 @@ namespace ElementalBuddies
                     case "-netjoin": join = next; break;
                     case "-netplayers": if (int.TryParse(next, out int n)) AutoStartPlayers = n; break;
                     case "-netname": if (next != null) NetPlayer.LocalPlayerName = next; break;
+                    case "-netmap": if (next != null) GameSession.MapId = next; break; // Map für Host-Tests (z. B. forest)
                     case "-netchampion": if (int.TryParse(next, out int c)) GameSession.SelectedChampion = GameSession.ClampChampion(c); break;
                 }
             }

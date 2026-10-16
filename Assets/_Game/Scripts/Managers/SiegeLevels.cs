@@ -39,13 +39,29 @@ namespace ElementalBuddies
         public static int Current => Mathf.Clamp(GameSession.SiegeLevel, 0, Max);
 
         public static bool Unlocked => Progression.IsUnlockedPersistent(UnlockId.SiegeLevels);
-        public static int HighestWon => PlayerPrefs.GetInt(PrefWon, -1);
-        // Höchste wählbare Stufe
-        public static int MaxSelectable => Unlocked ? Mathf.Clamp(HighestWon + 1, 1, Max) : 0;
 
-        public static int BestWave(int level) => PlayerPrefs.GetInt(PrefBest + level, 0);
+        // Rekorde und Freischalt-Kette gelten pro Map (Nutzerentscheidung 2026-10-15): Schlüssel mit dem Rekord-Präfix der
+        // Map (Progression.RecordKey; Stadt = alte Schlüssel ohne Präfix). map == null → Map der laufenden Szene
+        // (MapContext.Current, im Menü die Stadt) – das Menü übergibt die gewählte Map.
+        private static string Key(MapDefinitionSO map, string key) => Progression.RecordKey(map, key);
 
-        public static string Label(int level) => level <= 0 ? "Keine Belagerungsstufe" : $"Belagerungsstufe {level} – {Names[Mathf.Clamp(level, 0, Max)]}";
+        public static int HighestWonOn(MapDefinitionSO map) => PlayerPrefs.GetInt(Key(map, PrefWon), -1);
+        public static int HighestWon => HighestWonOn(null);
+        // Höchste wählbare Stufe (eigene Kette je Map ab Stufe 1)
+        public static int MaxSelectableOn(MapDefinitionSO map) => Unlocked ? Mathf.Clamp(HighestWonOn(map) + 1, 1, Max) : 0;
+        public static int MaxSelectable => MaxSelectableOn(null);
+
+        public static int BestWave(int level, MapDefinitionSO map = null) => PlayerPrefs.GetInt(Key(map, PrefBest + level), 0);
+
+        // Name der Stufe: map-eigener Name (MapDefinitionSO.SiegeLevelNames, Stadt: keine) oder Standard
+        public static string Name(int level, MapDefinitionSO map = null)
+        {
+            level = Mathf.Clamp(level, 0, Max);
+            if (map == null) map = MapContext.Current;
+            return (map != null ? map.SiegeLevelName(level) : null) ?? Names[level];
+        }
+
+        public static string Label(int level) => level <= 0 ? "Keine Belagerungsstufe" : $"Belagerungsstufe {level} – {Name(level)}";
 
         // Alle aktiven Erschwernisse als Aufzählung (Menü-Tooltip)
         public static string Summary(int level)
@@ -61,26 +77,32 @@ namespace ElementalBuddies
         }
 
         // Spielende/Morgengrauen: Rekord der Stufe speichern; true = neue höchste gewonnene Stufe
-        public static bool RecordDawn(int level)
+        public static bool RecordDawn(int level, MapDefinitionSO map = null)
         {
-            RecordWave(level, DawnWave);
-            if (level <= HighestWon) return false;
-            PlayerPrefs.SetInt(PrefWon, level);
+            RecordWave(level, DawnWave, map);
+            if (level <= HighestWonOn(map)) return false;
+            PlayerPrefs.SetInt(Key(map, PrefWon), level);
             PlayerPrefs.Save();
             return true;
         }
 
-        public static void RecordWave(int level, int wave)
+        public static void RecordWave(int level, int wave, MapDefinitionSO map = null)
         {
-            if (wave <= BestWave(level)) return;
-            PlayerPrefs.SetInt(PrefBest + level, wave);
+            if (wave <= BestWave(level, map)) return;
+            PlayerPrefs.SetInt(Key(map, PrefBest + level), wave);
             PlayerPrefs.Save();
         }
 
+        // Alle Maps
         public static void ResetAll()
         {
-            PlayerPrefs.DeleteKey(PrefWon);
-            for (int i = 0; i <= Max; i++) PlayerPrefs.DeleteKey(PrefBest + i);
+            var maps = new System.Collections.Generic.List<MapDefinitionSO>(MapRegistry.All);
+            if (!maps.Contains(MapRegistry.Default)) maps.Add(MapRegistry.Default);
+            foreach (var m in maps)
+            {
+                PlayerPrefs.DeleteKey(Key(m, PrefWon));
+                for (int i = 0; i <= Max; i++) PlayerPrefs.DeleteKey(Key(m, PrefBest + i));
+            }
         }
 
         // ---------------- Erschwernisse (kumulativ) ----------------

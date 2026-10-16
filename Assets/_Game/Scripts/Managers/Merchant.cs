@@ -62,18 +62,13 @@ namespace ElementalBuddies
             return pa != null ? pa.GetElementAbilityName(e) : ElementInfo.AbilityName(e);
         }
 
-        // Halbe Kantenlänge des Mauerquadrats (Stadtmauer bei ±35 m um den Ursprung)
-        public const float CityWallHalfSize = 35f;
+        // Halbe Kantenlänge des Mauerquadrats aus der Map (Stadt: Stadtmauer bei ±35 m um den Ursprung)
+        public static float WallHalfSize => MapContext.Current.WallHalfSize;
 
-        public static bool IsInsideCity(Vector3 pos) => Mathf.Max(Mathf.Abs(pos.x), Mathf.Abs(pos.z)) < CityWallHalfSize;
+        public static bool IsInsideCity(Vector3 pos) => MapContext.Current.IsInside(pos);
 
-        // Ortsangabe relativ zur Stadtmauer: „in der Stadt“ oder „vor der West-/Nord-/Süd-/Ostmauer“ (dominante Achse)
-        public static string LocationPhrase(Vector3 pos)
-        {
-            if (IsInsideCity(pos)) return "in der Stadt";
-            if (Mathf.Abs(pos.x) >= Mathf.Abs(pos.z)) return pos.x < 0f ? "vor der Westmauer" : "vor der Ostmauer";
-            return pos.z > 0f ? "vor der Nordmauer" : "vor der Südmauer";
-        }
+        // Ortsangabe relativ zur Mauer der Map: Stadt „in der Stadt“ oder „vor der West-/Nord-/Süd-/Ostmauer“ (dominante Achse)
+        public static string LocationPhrase(Vector3 pos) => MapContext.Current.LocationPhrase(pos);
     }
 
     // Händlerstand vor der Stadtmauer (Ring zwischen Mauer und Außenrand). Wird vom MerchantManager zu Wellenbeginn

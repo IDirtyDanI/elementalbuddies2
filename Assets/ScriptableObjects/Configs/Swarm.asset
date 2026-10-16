@@ -23,6 +23,7 @@ MonoBehaviour:
   BaseHP: 22
   Speed: 5.2
   AttackDamage: 4
+  Role: 1
   Armor: 0
   BountyMultiplier: 0.35
   VisualScale: 0.6
@@ -43,3 +44,8 @@ MonoBehaviour:
   ThemeColor: {r: 1, g: 1, b: 1, a: 1}
   Icon: {fileID: 21300000, guid: 36b287de8b20f4157928d9878577809f, type: 3}
   PreviewHint: "Viele, schnell und schwach \u2013 Fl\xE4chenschaden hilft"
+  IsFlyer: 0
+  FlyHeight: 2
+  ObstacleClearance: 1.5
+  DiveHeight: 0.8
+  DeathClipDuration: 0

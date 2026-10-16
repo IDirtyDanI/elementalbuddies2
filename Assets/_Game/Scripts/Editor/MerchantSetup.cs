@@ -807,17 +807,24 @@ namespace ElementalBuddies.EditorTools
 
         // ---------------- NavMesh ----------------
 
-        // NavMeshSurface „Environment" neu backen und in Assets/NavMesh-Environment.asset kopieren (CopySerialized)
+        // NavMeshSurface „Environment" neu backen und in das NavMesh-Asset der Szene kopieren (CopySerialized).
+        // Pfad je Szene (MapEditorUtil.NavMeshAssetPath): Stadt = Assets/NavMesh-Environment.asset (GUID bleibt),
+        // andere Szenen = <Szenenordner>/<Szene>/NavMesh-Environment.asset (wird beim ersten Bake angelegt).
         public static string RebakeNavMesh()
         {
             Unity.AI.Navigation.NavMeshSurface surface = null;
             foreach (var srf in Object.FindObjectsByType<Unity.AI.Navigation.NavMeshSurface>(FindObjectsSortMode.None))
-                if (srf.name == "Environment") surface = srf;
+                if (srf.name == "Environment" && srf.agentTypeID == 0) surface = srf; // nicht die Rammen-Surface (#311)
             if (surface == null) return "NavMeshSurface 'Environment' fehlt";
-            const string assetPath = "Assets/NavMesh-Environment.asset";
+            string assetPath = MapEditorUtil.NavMeshAssetPath(surface.gameObject.scene, MapEditorUtil.EnvironmentNavMeshFile);
             var asset = AssetDatabase.LoadAssetAtPath<NavMeshData>(assetPath);
             surface.BuildNavMesh();
             var built = surface.navMeshData;
+            if (asset == null && built != null)
+            {
+                AssetDatabase.CreateAsset(Object.Instantiate(built), assetPath);
+                asset = AssetDatabase.LoadAssetAtPath<NavMeshData>(assetPath);
+            }
             if (asset != null && built != null && built != asset)
             {
                 EditorUtility.CopySerialized(built, asset);

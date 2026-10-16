@@ -490,16 +490,18 @@ namespace ElementalBuddies
             if (useCache && _reachCache.TryGetValue(cell, out bool cached)) return cached;
 
             bool reachable = false;
-            if (UnityEngine.AI.NavMesh.SamplePosition(position, out var hit, MaxReachDistance + 1f, UnityEngine.AI.NavMesh.AllAreas))
+            // nur das NavMesh der normalen Gegner (Agententyp 0) – sonst landen Punkte auf dem Rammen-NavMesh (#312)
+            var filter = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = UnityEngine.AI.NavMesh.AllAreas };
+            if (UnityEngine.AI.NavMesh.SamplePosition(position, out var hit, MaxReachDistance + 1f, filter))
             {
                 Vector3 d = hit.position - position;
                 d.y = 0f;
                 Vector3 nexusPoint = nexus.GetClosestPoint(hit.position);
                 if (d.magnitude <= MaxReachDistance
-                    && UnityEngine.AI.NavMesh.SamplePosition(nexusPoint, out var nexusHit, 4f, UnityEngine.AI.NavMesh.AllAreas))
+                    && UnityEngine.AI.NavMesh.SamplePosition(nexusPoint, out var nexusHit, 4f, filter))
                 {
                     if (_reachPath == null) _reachPath = new UnityEngine.AI.NavMeshPath();
-                    reachable = UnityEngine.AI.NavMesh.CalculatePath(hit.position, nexusHit.position, UnityEngine.AI.NavMesh.AllAreas, _reachPath)
+                    reachable = UnityEngine.AI.NavMesh.CalculatePath(hit.position, nexusHit.position, filter, _reachPath)
                                 && _reachPath.status == UnityEngine.AI.NavMeshPathStatus.PathComplete;
                 }
             }

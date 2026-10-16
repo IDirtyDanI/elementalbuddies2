@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed4bacb370b7449b099ed0070d028015, type: 3}
+  m_Name: Theme_Forest
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.EnemyThemeSO
+  Id: forest
+  DisplayName: Goblins & Orks
+  Roles:
+  - Role: 0
+    Config: {fileID: 11400000, guid: 22cf158a81ffe401ea74756819114fcf, type: 2}
+  - Role: 1
+    Config: {fileID: 11400000, guid: f4b8c47513b9e43acb952e05e7b4c096, type: 2}
+  - Role: 2
+    Config: {fileID: 11400000, guid: 5d8f372d97b3a4e63a8f39c722268867, type: 2}
+  - Role: 3
+    Config: {fileID: 11400000, guid: 6a104f15deb1445a6aa5175a9c1a4337, type: 2}
+  - Role: 4
+    Config: {fileID: 11400000, guid: d641be05c1cfc4dc8805aa651a1bbd32, type: 2}
+  - Role: 6
+    Config: {fileID: 11400000, guid: 5b474ce3eb1854a119797d1083511fb9, type: 2}
+  - Role: 7
+    Config: {fileID: 11400000, guid: 3dc92972c2b3d4c278d7d3ad34eed581, type: 2}
+  - Role: 8
+    Config: {fileID: 11400000, guid: 8384f39a986124512ab69d08e475d1ad, type: 2}
+  - Role: 9
+    Config: {fileID: 11400000, guid: f099166b0b5524675b0f6ffbb75310d3, type: 2}
+  - Role: 5
+    Config: {fileID: 11400000, guid: 55541123a9dd1427fa7455991d8d80a2, type: 2}
+  BossSpawnSfx: 72

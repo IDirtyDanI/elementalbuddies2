@@ -28,7 +28,7 @@ namespace ElementalBuddies.EditorTools
         // Sprint 3 (Draft & Eliten)
         public const string FrostShatterPath = PrefabDir + "VFX_FrostShatter.prefab";
         public const string EliteAuraPath = PrefabDir + "VFX_EliteAura.prefab";
-        private const string GameScene = "Assets/test.unity";
+        private const string GameScene = MapEditorUtil.CityScenePath; // Stadt (Walddorf P0: eine Konstante)
         private const string MenuScene = "Assets/Scenes/MainMenu.unity";
 
         [MenuItem("BuddyTD/Game Feel/Einrichten (Sounds, VFX, Szene)")]
@@ -51,6 +51,27 @@ namespace ElementalBuddies.EditorTools
             SetupScene();
             AssetDatabase.SaveAssets();
             Debug.Log("GameFeelSetup: Sounds zugewiesen.");
+        }
+
+        // Nur Audio ins Kern-Prefab Prefabs/Core/Managers.prefab (gilt für Stadt und Walddorf, #260) – öffnet/speichert keine Szene
+        [MenuItem("BuddyTD/Game Feel/Sounds ins Managers-Prefab (ohne Szenen)")]
+        public static void SetupSoundsInManagersPrefabMenu() => Debug.Log(SetupSoundsInManagersPrefab());
+
+        public const string ManagersPrefabPath = "Assets/_Game/Prefabs/Core/Managers.prefab";
+
+        public static string SetupSoundsInManagersPrefab()
+        {
+            ImportAudio();
+            var root = PrefabUtility.LoadPrefabContents(ManagersPrefabPath);
+            int n = 0;
+            try
+            {
+                foreach (var ga in root.GetComponentsInChildren<GameAudio>(true)) { AssignGameAudio(ga); n++; }
+                if (n > 0) PrefabUtility.SaveAsPrefabAsset(root, ManagersPrefabPath);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+            AssetDatabase.SaveAssets();
+            return $"GameFeelSetup: Sounds in {ManagersPrefabPath} zugewiesen ({n} GameAudio).";
         }
 
         [MenuItem("BuddyTD/Game Feel/Nur VFX neu bauen")]
@@ -173,6 +194,23 @@ namespace ElementalBuddies.EditorTools
             yield return new Sfx(SfxId.LeapLand, 0.65f, 0.3f, P, "leap_land");
             yield return new Sfx(SfxId.WarRoar, 0.7f, 1f, new Vector2(0.97f, 1.03f), "war_roar");
             yield return new Sfx(SfxId.RageFull, 0.55f, 1f, PFix, "rage_full");
+            // Walddorf (2026-10-16, Etappe 3): Pegel wie die Untoten-Gegenstücke (Kategorie in synth_sfx.py), Zuordnung über
+            // EnemyConfigSO (MeleeHitSfx/AttackSfx/DeathSfx/SpawnSfx, ForestAudioSetup) und Theme_Forest.BossSpawnSfx
+            yield return new Sfx(SfxId.OrkGrunt, 0.42f, 0.05f, P, "ork_grunt");              // wie EnemyChop
+            yield return new Sfx(SfxId.OrkDeath, 0.42f, 0.08f, P, "ork_death");              // wie EnemyDeath
+            yield return new Sfx(SfxId.OrkWarcry, 0.85f, 2f, PFix, "ork_warcry");            // Boss-Ankündigung (BossSpawn 0,9)
+            yield return new Sfx(SfxId.GoblinStab, 0.36f, 0.04f, PWide, "goblin_stab");      // wie EnemyClaw
+            yield return new Sfx(SfxId.GoblinScreech, 0.38f, 0.07f, PWide, "goblin_screech_1", "goblin_screech_2");
+            yield return new Sfx(SfxId.GoblinBowShot, 0.4f, 0.05f, P, "goblin_bow");
+            yield return new Sfx(SfxId.WolfHowl, 0.5f, 6f, new Vector2(0.97f, 1.03f), "wolf_howl"); // einmal je Rudel
+            yield return new Sfx(SfxId.WolfBite, 0.34f, 0.04f, PWide, "wolf_bite");
+            yield return new Sfx(SfxId.WolfYelp, 0.36f, 0.07f, PWide, "wolf_yelp");
+            yield return new Sfx(SfxId.SpiderBite, 0.34f, 0.04f, PWide, "spider_bite");
+            yield return new Sfx(SfxId.SpiderDeath, 0.42f, 0.06f, PWide, "spider_death");
+            yield return new Sfx(SfxId.WyvernScreech, 0.45f, 1.5f, PWide, "wyvern_screech");
+            yield return new Sfx(SfxId.WingFlap, 0.38f, 0.15f, PWide, "wing_flap");
+            yield return new Sfx(SfxId.BatScreech, 0.42f, 1f, PWide, "bat_screech");
+            yield return new Sfx(SfxId.BatFlap, 0.34f, 0.12f, PWide, "bat_flap");
         }
 
         private static void AssignGameAudio(GameAudio ga)

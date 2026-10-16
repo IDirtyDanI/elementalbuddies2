@@ -425,6 +425,42 @@ namespace ElementalBuddies
         // "2er-Fusionen gesperrt – Erfolg „Zwillingskraft“ auf Normal oder höher: …" (gespielte Stufe)
         public static string LockText(UnlockId id) => $"{GetUnlockName(id)} gesperrt – {RequirementText(id, SnapshotRank)}";
 
+        // ---------------- Maps (Walddorf, Paket C-Menü) ----------------
+
+        // Map freigeschaltet? UnlockAchievementId leer = immer frei, sonst der Erfolg auf irgendeiner Stufe (persistent,
+        // Hauptmenü). Walddorf: "dawn" (Morgengrauen). DevTools-Session-Override zählt nicht (Menü zeigt den echten Stand).
+        public static bool IsMapUnlocked(MapDefinitionSO map) =>
+            map != null && (string.IsNullOrEmpty(map.UnlockAchievementId) || AchievedRank(map.UnlockAchievementId) > 0);
+
+        // Kurzform der Freischalt-Bedingung einer gesperrten Map (Hinweiszeile/Kachel im Hauptmenü)
+        public static string MapGoalText(MapDefinitionSO map)
+        {
+            if (map == null || string.IsNullOrEmpty(map.UnlockAchievementId)) return "";
+            if (map.UnlockAchievementId == "dawn")
+            {
+                var city = MapRegistry.Find(MapDefinitionSO.CityId);
+                return "Erreiche das Morgengrauen auf der " + (city != null ? city.DisplayName : "Stadt") + "-Map";
+            }
+            var a = Database != null ? Database.Find(map.UnlockAchievementId) : null;
+            return a != null ? "Erfolg „" + a.Title + "“: " + AchievementDatabaseSO.GetGoalText(a) : "Erfolg „" + map.UnlockAchievementId + "“";
+        }
+
+        // Präfix der map-eigenen Rekord-Schlüssel (BestWave, siege_won, siege_best_<n>): Stadt leer (alte Schlüssel),
+        // sonst MapDefinitionSO.RecordKeyPrefix bzw. – falls dort nichts steht – "<Id>_", damit Maps nie Schlüssel teilen.
+        // map == null → Map der laufenden Szene (MapContext.Current; im Menü die Stadt).
+        public static string RecordPrefix(MapDefinitionSO map)
+        {
+            if (map == null) map = MapContext.Current;
+            if (map == null) return "";
+            if (!string.IsNullOrEmpty(map.RecordKeyPrefix)) return map.RecordKeyPrefix;
+            return string.IsNullOrEmpty(map.Id) || map.Id == MapDefinitionSO.CityId ? "" : map.Id + "_";
+        }
+
+        public static string RecordKey(MapDefinitionSO map, string key) => RecordPrefix(map) + key;
+
+        // Beste Welle des GameManagers auf dieser Map (Menü/Statusbericht)
+        public static int BestWaveOnMap(MapDefinitionSO map) => PlayerPrefs.GetInt(RecordKey(map, BestWaveKey), 0);
+
         // ---------------- Bequeme Abfragen ----------------
 
         public static UnlockId ChampionUnlock(ChampionClass c) =>
@@ -516,7 +552,10 @@ namespace ElementalBuddies
             var sb = new System.Text.StringBuilder();
             sb.Append($"Erfolge (Format v{PlayerPrefs.GetInt(VersionKey, 1)}):");
             for (int r = RankEasy; r <= MaxRank; r++) sb.Append($" {RankName(r)} {AchievedCountFor(r)}/{All.Count}");
-            sb.AppendLine($" · Bestwelle {PlayerPrefs.GetInt(BestWaveKey, 0)}");
+            sb.Append(" · Bestwelle");
+            foreach (var m in MapRegistry.All)
+                sb.Append($" {m.DisplayName} {BestWaveOnMap(m)}{(IsMapUnlocked(m) ? "" : " (gesperrt)")}");
+            sb.AppendLine();
             for (int r = RankEasy; r <= MaxRank; r++)
                 sb.AppendLine($"  {RankName(r)}: Welle ohne Cheats {BestWaveReachedFor(r)} · Boss-Arten {BossKindsDefeatedFor(r)}/{(Database != null ? Database.BossKinds.Count : 0)}");
             foreach (var a in All)

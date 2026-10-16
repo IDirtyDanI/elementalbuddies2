@@ -1,0 +1,172 @@
+{
+ "model": "Ork_Faehrtenmeister",
+ "rig": "Generic",
+ "fps": 30,
+ "visualScale": 1.9,
+ "moveSpeedModel": 0.8947,
+ "deathDuration": 1.6,
+ "clips": [
+  {
+   "name": "Hunter_Idle",
+   "role": "idle",
+   "loop": true,
+   "frames": 48,
+   "hit": -1.0
+  },
+  {
+   "name": "Hunter_Run",
+   "role": "move",
+   "loop": true,
+   "frames": 30,
+   "hit": -1.0
+  },
+  {
+   "name": "Hunter_Attack",
+   "role": "attack",
+   "loop": false,
+   "frames": 40,
+   "hit": 0.35
+  },
+  {
+   "name": "Hunter_Shoot",
+   "role": "shoot",
+   "loop": false,
+   "frames": 60,
+   "hit": 1.0
+  },
+  {
+   "name": "Hunter_Die",
+   "role": "die",
+   "loop": false,
+   "frames": 40,
+   "hit": -1.0
+  }
+ ],
+ "triggers": [
+  {
+   "trigger": "Attack",
+   "clip": "Hunter_Attack"
+  },
+  {
+   "trigger": "Shoot",
+   "clip": "Hunter_Shoot"
+  },
+  {
+   "trigger": "Die",
+   "clip": "Hunter_Die"
+  }
+ ],
+ "materials": [
+  {
+   "name": "Ork_Skin",
+   "hex": "#5f7a3e",
+   "emission": 0.0
+  },
+  {
+   "name": "Ork_SkinDark",
+   "hex": "#465c2c",
+   "emission": 0.0
+  },
+  {
+   "name": "Boss_Eye_Hunter",
+   "hex": "#b066ff",
+   "emission": 3.0
+  },
+  {
+   "name": "Enemy_Tooth",
+   "hex": "#ede0bc",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Mouth",
+   "hex": "#3a1a16",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Leather",
+   "hex": "#7a4c2b",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_IronDark",
+   "hex": "#4c4f59",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_LeatherDark",
+   "hex": "#4f301c",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Iron",
+   "hex": "#8e939e",
+   "emission": 0.0
+  },
+  {
+   "name": "Ork_ClothDark",
+   "hex": "#561c17",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Rope",
+   "hex": "#b29464",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Horn",
+   "hex": "#d9c7a0",
+   "emission": 0.0
+  },
+  {
+   "name": "Hunter_HornDark",
+   "hex": "#8a7048",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_WoodDark",
+   "hex": "#5b3a22",
+   "emission": 0.0
+  },
+  {
+   "name": "Boss_Glow_Hunter",
+   "hex": "#9933ff",
+   "emission": 2.4
+  },
+  {
+   "name": "Hunter_Feather",
+   "hex": "#2c2236",
+   "emission": 0.0
+  },
+  {
+   "name": "Wolf_FurLight",
+   "hex": "#b5aa98",
+   "emission": 0.0
+  },
+  {
+   "name": "Wolf_FurDark",
+   "hex": "#4a4642",
+   "emission": 0.0
+  },
+  {
+   "name": "Wolf_Fur",
+   "hex": "#6f6a64",
+   "emission": 0.0
+  },
+  {
+   "name": "Wolf_Nose",
+   "hex": "#231c1a",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Claw",
+   "hex": "#2f2622",
+   "emission": 0.0
+  }
+ ],
+ "tris": 2848,
+ "releaseModel": [
+  0.034,
+  -0.196,
+  1.503
+ ]
+}

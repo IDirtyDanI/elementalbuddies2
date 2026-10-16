@@ -1,0 +1,121 @@
+{
+ "model": "Goblin_Bogenschuetze",
+ "rig": "Generic",
+ "fps": 30,
+ "visualScale": 1.0,
+ "moveSpeedModel": 3.0,
+ "deathDuration": 1.05,
+ "clips": [
+  {
+   "name": "GobArcher_Idle",
+   "role": "idle",
+   "loop": true,
+   "frames": 48,
+   "hit": -1.0
+  },
+  {
+   "name": "GobArcher_Run",
+   "role": "move",
+   "loop": true,
+   "frames": 12,
+   "hit": -1.0
+  },
+  {
+   "name": "GobArcher_Shoot",
+   "role": "attack",
+   "loop": false,
+   "frames": 40,
+   "hit": 0.35
+  },
+  {
+   "name": "GobArcher_Die",
+   "role": "die",
+   "loop": false,
+   "frames": 25,
+   "hit": -1.0
+  }
+ ],
+ "materials": [
+  {
+   "name": "Gob_Cloth",
+   "hex": "#8a6a3e",
+   "emission": 0.0
+  },
+  {
+   "name": "Gob_Skin",
+   "hex": "#7fa04a",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_LeatherDark",
+   "hex": "#4f301c",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Iron",
+   "hex": "#8e939e",
+   "emission": 0.0
+  },
+  {
+   "name": "Gob_SkinDark",
+   "hex": "#5f7d35",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Eye",
+   "hex": "#ffd24a",
+   "emission": 2.5
+  },
+  {
+   "name": "Enemy_Mouth",
+   "hex": "#3a1a16",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Tooth",
+   "hex": "#ede0bc",
+   "emission": 0.0
+  },
+  {
+   "name": "Gob_EarInner",
+   "hex": "#b4805e",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Leather",
+   "hex": "#7a4c2b",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Claw",
+   "hex": "#2f2622",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Rope",
+   "hex": "#b29464",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Wood",
+   "hex": "#865934",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Horn",
+   "hex": "#d9c7a0",
+   "emission": 0.0
+  },
+  {
+   "name": "Ork_Cloth",
+   "hex": "#7d2a22",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Burlap",
+   "hex": "#a68a5e",
+   "emission": 0.0
+  }
+ ],
+ "tris": 1658
+}

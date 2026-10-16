@@ -19,7 +19,7 @@ namespace ElementalBuddies.EditorTools
         private const string UpgradeDir = "Assets/ScriptableObjects/Upgrades/";
         private const string DraftDir = UpgradeDir + "Draft/";
         private const string IconDir = "Assets/_Game/UI/Icons/";
-        private const string GameScene = "Assets/test.unity";
+        private const string GameScene = MapEditorUtil.CityScenePath; // Stadt (Walddorf P0: eine Konstante)
 
         private class Def
         {

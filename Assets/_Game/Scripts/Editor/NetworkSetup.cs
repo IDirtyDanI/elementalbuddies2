@@ -30,7 +30,7 @@ namespace ElementalBuddies.EditorTools
         public const string NetPlayerPath = PrefabRoot + "/Net/NetPlayer.prefab";
         public const string ManagerPath = "Assets/Resources/Net/NetworkManager.prefab";
         public const string PlayerPrefabPath = PrefabRoot + "/Player.prefab";
-        public const string GameScenePath = "Assets/test.unity";
+        public const string GameScenePath = MapEditorUtil.CityScenePath; // Stadt (Walddorf P0: eine Konstante)
 
         [MenuItem("BuddyTD/Netzwerk/Einrichten (alles)")]
         public static void SetupAll()

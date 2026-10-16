@@ -1,0 +1,3 @@
+name,kind,x,z,yaw,length,width,prefab
+Hauptbruecke,bridge,-18.000,0.000,90,8.000,6.000,Assets/_Game/Prefabs/Village/Dorf_Bruecke.prefab
+Steg,steg,-19.000,-10.750,90,7.000,2.500,Assets/_Game/Prefabs/Village/Dorf_Steg.prefab

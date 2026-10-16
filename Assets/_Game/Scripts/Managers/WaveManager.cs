@@ -19,9 +19,12 @@ namespace ElementalBuddies
         [Tooltip("0 = jede Welle ab StartWave; n > 0 = nur jede n-te Welle (StartWave, StartWave + n, …), z. B. Bosse.")]
         public int EveryNthWave = 0;
 
-        public int GetCount(int waveNumber)
+        public int GetCount(int waveNumber) => Config == null ? 0 : CountFor(waveNumber);
+
+        // Anzahl ohne Config-Prüfung (Rollen-Gruppen wie der Flieger holen die Config erst aus dem Theme)
+        public int CountFor(int waveNumber)
         {
-            if (Config == null || waveNumber < StartWave) return 0;
+            if (waveNumber < StartWave) return 0;
             if (EveryNthWave > 0 && (waveNumber - StartWave) % EveryNthWave != 0) return 0;
             return Mathf.Max(0, BaseCount + Mathf.FloorToInt(PerWave * (waveNumber - StartWave)));
         }
@@ -49,6 +52,13 @@ namespace ElementalBuddies
         public List<ExtraEnemyGroup> ExtraGroups = new List<ExtraEnemyGroup>();
         [Tooltip("Alle Gruppen einer Welle spawnen parallel; Gruppe i startet i × diesen Versatz (s) nach dem StartDelay.")]
         public float GroupStartOffset = 2f;
+
+        [Header("Flieger (Walddorf-Plan, Rolle Flyer)")]
+        [Tooltip("Zusatzgruppe der Rolle Flyer, hinter den ExtraGroups angehängt. Config leer = Flieger des Map-Themes " +
+                 "(Stadt: Riesen-Fledermaus, Dorf: Mini-Wyvern); hat das Theme keinen Flieger, entfällt die Gruppe.")]
+        public ExtraEnemyGroup FlyerGroup = new ExtraEnemyGroup { StartWave = 9, BaseCount = 2, PerWave = 0.4f, SpawnInterval = 2.5f };
+        [Tooltip("Höchstens so viele Flieger gleichzeitig am Leben – weitere Flieger-Spawns warten (Lesbarkeit/Leistung). 0 = kein Deckel.")]
+        public int MaxFlyersAlive = 24;
 
         [Header("Balancing – Gegner-HP")]
         [Tooltip("HP Normalgegner: BaseHP · (1 + HpLinearPerWave·(w−1)) · HpGrowthPerWave^(w−1). Linearer Anteil.")]
@@ -121,6 +131,42 @@ namespace ElementalBuddies
         public float HpPerExtraPlayer = 0.25f;
         [Tooltip("Boss-HP × (1 + BossHpPerExtraPlayer·(n−1)).")]
         public float BossHpPerExtraPlayer = 0.6f;
+
+        // ---------------- Gegner-Theme der Map ----------------
+
+        // Tests/Dev: erzwingt ein Theme (null = Theme der Map aus MapContext). Setzen leert die Wellen-Caches.
+        public EnemyThemeSO ThemeOverride
+        {
+            get => _themeOverride;
+            set { _themeOverride = value; _bossWaveCache.Clear(); }
+        }
+        private EnemyThemeSO _themeOverride;
+
+        // Gegner-Theme dieses Spiels (null = Identität)
+        public EnemyThemeSO ActiveTheme
+        {
+            get
+            {
+                if (_themeOverride != null) return _themeOverride;
+                var map = MapContext.Current;
+                return map != null ? map.Theme : null;
+            }
+        }
+
+        // Kanonische Config (Wellen-Assets, ExtraGroups, RamConfig, Angreifer) → Config des aktiven Themes (gleiche Rolle)
+        public EnemyConfigSO ResolveConfig(EnemyConfigSO config) => EnemyThemeSO.Resolve(ActiveTheme, config);
+
+        // Config der Flieger-Gruppe: eigene (aufgelöst) oder der Flieger des Themes; null = keine Flieger
+        public EnemyConfigSO FlyerConfig
+        {
+            get
+            {
+                if (FlyerGroup == null) return null;
+                if (FlyerGroup.Config != null) return ResolveConfig(FlyerGroup.Config);
+                var theme = ActiveTheme;
+                return theme != null ? theme.ConfigFor(EnemyRole.Flyer) : null;
+            }
+        }
 
         // Spielerzahl-Faktor: 1 + perPlayer·(n−1)
         private static float PlayerFactor(float perPlayer) => 1f + Mathf.Max(0f, perPlayer) * Mathf.Max(0, Net.PlayerCount - 1);
@@ -328,7 +374,10 @@ namespace ElementalBuddies
         {
             if (boss == null) return;
             ToastUI.Show($"{boss.DisplayName} ist erschienen!");
-            GameAudio.Play(GameAudio.Has(SfxId.BossSpawn) ? SfxId.BossSpawn : SfxId.StoneWall);
+            var theme = ActiveTheme;
+            SfxId sfx = theme != null ? theme.BossSpawnSfx : SfxId.BossSpawn;
+            if (!GameAudio.Has(sfx)) sfx = GameAudio.Has(SfxId.BossSpawn) ? SfxId.BossSpawn : SfxId.StoneWall;
+            GameAudio.Play(sfx);
         }
 
         private bool IsGameOver => GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
@@ -568,19 +617,28 @@ namespace ElementalBuddies
             return copy;
         }
 
-        // Hängt alle Zusatzgruppen mit StartWave <= waveNumber an (auf einer Kopie)
+        // Hängt alle Zusatzgruppen mit StartWave <= waveNumber an (auf einer Kopie), danach die Flieger-Gruppe
         private WaveConfigSO AddExtraGroups(WaveConfigSO wave, int waveNumber)
         {
-            if (ExtraGroups == null || ExtraGroups.Count == 0) return wave;
-
             WaveConfigSO copy = null;
-            foreach (var extra in ExtraGroups)
+            if (ExtraGroups != null)
+                foreach (var extra in ExtraGroups)
+                {
+                    if (extra == null) continue;
+                    int count = extra.GetCount(waveNumber);
+                    if (count <= 0) continue;
+                    if (copy == null) copy = CopyWave(wave);
+                    copy.EnemiesToSpawn.Add(new EnemySpawnInfo { EnemyType = extra.Config, Count = count, SpawnInterval = Mathf.Max(0.05f, extra.SpawnInterval) });
+                }
+            int flyers = FlyerGroup != null ? FlyerGroup.CountFor(waveNumber) : 0;
+            if (flyers > 0)
             {
-                if (extra == null) continue;
-                int count = extra.GetCount(waveNumber);
-                if (count <= 0) continue;
-                if (copy == null) copy = CopyWave(wave);
-                copy.EnemiesToSpawn.Add(new EnemySpawnInfo { EnemyType = extra.Config, Count = count, SpawnInterval = Mathf.Max(0.05f, extra.SpawnInterval) });
+                var cfg = FlyerConfig;
+                if (cfg != null)
+                {
+                    if (copy == null) copy = CopyWave(wave);
+                    copy.EnemiesToSpawn.Add(new EnemySpawnInfo { EnemyType = cfg, Count = flyers, SpawnInterval = Mathf.Max(0.05f, FlyerGroup.SpawnInterval) });
+                }
             }
             return copy != null ? copy : wave;
         }
@@ -614,7 +672,8 @@ namespace ElementalBuddies
             foreach (var g in wave.EnemiesToSpawn)
             {
                 if (g == null) continue;
-                var copy = new EnemySpawnInfo { EnemyType = g.EnemyType, Count = g.Count, SpawnInterval = g.SpawnInterval };
+                // Theme-Auflösung: gleiche Rolle → gleiche Werte (ThemeParityTests), Anzahlen/Rampe bleiben gleich
+                var copy = new EnemySpawnInfo { EnemyType = ResolveConfig(g.EnemyType), Count = g.Count, SpawnInterval = g.SpawnInterval };
                 bool boss = g.EnemyType != null && g.EnemyType.IsBoss;
                 if (!boss && g.Count > 0)
                 {
@@ -747,9 +806,16 @@ namespace ElementalBuddies
         private IEnumerator SpawnGroupRoutine(EnemySpawnInfo group, float delay)
         {
             if (delay > 0f) yield return new WaitForSeconds(delay);
+            bool flyer = group.EnemyType != null && group.EnemyType.Role == EnemyRole.Flyer;
             for (int i = 0; i < group.Count; i++)
             {
                 if (IsGameOver) yield break;
+                // Flieger-Deckel: warten, bis wieder Platz ist (Wellenende hängt nur an EnemiesRemaining)
+                while (flyer && MaxFlyersAlive > 0 && AliveFlyers() >= MaxFlyersAlive)
+                {
+                    yield return new WaitForSeconds(0.5f);
+                    if (IsGameOver) yield break;
+                }
                 SpawnEnemy(group.EnemyType);
                 // Nach dem letzten Gegner nicht mehr warten: sonst läuft die Routine über das Wellenende hinaus und
                 // zählt _spawnRoutinesRunning der NÄCHSTEN Welle herunter → Sicherheitsnetz beendet sie zu früh.
@@ -787,6 +853,7 @@ namespace ElementalBuddies
 
         private void SpawnEnemy(EnemyConfigSO config)
         {
+            config = ResolveConfig(config);
             if (!TryGetSpawnPose(out Vector3 pos, out Quaternion rot))
             {
                 Debug.LogError("WaveManager: No SpawnPortal and no SpawnPoints – cannot spawn!");
@@ -813,6 +880,12 @@ namespace ElementalBuddies
         private EnemyBrain InstantiateEnemy(EnemyConfigSO config, Vector3 pos, Quaternion rot, float hpMultiplier, EliteAffix elite = EliteAffix.None)
         {
             if (!Net.IsServer) return null;
+            config = ResolveConfig(config); // einzige Stelle für alle Spawn-Pfade (idempotent)
+            if (config == null || config.Prefab == null)
+            {
+                Debug.LogError("WaveManager: Theme-Config ohne Prefab: " + (config != null ? config.name : "null"));
+                return null;
+            }
             GameObject go = Instantiate(config.Prefab, pos, rot);
             var brain = go.GetComponent<EnemyBrain>();
             if (brain != null)
@@ -825,6 +898,7 @@ namespace ElementalBuddies
             // HP-NetworkVariables setzt EnemyNet.OnNetworkSpawn (vor dem Spawn geschrieben warnt Netcode)
             var no = go.GetComponent<Unity.Netcode.NetworkObject>();
             if (no != null && Net.IsRunning) no.Spawn(true);
+            if (brain != null && config.Role == EnemyRole.Flyer) _flyers.Add(brain);
             if (brain != null) OnEnemySpawned?.Invoke(brain);
             return brain;
         }
@@ -837,6 +911,7 @@ namespace ElementalBuddies
         public EnemyBrain SpawnEnemyAt(EnemyConfigSO config, Vector3 position, float hpMultiplier = -1f, bool countTowardWave = true, EliteAffix elite = EliteAffix.None)
         {
             if (!Net.IsServer || IsGameOver) return null;
+            config = ResolveConfig(config);
             if (config == null || config.Prefab == null)
             {
                 Debug.LogError("WaveManager.SpawnEnemyAt: Config or Prefab missing!");
@@ -863,8 +938,16 @@ namespace ElementalBuddies
             var wave = Waves[Mathf.Clamp(CurrentWaveIndex, 0, Waves.Count - 1)];
             if (wave == null || wave.EnemiesToSpawn == null) return null;
             foreach (var g in wave.EnemiesToSpawn)
-                if (g != null && g.EnemyType != null && g.EnemyType.Prefab != null) return g.EnemyType;
+                if (g != null && g.EnemyType != null && g.EnemyType.Prefab != null) return ResolveConfig(g.EnemyType);
             return null;
+        }
+
+        // Lebende Flieger (Server; zerstörte/tote Einträge werden ausgeräumt)
+        private readonly List<EnemyBrain> _flyers = new List<EnemyBrain>();
+        public int AliveFlyers()
+        {
+            _flyers.RemoveAll(b => b == null || b.IsDead);
+            return _flyers.Count;
         }
 
         private void HandleEnemyDeath()

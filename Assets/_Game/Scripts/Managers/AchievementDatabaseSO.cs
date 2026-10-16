@@ -136,14 +136,36 @@ namespace ElementalBuddies
             return result;
         }
 
-        // -1, wenn der Config-Name zu keiner bekannten Boss-Art passt
+        // -1, wenn der Config-Name zu keiner bekannten Boss-Art passt. Walddorf: Boss-Configs anderer Themes zählen über
+        // ihre Rolle als dieselbe Art wie der kanonische Untoten-Boss (Ork-Kriegsherr = Knochenfürst, Goblin-Schamane =
+        // Nekromant, Ork-Fährtenmeister = Totenjäger) → Bits und gespeicherte Bitmaske bleiben unverändert.
         public int GetBossKindIndex(EnemyConfigSO config)
         {
             if (config == null || BossKinds == null) return -1;
-            string n = config.name;
+            int i = IndexOfKind(config.name);
+            if (i >= 0 || !config.IsBoss) return i;
+            string canonical = CanonicalBossKind(config.Role);
+            return canonical != null ? IndexOfKind(canonical) : -1;
+        }
+
+        private int IndexOfKind(string configName)
+        {
+            if (string.IsNullOrEmpty(configName)) return -1;
             for (int i = 0; i < BossKinds.Count; i++)
-                if (!string.IsNullOrEmpty(BossKinds[i]) && n.IndexOf(BossKinds[i], StringComparison.OrdinalIgnoreCase) >= 0) return i;
+                if (!string.IsNullOrEmpty(BossKinds[i]) && configName.IndexOf(BossKinds[i], StringComparison.OrdinalIgnoreCase) >= 0) return i;
             return -1;
+        }
+
+        // Kanonischer Boss-Art-Name (Teil des Untoten-Config-Namens) je Boss-Rolle; null = keine Boss-Rolle
+        public static string CanonicalBossKind(EnemyRole role)
+        {
+            switch (role)
+            {
+                case EnemyRole.BossMelee: return "BossBoneLord";
+                case EnemyRole.BossCaster: return "BossNecromancer";
+                case EnemyRole.BossHunter: return "BossDeathHunter";
+                default: return null;
+            }
         }
 
         public string GetBossKindName(int index) =>

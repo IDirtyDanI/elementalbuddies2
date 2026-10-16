@@ -26,7 +26,7 @@ namespace ElementalBuddies.EditorTools
         private const string ModelDir = "Assets/_Game/Models/Vegetation/";
         private const string MatDir = ModelDir + "Materials/";
         private const string PrefabDir = "Assets/_Game/Prefabs/Vegetation/";
-        private const string ScenePath = "Assets/test.unity";
+        private const string ScenePath = MapEditorUtil.CityScenePath; // Stadt (Walddorf P0: eine Konstante)
         private const float WallHalf = 35f;          // Stadtmauer bei ±35
         private const int IgnoreRaycastLayer = 2;    // Kronen-Volumen: nicht in ObstacleLayer, nicht im Standard-Raycast
 

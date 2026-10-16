@@ -49,6 +49,13 @@ MonoBehaviour:
     Description: "Jagt Buddies \u2013 Erde-Buddy lenkt sie per Spott ab"
     Icon: {fileID: 21300000, guid: 306d96dc376264f84b486b95965413f5, type: 3}
     Extra: 
+  - Key: enemy:Flyer_Bat
+    Category: 0
+    Title: Riesen-Fledermaus
+    Description: "Fliegt \xFCber H\xE4user und Buddies direkt zum Nexus \u2013 st\xF6\xDFt
+      zum Angriff herab"
+    Icon: {fileID: 21300000, guid: 96065a25a18324af282af040c8d677c0, type: 3}
+    Extra: 
   - Key: enemy:BossNecromancer
     Category: 1
     Title: Nekromant
@@ -60,6 +67,61 @@ MonoBehaviour:
     Title: "Totenj\xE4ger"
     Description: "Fernkampf-Boss mit Pfeilhagel \u2013 in Bewegung bleiben"
     Icon: {fileID: 21300000, guid: 61fc27d2875404de386e888be3b77af1, type: 3}
+    Extra: Boss
+  - Key: enemy:Goblin_Pluenderer
+    Category: 0
+    Title: "Goblin-Pl\xFCnderer"
+    Description: "L\xE4uft direkt zum Nexus"
+    Icon: {fileID: 21300000, guid: c2899d62d0689402c83c9b5bfbbf7de6, type: 3}
+    Extra: 
+  - Key: enemy:Wolf
+    Category: 0
+    Title: Wolf
+    Description: "Viele, schnell und schwach \u2013 Fl\xE4chenschaden hilft"
+    Icon: {fileID: 21300000, guid: b58689d5d4f2f46d1a090ba6b09c305e, type: 3}
+    Extra: 
+  - Key: enemy:Goblin_Bogenschuetze
+    Category: 0
+    Title: "Goblin-Bogensch\xFCtze"
+    Description: "Fernkampf \u2013 beschie\xDFt Buddies"
+    Icon: {fileID: 21300000, guid: dfd62213c77b047cebefedc42cb9556f, type: 3}
+    Extra: 
+  - Key: enemy:Ork_Krieger
+    Category: 0
+    Title: Ork-Krieger
+    Description: "Gepanzert (\u2212Schaden), greift Buddies im Weg an"
+    Icon: {fileID: 21300000, guid: b63c988dad8f340aa86393c6e07708aa, type: 3}
+    Extra: "R\xFCstung 50 %"
+  - Key: enemy:Ork_Kriegsherr
+    Category: 1
+    Title: Ork-Kriegsherr
+    Description: "Nahkampf-Boss: Kriegsstampfer \u2013 aus den roten Fl\xE4chen gehen"
+    Icon: {fileID: 21300000, guid: 27cfb4c62d7e44db3b7df1b410c6567b, type: 3}
+    Extra: Boss
+  - Key: enemy:Waldspinne
+    Category: 0
+    Title: Waldspinne
+    Description: "Jagt Buddies \u2013 Erde-Buddy lenkt sie per Spott ab"
+    Icon: {fileID: 21300000, guid: 4fd8c35e49b6b4dafb568166f44f95c0, type: 3}
+    Extra: 
+  - Key: enemy:Flyer_Wyvern
+    Category: 0
+    Title: Mini-Wyvern
+    Description: "Fliegt \xFCber H\xE4user und Buddies direkt zum Nexus \u2013 st\xF6\xDFt
+      zum Angriff herab"
+    Icon: {fileID: 21300000, guid: 8e5bd9faa8a8543689bfcae71f28f600, type: 3}
+    Extra: 
+  - Key: enemy:Goblin_Schamane
+    Category: 1
+    Title: Goblin-Schamane
+    Description: "Beschw\xF6rt Diener und heilt sie \u2013 zuerst ausschalten"
+    Icon: {fileID: 21300000, guid: 7522af3cb262b4c55b9bedb61be5d915, type: 3}
+    Extra: Boss
+  - Key: enemy:Ork_Faehrtenmeister
+    Category: 1
+    Title: "Ork-F\xE4hrtenmeister"
+    Description: "Fernkampf-Boss mit Speerhagel \u2013 in Bewegung bleiben"
+    Icon: {fileID: 21300000, guid: 585624df310284bf58e9d4ea5e4f3ca9, type: 3}
     Extra: Boss
   - Key: elite:Fireproof
     Category: 2

@@ -23,6 +23,7 @@ MonoBehaviour:
   BaseHP: 75
   Speed: 4.6
   AttackDamage: 16
+  Role: 4
   Armor: 0
   BountyMultiplier: 2
   VisualScale: 1
@@ -43,3 +44,8 @@ MonoBehaviour:
   ThemeColor: {r: 1, g: 1, b: 1, a: 1}
   Icon: {fileID: 21300000, guid: 306d96dc376264f84b486b95965413f5, type: 3}
   PreviewHint: "Jagt Buddies \u2013 Erde-Buddy lenkt sie per Spott ab"
+  IsFlyer: 0
+  FlyHeight: 2
+  ObstacleClearance: 1.5
+  DiveHeight: 0.8
+  DeathClipDuration: 0

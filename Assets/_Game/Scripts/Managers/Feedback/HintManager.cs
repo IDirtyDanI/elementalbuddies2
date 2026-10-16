@@ -100,7 +100,7 @@ namespace ElementalBuddies
         private void HandleMerchant(Merchant m)
         {
             // Stände liegen draußen vor der Stadtmauer – der Pfeil am Bildschirmrand (OffscreenIndicatorUI) führt hin
-            string where = m == null ? "vor der Stadtmauer"
+            string where = m == null ? MapContext.Current.OutsideWallPhrase
                 : MerchantInfo.IsInsideCity(m.transform.position) ? m.LocationPhrase : $"draußen {m.LocationPhrase}";
             Show("merchant", $"Ein <b>Händler</b> hat seinen Stand {where} geöffnet – der Pfeil am Bildschirmrand zeigt den Weg. Nimm ihn ein wie einen Schrein; mit Gold kaufst du dort Verbesserungen für deine Fähigkeiten.");
         }
@@ -120,7 +120,7 @@ namespace ElementalBuddies
 
         // Texte mit Tasten nennen die aktuelle Belegung (KeyBindings), Standard 1–4 bzw. WASD/LMB/RMB/R/F/C/V
         private static string BuildText =>
-            $"Bau <b>Buddies</b> mit {BuildKeys()} (oder unten anklicken) und klick auf den Boden. Sie verteidigen die Stadt für dich – platzieren geht nur zwischen den Wellen.";
+            $"Bau <b>Buddies</b> mit {BuildKeys()} (oder unten anklicken) und klick auf den Boden. Sie verteidigen " + MapContext.Current.SettlementNoun + " für dich – platzieren geht nur zwischen den Wellen.";
 
         private static string BuildKeys()
         {

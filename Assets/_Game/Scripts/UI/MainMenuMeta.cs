@@ -172,9 +172,12 @@ namespace ElementalBuddies
             return t;
         }
 
+        // Map, deren Belagerungsstufen/Rekorde die Leiste zeigt (pro Map getrennt): die im Menü gewählte
+        private MapDefinitionSO Map => _menu != null ? _menu.SelectedMap : GameSession.Map;
+
         private void ChangeSiege(int delta)
         {
-            int max = SiegeLevels.MaxSelectable;
+            int max = SiegeLevels.MaxSelectableOn(Map);
             int lvl = Mathf.Clamp(GameSession.SiegeLevel + delta, 0, max);
             if (lvl == GameSession.SiegeLevel) return;
             GameSession.SiegeLevel = lvl;
@@ -224,24 +227,43 @@ namespace ElementalBuddies
             }
 
             bool unlocked = SiegeLevels.Unlocked;
-            int lvl = Mathf.Min(GameSession.SiegeLevel, SiegeLevels.MaxSelectable);
-            if (lvl != GameSession.SiegeLevel) GameSession.SiegeLevel = lvl;
+            var map = Map;
+            int maxSel = SiegeLevels.MaxSelectableOn(map);
+            int lvl = Mathf.Min(GameSession.SiegeLevel, maxSel);
+            // Nur im Hauptbildschirm angleichen: in der Lobby gilt beim Client die Stufe des Hosts
+            if (lvl != GameSession.SiegeLevel && (_menu == null || _menu.IsMainView)) GameSession.SiegeLevel = lvl;
+            // Mehrere Maps: Map-Name dazu, denn Stufen und Rekorde gelten pro Map
+            string onMap = MapRegistry.All.Count > 1 && map != null ? $" <size=85%>({map.DisplayName})</size>" : "";
             if (!unlocked)
-                _siegeText.text = $"<color=#6b5a48><b>Gesperrt:</b> Belagerungsstufen – ab dem ersten Morgengrauen (Welle {SiegeLevels.DawnWave})</color>";
+            {
+                string what = LockedByDawn();
+                // mit Map-Namen wird es lang: dann ohne Wellenangabe (die steht im Ziel/Hinweis)
+                string when = what.Length > "Belagerungsstufen".Length ? "ab dem ersten Morgengrauen" : $"ab dem ersten Morgengrauen (Welle {SiegeLevels.DawnWave})";
+                _siegeText.text = $"<color=#6b5a48><b>Gesperrt:</b> {what} – {when}</color>";
+            }
             else if (lvl == 0)
-                _siegeText.text = "<b>Belagerung:</b> keine Erschwernis";
+                _siegeText.text = $"<b>Belagerung{onMap}:</b> keine Erschwernis";
             else
             {
-                int best = SiegeLevels.BestWave(lvl);
-                _siegeText.text = $"<b>Belagerung {lvl}:</b> {SiegeLevels.Names[lvl]}" + (best > 0 ? $"  <color=#6b5a48>(Rekord W{best})</color>" : "");
+                int best = SiegeLevels.BestWave(lvl, map);
+                _siegeText.text = $"<b>Belagerung {lvl}{onMap}:</b> {SiegeLevels.Name(lvl, map)}" + (best > 0 ? $"  <color=#6b5a48>(Rekord W{best})</color>" : "");
             }
             _siegeLeft.gameObject.SetActive(unlocked);
             _siegeRight.gameObject.SetActive(unlocked);
             _siegeLeft.interactable = lvl > 0;
-            _siegeRight.interactable = lvl < SiegeLevels.MaxSelectable;
+            _siegeRight.interactable = lvl < maxSel;
             var srt = _siegeText.rectTransform;
             srt.anchoredPosition = new Vector2(unlocked ? 84f : 34f, srt.anchoredPosition.y);
             srt.sizeDelta = new Vector2(unlocked ? 530f : 632f, srt.sizeDelta.y);
+        }
+
+        // "Belagerungsstufen" bzw. "Belagerungsstufen und Walddorf" (Maps, die das Morgengrauen freischaltet und noch gesperrt sind)
+        private static string LockedByDawn()
+        {
+            var names = new List<string>();
+            foreach (var m in MapRegistry.All)
+                if (m != null && m.UnlockAchievementId == "dawn" && !Progression.IsMapUnlocked(m)) names.Add(m.DisplayName);
+            return names.Count == 0 ? "Belagerungsstufen" : "Belagerungsstufen, " + string.Join(", ", names.ToArray());
         }
 
         // Kurzinfo der gewählten Belagerungsstufe (Hover über den Text): Erschwernisse

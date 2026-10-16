@@ -23,6 +23,7 @@ MonoBehaviour:
   BaseHP: 60
   Speed: 3.5
   AttackDamage: 10
+  Role: 0
   Armor: 0
   BountyMultiplier: 1
   VisualScale: 1
@@ -43,3 +44,8 @@ MonoBehaviour:
   ThemeColor: {r: 1, g: 1, b: 1, a: 1}
   Icon: {fileID: 21300000, guid: 109eb45b4ec384fc789d1b5e8479c972, type: 3}
   PreviewHint: "L\xE4uft direkt zum Nexus"
+  IsFlyer: 0
+  FlyHeight: 2
+  ObstacleClearance: 1.5
+  DiveHeight: 0.8
+  DeathClipDuration: 0

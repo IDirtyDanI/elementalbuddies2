@@ -1,0 +1,1229 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2322010122936604464
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7752053759967259534}
+  - component: {fileID: 8771156564460136124}
+  - component: {fileID: 3511717620900820240}
+  - component: {fileID: 3714633361883744535}
+  - component: {fileID: 4939414740977828733}
+  - component: {fileID: 3576876868473832541}
+  - component: {fileID: 2920547085495809119}
+  - component: {fileID: 1278198410212458472}
+  - component: {fileID: 562893614291346728}
+  - component: {fileID: 9185864538888572633}
+  - component: {fileID: 7106672166363747184}
+  - component: {fileID: 1291812427451800876}
+  - component: {fileID: 7743044406243151889}
+  - component: {fileID: 621962775724655004}
+  - component: {fileID: 3144153159232174494}
+  - component: {fileID: 5399341814609981798}
+  - component: {fileID: 4148792227973406313}
+  m_Layer: 0
+  m_Name: Managers
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7752053759967259534
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5.0853004, y: -2.6853256, z: 6.3899803}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8771156564460136124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 644b05a6da179eb469ef06deb407ecfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  AllDeadGrace: 0.5
+  WipeReviveDelay: 10
+  WipeCostFirst: 0.15
+  WipeCostStep: 0.1
+--- !u!114 &3511717620900820240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29a614f27d7421548ba7587a6695ffc4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  settings: {fileID: 11400000, guid: 357a4ce6d691b494e944cd7f4c8d3032, type: 2}
+--- !u!114 &3714633361883744535
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 439c9a4902f144d4b9155d0bece3da68, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  UnitConfigs:
+  - {fileID: 11400000, guid: 6557c62142188084b81b62593c2bbd36, type: 2}
+  - {fileID: 11400000, guid: 755f75e7d4cb2264fa12a362664d5f28, type: 2}
+  - {fileID: 11400000, guid: 9bd0aaeaf67d60c45ae42642cc733a46, type: 2}
+  - {fileID: 11400000, guid: fbdf55d7fe5e4814faa0d1ae34d5071a, type: 2}
+  FloorLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  ObstacleLayer:
+    serializedVersion: 2
+    m_Bits: 193
+  ValidMat: {fileID: 2100000, guid: c3e9ecd776dd37946bd97d073d90fcc7, type: 2}
+  InvalidMat: {fileID: 2100000, guid: 1f124588b9612a8488b8de7d12ac9d07, type: 2}
+  BuddyLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  RangeIndicatorMaterial: {fileID: 0}
+  RangeIndicatorAlpha: 0.7
+  inputAsset: {fileID: -944628639613478452, guid: 35eddc955b2db9d4198c24892c4b092a, type: 3}
+  MaxReachDistance: 1.3
+--- !u!114 &4939414740977828733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8cfad5f2e1955948b4cac0d716085b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Waves:
+  - {fileID: 11400000, guid: 93ddbcf459c8d1647861087a0521f704, type: 2}
+  SpawnPoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  ShrineWaveExtraTime: 25
+  MerchantWaveExtraTime: 20
+  ExtraGroups:
+  - Config: {fileID: 11400000, guid: 58526041a8e384140a4bd495a26fb394, type: 2}
+    StartWave: 3
+    BaseCount: 6
+    PerWave: 2
+    SpawnInterval: 0.35
+    EveryNthWave: 0
+  - Config: {fileID: 11400000, guid: e5984443704af410ea02991db0d52f19, type: 2}
+    StartWave: 5
+    BaseCount: 1
+    PerWave: 0.5
+    SpawnInterval: 3
+    EveryNthWave: 0
+  - Config: {fileID: 11400000, guid: b485abf027a4b456cbfecbf44d8e79d5, type: 2}
+    StartWave: 4
+    BaseCount: 1
+    PerWave: 0.5
+    SpawnInterval: 2.5
+    EveryNthWave: 0
+  - Config: {fileID: 11400000, guid: ebd1fddd9f1d941d7b537ccdade7d9d6, type: 2}
+    StartWave: 7
+    BaseCount: 1
+    PerWave: 0.34
+    SpawnInterval: 4
+    EveryNthWave: 0
+  - Config: {fileID: 11400000, guid: 8ba647bd54f7f40f1816a8544de27901, type: 2}
+    StartWave: 6
+    BaseCount: 1
+    PerWave: 0
+    SpawnInterval: 1
+    EveryNthWave: 12
+  - Config: {fileID: 11400000, guid: e8eec16b1722141a4ba9b673f20f6120, type: 2}
+    StartWave: 10
+    BaseCount: 1
+    PerWave: 0
+    SpawnInterval: 1
+    EveryNthWave: 12
+  - Config: {fileID: 11400000, guid: 57b2db8c5ff134c829a8e5269dff8cc7, type: 2}
+    StartWave: 14
+    BaseCount: 1
+    PerWave: 0
+    SpawnInterval: 1
+    EveryNthWave: 12
+  GroupStartOffset: 2
+  FlyerGroup:
+    Config: {fileID: 0}
+    StartWave: 9
+    BaseCount: 2
+    PerWave: 0.4
+    SpawnInterval: 2.5
+    EveryNthWave: 0
+  MaxFlyersAlive: 24
+  HpLinearPerWave: 0.02
+  HpGrowthPerWave: 1.031
+  BossRampWave: 12
+  CountGrowth: 0.05
+  CountExponent: 1.2
+  MaxEnemiesPerWave: 260
+  IntervalDecayPerWave: 0.98
+  MinIntervalFactor: 0.5
+  BossWaveEscortFactor: 0.6
+  DamageGrowthPerWave: 0.04
+  HarvestAfterBoss: 1
+  HarvestCountFactor: 0.75
+  HarvestBonusFactor: 1.5
+  EarlyCallMaxFraction: 0.3
+  EarlyCallWindow: 25
+  EliteFromWave: 12
+  EliteShareStart: 0.025
+  EliteSharePerWave: 0.003
+  EliteShareMax: 0.06
+  MaxElitesPerWave: 8
+  EliteAuraPrefab: {fileID: 4113057850483280799, guid: 43224af1bf71b4ef0aa3d1d7e145dadd, type: 3}
+  EliteIcons:
+  - {fileID: 21300000, guid: 52f33ba899dfe4519a484a0814a580dc, type: 3}
+  - {fileID: 21300000, guid: b43db57af7b3843b1b5e36b81320afaa, type: 3}
+  - {fileID: 21300000, guid: 9c822bb50897d493682abb93684c74e2, type: 3}
+  - {fileID: 21300000, guid: 324356ac14935446e864a6264ed4ce94, type: 3}
+  - {fileID: 21300000, guid: 9eb5fbfd3a7814575aed54a40f77b723, type: 3}
+  - {fileID: 21300000, guid: 015931bcaa0e0424796e82fb16aa6933, type: 3}
+  EventFromWave: 16
+  EventEvery: 3
+  BloodMoonSpeed: 1.2
+  BloodMoonBounty: 1.5
+  SoulStormBounty: 2
+  SoulStormMagnet: 0.3
+  CountPerExtraPlayer: 0.5
+  HpPerExtraPlayer: 0.25
+  BossHpPerExtraPlayer: 0.6
+  RamConfig: {fileID: 11400000, guid: a44548a7bf3d4471c866d7ef570ace24, type: 2}
+--- !u!114 &3576876868473832541
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 325c3705d137e9e4480fbf9bb26c6421, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  StartRerolls: 1
+  DraftRerollBaseCost: 25
+  DraftRerollCostStep: 15
+  SkipShardsBase: 10
+  SkipShardsPerWave: 2
+  RareChanceStart: 0.22
+  RareChanceEnd: 0.33
+  EpicChanceStart: 0.03
+  EpicChanceEnd: 0.12
+  EpicFromWave: 3
+  RarityRampWave: 20
+  ComboWeight: 2.5
+  AllUpgrades:
+  - {fileID: 11400000, guid: 72aec16ccc5b2c9429323a04ffb235f0, type: 2}
+  - {fileID: 11400000, guid: 2d3049a836ce4f64499d4a089a060a29, type: 2}
+  - {fileID: 11400000, guid: d4a8cc68076c4064cb77399e4f958b23, type: 2}
+  - {fileID: 11400000, guid: 55d273f7252d1194c81e6b0d21c98b31, type: 2}
+  - {fileID: 11400000, guid: edffad379e63ebd4882f8af404106e4c, type: 2}
+  - {fileID: 11400000, guid: 13e850eb8b8b84751a2747004b890722, type: 2}
+  - {fileID: 11400000, guid: 249e4e7e0ea7a4e7082e8184195f6c8a, type: 2}
+  - {fileID: 11400000, guid: 5ea1979d0ab0d43039a63208514c9a56, type: 2}
+  - {fileID: 11400000, guid: 29a8e686f65cd46779337878a96b419f, type: 2}
+  - {fileID: 11400000, guid: 644309eebfbc146438195516d463548a, type: 2}
+  - {fileID: 11400000, guid: 1431480634ef84317ab56eccf3e484b6, type: 2}
+  - {fileID: 11400000, guid: cb373a2210bd1409dbc6b75390c7004d, type: 2}
+  - {fileID: 11400000, guid: 43d52312290594b5eb0d8b367ae34733, type: 2}
+  - {fileID: 11400000, guid: f70c88c1eb6e7477a86945cf8219ef4a, type: 2}
+  - {fileID: 11400000, guid: 09ee8452eb48c44f59f004ee98510493, type: 2}
+  - {fileID: 11400000, guid: 0c6d9c6a4dbeb4dd38cee3e7fe097ff5, type: 2}
+  - {fileID: 11400000, guid: 323b9f27923b64918adff1ecaa8f3dd8, type: 2}
+  - {fileID: 11400000, guid: 7d56abc19a7bf40df8375c609490b1fe, type: 2}
+  - {fileID: 11400000, guid: af7f5b34f357a4a239d79e4a37e322aa, type: 2}
+  - {fileID: 11400000, guid: 8e1e0b9f3d86746eab3e7aea6f816daa, type: 2}
+  - {fileID: 11400000, guid: 985d8edde2e674d54993adf114cd37c3, type: 2}
+  - {fileID: 11400000, guid: f675cb508e3814b08b79d0597d3b1a35, type: 2}
+  - {fileID: 11400000, guid: ff9b6770d3bf2484c8ee17207e127d3d, type: 2}
+  - {fileID: 11400000, guid: bd0ad079f2ece478abb585e8ccfa677c, type: 2}
+  - {fileID: 11400000, guid: a79bb2dd1ae3e40d59c54ae981b463b5, type: 2}
+  - {fileID: 11400000, guid: 42bc513a299e74f6ebe2f6f54a285ac6, type: 2}
+  - {fileID: 11400000, guid: 4fa97fae9d84d48488e84e14698314cc, type: 2}
+  - {fileID: 11400000, guid: 6f5de571318f543bfb5668536a4e4921, type: 2}
+  - {fileID: 11400000, guid: 1b45f9407cbcb4cc6973c9ed3612e6b2, type: 2}
+  - {fileID: 11400000, guid: d8c3679686ff049beb211834d91eb98a, type: 2}
+  - {fileID: 11400000, guid: 16af1651718be40d0839c622ff57bf40, type: 2}
+  - {fileID: 11400000, guid: 642d3646718ad48839bd098ccc5c3864, type: 2}
+  PlayerStatsRef: {fileID: 0}
+  PlayerControllerRef: {fileID: 0}
+  InteractionRef: {fileID: 3714633361883744535}
+  GlobalSettings: {fileID: 11400000, guid: 357a4ce6d691b494e944cd7f4c8d3032, type: 2}
+--- !u!114 &2920547085495809119
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e9a8c1b87bfd4a80905d880860d4bd0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BuddySlotManager
+  settings: {fileID: 11400000, guid: 357a4ce6d691b494e944cd7f4c8d3032, type: 2}
+--- !u!114 &1278198410212458472
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a5427ef003674c3bb60e644a3bf7a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShrineManager
+  AwakenAtWave: 0400000006000000080000000a000000
+  RetryAfterWaves: 2
+--- !u!114 &562893614291346728
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f8c9f9813d17407b9c8c73f64934349, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.DevTools
+  Enabled: 0
+  StartWave: 6
+  UnlimitedResources: 1
+  InvulnerableNexus: 1
+  GodMode: 1
+  UnlimitedBuddies: 1
+  UnlockAllSpells: 1
+  ForceChampion: 1
+  Champion: 1
+  ForceMerchant: 0
+  ForcedMerchant: 0
+  GrantSkippedSlots: 1
+  ShowHelp: 1
+  DevBossConfigs:
+  - {fileID: 11400000, guid: 8ba647bd54f7f40f1816a8544de27901, type: 2}
+  - {fileID: 11400000, guid: e8eec16b1722141a4ba9b673f20f6120, type: 2}
+  - {fileID: 11400000, guid: 57b2db8c5ff134c829a8e5269dff8cc7, type: 2}
+  AllowAchievementsWithCheats: 0
+  UnlockAllContent: 0
+--- !u!114 &9185864538888572633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd6ce11beb2c04881ae7c5b3edfa92dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.GameAudio
+  MasterVolume: 1
+  SfxVolume: 1
+  SpatialBlend: 0.25
+  Voices: 16
+  Entries:
+  - Id: 0
+    Clips:
+    - {fileID: 8300000, guid: 6c100961f0a503b4f88c20313f3d26c6, type: 3}
+    Volume: 0.45
+    Pitch: {x: 1.15, y: 1.3}
+    MinInterval: 0.05
+  - Id: 1
+    Clips:
+    - {fileID: 8300000, guid: e3e6f762c7303534fbdcea6e22e6cad5, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 2
+    Clips:
+    - {fileID: 8300000, guid: 8658390c748714202a19ead6f159a95e, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 3
+    Clips:
+    - {fileID: 8300000, guid: 2dc6394d24b2faf48afd63c874bf6a1a, type: 3}
+    Volume: 0.55
+    Pitch: {x: 1, y: 1.1}
+    MinInterval: 0.1
+  - Id: 4
+    Clips:
+    - {fileID: 8300000, guid: 7dbc55010d256cc40843e4f087b15352, type: 3}
+    Volume: 0.8
+    Pitch: {x: 0.75, y: 0.8}
+    MinInterval: 0.1
+  - Id: 5
+    Clips:
+    - {fileID: 8300000, guid: 2dc6394d24b2faf48afd63c874bf6a1a, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.55, y: 0.6}
+    MinInterval: 0.1
+  - Id: 6
+    Clips:
+    - {fileID: 8300000, guid: 7dbc55010d256cc40843e4f087b15352, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1.35, y: 1.45}
+    MinInterval: 0.1
+  - Id: 7
+    Clips:
+    - {fileID: 8300000, guid: 49cfcd55291394d0daccc14d5ddde31b, type: 3}
+    - {fileID: 8300000, guid: 546f14b20c4f44e3e977f9000fe52db0, type: 3}
+    - {fileID: 8300000, guid: e596ea87170154662abc7ec3aa7aafbe, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.06
+  - Id: 8
+    Clips:
+    - {fileID: 8300000, guid: 756099f7db9cf4e0191a08bcef562072, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.7
+  - Id: 9
+    Clips:
+    - {fileID: 8300000, guid: 57df5e058756446a2979cbc82cfcc1e0, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 10
+    Clips:
+    - {fileID: 8300000, guid: 2dc6394d24b2faf48afd63c874bf6a1a, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1.35, y: 1.45}
+    MinInterval: 0.2
+  - Id: 11
+    Clips:
+    - {fileID: 8300000, guid: f7328f51d52f84a10b75bcd97165d4ac, type: 3}
+    Volume: 0.7
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 12
+    Clips:
+    - {fileID: 8300000, guid: 57df5e058756446a2979cbc82cfcc1e0, type: 3}
+    Volume: 0.9
+    Pitch: {x: 0.55, y: 0.6}
+    MinInterval: 1
+  - Id: 13
+    Clips:
+    - {fileID: 8300000, guid: b4eef90cfd3454eb1bf15657ea4cd71e, type: 3}
+    Volume: 0.38
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.035
+  - Id: 14
+    Clips:
+    - {fileID: 8300000, guid: c752b717bae4d42f0a0d78588aa8bb2b, type: 3}
+    - {fileID: 8300000, guid: 271529d85206d48a9b2eb5927c6909d6, type: 3}
+    - {fileID: 8300000, guid: d9b9b956fed1b494db63bc5010eef121, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 15
+    Clips:
+    - {fileID: 8300000, guid: ee772943cab1c4559a0fab3ad183673b, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 16
+    Clips:
+    - {fileID: 8300000, guid: 4fc99f3ef6107457a89ed5af4ee0c820, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.15
+  - Id: 17
+    Clips:
+    - {fileID: 8300000, guid: 980f5fb1fd99341fca3c301ab9653c25, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 18
+    Clips:
+    - {fileID: 8300000, guid: 1648e3aad914840ebbeaefb17232e214, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 19
+    Clips:
+    - {fileID: 8300000, guid: 595e76f13a7134fae9665d7239e3a0b6, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 20
+    Clips:
+    - {fileID: 8300000, guid: 48302ff98473645ac8d1fd89f8940dcb, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 21
+    Clips:
+    - {fileID: 8300000, guid: a1c843d18bd934330b7dd1077a06bbed, type: 3}
+    Volume: 0.32
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 22
+    Clips:
+    - {fileID: 8300000, guid: 0499e35dd291a48dc85018846daee1d4, type: 3}
+    Volume: 0.9
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 23
+    Clips:
+    - {fileID: 8300000, guid: 4543f686c57c54f7baf00bcb1cb5d290, type: 3}
+    Volume: 0.7
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.5
+  - Id: 24
+    Clips:
+    - {fileID: 8300000, guid: faca09ca25cce4b38887069442c45307, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.97, y: 1.03}
+    MinInterval: 0.05
+  - Id: 25
+    Clips:
+    - {fileID: 8300000, guid: d67408bc2916f4e599011d9d7bd50faa, type: 3}
+    Volume: 0.22
+    Pitch: {x: 0.97, y: 1.03}
+    MinInterval: 0.04
+  - Id: 26
+    Clips:
+    - {fileID: 8300000, guid: 4d0c112b1c44340f882b5b95b435cbde, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.2
+  - Id: 27
+    Clips:
+    - {fileID: 8300000, guid: 1a630bbb957b54c7180e98e98f39c01d, type: 3}
+    Volume: 0.65
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.1
+  - Id: 28
+    Clips:
+    - {fileID: 8300000, guid: 6625583598bfb440585189224469f621, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.2
+  - Id: 29
+    Clips:
+    - {fileID: 8300000, guid: ce81ae467766b4273be70ebc8026cd5c, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 30
+    Clips:
+    - {fileID: 8300000, guid: d329fd9c68d4447cbb248d1135ab7e17, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 31
+    Clips:
+    - {fileID: 8300000, guid: 934e6beac935a4628922739a6115feb5, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 32
+    Clips:
+    - {fileID: 8300000, guid: 58f85cf912d164587b8c24ef20735a68, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.1
+  - Id: 33
+    Clips:
+    - {fileID: 8300000, guid: 56e002529bd9c4ab7b87fec188cfec1f, type: 3}
+    Volume: 0.8
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 34
+    Clips:
+    - {fileID: 8300000, guid: 97811ae4176594ad1a74c6367a926f7a, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 35
+    Clips:
+    - {fileID: 8300000, guid: ecaf384c74e6147f08307eaa26d04926, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 36
+    Clips:
+    - {fileID: 8300000, guid: e410d2ea3b1644fabbbc98d5f115f479, type: 3}
+    Volume: 0.75
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 37
+    Clips:
+    - {fileID: 8300000, guid: ca201452ea345463c8c5c93d3b61aa1a, type: 3}
+    Volume: 0.55
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.5
+  - Id: 38
+    Clips:
+    - {fileID: 8300000, guid: 44ed999c50c4149929b8b6dc8a8d92c1, type: 3}
+    Volume: 0.26
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.09
+  - Id: 39
+    Clips:
+    - {fileID: 8300000, guid: a819598cb3f214fdf842166140a8bb56, type: 3}
+    Volume: 0.28
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.07
+  - Id: 40
+    Clips:
+    - {fileID: 8300000, guid: cc1eb53e3e6614e7da306e8caf04ede2, type: 3}
+    Volume: 0.26
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.09
+  - Id: 41
+    Clips:
+    - {fileID: 8300000, guid: 2edcfb900020b4869a2168294c2e2465, type: 3}
+    Volume: 0.28
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.07
+  - Id: 42
+    Clips:
+    - {fileID: 8300000, guid: 5ca684d1146e9469b99182d711594c93, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.2
+  - Id: 43
+    Clips:
+    - {fileID: 8300000, guid: f2a7c268994dc483387f48212057e139, type: 3}
+    Volume: 0.32
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.08
+  - Id: 44
+    Clips:
+    - {fileID: 8300000, guid: 00e72301c760f474494da6a299bc2e34, type: 3}
+    Volume: 0.24
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.1
+  - Id: 45
+    Clips:
+    - {fileID: 8300000, guid: b88386fa9de9d4ecd9756e575af5daef, type: 3}
+    Volume: 0.22
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 1.2
+  - Id: 46
+    Clips:
+    - {fileID: 8300000, guid: 1c8532084579a4dbebe915b5fbdf9ae6, type: 3}
+    Volume: 0.5
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.05
+  - Id: 47
+    Clips:
+    - {fileID: 8300000, guid: 8bfd0ac3a14ef475ab83298704512270, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.05
+  - Id: 48
+    Clips:
+    - {fileID: 8300000, guid: 05ae48056f1f54ae28347ad343249a68, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.05
+  - Id: 49
+    Clips:
+    - {fileID: 8300000, guid: 7a7b90f4b5f32437e9b308e63d15383e, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.1
+  - Id: 50
+    Clips:
+    - {fileID: 8300000, guid: 498eaf0a71c4d43ffa0507926fea6275, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 5
+  - Id: 51
+    Clips:
+    - {fileID: 8300000, guid: 1678a77baec9d4896af90448f711303c, type: 3}
+    Volume: 0.75
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 52
+    Clips:
+    - {fileID: 8300000, guid: 6071a32efc7704efb96820f5d73ff3ef, type: 3}
+    Volume: 0.5
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.5
+  - Id: 53
+    Clips:
+    - {fileID: 8300000, guid: bbe59a3dd5734432f9205c64352976a4, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.15
+  - Id: 54
+    Clips:
+    - {fileID: 8300000, guid: 05d5eff2c1e1b45e5874dd5da33a6b0d, type: 3}
+    Volume: 0.4
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.25
+  - Id: 55
+    Clips:
+    - {fileID: 8300000, guid: 8b6d6ab52fe0c43c5bbfb1a17a507f18, type: 3}
+    Volume: 0.4
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.4
+  - Id: 56
+    Clips:
+    - {fileID: 8300000, guid: 51d3eedb8ef534fd9866aad0716ec684, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 57
+    Clips:
+    - {fileID: 8300000, guid: 51251da9d4f264e4495a7edfc59c2b57, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 58
+    Clips:
+    - {fileID: 8300000, guid: 32edca887011d4dd184bc85105bd4b41, type: 3}
+    Volume: 0.36
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.04
+  - Id: 59
+    Clips:
+    - {fileID: 8300000, guid: 031073572b0214ad1a41f3c504ffe5e5, type: 3}
+    Volume: 0.3
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.04
+  - Id: 60
+    Clips:
+    - {fileID: 8300000, guid: 0978f931b3ea349f587b61489af8a38c, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 61
+    Clips:
+    - {fileID: 8300000, guid: 022635a538c4e4278a1313f9d4a8e31d, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 62
+    Clips:
+    - {fileID: 8300000, guid: 21f7683fecda34529a2b9d9a1186db58, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.05
+  - Id: 63
+    Clips:
+    - {fileID: 8300000, guid: 37b242c68f07d4b62af4b23430483220, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.2
+  - Id: 64
+    Clips:
+    - {fileID: 8300000, guid: 510751377168d4725a61df2b3352347a, type: 3}
+    Volume: 0.55
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.12
+  - Id: 65
+    Clips:
+    - {fileID: 8300000, guid: d6e0b9bfeae1643e78b6905e71015ea5, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 66
+    Clips:
+    - {fileID: 8300000, guid: 74ae9535942654efeb5bd0fa73057d17, type: 3}
+    Volume: 0.6
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 67
+    Clips:
+    - {fileID: 8300000, guid: c4832dbc7724a4cd0979a68fc75fc990, type: 3}
+    Volume: 0.65
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.3
+  - Id: 68
+    Clips:
+    - {fileID: 8300000, guid: d1137d9b7e55c4f2bb7ac4a85788867a, type: 3}
+    Volume: 0.7
+    Pitch: {x: 0.97, y: 1.03}
+    MinInterval: 1
+  - Id: 69
+    Clips:
+    - {fileID: 8300000, guid: e56651d72237f4669b0e7c776f789808, type: 3}
+    Volume: 0.55
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 70
+    Clips:
+    - {fileID: 8300000, guid: 515b86f157dc74521a75363651b35f82, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 71
+    Clips:
+    - {fileID: 8300000, guid: 93dbea0267b7c42d5972825d5824ddc0, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.08
+  - Id: 72
+    Clips:
+    - {fileID: 8300000, guid: 776077c5cd1a3406e977c4ad77b87b01, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 73
+    Clips:
+    - {fileID: 8300000, guid: 15310c7d1587a4aaa85a6c150ca6889a, type: 3}
+    Volume: 0.36
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.04
+  - Id: 74
+    Clips:
+    - {fileID: 8300000, guid: b0b087bc1732746e198cd1f10da715c7, type: 3}
+    - {fileID: 8300000, guid: 7619c596ea0c64b1eab509cc373cf455, type: 3}
+    Volume: 0.38
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.07
+  - Id: 75
+    Clips:
+    - {fileID: 8300000, guid: 4b2f5b22969e04dcf834f0894fdc79c6, type: 3}
+    Volume: 0.4
+    Pitch: {x: 0.95, y: 1.05}
+    MinInterval: 0.05
+  - Id: 76
+    Clips:
+    - {fileID: 8300000, guid: 7302275e1b22f4eefb8342835ab05b3c, type: 3}
+    Volume: 0.5
+    Pitch: {x: 0.97, y: 1.03}
+    MinInterval: 6
+  - Id: 77
+    Clips:
+    - {fileID: 8300000, guid: b2f1caec04aac423ab3c97e838d3b80d, type: 3}
+    Volume: 0.34
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.04
+  - Id: 78
+    Clips:
+    - {fileID: 8300000, guid: 7de36194414384a77b742ba1afc06366, type: 3}
+    Volume: 0.36
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.07
+  - Id: 79
+    Clips:
+    - {fileID: 8300000, guid: 632eb0dc97c884fa2a53c1b1dfe854ea, type: 3}
+    Volume: 0.34
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.04
+  - Id: 80
+    Clips:
+    - {fileID: 8300000, guid: aee971da30b7a410caba73aafc496dc9, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.06
+  - Id: 81
+    Clips:
+    - {fileID: 8300000, guid: 1a992983f1d0849e28e3d612af337b42, type: 3}
+    Volume: 0.45
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 1.5
+  - Id: 82
+    Clips:
+    - {fileID: 8300000, guid: 9001a4679798441559631de4bc748e83, type: 3}
+    Volume: 0.38
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.15
+  - Id: 83
+    Clips:
+    - {fileID: 8300000, guid: 810ad6bcf4ae44faabfad71fe505f471, type: 3}
+    Volume: 0.42
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 1
+  - Id: 84
+    Clips:
+    - {fileID: 8300000, guid: d36d9728285a54c7880e95453d73f8ff, type: 3}
+    Volume: 0.34
+    Pitch: {x: 0.9, y: 1.1}
+    MinInterval: 0.12
+  MusicClip: {fileID: 0}
+  MusicVolume: 0.2
+  MusicFadeIn: 2
+  MusicChangeTime: 0.25
+  MusicLevel: 1
+  PauseMusicDuck: 0.45
+--- !u!114 &7106672166363747184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b561e9ea4ca774ede8909c127cadb24e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.PauseManager
+--- !u!114 &1291812427451800876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c549e9d4c97ee43ffa441a380f5ee00b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.FusionManager
+  Recipes:
+  - ElementA: 0
+    ElementB: 3
+    Result: 0
+    ResultConfig: {fileID: 11400000, guid: 1509f89717cb545cf9c83d6a349b6846, type: 2}
+    Description: "Kettenblitz: springt auf bis zu 3 weitere Gegner (Schaden nimmt
+      pro Sprung ab). Nasse Gegner nehmen doppelten Schaden und verl\xE4ngern die
+      Kette."
+    Icon: {fileID: 21300000, guid: f5583604daad84973980cdab95d89493, type: 3}
+  - ElementA: 1
+    ElementB: 3
+    Result: 1
+    ResultConfig: {fileID: 11400000, guid: 4ab5b29718cd34a0bad6fa655a9494d4, type: 2}
+    Description: "Wasserstrahl \xFCber die volle Reichweite: trifft alle Gegner im
+      Strahl, macht sie nass und verlangsamt sie. Jeder 4. Strahl erzeugt einen Strudel,
+      der Gegner festh\xE4lt."
+    Icon: {fileID: 21300000, guid: 45e8416a62d1945968cdb798a448a593, type: 3}
+  - ElementA: 0
+    ElementB: 1
+    Result: 2
+    ResultConfig: {fileID: 11400000, guid: 242eb40231c9846d7b6149987f9ae045, type: 2}
+    Description: "R\xFCckenwind: Buddies in Reichweite feuern 25 % schneller. B\xF6e
+      st\xF6\xDFt Gegner den Weg zur\xFCck und tr\xE4gt Br\xE4nde auf Gegner in der
+      N\xE4he weiter."
+    Icon: {fileID: 21300000, guid: e67a8b190ab994f2d82d336b2c2c57fa, type: 3}
+  - ElementA: 2
+    ElementB: 3
+    Result: 3
+    ResultConfig: {fileID: 11400000, guid: 568158805b6af4eef85519c9351cd7fd, type: 2}
+    Description: "Verflucht bis zu 2 Gegner: Schaden \xFCber Zeit, und verfluchte
+      Gegner nehmen 25 % mehr Schaden aus allen Quellen."
+    Icon: {fileID: 21300000, guid: e6be4061f54af45259673602639aaad4, type: 3}
+  - ElementA: 0
+    ElementB: 2
+    Result: 4
+    ResultConfig: {fileID: 11400000, guid: 0b8b151252957483285e5dd25c84fa2f, type: 2}
+    Description: "Lavakugel auf die dichteste Gegnergruppe: Fl\xE4chenschaden und
+      Brand beim Einschlag. Hinterl\xE4sst eine Lavapf\xFCtze, die 4 s lang Schaden
+      macht und leicht verlangsamt."
+    Icon: {fileID: 21300000, guid: c52bc2e2cdf7d450fa2bc470e3128885, type: 3}
+  - ElementA: 1
+    ElementB: 2
+    Result: 5
+    ResultConfig: {fileID: 11400000, guid: eb5fed16989554851a158c21e08d2615, type: 2}
+    Description: "Super-Tank: viel Leben, 35 % weniger Schaden. Frost-Aura verlangsamt
+      Gegner in Reichweite, verspottet sie regelm\xE4\xDFig. Erlittener Schaden l\xE4dt
+      eine Splitter-Nova, die ihn an alle Gegner zur\xFCckgibt."
+    Icon: {fileID: 21300000, guid: 1263a003a346447a3bbef7fe192df3db, type: 3}
+  TriRecipes:
+  - ElementA: 0
+    ElementB: 1
+    ElementC: 2
+    Result: 6
+    ResultConfig: {fileID: 11400000, guid: fa6a093dbb8fc4d50bba12bfe9fff2e2, type: 2}
+    Description: "Meteor auf die dichteste Gegnergruppe: gro\xDFer Fl\xE4chenschaden,
+      bet\xE4ubt und st\xF6\xDFt zur\xFCck. Hinterl\xE4sst einen Krater, der verlangsamt
+      und brennt. Nimmt 20 % weniger Schaden."
+    Icon: {fileID: 21300000, guid: 5ac48075a25174c3299319f7064a272e, type: 3}
+  - ElementA: 0
+    ElementB: 1
+    ElementC: 3
+    Result: 7
+    ResultConfig: {fileID: 11400000, guid: 43e5be07c4e574a75b53912e09c05e4c, type: 2}
+    Description: "Ruft eine Sturmwolke \xFCber die dichteste Gruppe: macht Gegner
+      nass und schl\xE4gt mit Kettenblitzen ein (doppelter Schaden auf Nasse). Aura:
+      Gegner in der N\xE4he sind 25 % langsamer."
+    Icon: {fileID: 21300000, guid: 497fced424a154a82ab41ab1e122b09b, type: 3}
+  - ElementA: 0
+    ElementB: 2
+    ElementC: 3
+    Result: 8
+    ResultConfig: {fileID: 11400000, guid: 7d3fe00401b8c42bdb4b33ce2d6c3261, type: 2}
+    Description: "Sturzflug durch die Gegnerlinie: Schaden, Brand und eine Feuerspur.
+      Aura: +30 % Schaden f\xFCr Buddies in der N\xE4he. Wiedergeburt: Einmal pro
+      Welle ersteht ein zerst\xF6rter Buddy in der N\xE4he (oder der Ph\xF6nix selbst)
+      mit halbem Leben neu."
+    Icon: {fileID: 21300000, guid: 2e0535e5fcafa4983a59d7fe3d786e38, type: 3}
+  - ElementA: 1
+    ElementB: 2
+    ElementC: 3
+    Result: 9
+    ResultConfig: {fileID: 11400000, guid: 43a333a85f2394357a0281df200a028e, type: 2}
+    Description: "Riesiger W\xE4chter (25 % weniger Schaden): Wurzeln halten bis
+      zu 6 Gegner fest, die dem Nexus am n\xE4chsten sind. Heilt Buddies und den
+      Nexus in der N\xE4he. Dornen werfen Nahkampf-Schaden zur\xFCck."
+    Icon: {fileID: 21300000, guid: 6854237859014449fabe03a677c5afc8, type: 3}
+  FusionRange: 5
+  MinLevel: 2
+  MaxFusionLevel: 2
+  TriFusionLevel: 3
+  FusionBurstPrefab: {fileID: 4550167610172782757, guid: 556f26d3372a54e3086c7a936117973b, type: 3}
+  LinkMaterial: {fileID: 0}
+  LinkColor: {r: 0.85, g: 0.7, b: 1, a: 0.9}
+  LinkArcHeight: 1.5
+  SpotSearchRadius: 4
+  SpotSearchStep: 0.5
+  SpotClearance: 0.05
+  DefaultFootprint: 0.85
+--- !u!114 &7743044406243151889
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dde0b3c7e8b164e20ac82a1b99cff2ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.MerchantManager
+  FirstWave: 11
+  EveryNWaves: 2
+  Cards:
+  - {fileID: 11400000, guid: ed099db5e49a4496ca747fe7b2f61b78, type: 2}
+  - {fileID: 11400000, guid: 64ee468dd1c974e6b86e59e606867815, type: 2}
+  - {fileID: 11400000, guid: 26bcb6f023bcc46d3b1a99773cd69e65, type: 2}
+  - {fileID: 11400000, guid: 71c4c461e92a2451fa4024e7861b5c3b, type: 2}
+  - {fileID: 11400000, guid: a61c25b1a3ff245959cfe41c35ca8807, type: 2}
+  - {fileID: 11400000, guid: d190dd168c9374c43a775db27d706ea1, type: 2}
+  - {fileID: 11400000, guid: 6d89180db1b6f471f8ae29a6c07b8bb7, type: 2}
+  - {fileID: 11400000, guid: 34e72bc7326b84369916f16369d63aef, type: 2}
+  - {fileID: 11400000, guid: d7cb21cc8c3e044bc9483cdb56ea45a3, type: 2}
+  - {fileID: 11400000, guid: ffa669452b4d14d08a3ac4f650ddd441, type: 2}
+  - {fileID: 11400000, guid: 2457c1a68a65b4aedab21651a7209d72, type: 2}
+  - {fileID: 11400000, guid: 12fcabc2707324f8d9a34e317a289026, type: 2}
+  - {fileID: 11400000, guid: 297b39182d178401484d543e660e99ec, type: 2}
+  - {fileID: 11400000, guid: 235ec04b95c0c4ede9d05c4e34a2157c, type: 2}
+  - {fileID: 11400000, guid: a9b8790f35725426b93331ccebd438ef, type: 2}
+  - {fileID: 11400000, guid: 8a3cc7eb985aa4919b9259922bcaa57f, type: 2}
+  - {fileID: 11400000, guid: 6fc8dede2cbd144b39844f0984147d09, type: 2}
+  - {fileID: 11400000, guid: 0ef9fde692a32478db93eb3114151664, type: 2}
+  - {fileID: 11400000, guid: c5a74310cefe3485b897c03c91f56dcd, type: 2}
+  - {fileID: 11400000, guid: a342bded4f5104c8aa139951956f7417, type: 2}
+  - {fileID: 11400000, guid: 1a6417418b60642b1b701a17cc9e2565, type: 2}
+  - {fileID: 11400000, guid: b731e4fdf7e084ade88cdb8d5ebba034, type: 2}
+  - {fileID: 11400000, guid: 92238198cc0a743ffaaff0d1c0688803, type: 2}
+  - {fileID: 11400000, guid: 972fa9a3f69b04bd58cd2f3989841bf5, type: 2}
+  - {fileID: 11400000, guid: 13ba7f5dcada04ac1844b82c4e3de7c7, type: 2}
+  - {fileID: 11400000, guid: 478d88bf768fe4402b26ea682a73c400, type: 2}
+  - {fileID: 11400000, guid: 7c14477ecc11747f781dc7771f210440, type: 2}
+  - {fileID: 11400000, guid: 3d2087d7e6fcc4058b0a99932dbfbbf1, type: 2}
+  - {fileID: 11400000, guid: 8017049cf682e459c9da833556c713ec, type: 2}
+  - {fileID: 11400000, guid: 635605c4133bb4e1093861ca82112d5e, type: 2}
+  - {fileID: 11400000, guid: a855ac676cb1f4611913815359faed6a, type: 2}
+  - {fileID: 11400000, guid: b5309d5142cb9441a91efa92d77aecea, type: 2}
+  - {fileID: 11400000, guid: 3a91e068e619e4db497dd18dbf658c99, type: 2}
+  - {fileID: 11400000, guid: 495e1f92fc5064b12936a14a1b0ad6c4, type: 2}
+  - {fileID: 11400000, guid: da6aa58459bbf4299b163b01e82a8997, type: 2}
+  - {fileID: 11400000, guid: 329d0f65f046942e0814a512621863f9, type: 2}
+  - {fileID: 11400000, guid: 5e299d88e02684240a5dd8ddee15d2a7, type: 2}
+  - {fileID: 11400000, guid: 86104e2d088a340bb889401131de12f9, type: 2}
+  - {fileID: 11400000, guid: c2fdad81d594e4d4fa0f8c84306c9350, type: 2}
+  - {fileID: 11400000, guid: 3a5fc8695268c4429a46bb24b034c5a2, type: 2}
+  - {fileID: 11400000, guid: e0502c3f4dee1485cbc115a1ac6bed24, type: 2}
+  - {fileID: 11400000, guid: b992d3194f64d447fb39adfc4fb84d49, type: 2}
+  - {fileID: 11400000, guid: 1ed432b31fd614748928fa1f8439ea7a, type: 2}
+  - {fileID: 11400000, guid: 06ff8cb7cd84e48d58d60bcdb69db81b, type: 2}
+  - {fileID: 11400000, guid: d043d9d257bff4d4982c83553ce04ed4, type: 2}
+  - {fileID: 11400000, guid: 9ebfd3aedf82a487b923465fb3bc8f37, type: 2}
+  - {fileID: 11400000, guid: cc6c9bfe5d6e44e539b8c204d84990ec, type: 2}
+  - {fileID: 11400000, guid: eb828107ad03a459299c328d5be10748, type: 2}
+  - {fileID: 11400000, guid: 4ea76420e597f4b0699b998b7a94bbb5, type: 2}
+  - {fileID: 11400000, guid: 31df2c05d7bbe4729b810eb9171666eb, type: 2}
+  - {fileID: 11400000, guid: 7856ecf623c2845e9b5feded16663f4b, type: 2}
+  - {fileID: 11400000, guid: 83a9dfb1b1b8044feba127e29b068a3a, type: 2}
+  - {fileID: 11400000, guid: 96f3d7f3df97d42b68069dc9f5bd8a4c, type: 2}
+  - {fileID: 11400000, guid: c56407b0f4984477c876a485687964dd, type: 2}
+  - {fileID: 11400000, guid: 06b899387655f45c3aca9042afd91e60, type: 2}
+  - {fileID: 11400000, guid: e798686003c87487099caefe703d71f9, type: 2}
+  - {fileID: 11400000, guid: ad6cc153bffb44d06b40296419ceab74, type: 2}
+  - {fileID: 11400000, guid: d266ed9d6148c41fe8ab0eb7df38c6c0, type: 2}
+  - {fileID: 11400000, guid: 279baaf7516ad4018a26d7c845ea502b, type: 2}
+  - {fileID: 11400000, guid: 47f537597943b49008ee741d7b24abfc, type: 2}
+  - {fileID: 11400000, guid: 1714379fe93594609a7dffc5bdefba7f, type: 2}
+  - {fileID: 11400000, guid: f36ca32806b6347c6b08140ab68d747c, type: 2}
+  - {fileID: 11400000, guid: 2ab2163ea41c544cba3bd453184dae0f, type: 2}
+  - {fileID: 11400000, guid: a0d81ebfc0a26463dad0f0b39e60c38a, type: 2}
+  - {fileID: 11400000, guid: 7429c6520fdea41199f47454e039a797, type: 2}
+  - {fileID: 11400000, guid: 060c86f4700274ff2bea0d72e55e55fe, type: 2}
+  - {fileID: 11400000, guid: 007628239a0e846288f832c40c702dbe, type: 2}
+  - {fileID: 11400000, guid: 9ed0e03b9f72048a9b4fa19e2ae1e503, type: 2}
+  - {fileID: 11400000, guid: f6250f2a4e93347c9a5971620e83d647, type: 2}
+  - {fileID: 11400000, guid: d8d0d7da0339c4f7ab9ab425cc5bbf84, type: 2}
+  - {fileID: 11400000, guid: 869a1edcdc6334479b449e6d954ed751, type: 2}
+  - {fileID: 11400000, guid: d9d183f5e4c6d4c9196813418956a952, type: 2}
+  - {fileID: 11400000, guid: e7027bc0ddafa45048254c53f760ff93, type: 2}
+  - {fileID: 11400000, guid: 8eb23872b2c6948a38505202ff72efc5, type: 2}
+  - {fileID: 11400000, guid: 60dd949b0129849b89119de8027c006b, type: 2}
+  - {fileID: 11400000, guid: 4903c5ac9b0c1409dbca4e64644510a9, type: 2}
+  - {fileID: 11400000, guid: cbff99382660e42bb8d1c66b9e7beaf0, type: 2}
+  - {fileID: 11400000, guid: f041f81f187a148b8bb7a0bb803bdf9b, type: 2}
+  - {fileID: 11400000, guid: d361c441872c74b5699f7668cd6275e0, type: 2}
+  - {fileID: 11400000, guid: 93d4825ae40094502a4c3ea67111cdbb, type: 2}
+  - {fileID: 11400000, guid: 4f5a1ca2c3ae6480ab0111d358b6886c, type: 2}
+  - {fileID: 11400000, guid: 46562a81dba244b3ea1c30fa7a425dba, type: 2}
+  - {fileID: 11400000, guid: fdddfaf7429a147b292fadbcf6076799, type: 2}
+  - {fileID: 11400000, guid: f88753706b5754962a96aa8972432f8e, type: 2}
+  - {fileID: 11400000, guid: 152a7bfdd337d4517a2279756493bd10, type: 2}
+  - {fileID: 11400000, guid: c695fc42c56be452d9c2ed78a71b9e19, type: 2}
+  - {fileID: 11400000, guid: 42b29c942cb4d4cf798cf2136f135ff1, type: 2}
+  - {fileID: 11400000, guid: 444769d5d42fb4812b4a11a0b492994f, type: 2}
+  - {fileID: 11400000, guid: 11afbcb57f19e47d9a8fbd9d88949e4f, type: 2}
+  - {fileID: 11400000, guid: e8a44dbad7c274e04ac135ad809d1eed, type: 2}
+  - {fileID: 11400000, guid: 1a9e027be2196469d8fbb89b933b0209, type: 2}
+  - {fileID: 11400000, guid: 50da2791dea2e44da9ae148928d26b42, type: 2}
+  - {fileID: 11400000, guid: 9a546f1714c784afc8e93751c581858a, type: 2}
+  CardsOffered: 3
+  ExtraCardBaseCost: 60
+  ExtraCardCostStep: 30
+  RerollBaseCost: 25
+  CurseFromWave: 13
+  CurseChance: 0.35
+  RerollCostStep: 15
+  Settings: {fileID: 11400000, guid: 357a4ce6d691b494e944cd7f4c8d3032, type: 2}
+  MinCaptureContributionSeconds: 2
+  Portraits:
+  - {fileID: 21300000, guid: 9b735d1a585084e4bba23aae7316f47f, type: 3}
+  - {fileID: 21300000, guid: 236cc2f6c030247c38ad9fa074bae3cf, type: 3}
+  - {fileID: 21300000, guid: 90d56e2d87f5a48b19e8991b20cc90f5, type: 3}
+  - {fileID: 21300000, guid: dd4c7862a70b146f2a506703fd82725b, type: 3}
+  - {fileID: 21300000, guid: 57bb1c7ec89c34d28bba011883b69e22, type: 3}
+  Emblems:
+  - {fileID: 21300000, guid: 5b486d60e9a934c36a32627d1a96c0b3, type: 3}
+  - {fileID: 21300000, guid: 9a24258b80f4649d187f6bb90fede365, type: 3}
+  - {fileID: 21300000, guid: ea215e2e3d9dc4a10969e6bd7f024944, type: 3}
+  - {fileID: 21300000, guid: 00af7c33e46934479a0af2745f7829ab, type: 3}
+  - {fileID: 21300000, guid: 89e78796b6ecd44738bc8aa2fb2c758e, type: 3}
+  Badges:
+  - {fileID: 21300000, guid: cdac4409e59454290bf24b395aec15c9, type: 3}
+  - {fileID: 21300000, guid: bf36bab262b964f618d5e7dc219b5d82, type: 3}
+  - {fileID: 21300000, guid: d5c24917b780340b591000adbae5c461, type: 3}
+  - {fileID: 21300000, guid: f500b8c92fdc14ce1ae1fd312bfcc971, type: 3}
+  - {fileID: 21300000, guid: 5c111260ccffe400e898d0942dc6df77, type: 3}
+  - {fileID: 21300000, guid: 68fc9ebe379354031a0a2db3216eeb0c, type: 3}
+  - {fileID: 21300000, guid: 2717b960215e6477cb013691045fc246, type: 3}
+  - {fileID: 21300000, guid: 041727f8deb5f4aab8d16658bc851f1d, type: 3}
+  - {fileID: 21300000, guid: bf36bab262b964f618d5e7dc219b5d82, type: 3}
+  - {fileID: 21300000, guid: 1afc52782595f4eac8ccd134bfa2857b, type: 3}
+  - {fileID: 21300000, guid: 68fc9ebe379354031a0a2db3216eeb0c, type: 3}
+  - {fileID: 21300000, guid: e5790f9eee3d84a62b698990d58f14eb, type: 3}
+  - {fileID: 21300000, guid: bf36bab262b964f618d5e7dc219b5d82, type: 3}
+  ForceKind: 0
+  ForcedKind: 0
+--- !u!114 &621962775724655004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecc3d531134614346877853af7133861, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.AchievementManager
+  ScanInterval: 0.5
+  ShowToast: 1
+  UsePopup: 1
+  Sound: 9
+--- !u!114 &3144153159232174494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: facfbdb20275941cb9af53ebd36dc2e0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.RunTelemetry
+  Enabled: 1
+  LogPath: 1
+--- !u!114 &5399341814609981798
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f83d13f1b67e4c64b6cee0255666851, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.FeedbackDirector
+  EnemyDeathVfx: {fileID: 1345385291579790386, guid: e30b932676f0e4b3b80399b9081a6eb3, type: 3}
+  BossDeathVfx: {fileID: 8301344414407694689, guid: a2242213aa22747a1858ab469456afdf, type: 3}
+  HitSparkVfx: {fileID: 1874653188374554178, guid: fcc5dee607faa450ab31512c889402c9, type: 3}
+  FrostShatterVfx: {fileID: 5005148900362757932, guid: 09aa4cfcdb78d440fbc2862035df68d0, type: 3}
+  DeathVfxPerSecond: 24
+  ChampionColor: {r: 1, g: 0.92, b: 0.45, a: 1}
+  HeavyColor: {r: 1, g: 0.55, b: 0.15, a: 1}
+  TowerColor: {r: 0.93, g: 0.9, b: 0.82, a: 1}
+  ChampionSize: 34
+  HeavySize: 46
+  TowerSize: 24
+  TowerAggregate: 0.3
+  HeavyFraction: 0.25
+  NexusAlarmCooldown: 10
+  LowHealthFraction: 0.3
+  StreakWindow: 3
+  StreakTiers: 0f0000001e0000003c000000
+  StreakNames:
+  - Gemetzel!
+  - Blutbad!
+  - Vernichtung!
+  StreakCooldown: 15
+--- !u!114 &4148792227973406313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2322010122936604464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50030cbac7ffa42e9a631f318c6bfd41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.MusicDirector
+  MenuClip: {fileID: 8300000, guid: d07963838aa9f42069ea5e8bee7d87df, type: 3}
+  BuildClip: {fileID: 8300000, guid: 0a68cf86e2448485090a1ef98b566268, type: 3}
+  CombatBaseClip: {fileID: 8300000, guid: 905d9f5cd77c24aaba2368f83f459387, type: 3}
+  CombatIntenseClip: {fileID: 8300000, guid: 966a5076867704b43bddc065cb9c3b0e, type: 3}
+  BossClip: {fileID: 8300000, guid: a2c7d735697714e9d8208e7c8c6ea8e7, type: 3}
+  CrossfadeTime: 2.5
+  GameOverFade: 4
+  IntensityRate: 0.35
+  EnemiesLow: 12
+  EnemiesHigh: 45

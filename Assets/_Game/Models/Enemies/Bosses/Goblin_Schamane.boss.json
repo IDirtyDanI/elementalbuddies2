@@ -1,0 +1,192 @@
+{
+ "model": "Goblin_Schamane",
+ "rig": "Generic",
+ "fps": 30,
+ "visualScale": 1.9,
+ "moveSpeedModel": 0.8421,
+ "deathDuration": 1.4,
+ "clips": [
+  {
+   "name": "Shaman_Idle",
+   "role": "idle",
+   "loop": true,
+   "frames": 48,
+   "hit": -1.0
+  },
+  {
+   "name": "Shaman_Walk",
+   "role": "move",
+   "loop": true,
+   "frames": 30,
+   "hit": -1.0
+  },
+  {
+   "name": "Shaman_Attack",
+   "role": "attack",
+   "loop": false,
+   "frames": 40,
+   "hit": 0.4
+  },
+  {
+   "name": "Shaman_Cast",
+   "role": "cast",
+   "loop": false,
+   "frames": 45,
+   "hit": 0.7
+  },
+  {
+   "name": "Shaman_Die",
+   "role": "die",
+   "loop": false,
+   "frames": 34,
+   "hit": -1.0
+  }
+ ],
+ "triggers": [
+  {
+   "trigger": "Attack",
+   "clip": "Shaman_Attack"
+  },
+  {
+   "trigger": "Cast",
+   "clip": "Shaman_Cast"
+  },
+  {
+   "trigger": "Die",
+   "clip": "Shaman_Die"
+  }
+ ],
+ "materials": [
+  {
+   "name": "Gob_Cloth",
+   "hex": "#8a6a3e",
+   "emission": 0.0
+  },
+  {
+   "name": "Gob_Skin",
+   "hex": "#7fa04a",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_LeatherDark",
+   "hex": "#4f301c",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Iron",
+   "hex": "#8e939e",
+   "emission": 0.0
+  },
+  {
+   "name": "Gob_SkinDark",
+   "hex": "#5f7d35",
+   "emission": 0.0
+  },
+  {
+   "name": "Boss_Eye_Shaman",
+   "hex": "#6dff52",
+   "emission": 3.0
+  },
+  {
+   "name": "Enemy_Mouth",
+   "hex": "#3a1a16",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Tooth",
+   "hex": "#ede0bc",
+   "emission": 0.0
+  },
+  {
+   "name": "Gob_EarInner",
+   "hex": "#b4805e",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Leather",
+   "hex": "#7a4c2b",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Claw",
+   "hex": "#2f2622",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Rope",
+   "hex": "#b29464",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_WoodDark",
+   "hex": "#5b3a22",
+   "emission": 0.0
+  },
+  {
+   "name": "Shaman_Bone",
+   "hex": "#e4d7b4",
+   "emission": 0.0
+  },
+  {
+   "name": "Boss_Glow_Shaman",
+   "hex": "#59ff40",
+   "emission": 2.2
+  },
+  {
+   "name": "Enemy_Horn",
+   "hex": "#d9c7a0",
+   "emission": 0.0
+  },
+  {
+   "name": "Shaman_Feather",
+   "hex": "#b8452a",
+   "emission": 0.0
+  },
+  {
+   "name": "Shaman_FeatherLight",
+   "hex": "#e8dcc0",
+   "emission": 0.0
+  },
+  {
+   "name": "Shaman_FeatherDark",
+   "hex": "#2a2524",
+   "emission": 0.0
+  },
+  {
+   "name": "Shaman_Paint",
+   "hex": "#d8d0b8",
+   "emission": 0.0
+  },
+  {
+   "name": "Boss_FurLight",
+   "hex": "#a8957c",
+   "emission": 0.0
+  },
+  {
+   "name": "Boss_Fur",
+   "hex": "#6a5848",
+   "emission": 0.0
+  },
+  {
+   "name": "Boss_FurDark",
+   "hex": "#43362c",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Wood",
+   "hex": "#865934",
+   "emission": 0.0
+  },
+  {
+   "name": "Shaman_DrumSkin",
+   "hex": "#d6bf90",
+   "emission": 0.0
+  }
+ ],
+ "tris": 2220,
+ "releaseModel": [
+  -0.341,
+  -0.738,
+  1.405
+ ]
+}

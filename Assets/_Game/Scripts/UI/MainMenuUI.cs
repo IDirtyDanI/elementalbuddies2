@@ -103,6 +103,24 @@ namespace ElementalBuddies
         public Color DifficultySelectedTextColor = new Color(0.937f, 0.878f, 0.741f);
         public Color DifficultyNormalTextColor = new Color(0.239f, 0.149f, 0.078f);
 
+        // Ersatz-Vorschaubild einer Map (falls MapDefinitionSO.Preview leer ist), per Id
+        [System.Serializable]
+        public class MapPreviewEntry
+        {
+            public string Id;
+            public Sprite Sprite;
+        }
+
+        [Header("Map (Walddorf, Paket C-Menü)")]
+        [Tooltip("Zeile der Map-Kacheln zwischen Champion-Karten und Schwierigkeit; die Kacheln entstehen zur Laufzeit aus MapRegistry.All.")]
+        public RectTransform MapSelect;
+        [Tooltip("Inaktive Vorlage einer Map-Kachel (Button); Kinder: Thumb (Image), Lock (Image), Name (TMP), Sub (TMP).")]
+        public GameObject MapTileTemplate;
+        [Tooltip("Ersatzbilder je Map-Id (MapPreviewRenderer schreibt Assets/_Game/UI/Maps/map_preview_<id>.png).")]
+        public MapPreviewEntry[] MapPreviews = new MapPreviewEntry[0];
+        public Sprite MapPreviewPlaceholder;
+        public float MapTileGap = 12f;
+
         [Header("Übergang")]
         [Tooltip("Schwarzer Vollbild-Überblender (Alpha 0..1) beim Spielstart.")]
         public CanvasGroup Fader;
@@ -228,6 +246,7 @@ namespace ElementalBuddies
             ChampionClass start = GameSession.SelectedChampion;
             if (IsLocked(start)) start = ChampionClass.Mage;
             RefreshDifficulty();
+            InitMaps();
             Select(start, true);
             MainMenuMeta.Attach(this); // Nächstes Ziel, Belagerungsstufe, Kodex (Plan Fesselung E3/E4/E6)
             KeyBindingsMenu.Attach(this); // Einstellungen → Tastaturbelegung
@@ -264,9 +283,11 @@ namespace ElementalBuddies
         void Update()
         {
             UpdateNetwork();
+            if (_loading) return;
+            HandleGamepad();
 
             var kb = Keyboard.current;
-            if (kb == null || _loading) return;
+            if (kb == null) return;
 
             if (_view == NetView.Join)
             {
@@ -281,6 +302,7 @@ namespace ElementalBuddies
                 {
                     if (kb.qKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() - 1); return; }
                     if (kb.eKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() + 1); return; }
+                    if (kb.mKey.wasPressedThisFrame) { CycleMap(kb.shiftKey.isPressed ? -1 : 1); return; }
                 }
                 int li = IndexOf(_selected);
                 if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) Select(ClassAt(li - 1), false);
@@ -319,6 +341,8 @@ namespace ElementalBuddies
             // Schwierigkeit per Tastatur: Q leichter, E schwerer (ohne Umlauf)
             if (kb.qKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() - 1); return; }
             if (kb.eKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() + 1); return; }
+            // Map per Tastatur: M nächste, Umschalt+M vorige (M liegt auf QWERTZ und QWERTY gleich)
+            if (kb.mKey.wasPressedThisFrame) { CycleMap(kb.shiftKey.isPressed ? -1 : 1); return; }
 
             // Champion per Tastatur wechseln: ←/→, A/D oder 1–4
             int idx = IndexOf(_selected);
@@ -573,20 +597,250 @@ namespace ElementalBuddies
                 DetailTagline.text = selLocked ? "Gesperrt" + onRank + " – " + LockGoal(_selected) : sdef.Tagline;
                 DetailTagline.color = selLocked ? LockedTextColor : _detailTaglineColor;
             }
+            // Gesperrte Map blockiert "Spielen" ebenso (Hinweis: Champion-Sperre zuerst). In der Lobby zeigt die Kachel die
+            // Map des Hosts – sie darf für Clients gesperrt sein (der Host hat sie freigeschaltet), also keine Sperre.
+            var map = SelectedMap;
+            bool mapLocked = _view != NetView.Lobby && IsMapLocked(map);
+            bool blocked = selLocked || mapLocked;
             if (PlayButton != null)
             {
-                PlayButton.interactable = !selLocked;
-                if (PlayButton.image != null) PlayButton.image.color = selLocked ? LockedPlayTint : Color.white;
+                PlayButton.interactable = !blocked;
+                if (PlayButton.image != null) PlayButton.image.color = blocked ? LockedPlayTint : Color.white;
             }
-            if (_playLabel != null) _playLabel.text = selLocked ? "Gesperrt" : _playLabelText;
+            if (_playLabel != null) _playLabel.text = blocked ? "Gesperrt" : _playLabelText;
             if (PlayLockHint != null)
             {
-                PlayLockHint.gameObject.SetActive(selLocked);
+                PlayLockHint.gameObject.SetActive(blocked);
                 if (selLocked)
                     PlayLockHint.text = (sdef != null ? sdef.DisplayName : _selected.ToString()) + onRank + " gesperrt – " + LockGoal(_selected);
+                else if (mapLocked)
+                    PlayLockHint.text = map.DisplayName + " gesperrt – " + Progression.MapGoalText(map);
             }
             // Sperr-Hinweis und Stufen-Beschreibung teilen sich die Zeile über "Spielen"
-            if (DifficultyDescription != null) DifficultyDescription.gameObject.SetActive(!(selLocked && PlayLockHint != null));
+            if (DifficultyDescription != null) DifficultyDescription.gameObject.SetActive(!(blocked && PlayLockHint != null));
+            RefreshMaps();
+        }
+
+        // ---------------- Map (Walddorf, Paket C-Menü) ----------------
+
+        private class MapTile
+        {
+            public MapDefinitionSO Map;
+            public Button Button;
+            public Image Thumb, Lock;
+            public TextMeshProUGUI Name, Sub;
+        }
+
+        private readonly List<MapTile> _mapTiles = new List<MapTile>();
+        private MapDefinitionSO _selectedMap;
+
+        // Im Menü gewählte bzw. angezeigte Map (in der Lobby beim Client: die Map des Hosts); nie null
+        public MapDefinitionSO SelectedMap => _selectedMap != null ? _selectedMap : MapRegistry.Default;
+
+        public static bool IsMapLocked(MapDefinitionSO m) => m != null && !Progression.IsMapUnlocked(m);
+
+        // Eigene, spielbare Map: gespeicherte Wahl, gesperrt (z. B. nach dem Zurücksetzen der Erfolge) → Standard (Stadt)
+        private static MapDefinitionSO OwnMap()
+        {
+            var m = GameSession.Map;
+            return IsMapLocked(m) ? MapRegistry.Default : m;
+        }
+
+        private void InitMaps()
+        {
+            _selectedMap = OwnMap();
+            // Gespeicherte Map gesperrt → Stadt auch speichern (Lobby/Spielstart lesen GameSession.MapId)
+            if (PlayerPrefs.HasKey("map") && GameSession.MapId != _selectedMap.Id) GameSession.MapId = _selectedMap.Id;
+            BuildMapTiles();
+            RefreshMaps();
+        }
+
+        // Kacheln aus MapRegistry.All (Reihenfolge Order) in der Zeile MapSelect verteilen. Fehlt Map_Forest, gibt es
+        // eben nur die Stadt-Kachel über die ganze Breite.
+        private void BuildMapTiles()
+        {
+            foreach (var t in _mapTiles)
+            {
+                if (t == null || t.Button == null) continue;
+                if (Application.isPlaying) Destroy(t.Button.gameObject);
+                else DestroyImmediate(t.Button.gameObject);
+            }
+            _mapTiles.Clear();
+            if (MapSelect == null || MapTileTemplate == null) return;
+            MapTileTemplate.SetActive(false);
+            // Reste früherer Aufbauten (z. B. Init im Edit-Mode) entfernen – nur die Vorlage bleibt
+            for (int i = MapSelect.childCount - 1; i >= 0; i--)
+            {
+                var c = MapSelect.GetChild(i).gameObject;
+                if (c == MapTileTemplate) continue;
+                if (Application.isPlaying) { c.SetActive(false); Destroy(c); }
+                else DestroyImmediate(c);
+            }
+
+            var maps = MapRegistry.All;
+            int n = maps.Count > 0 ? maps.Count : 1;
+            float totalW = MapSelect.rect.width > 1f ? MapSelect.rect.width : MapSelect.sizeDelta.x;
+            float h = MapSelect.rect.height > 1f ? MapSelect.rect.height : MapSelect.sizeDelta.y;
+            float w = (totalW - MapTileGap * (n - 1)) / n;
+            for (int i = 0; i < n; i++)
+            {
+                var m = maps.Count > 0 ? maps[i] : MapRegistry.Default;
+                var go = Instantiate(MapTileTemplate, MapSelect);
+                go.name = "Map_" + m.Id;
+                go.SetActive(true);
+                var rt = (RectTransform)go.transform;
+                rt.anchorMin = rt.anchorMax = new Vector2(0f, 0f);
+                rt.pivot = new Vector2(0f, 0f);
+                rt.anchoredPosition = new Vector2(i * (w + MapTileGap), 0f);
+                rt.sizeDelta = new Vector2(w, h);
+                var tile = new MapTile
+                {
+                    Map = m,
+                    Button = go.GetComponent<Button>(),
+                    Thumb = FindChild<Image>(go.transform, "Thumb"),
+                    Lock = FindChild<Image>(go.transform, "Lock"),
+                    Name = FindChild<TextMeshProUGUI>(go.transform, "Name"),
+                    Sub = FindChild<TextMeshProUGUI>(go.transform, "Sub"),
+                };
+                if (tile.Button != null)
+                {
+                    int idx = i;
+                    tile.Button.onClick.RemoveAllListeners();
+                    tile.Button.onClick.AddListener(() => SelectMap(idx));
+                }
+                _mapTiles.Add(tile);
+            }
+        }
+
+        // Vorschaubild: MapDefinitionSO.Preview, sonst Ersatzbild per Id, sonst Platzhalter
+        public Sprite PreviewFor(MapDefinitionSO m)
+        {
+            if (m == null) return MapPreviewPlaceholder;
+            if (m.Preview != null) return m.Preview;
+            foreach (var e in MapPreviews)
+                if (e != null && e.Sprite != null && e.Id == m.Id) return e.Sprite;
+            return MapPreviewPlaceholder;
+        }
+
+        private int MapIndex()
+        {
+            var maps = MapRegistry.All;
+            for (int i = 0; i < maps.Count; i++) if (maps[i] == SelectedMap) return i;
+            return 0;
+        }
+
+        // Tastatur/Gamepad: zyklisch weiter (zwei Maps = umschalten)
+        private void CycleMap(int delta)
+        {
+            int n = MapRegistry.All.Count;
+            if (n <= 1) return;
+            SelectMap(((MapIndex() + delta) % n + n) % n);
+        }
+
+        // Map wählen. Gesperrte Maps sind im Hauptbildschirm ansehbar (Schloss, "Spielen" gesperrt), gespeichert wird nur
+        // eine freigeschaltete Wahl (GameSession.MapId). In der Lobby wählt nur der Host, und nur eine Map, die er selbst
+        // freigeschaltet hat; sie reist mit der Schwierigkeit an die Clients (NetLobby/LobbyCodec).
+        public void SelectMap(int index)
+        {
+            var maps = MapRegistry.All;
+            if (maps.Count == 0 || _loading) return;
+            if (_view == NetView.Join) return;
+            if (_view == NetView.Lobby && Net.IsClientOnly) return;
+            index = Mathf.Clamp(index, 0, maps.Count - 1);
+            var m = maps[index];
+            if (m == null) return;
+            bool locked = IsMapLocked(m);
+            if (_view == NetView.Lobby && locked)
+            {
+                ShowNetMessage(m.DisplayName + " ist gesperrt – " + Progression.MapGoalText(m), 4f);
+                return;
+            }
+            bool changed = m != _selectedMap;
+            _selectedMap = m;
+            if (!locked && GameSession.MapId != m.Id) GameSession.MapId = m.Id;
+            if (changed && Application.isPlaying) GameAudio.Play(SfxId.UiClick);
+            RefreshLocks();
+            if (MainMenuMeta.Instance != null) MainMenuMeta.Instance.Refresh(); // Belagerungsstufe/Rekord der Map
+            if (_view == NetView.Lobby)
+            {
+                NetLobby.PushDifficulty(GameSession.DifficultyId);
+                RefreshLobby();
+                return;
+            }
+            if (Application.isPlaying && PlayButton != null && EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(PlayButton.gameObject);
+        }
+
+        // Kacheln: gewählte Map Holz + Cremeschrift (wie die Schwierigkeit), andere Pergament; gesperrt: Schloss, graues Bild
+        private void RefreshMaps()
+        {
+            if (_mapTiles.Count == 0) return;
+            bool inLobby = _view == NetView.Lobby;
+            bool canChoose = !inLobby || !Net.IsClientOnly;
+            foreach (var t in _mapTiles)
+            {
+                if (t == null || t.Map == null) continue;
+                bool sel = t.Map == SelectedMap;
+                bool locked = IsMapLocked(t.Map);
+                bool showLock = locked && !(inLobby && sel); // Host-Map beim Client nicht als gesperrt zeigen
+                if (t.Button != null)
+                {
+                    t.Button.interactable = canChoose && !(inLobby && locked);
+                    var img = t.Button.image;
+                    if (img != null)
+                    {
+                        var spr = sel ? DifficultySelectedSprite : DifficultyNormalSprite;
+                        if (spr != null) img.sprite = spr;
+                        img.color = showLock && !sel ? LockedCardTint : Color.white;
+                    }
+                    var ss = t.Button.spriteState;
+                    var hover = sel ? DifficultySelectedHoverSprite : DifficultyNormalHoverSprite;
+                    if (hover != null)
+                    {
+                        ss.highlightedSprite = hover;
+                        ss.selectedSprite = hover;
+                        ss.pressedSprite = hover;
+                        t.Button.spriteState = ss;
+                    }
+                }
+                if (t.Thumb != null)
+                {
+                    var spr = PreviewFor(t.Map);
+                    t.Thumb.sprite = spr;
+                    t.Thumb.enabled = spr != null;
+                    t.Thumb.color = showLock ? LockedPortraitTint : Color.white;
+                }
+                if (t.Lock != null) t.Lock.gameObject.SetActive(showLock);
+                Color textCol = sel ? DifficultySelectedTextColor : (showLock ? LockedNameColor : DifficultyNormalTextColor);
+                if (t.Name != null)
+                {
+                    t.Name.text = t.Map.DisplayName;
+                    t.Name.color = textCol;
+                }
+                if (t.Sub != null)
+                {
+                    t.Sub.text = showLock ? "Gesperrt: Morgengrauen" : t.Map.Tagline;
+                    if (showLock && t.Map.UnlockAchievementId != "dawn") t.Sub.text = "Gesperrt";
+                    Color sub = sel ? DifficultySelectedTextColor : (showLock ? LockedTextColor : DifficultyNormalTextColor);
+                    sub.a = 0.85f;
+                    t.Sub.color = sub;
+                }
+            }
+        }
+
+        // Gamepad (wie Tastatur Q/E bzw. M): Schultertasten = Schwierigkeit, Trigger = Map; nur Hauptbildschirm/Lobby ohne Overlays
+        private void HandleGamepad()
+        {
+            var gp = Gamepad.current;
+            if (gp == null || _view == NetView.Join) return;
+            if (KeyBindingsMenu.IsOpen || MainMenuMeta.IsCodexOpen) return;
+            if (SettingsPanel != null && SettingsPanel.activeSelf) return;
+            if (AchievementsPanel != null && AchievementsPanel.activeSelf) return;
+            if (_view == NetView.Lobby && Net.IsClientOnly) return;
+            if (gp.leftShoulder.wasPressedThisFrame) SelectDifficulty(DifficultyIndex() - 1);
+            else if (gp.rightShoulder.wasPressedThisFrame) SelectDifficulty(DifficultyIndex() + 1);
+            else if (gp.leftTrigger.wasPressedThisFrame) CycleMap(-1);
+            else if (gp.rightTrigger.wasPressedThisFrame) CycleMap(1);
         }
 
         // ---------------- Schwierigkeit ----------------
@@ -833,8 +1087,9 @@ namespace ElementalBuddies
         // Einzelspieler: lokaler Host ohne Mitspieler, der Host lädt die Spielszene per NGO-SceneManager
         public void Play()
         {
-            if (_loading || _view != NetView.Main || IsLocked(_selected)) return;
+            if (_loading || _view != NetView.Main || IsLocked(_selected) || IsMapLocked(SelectedMap)) return;
             GameSession.SelectedChampion = _selected;
+            if (GameSession.MapId != SelectedMap.Id) GameSession.MapId = SelectedMap.Id;
             if (!Application.isPlaying) return;
             _loading = true;
             StartCoroutine(LoadGame());
@@ -879,13 +1134,18 @@ namespace ElementalBuddies
             {
 #if UNITY_EDITOR
                 // Szene nicht in den Build Settings: im Editor trotzdem starten (NetBootstrap startet den Solo-Host)
-                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
-                    "Assets/" + GameSession.GameScene + ".unity", new LoadSceneParameters(LoadSceneMode.Single));
-#else
-                Debug.LogError("MainMenuUI: Spielszene '" + GameSession.GameScene + "' fehlt in den Build Settings.");
+                if (System.IO.File.Exists(GameSession.Map.ScenePath))
+                {
+                    UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
+                        GameSession.Map.ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+                    yield break;
+                }
+#endif
+                // Szene fehlt (z. B. Walddorf noch nicht gebaut): Meldung statt Absturz, Menü bleibt bedienbar
+                Debug.LogError("MainMenuUI: Spielszene '" + GameSession.GameScene + "' (" + GameSession.Map.ScenePath + ") fehlt in den Build Settings.");
+                ShowNetMessage(MapMissingText(GameSession.Map));
                 _loading = false;
                 ResetFader();
-#endif
             }
         }
 
@@ -970,7 +1230,13 @@ namespace ElementalBuddies
 
             // Kommandozeile (Testautomatisierung) oder noch laufende Verbindung → Lobby
             bool started = NetSession.HandleCommandLine();
-            if (started) SetView(NetView.Lobby);
+            if (started)
+            {
+                // -netmap kann die Map nach InitMaps geändert haben → Kacheln/Lobby nachziehen
+                _selectedMap = OwnMap();
+                RefreshMaps();
+                SetView(NetView.Lobby);
+            }
             else if (Net.IsRunning)
             {
                 if (ns.Mode == NetMode.Solo || ns.Mode == NetMode.None) _ = ns.ShutdownAsync();
@@ -993,6 +1259,7 @@ namespace ElementalBuddies
 
         private void SetView(NetView view)
         {
+            var prevView = _view;
             _view = view;
             bool main = view == NetView.Main;
             bool lobby = view == NetView.Lobby;
@@ -1042,7 +1309,11 @@ namespace ElementalBuddies
                     RefreshDifficulty();
                 }
                 SetDifficultyInteractable(true);
+                // Map eines verlassenen Raums (Client) nicht übernehmen: eigene Wahl wieder anzeigen
+                if (prevView == NetView.Lobby || _selectedMap == null || !IsMapLocked(_selectedMap))
+                    _selectedMap = OwnMap();
                 RefreshLocks();
+                if (MainMenuMeta.Instance != null) MainMenuMeta.Instance.Refresh();
                 if (EventSystem.current != null && PlayButton != null) EventSystem.current.SetSelectedGameObject(PlayButton.gameObject);
             }
         }
@@ -1066,14 +1337,20 @@ namespace ElementalBuddies
             if (JoinCodeInput != null) JoinCodeInput.interactable = on;
         }
 
-        // Champion für die Verbindung festlegen (NetPlayer meldet ihn beim Spawn); gesperrt → erster freier
+        // Champion für die Verbindung festlegen (NetPlayer meldet ihn beim Spawn); gesperrt → erster freier.
+        // Gleiches für die Map: eine nur angesehene, gesperrte Map wird nicht gehostet.
         private void PrepareConnect()
         {
             ChampionClass c = _selected;
             if (IsLocked(c)) c = FirstUnlocked();
             GameSession.SelectedChampion = c;
+            if (IsMapLocked(SelectedMap)) _selectedMap = OwnMap();
+            if (GameSession.MapId != SelectedMap.Id) GameSession.MapId = SelectedMap.Id;
             ShowNetMessage(null);
         }
+
+        private static string MapMissingText(MapDefinitionSO m) =>
+            "Die Karte „" + (m != null ? m.DisplayName : "?") + "“ ist in dieser Version noch nicht verfügbar.";
 
         private ChampionClass FirstUnlocked()
         {
@@ -1196,6 +1473,14 @@ namespace ElementalBuddies
         private void StartLobbyGame()
         {
             if (_loading || !CanStartLobbyGame()) return;
+            // Host-Map muss freigeschaltet und ladbar sein (sonst Meldung statt Fehlstart)
+            if (IsMapLocked(GameSession.Map)) { GameSession.MapId = OwnMap().Id; _selectedMap = OwnMap(); RefreshLobby(); }
+            // Koop lädt per NGO-Szenenverwaltung – das braucht die Szene in den Build Settings
+            if (!Application.CanStreamedLevelBeLoaded(GameSession.GameScene))
+            {
+                ShowNetMessage(MapMissingText(GameSession.Map));
+                return;
+            }
             var np = NetPlayer.Local;
             if (np != null) GameSession.SelectedChampion = np.ChampionClass;
             NetLobby.PushDifficulty(GameSession.DifficultyId);
@@ -1281,7 +1566,14 @@ namespace ElementalBuddies
             if (NetMessage == null) return;
             bool show = !string.IsNullOrEmpty(text);
             NetMessage.gameObject.SetActive(show);
-            if (show) NetMessage.text = text;
+            if (show)
+            {
+                NetMessage.text = text;
+                // über der Ziel-Leiste (MainMenuMeta hängt sie zur Laufzeit an), aber unter dem Überblender
+                int top = NetMessage.transform.parent.childCount - 1;
+                if (Fader != null && Fader.transform.parent == NetMessage.transform.parent) top = Fader.transform.GetSiblingIndex() - 1;
+                NetMessage.transform.SetSiblingIndex(Mathf.Max(0, top));
+            }
             _messageTimer = show ? duration : 0f;
         }
 
@@ -1376,12 +1668,26 @@ namespace ElementalBuddies
             if (LobbyNameInput != null) LobbyNameInput.interactable = local != null && NetLobby.Local != null;
             SetDifficultyInteractable(!running || isHost);
 
-            // Schwierigkeit
+            // Map des Raums: beim Client die Map des Hosts (NetLobby.RoomMapId), beim Host die eigene Wahl
+            var roomMap = running && !isHost ? MapRegistry.Get(NetLobby.RoomMapId) : SelectedMap;
+            if (roomMap != _selectedMap)
+            {
+                _selectedMap = roomMap;
+                RefreshMaps();
+            }
+
+            // Schwierigkeit + Map
             if (LobbyDifficultyText != null)
             {
                 var d = GameSession.Difficulty;
-                LobbyDifficultyText.text = "Schwierigkeit: <b>" + d.DisplayName + "</b>" +
-                    (isHost ? "  <size=80%>(Q/E)</size>" : "  <size=80%>– wählt der Host</size>");
+                if (!LobbyDifficultyText.enableAutoSizing)
+                {
+                    LobbyDifficultyText.fontSizeMax = LobbyDifficultyText.fontSize;
+                    LobbyDifficultyText.fontSizeMin = 16f;
+                    LobbyDifficultyText.enableAutoSizing = true;
+                }
+                LobbyDifficultyText.text = "Schwierigkeit: <b>" + d.DisplayName + "</b>  ·  Karte: <b>" + roomMap.DisplayName + "</b>" +
+                    (isHost ? "  <size=80%>(Q/E · M)</size>" : "  <size=80%>– wählt der Host</size>");
             }
 
             // Status

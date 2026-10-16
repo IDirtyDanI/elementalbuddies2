@@ -256,7 +256,7 @@ namespace ElementalBuddies
             if (BossDeathVfx != null) Spawn(BossDeathVfx, pos + Vector3.up * 1f, 5f);
             GameAudio.Play(SfxId.BossDeath, pos);
             GameAudio.Play(SfxId.BossDefeated);
-            _fc.ShowBanner(e.DisplayName + " besiegt!", "Die Stadt atmet auf", new Color(1f, 0.84f, 0.35f), 3f);
+            _fc.ShowBanner(e.DisplayName + " besiegt!", MapContext.Current.BossRelief, new Color(1f, 0.84f, 0.35f), 3f);
         }
 
         private void CountKill()
@@ -458,7 +458,7 @@ namespace ElementalBuddies
             var atmo = SiegeProgression.Instance != null ? SiegeProgression.Instance.Atmosphere : null;
             if (atmo != null) atmo.SetDawn(true);
             GameAudio.Play(GameAudio.Has(SfxId.Dawn) ? SfxId.Dawn : SfxId.BossDefeated);
-            if (_fc != null) _fc.ShowBanner("Morgengrauen!", "Die Stadt hat die Nacht überstanden", new Color(1f, 0.78f, 0.42f), 4f);
+            if (_fc != null) _fc.ShowBanner("Morgengrauen!", MapContext.Current.DawnVictoryLine, new Color(1f, 0.78f, 0.42f), 4f);
         }
 
         private void HandleGameOver(string reason)

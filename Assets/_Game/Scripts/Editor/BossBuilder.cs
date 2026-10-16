@@ -1044,6 +1044,352 @@ namespace ElementalBuddies.EditorTools
             rt.offsetMin = new Vector2(l, b); rt.offsetMax = new Vector2(-r, -t);
         }
 
+        // ---------------- Walddorf: Dorf-Bosse mit eigenen Modellen (Etappe 3, A-Bosse) ----------------
+        // Ork-Kriegsherr / Goblin-Schamane / Ork-Fährtenmeister = Theme-Variante der Stadt-Bosse, nur die Optik ist neu:
+        //  - Modelle + Clips aus art-src/enemies/build_bosses.py: Models/Enemies/Bosses/<Name>.fbx + Sidecar <Name>.boss.json
+        //    (bewusst kein .anim.json – ForestEnemyBuilder.ImportSidecarModels würde sonst einen Controller ohne Boss-Trigger
+        //    über diesen schreiben). Import über ForestEnemyBuilder.ConfigureModelImport (Generic, Takes → Clips, Palette).
+        //  - Controller Models/Enemies/Bosses/<Name>.controller: Idle ⇄ Run (Tempo = Speed / (Clip-Tempo × VisualScale),
+        //    rutschfrei), je Boss-Trigger des Stadt-Controllers (Attack, Slam/Whirl, Cast, Shoot) ein AnyState-Zustand mit
+        //    Tempo 1 (Treffer-Frames in Blender auf die Ausholzeiten gelegt), Die (Tod-Clip, EnemyCorpse).
+        //    ForestEnemyBuilder.ModelController nimmt genau diesen Controller (<Name>.controller im Modellordner).
+        //  - Prefab Prefabs/Bosses/Forest/<Name>.prefab: Inhalt des Stadt-Bosses (Wurzel, Agent, Collider, EnemyBrain,
+        //    BossBrain.Abilities, Aura, HP-Leiste, Netz) 1:1, nur „Visual“ = Modell. Gespeichert über das bestehende Asset →
+        //    GUID und GlobalObjectIdHash bleiben. Fähigkeiten werden per JSON gegen den Stadt-Boss geprüft.
+        //  - Dorf-Config (nur Optik-Felder): DeathClipDuration aus dem Sidecar, ProjectileSpawnHeight = Abwurfpunkt des Clips
+        //    (Giftkugel in der Hand, Pfeil-Nocke) über dem Pivot; Icon (Wellenvorschau, Kodex, Porträt) aus dem Modell.
+        public const string ForestModelDir = "Assets/_Game/Models/Enemies/Bosses/";
+        public const string ForestPrefabDir = "Assets/_Game/Prefabs/Bosses/Forest/";
+        private const string ForestConfigDir = "Assets/ScriptableObjects/Configs/Forest/";
+        private const string IconDir = "Assets/_Game/UI/Icons/";
+
+        public static readonly string[,] ForestBosses =
+        {
+            { "Ork_Kriegsherr", "BossBoneLord" },
+            { "Goblin_Schamane", "BossNecromancer" },
+            { "Ork_Faehrtenmeister", "BossDeathHunter" },
+        };
+
+        [System.Serializable] public class BossTrigger { public string trigger, clip; }
+        [System.Serializable]
+        public class BossSidecar
+        {
+            public string model;
+            public float visualScale = 1f, moveSpeedModel, deathDuration;
+            public float[] releaseModel = new float[0];
+            public BossTrigger[] triggers = new BossTrigger[0];
+            public ForestEnemyBuilder.SideClip[] clips = new ForestEnemyBuilder.SideClip[0];
+        }
+
+        [MenuItem("BuddyTD/Walddorf/Dorf-Bosse bauen (Modelle, Prefabs, Icons)")]
+        private static void BuildForestMenu() => BuildForest();
+
+        public static string BuildForest(bool renderIcons = true)
+        {
+            var sb = new System.Text.StringBuilder("BossBuilder.BuildForest:");
+            if (EditorApplication.isPlayingOrWillChangePlaymode) { sb.Append(" nur im Edit-Modus."); Debug.LogWarning(sb); return sb.ToString(); }
+            for (int i = 0; i < ForestBosses.GetLength(0); i++)
+            {
+                try { BuildForestBoss(ForestBosses[i, 0], ForestBosses[i, 1], renderIcons, sb); }
+                catch (System.Exception e) { sb.Append($"\n  FEHLER {ForestBosses[i, 0]}: {e.Message}"); Debug.LogException(e); }
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log(sb.ToString());
+            return sb.ToString();
+        }
+
+        private static void BuildForestBoss(string name, string source, bool renderIcon, System.Text.StringBuilder sb)
+        {
+            string fbx = ForestModelDir + name + ".fbx";
+            string sidePath = ForestModelDir + name + ".boss.json";
+            if (AssetImporter.GetAtPath(fbx) == null || !System.IO.File.Exists(sidePath)) { sb.Append($"\n  {name}: Modell/Sidecar fehlt ({fbx})"); return; }
+            string json = System.IO.File.ReadAllText(sidePath);
+            var side = JsonUtility.FromJson<ForestEnemyBuilder.Sidecar>(json);
+            var boss = JsonUtility.FromJson<BossSidecar>(json);
+            ForestEnemyBuilder.ConfigureModelImport(fbx, side, true);
+
+            var cfg = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(ForestConfigDir + name + ".asset");
+            float vs = cfg != null && cfg.VisualScale > 0f ? cfg.VisualScale : Mathf.Max(0.01f, side.visualScale);
+            var ctrl = ForestBossController(name, fbx, boss, vs, sb);
+
+            string srcPath = PrefabDir + source + ".prefab";
+            string dst = ForestPrefabDir + name + ".prefab";
+            var root = PrefabUtility.LoadPrefabContents(srcPath);
+            float pivot = 1f;
+            try
+            {
+                root.name = name;
+                var agent = root.GetComponent<NavMeshAgent>();
+                float baseOffset = agent != null ? agent.baseOffset : 0f;
+                pivot = baseOffset; // Pivot-Höhe über dem Boden im Wurzel-Raum (Spiel: × VisualScale)
+                var oldVisual = root.transform.Find("Visual");
+                var visual = new GameObject("Visual");
+                visual.tag = oldVisual != null ? oldVisual.tag : root.tag;
+                visual.layer = root.layer;
+                visual.transform.SetParent(root.transform, false);
+                visual.transform.localPosition = new Vector3(0f, -baseOffset, 0f);
+                visual.transform.localScale = Vector3.one / Mathf.Max(0.01f, root.transform.localScale.x);
+                if (oldVisual != null)
+                {
+                    visual.transform.SetSiblingIndex(oldVisual.GetSiblingIndex());
+                    Object.DestroyImmediate(oldVisual.gameObject);
+                }
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>(fbx);
+                var inst = (GameObject)PrefabUtility.InstantiatePrefab(model, visual.transform);
+                inst.name = name + "_Model";
+                foreach (var t in inst.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = root.layer;
+                var anim = inst.GetComponent<Animator>();
+                if (anim == null) anim = inst.AddComponent<Animator>();
+                foreach (var a in inst.GetComponentsInChildren<Animator>(true)) if (a != anim) Object.DestroyImmediate(a);
+                anim.applyRootMotion = false;
+                anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+                foreach (var o in AssetDatabase.LoadAllAssetsAtPath(fbx)) if (o is Avatar av) { anim.avatar = av; break; }
+                anim.runtimeAnimatorController = ctrl;
+
+                var brain = root.GetComponent<EnemyBrain>();
+                if (brain != null && cfg != null) brain.Config = cfg;
+                PrefabUtility.SaveAsPrefabAsset(root, dst);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+
+            // ForestEnemyBuilder („Dorf-Gegner bauen“) überspringt Prefabs mit diesem Label (sonst Platzhalter/Auto-Visual)
+            ForestEnemyBuilder.MarkOwnBuilder(dst);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(dst);
+            if (cfg != null)
+            {
+                cfg.Prefab = prefab;
+                // Klänge (nur Ton, Walddorf-Synthese von A-Ramme/Audio): Ork-Grunzen beim Ausholen (Treffer bleibt der Axt-/
+                // Stadt-Ton), eigene Todeslaute
+                switch (name)
+                {
+                    case "Ork_Kriegsherr":
+                        cfg.AttackSound = true; cfg.AttackSfx = SfxId.OrkGrunt; cfg.DeathSound = true; cfg.DeathSfx = SfxId.OrkDeath; break;
+                    case "Goblin_Schamane":
+                        cfg.AttackSound = false; cfg.DeathSound = true; cfg.DeathSfx = SfxId.GoblinScreech; break;
+                    case "Ork_Faehrtenmeister":
+                        cfg.AttackSound = true; cfg.AttackSfx = SfxId.GoblinBowShot; cfg.DeathSound = true; cfg.DeathSfx = SfxId.OrkDeath; break;
+                }
+                if (side.deathDuration > 0f) cfg.DeathClipDuration = side.deathDuration;
+                // Abwurfpunkt (Modell-Meter, Blender z = oben) → Höhe über dem Pivot im Spiel
+                if (boss.releaseModel != null && boss.releaseModel.Length == 3 && cfg.ProjectilePrefab != null)
+                    cfg.ProjectileSpawnHeight = Mathf.Round((boss.releaseModel[2] - pivot) * vs * 100f) / 100f;
+                EditorUtility.SetDirty(cfg);
+            }
+            string iconPath = IconDir + "icon_enemy_" + name.ToLowerInvariant() + ".png";
+            if (renderIcon && prefab != null)
+            {
+                PacingSetup.RenderIcon(prefab, iconPath);
+                AssetDatabase.ImportAsset(iconPath);
+                var ti = AssetImporter.GetAtPath(iconPath) as TextureImporter;
+                if (ti != null)
+                {
+                    ti.textureType = TextureImporterType.Sprite;
+                    ti.spriteImportMode = SpriteImportMode.Single;
+                    ti.alphaIsTransparency = true;
+                    ti.mipmapEnabled = false;
+                    ti.SaveAndReimport();
+                }
+                if (cfg != null) { cfg.Icon = AssetDatabase.LoadAssetAtPath<Sprite>(iconPath); EditorUtility.SetDirty(cfg); }
+            }
+            sb.Append($"\n  {dst}: Modell {fbx} ({side.tris} Tris, {side.clips.Length} Clips), Controller {AssetDatabase.GetAssetPath(ctrl)}, "
+                      + $"Fähigkeiten {(AbilitiesMatch(srcPath, dst, out string why) ? "identisch" : "ABWEICHEND " + why)}, "
+                      + $"Tod {(cfg != null ? cfg.DeathClipDuration : 0f):0.##} s, Abschuss {(cfg != null ? cfg.ProjectileSpawnHeight : 0f):0.##} m");
+        }
+
+        // JSON-Vergleich BossBrain.Abilities (und GlobalCooldown/BeamHeight) Stadt-Boss ↔ Dorf-Boss
+        public static bool AbilitiesMatch(string cityPrefab, string forestPrefab, out string why)
+        {
+            why = "";
+            var a = AssetDatabase.LoadAssetAtPath<GameObject>(cityPrefab)?.GetComponent<BossBrain>();
+            var b = AssetDatabase.LoadAssetAtPath<GameObject>(forestPrefab)?.GetComponent<BossBrain>();
+            if (a == null || b == null) { why = "BossBrain fehlt"; return false; }
+            if (a.Abilities.Count != b.Abilities.Count) { why = "Anzahl"; return false; }
+            for (int i = 0; i < a.Abilities.Count; i++)
+                if (JsonUtility.ToJson(a.Abilities[i]) != JsonUtility.ToJson(b.Abilities[i])) { why = a.Abilities[i].Name; return false; }
+            if (!Mathf.Approximately(a.GlobalCooldown, b.GlobalCooldown) || !Mathf.Approximately(a.BeamHeight, b.BeamHeight)) { why = "BossBrain-Felder"; return false; }
+            return true;
+        }
+
+        // Idle ⇄ Run (Bool Moving, Tempo über Speed), Boss-Trigger per AnyState (Tempo 1, Rückweg so, dass die Überblendung
+        // mit dem Clip-Ende fertig ist), Die (AnyState, bleibt stehen). GUID bleibt bei erneutem Lauf.
+        private static AnimatorController ForestBossController(string name, string fbx, BossSidecar side, float visualScale, System.Text.StringBuilder sb)
+        {
+            string path = ForestModelDir + name + ".controller";
+            var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+            if (ac == null) ac = AnimatorController.CreateAnimatorControllerAtPath(path);
+            var sm = ac.layers[0].stateMachine;
+            foreach (var t in sm.anyStateTransitions) sm.RemoveAnyStateTransition(t);
+            foreach (var st in sm.states) sm.RemoveState(st.state);
+            while (ac.parameters.Length > 0) ac.RemoveParameter(0);
+            ac.AddParameter("Moving", AnimatorControllerParameterType.Bool);
+            ac.AddParameter("Speed", AnimatorControllerParameterType.Float);
+
+            AnimationClip ClipNamed(string n)
+            {
+                foreach (var o in AssetDatabase.LoadAllAssetsAtPath(fbx)) if (o is AnimationClip c && c.name == n) return c;
+                return null;
+            }
+            AnimationClip Role(string role)
+            {
+                foreach (var c in side.clips) if (c.role == role) return ClipNamed(c.name);
+                return null;
+            }
+            var idle = sm.AddState("Idle", new Vector3(300, 120, 0)); idle.motion = Role("idle");
+            var run = sm.AddState("Run", new Vector3(300, 0, 0)); run.motion = Role("move");
+            run.speedParameterActive = true;
+            run.speedParameter = "Speed";
+            run.speed = 1f / Mathf.Max(0.05f, side.moveSpeedModel * visualScale);
+            sm.defaultState = idle;
+            var toRun = idle.AddTransition(run); toRun.AddCondition(AnimatorConditionMode.If, 0f, "Moving"); toRun.hasExitTime = false; toRun.duration = 0.15f;
+            var toIdle = run.AddTransition(idle); toIdle.AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving"); toIdle.hasExitTime = false; toIdle.duration = 0.15f;
+            int k = 0;
+            foreach (var trg in side.triggers)
+            {
+                var clip = ClipNamed(trg.clip);
+                ac.AddParameter(trg.trigger, AnimatorControllerParameterType.Trigger);
+                var st = sm.AddState(trg.trigger, new Vector3(600, 70 * k++, 0));
+                st.motion = clip;
+                st.speed = 1f;
+                var any = sm.AddAnyStateTransition(st);
+                any.AddCondition(AnimatorConditionMode.If, 0f, trg.trigger);
+                if (trg.trigger == "Die") { any.duration = 0.08f; any.canTransitionToSelf = false; continue; }
+                any.duration = 0.06f;
+                any.canTransitionToSelf = true;
+                float len = clip != null && clip.length > 0f ? clip.length : 1f;
+                float exit = Mathf.Clamp(1f - 0.2f / len, 0.5f, 0.95f);
+                var a1 = st.AddTransition(run); a1.AddCondition(AnimatorConditionMode.If, 0f, "Moving"); a1.hasExitTime = true; a1.exitTime = exit; a1.duration = 0.2f;
+                var a2 = st.AddTransition(idle); a2.AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving"); a2.hasExitTime = true; a2.exitTime = exit; a2.duration = 0.2f;
+                if (clip == null) sb.Append($"\n  Warnung {name}: Clip {trg.clip} fehlt");
+            }
+            foreach (var st in sm.states) if (st.state.motion == null) sb.Append($"\n  Warnung {name}: kein Clip für {st.state.name}");
+            EditorUtility.SetDirty(ac);
+            return ac;
+        }
+
+        // Kontaktbogen (Prüfung): je Dorf-Boss eine Zeile – Stadt-Boss Ruhe | Dorf-Boss Ruhe | dann je Trigger Stadt/Dorf beim
+        // Treffer-Zeitpunkt (Attack = AttackWindup; Fähigkeiten = Windup (+ Sprung)). Gleiche Kamera je Zeile, VisualScale.
+        public static string RenderForestContactSheet(string outPath, int cell = 220)
+        {
+            var log = new System.Text.StringBuilder("Boss-Kontaktbogen:");
+            int rows = ForestBosses.GetLength(0), cols = 8;
+            var sheet = new Texture2D(cols * cell, rows * cell, TextureFormat.RGBA32, false);
+            var bg = new Color[cols * cell * rows * cell];
+            for (int i = 0; i < bg.Length; i++) bg[i] = new Color(0.25f, 0.27f, 0.3f);
+            sheet.SetPixels(bg);
+            for (int r = 0; r < rows; r++)
+            {
+                string name = ForestBosses[r, 0], src = ForestBosses[r, 1];
+                var city = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + src + ".prefab");
+                var forest = AssetDatabase.LoadAssetAtPath<GameObject>(ForestPrefabDir + name + ".prefab");
+                var cfg = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(ConfigDir + src + ".asset");
+                var bb = city.GetComponent<BossBrain>();
+                var shots = new List<(GameObject, string, float)> { (city, null, -1f), (forest, null, -1f), (city, "Attack", cfg.AttackWindup), (forest, "Attack", cfg.AttackWindup) };
+                var seen = new HashSet<string>();
+                foreach (var a in bb.Abilities)
+                {
+                    if (!seen.Add(a.AnimatorTrigger)) continue;
+                    float t = a.Windup + (a.Kind == BossAbilityKind.Slam ? a.LeapDuration : 0f);
+                    shots.Add((city, a.AnimatorTrigger, t));
+                    shots.Add((forest, a.AnimatorTrigger, t));
+                }
+                var px = SheetRow(shots, cfg.VisualScale, cell, log, name);
+                for (int c = 0; c < Mathf.Min(cols, px.Count); c++) sheet.SetPixels(c * cell, (rows - 1 - r) * cell, cell, cell, px[c]);
+            }
+            sheet.Apply();
+            System.IO.File.WriteAllBytes(outPath, sheet.EncodeToPNG());
+            Object.DestroyImmediate(sheet);
+            Debug.Log(log.ToString());
+            return log.ToString();
+        }
+
+        private static List<Color[]> SheetRow(List<(GameObject prefab, string trigger, float time)> shots, float vs, int size, System.Text.StringBuilder log, string label)
+        {
+            var result = new List<Color[]>();
+            var insts = new List<GameObject>();
+            var camGo = new GameObject("__BossSheetCam") { hideFlags = HideFlags.HideAndDontSave };
+            var key = new GameObject("__BossSheetKey") { hideFlags = HideFlags.HideAndDontSave };
+            var rt = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
+            try
+            {
+                var l1 = key.AddComponent<Light>();
+                l1.type = LightType.Directional; l1.intensity = 1.4f; l1.color = new Color(1f, 0.97f, 0.92f);
+                key.transform.rotation = Quaternion.Euler(35f, 150f, 0f);
+                var cam = camGo.AddComponent<Camera>();
+                cam.fieldOfView = 26f; cam.nearClipPlane = 0.05f; cam.farClipPlane = 300f; cam.targetTexture = rt;
+                cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.32f, 0.36f, 0.40f);
+                Bounds all = new Bounds(); bool any = false;
+                foreach (var s in shots)
+                {
+                    var inst = (GameObject)PrefabUtility.InstantiatePrefab(s.prefab);
+                    inst.hideFlags = HideFlags.HideAndDontSave;
+                    inst.transform.position = new Vector3(0f, -800f, 0f);
+                    inst.transform.localScale *= vs;
+                    foreach (var ps in inst.GetComponentsInChildren<ParticleSystemRenderer>(true)) ps.enabled = false;
+                    foreach (var cv in inst.GetComponentsInChildren<Canvas>(true)) cv.enabled = false;
+                    SamplePose(inst, s.trigger, s.time, log, label);
+                    insts.Add(inst);
+                    foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
+                    {
+                        if (!(r is MeshRenderer) && !(r is SkinnedMeshRenderer)) continue;
+                        if (any) all.Encapsulate(r.bounds); else { all = r.bounds; any = true; }
+                    }
+                    inst.SetActive(false);
+                }
+                float radius = Mathf.Max(all.extents.y, Mathf.Max(all.extents.x, all.extents.z) * 0.9f);
+                float dist = radius * 1.05f / Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+                Vector3 dir = Quaternion.Euler(0f, 35f, 0f) * Vector3.forward + Vector3.up * 0.35f;
+                cam.transform.position = all.center + dir.normalized * dist;
+                cam.transform.LookAt(all.center);
+                for (int i = 0; i < insts.Count; i++)
+                {
+                    insts[i].SetActive(true);
+                    SamplePose(insts[i], shots[i].trigger, shots[i].time, null, null);
+                    cam.Render();
+                    insts[i].SetActive(false);
+                    var prev = RenderTexture.active;
+                    RenderTexture.active = rt;
+                    var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                    tex.ReadPixels(new Rect(0, 0, size, size), 0, 0);
+                    tex.Apply();
+                    RenderTexture.active = prev;
+                    result.Add(tex.GetPixels());
+                    Object.DestroyImmediate(tex);
+                }
+                cam.targetTexture = null;
+            }
+            finally
+            {
+                foreach (var i in insts) if (i != null) Object.DestroyImmediate(i);
+                Object.DestroyImmediate(camGo); Object.DestroyImmediate(key);
+                rt.Release(); Object.DestroyImmediate(rt);
+            }
+            return result;
+        }
+
+        // Zustand des Triggers zum Zeitpunkt time abtasten (Zustandstempo berücksichtigt); trigger null = Ruhe (Default-Zustand)
+        private static void SamplePose(GameObject inst, string trigger, float time, System.Text.StringBuilder log, string label)
+        {
+            var anim = inst.GetComponentInChildren<Animator>(true);
+            if (anim == null || anim.runtimeAnimatorController == null) return;
+            anim.Rebind();
+            anim.Update(0f);
+            var ac = anim.runtimeAnimatorController as AnimatorController;
+            AnimatorState st = null;
+            if (ac != null)
+            {
+                if (trigger == null) st = ac.layers[0].stateMachine.defaultState;
+                else
+                    foreach (var t in ac.layers[0].stateMachine.anyStateTransitions)
+                        foreach (var c in t.conditions)
+                            if (c.parameter == trigger && t.destinationState != null) st = t.destinationState;
+            }
+            var clip = st != null ? st.motion as AnimationClip : null;
+            if (clip == null) { log?.Append($"\n  {label}: kein Zustand für {trigger}"); return; }
+            float ct = trigger == null ? 0f : time * Mathf.Abs(st.speed);
+            clip.SampleAnimation(anim.gameObject, ct);
+            log?.Append($"\n  {label} {inst.name.Replace("(Clone)", "")} {trigger ?? "Ruhe"}: {clip.name} t={time:0.00}s → Clip {ct:0.00}/{clip.length:0.00}s (Tempo {st.speed:0.##})");
+        }
+
         // ---------------- Partikel-Helfer (wie ChampionFxBuilder) ----------------
 
         private static ParticleSystem PS(Transform parent, string name, Vector3 pos, Material mat, Vector2 life, Vector2 size, Color color, int max, bool loop)

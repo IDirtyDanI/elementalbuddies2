@@ -96,8 +96,33 @@ namespace ElementalBuddies
             }
         }
 
-        // Name der Spielszene und des Hauptmenüs
-        public const string GameScene = "test";
+        // ---------------- Map (Walddorf-Plan, Paket P0) ----------------
+
+        private const string MapPrefKey = "map";
+
+        // Id der gewählten Map (PlayerPrefs „map“, Standard Stadt; unbekannte Ids → Stadt). Gelesen wird ohne
+        // Schreiben – der Schlüssel entsteht erst, wenn das Menü eine Map wählt. Freischaltung prüft das Menü (C-Menü).
+        public static string MapId
+        {
+            get
+            {
+                string id = PlayerPrefs.GetString(MapPrefKey, MapDefinitionSO.CityId);
+                var m = MapRegistry.Find(id);
+                return m != null ? m.Id : MapRegistry.Default.Id;
+            }
+            set
+            {
+                var m = MapRegistry.Find(value) ?? MapRegistry.Default;
+                PlayerPrefs.SetString(MapPrefKey, m.Id);
+                PlayerPrefs.Save();
+            }
+        }
+
+        // Gewählte Map (nie null)
+        public static MapDefinitionSO Map => MapRegistry.Get(MapId);
+
+        // Name der Spielszene der gewählten Map (früher fest „test“) und des Hauptmenüs
+        public static string GameScene => Map.SceneName;
         public const string MenuScene = "MainMenu";
     }
 }

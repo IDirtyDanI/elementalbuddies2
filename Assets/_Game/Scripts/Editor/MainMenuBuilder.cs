@@ -17,7 +17,7 @@ namespace ElementalBuddies.EditorTools
     public static class MainMenuBuilder
     {
         public const string ScenePath = "Assets/Scenes/MainMenu.unity";
-        private const string GameScenePath = "Assets/test.unity";
+        private const string GameScenePath = MapEditorUtil.CityScenePath; // Stadt (Walddorf P0: eine Konstante)
         private const string ChampionDir = "Assets/ScriptableObjects/Champions/";
         private const string PreviewDir = "Assets/_Game/Prefabs/Champions/";
         private const string MenuDir = "Assets/_Game/Menu/";
@@ -65,17 +65,23 @@ namespace ElementalBuddies.EditorTools
         [MenuItem("BuddyTD/Hauptmenü/Mehrspieler-UI (Hosten, Beitreten, Lobby) in bestehende Szene einbauen")]
         public static void AddMultiplayerUIMenu() { AddMultiplayerUIToScene(); }
 
+        [MenuItem("BuddyTD/Hauptmenü/Map-Auswahl in bestehende Szene einbauen")]
+        public static void AddMapUIMenu() { AddMapUIToScene(); }
+
         // ---------------- Build Settings ----------------
 
-        // MainMenu = Index 0, Spielszene danach. SampleScene (Unity-Vorlage, nicht referenziert) fliegt raus.
+        // MainMenu = Index 0, danach die Spielszenen aller Maps (MapDefinitionSO, nach Order; Stadt = Index 1), dann
+        // übrige Einträge. Maps ohne vorhandene Szenendatei werden nicht eingetragen. SampleScene fliegt raus.
         public static void SetupBuildSettings()
         {
             var list = new List<EditorBuildSettingsScene>();
             list.Add(new EditorBuildSettingsScene(ScenePath, true));
-            list.Add(new EditorBuildSettingsScene(GameScenePath, true));
+            var games = MapEditorUtil.GameScenePaths();
+            if (!games.Contains(GameScenePath)) games.Insert(0, GameScenePath);
+            foreach (var g in games) list.Add(new EditorBuildSettingsScene(g, true));
             foreach (var s in EditorBuildSettings.scenes)
             {
-                if (s.path == ScenePath || s.path == GameScenePath || s.path.EndsWith("SampleScene.unity")) continue;
+                if (s.path == ScenePath || games.Contains(s.path) || s.path.EndsWith("SampleScene.unity")) continue;
                 list.Add(s);
             }
             EditorBuildSettings.scenes = list.ToArray();
@@ -518,20 +524,22 @@ namespace ElementalBuddies.EditorTools
 
             // Champion-Karten (linke Spalte)
             var chooseHdr = Text(root, "ChooseHeader", "Wähle deinen Champion", _fHead, 40f, Cream, TextAlignmentOptions.BottomLeft, _mHeadOutline);
-            Place(chooseHdr.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(84f, -262f), new Vector2(700f, 56f));
+            Place(chooseHdr.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(84f, count4Plus(defs) ? ChooseHeaderY4 : -262f), new Vector2(700f, 56f));
 
             var cards = new List<MainMenuUI.Card>();
             int count = 0;
             foreach (var d in defs) if (d != null) count++;
-            // Ab 4 Karten enger und flacher, damit die Spalte über der Schwierigkeits-Zeile (y 462–514) endet:
-            // 4. Karte unten bei −820 (Referenz 1350 hoch → 530 über dem Rand), auch ausgewählt (×1,06) frei
-            float cardStep = count > 3 ? 124f : 168f;
-            _cardHeight = count > 3 ? 118f : 150f;
+            // Ab 4 Karten enger und flacher, damit die Spalte über der Map-Zeile (y 522–582) und der Schwierigkeits-Zeile
+            // (y 462–514) endet: 4. Karte unten bei −751 (Referenz 1350 hoch → 599 über dem Rand), ausgewählt (×1,06) 592
+            bool four = count > 3;
+            float cardStep = four ? CardStep4 : 168f;
+            _cardHeight = four ? CardHeight4 : 150f;
+            float cardTop = four ? CardTop4 : -330f;
             for (int i = 0; i < defs.Length; i++)
             {
                 var def = defs[i];
                 if (def == null) continue;
-                cards.Add(BuildCard(root, def, i, new Vector2(80f, -330f - i * cardStep)));
+                cards.Add(BuildCard(root, def, i, new Vector2(80f, cardTop - i * cardStep)));
             }
             ui.Cards = cards.ToArray();
             ui.CardNormalSprite = UISprite("slot_card");
@@ -552,6 +560,7 @@ namespace ElementalBuddies.EditorTools
             BuildAchievementExtras(root, ui);
             BuildDifficultyExtras(root, ui);
             BuildMultiplayerExtras(root, ui);
+            BuildMapExtras(root, ui);
 
             // Überblender (zuletzt = oben)
             var fader = Rect("Fader", root, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -565,6 +574,18 @@ namespace ElementalBuddies.EditorTools
         }
 
         private static float _cardHeight = 150f;
+
+        // Layout der linken Spalte ab 4 Champions (seit der Map-Zeile, Walddorf C-Menü 2026-10-15)
+        private const float ChooseHeaderY4 = -232f, CardTop4 = -298f, CardStep4 = 115f, CardHeight4 = 108f;
+        private const float MedallionSize4 = 100f, MedallionX4 = 92f, LockSize4 = 68f;
+        private const float MapRowY = 522f, MapRowH = 60f, MapRowW = 540f;
+
+        private static bool count4Plus(ChampionDefinitionSO[] defs)
+        {
+            int n = 0;
+            foreach (var d in defs) if (d != null) n++;
+            return n > 3;
+        }
 
         private static MainMenuUI.Card BuildCard(Transform parent, ChampionDefinitionSO def, int index, Vector2 pos)
         {
@@ -585,7 +606,9 @@ namespace ElementalBuddies.EditorTools
             var accent = Rect("Accent", rt, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(16f, 0f), new Vector2(8f, -40f));
             card.Accent = Img(accent, null, def.AccentColor, false);
 
-            var med = Rect("Medallion", rt, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(98f, 0f), new Vector2(112f, 112f));
+            bool small = _cardHeight < 118f;
+            var med = Rect("Medallion", rt, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(small ? MedallionX4 : 98f, 0f), Vector2.one * (small ? MedallionSize4 : 112f));
             card.PortraitBg = Img(med, MenuSprite("menu_disc"), def.AccentColor, false);
             var por = Rect("Portrait", med, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-14f, -14f));
             card.Portrait = Img(por, null, Color.white, false);
@@ -794,7 +817,8 @@ namespace ElementalBuddies.EditorTools
             foreach (var card in ui.Cards)
             {
                 if (card == null || card.PortraitBg == null) continue;
-                var lockRt = Rect("Lock", card.PortraitBg.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -2f), new Vector2(76f, 76f));
+                float ls = card.PortraitBg.rectTransform.sizeDelta.x < 112f ? LockSize4 : 76f;
+                var lockRt = Rect("Lock", card.PortraitBg.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -2f), new Vector2(ls, ls));
                 card.Lock = Img(lockRt, Icon("icon_lock"), Color.white, false);
                 card.Lock.preserveAspect = true;
                 lockRt.gameObject.SetActive(false);
@@ -910,7 +934,7 @@ namespace ElementalBuddies.EditorTools
             if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
         }
 
-        private const string KeyHintText = "←/→ oder 1–4: Champion wechseln   ·   Q/E: Schwierigkeit   ·   Enter: Spielen   ·   Esc: zurück";
+        private const string KeyHintText = "←/→ oder 1–4: Champion wechseln   ·   Q/E: Schwierigkeit   ·   M: Karte   ·   Enter: Spielen   ·   Esc: zurück";
 
         private static void BuildAchievementsPanel(Transform root, MainMenuUI ui)
         {
@@ -1503,6 +1527,151 @@ namespace ElementalBuddies.EditorTools
                 nav.selectOnDown = i < buttons.Length - 1 ? buttons[i + 1] : null;
                 buttons[i].navigation = nav;
             }
+        }
+
+        // ---------------- Map-Auswahl (Walddorf, Paket C-Menü) ----------------
+
+        // Ergänzt die bestehende Menü-Szene um die Map-Zeile (Kacheln mit Vorschaubild zwischen Champion-Karten und
+        // Schwierigkeit) und rückt Überschrift/Karten dafür zusammen – ohne den Rest neu zu bauen (ersetzt nur frühere
+        // Versionen der Map-Zeile). Die Kacheln selbst baut MainMenuUI zur Laufzeit aus MapRegistry.All.
+        public static void AddMapUIToScene()
+        {
+            if (EditorApplication.isPlaying) { Debug.LogWarning("MainMenuBuilder: nur im Edit-Modus."); return; }
+            if (!System.IO.File.Exists(ScenePath)) { Debug.LogWarning("MainMenuBuilder: " + ScenePath + " fehlt – erst \"Alles einrichten\"."); return; }
+            LoadFonts();
+            ImportMenuSprites();
+
+            Scene prevActive = SceneManager.GetActiveScene();
+            Scene menu = SceneManager.GetSceneByPath(ScenePath);
+            bool wasLoaded = menu.IsValid() && menu.isLoaded;
+            if (!wasLoaded) menu = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                MainMenuUI ui = null;
+                foreach (var go in menu.GetRootGameObjects())
+                {
+                    ui = go.GetComponentInChildren<MainMenuUI>(true);
+                    if (ui != null) break;
+                }
+                if (ui == null) { Debug.LogWarning("MainMenuBuilder: kein MainMenuUI in " + ScenePath); return; }
+
+                var root = ui.transform;
+                var old = root.Find("MapSelect");
+                if (old != null) Object.DestroyImmediate(old.gameObject);
+
+                // Linke Spalte zusammenrücken (nur bei 4+ Karten nötig)
+                if (ui.Cards != null && ui.Cards.Length > 3)
+                {
+                    var hdr = root.Find("ChooseHeader") as RectTransform;
+                    if (hdr != null) hdr.anchoredPosition = new Vector2(hdr.anchoredPosition.x, ChooseHeaderY4);
+                    for (int i = 0; i < ui.Cards.Length; i++)
+                    {
+                        var card = ui.Cards[i];
+                        if (card == null || card.Button == null) continue;
+                        var rt = (RectTransform)card.Button.transform;
+                        rt.anchoredPosition = new Vector2(80f, CardTop4 - i * CardStep4);
+                        rt.sizeDelta = new Vector2(rt.sizeDelta.x, CardHeight4);
+                        if (card.PortraitBg != null)
+                        {
+                            var med = card.PortraitBg.rectTransform;
+                            med.anchoredPosition = new Vector2(MedallionX4, 0f);
+                            med.sizeDelta = Vector2.one * MedallionSize4;
+                        }
+                        if (card.Lock != null) card.Lock.rectTransform.sizeDelta = Vector2.one * LockSize4;
+                    }
+                }
+
+                BuildMapExtras(root, ui);
+                if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
+                EditorUtility.SetDirty(ui);
+                EditorSceneManager.MarkSceneDirty(menu);
+                EditorSceneManager.SaveScene(menu, ScenePath);
+                Debug.Log("MainMenuBuilder: Map-Auswahl in " + ScenePath + " eingebaut.");
+            }
+            finally
+            {
+                if (prevActive.IsValid() && prevActive.isLoaded && prevActive != menu) SceneManager.SetActiveScene(prevActive);
+                if (!wasLoaded && prevActive != menu) EditorSceneManager.CloseScene(menu, true);
+            }
+        }
+
+        // Zeile MapSelect (unten links verankert wie die Schwierigkeit) mit inaktiver Kachel-Vorlage:
+        // Button (Pergament/Holz wie die Schwierigkeits-Knöpfe) | Thumb (16:9-Vorschau mit Rahmen, Schloss) | Name | Sub
+        private static void BuildMapExtras(Transform root, MainMenuUI ui)
+        {
+            var row = Rect("MapSelect", root, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(80f, MapRowY), new Vector2(MapRowW, MapRowH));
+            ui.MapSelect = row;
+
+            var tile = MakeButton(row, "MapTileTemplate", "", false, 26f, Vector2.zero, new Vector2(264f, MapRowH));
+            tile.navigation = new Navigation { mode = Navigation.Mode.None };
+            tile.image.raycastTarget = true;
+            var oldText = tile.transform.Find("Text");
+            if (oldText != null) Object.DestroyImmediate(oldText.gameObject);
+
+            float th = MapRowH - 12f, tw = Mathf.Round(th * 16f / 9f);
+            var frame = Rect("ThumbFrame", tile.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(5f, 0f), new Vector2(tw + 4f, th + 4f));
+            Img(frame, null, new Color(Ink.r, Ink.g, Ink.b, 0.85f), false);
+            var thumbRt = Rect("Thumb", frame, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-4f, -4f));
+            var thumb = Img(thumbRt, null, Color.white, false);
+            thumb.preserveAspect = false;
+            var lockRt = Rect("Lock", frame, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(th * 0.72f, th * 0.72f));
+            Img(lockRt, Icon("icon_lock"), Color.white, false).preserveAspect = true;
+            lockRt.gameObject.SetActive(false);
+
+            float textX = 5f + tw + 4f + 10f;
+            var name = Text(tile.transform, "Name", "Stadt", _fBold, 26f, Ink, TextAlignmentOptions.BottomLeft, null);
+            var nrt = name.rectTransform;
+            nrt.anchorMin = new Vector2(0f, 0.46f); nrt.anchorMax = new Vector2(1f, 1f); nrt.pivot = new Vector2(0f, 0.5f);
+            nrt.offsetMin = new Vector2(textX, 0f); nrt.offsetMax = new Vector2(-8f, -3f);
+            name.textWrappingMode = TextWrappingModes.NoWrap;
+            name.overflowMode = TextOverflowModes.Ellipsis;
+            name.enableAutoSizing = true; name.fontSizeMin = 18f; name.fontSizeMax = 26f;
+
+            var sub = Text(tile.transform, "Sub", "Die belagerte Stadt", _fBold, 17f, InkLight, TextAlignmentOptions.TopLeft, null);
+            var srt = sub.rectTransform;
+            srt.anchorMin = new Vector2(0f, 0f); srt.anchorMax = new Vector2(1f, 0.46f); srt.pivot = new Vector2(0f, 0.5f);
+            srt.offsetMin = new Vector2(textX + 1f, 3f); srt.offsetMax = new Vector2(-8f, 0f);
+            sub.textWrappingMode = TextWrappingModes.NoWrap;
+            sub.overflowMode = TextOverflowModes.Ellipsis;
+            sub.enableAutoSizing = false; sub.fontSize = 17f;
+
+            tile.gameObject.SetActive(false);
+            ui.MapTileTemplate = tile.gameObject;
+            ui.MapTileGap = 12f;
+            AssignMapPreviews(ui);
+
+            // Reihenfolge: hinter den Karten, vor der Schwierigkeit
+            var diff = root.Find("DifficultySelect");
+            if (diff != null) row.SetSiblingIndex(diff.GetSiblingIndex());
+            else if (ui.PlayButton != null) row.SetSiblingIndex(ui.PlayButton.transform.GetSiblingIndex());
+
+            var keyHint = root.Find("KeyHint");
+            var kt = keyHint != null ? keyHint.GetComponent<TextMeshProUGUI>() : null;
+            if (kt != null) kt.text = KeyHintText;
+            if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
+        }
+
+        // Ersatz-Vorschaubilder aus Assets/_Game/UI/Maps/map_preview_<id>.png (MapPreviewRenderer) eintragen
+        public static void AssignMapPreviews(MainMenuUI ui)
+        {
+            var list = new List<MainMenuUI.MapPreviewEntry>();
+            Sprite placeholder = null;
+            if (AssetDatabase.IsValidFolder(MapPreviewRenderer.Folder))
+            {
+                foreach (var guid in AssetDatabase.FindAssets("t:Sprite map_preview_", new[] { MapPreviewRenderer.Folder }))
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    var spr = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                    string file = System.IO.Path.GetFileNameWithoutExtension(path);
+                    if (spr == null || !file.StartsWith("map_preview_")) continue;
+                    string id = file.Substring("map_preview_".Length);
+                    if (id == MapPreviewRenderer.PlaceholderId) placeholder = spr;
+                    else list.Add(new MainMenuUI.MapPreviewEntry { Id = id, Sprite = spr });
+                }
+            }
+            ui.MapPreviews = list.ToArray();
+            ui.MapPreviewPlaceholder = placeholder;
+            EditorUtility.SetDirty(ui);
         }
 
         // ---------------- UI-Hilfen ----------------

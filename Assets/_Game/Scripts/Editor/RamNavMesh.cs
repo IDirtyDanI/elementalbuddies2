@@ -7,14 +7,14 @@ namespace ElementalBuddies.EditorTools
 {
     // Eigener NavMesh-Agententyp „Ramme“ (Bekannte Probleme #134): Die Belagerungsramme ist 2,54 m breit, der
     // Humanoid-Typ (Radius 0,5) ließ sie an Mauerecken und Zäunen durch die Geometrie schneiden. Typ mit Radius 1,3 +
-    // zweite NavMeshSurface „Ramme“ am Environment-Objekt, gebacken nach Assets/NavMesh-Ramme.asset.
+    // zweite NavMeshSurface „Ramme“ am Environment-Objekt, gebacken nach Assets/NavMesh-Ramme.asset (Stadt) bzw.
+    // <Szenenordner>/<Szene>/NavMesh-Ramme.asset (andere Maps, MapEditorUtil.NavMeshAssetPath).
     // Wird von RamBuilder (Agent im Prefab) und MerchantSetup.RebakeNavMesh (mitbacken) genutzt.
     public static class RamNavMesh
     {
         public const string AgentName = "Ramme";
         public const float AgentRadius = 1.3f;   // halbe Rumpfbreite 1,27 m
         public const float AgentHeight = 2f;     // wie Humanoid – Baumkronen über 2 m bleiben durchfahrbar
-        private const string AssetPath = "Assets/NavMesh-Ramme.asset";
 
         [MenuItem("BuddyTD/Ramme/NavMesh backen")]
         public static void BakeMenu() => Debug.Log(Bake());
@@ -86,15 +86,16 @@ namespace ElementalBuddies.EditorTools
             ram.overrideVoxelSize = false;
             ram.overrideTileSize = false;
 
+            string assetPath = MapEditorUtil.NavMeshAssetPath(env.gameObject.scene, MapEditorUtil.RamNavMeshFile);
             ram.BuildNavMesh();
             var built = ram.navMeshData;
-            var asset = AssetDatabase.LoadAssetAtPath<NavMeshData>(AssetPath);
+            var asset = AssetDatabase.LoadAssetAtPath<NavMeshData>(assetPath);
             if (built != null && built != asset)
             {
                 if (asset == null)
                 {
-                    AssetDatabase.CreateAsset(Object.Instantiate(built), AssetPath);
-                    asset = AssetDatabase.LoadAssetAtPath<NavMeshData>(AssetPath);
+                    AssetDatabase.CreateAsset(Object.Instantiate(built), assetPath);
+                    asset = AssetDatabase.LoadAssetAtPath<NavMeshData>(assetPath);
                 }
                 else EditorUtility.CopySerialized(built, asset);
                 ram.RemoveData();
@@ -104,7 +105,7 @@ namespace ElementalBuddies.EditorTools
             }
             EditorUtility.SetDirty(ram);
             AssetDatabase.SaveAssets();
-            return $"RamNavMesh: Typ „{AgentName}“ (ID {id}, Radius {AgentRadius}) gebacken → {AssetPath}";
+            return $"RamNavMesh: Typ „{AgentName}“ (ID {id}, Radius {AgentRadius}) gebacken → {assetPath}";
         }
     }
 }

@@ -21,17 +21,10 @@ namespace ElementalBuddies
         private static string _savedLocalDifficulty;
         private static int _savedLocalSiege = -1;
 
-        // Netzwert = "<Stufen-Id>#<Belagerungsstufe>" (Belagerungsstufe reist mit der Schwierigkeit)
-        private static string Pack(string id) => id + "#" + GameSession.SiegeLevel;
-        private static void Unpack(string value, out string id, out int siege)
-        {
-            siege = 0;
-            id = value ?? "";
-            int i = id.IndexOf('#');
-            if (i < 0) return;
-            int.TryParse(id.Substring(i + 1), out siege);
-            id = id.Substring(0, i);
-        }
+        // Netzwert = "<Stufen-Id>#<Belagerungsstufe>[#<Map-Id>]" (Belagerungsstufe und Map reisen mit der Schwierigkeit;
+        // Format und Rückwärtskompatibilität: LobbyCodec – für die Stadt identisch mit dem alten "<id>#<siege>")
+        private static string Pack(string id) => LobbyCodec.Pack(id, GameSession.SiegeLevel, GameSession.MapId);
+        private static void Unpack(string value, out string id, out int siege) => LobbyCodec.Unpack(value, out id, out siege, out _);
 
         public readonly NetworkVariable<FixedString32Bytes> Difficulty = new NetworkVariable<FixedString32Bytes>(
             default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -49,6 +42,21 @@ namespace ElementalBuddies
                     if (!string.IsNullOrEmpty(id)) return id;
                 }
                 return GameSession.DifficultyId;
+            }
+        }
+
+        // Map des Raums (Host-Wert; ohne Verbindung die lokale Wahl). Clients übernehmen sie nicht in ihre PlayerPrefs –
+        // die Szene lädt ohnehin der Host (NGO-Szenenverwaltung), der Wert dient der Lobby-Anzeige.
+        public static string RoomMapId
+        {
+            get
+            {
+                if (Host != null && Host.IsSpawned)
+                {
+                    LobbyCodec.Unpack(Host.Difficulty.Value.ToString(), out _, out _, out string map);
+                    return map;
+                }
+                return GameSession.MapId;
             }
         }
 

@@ -87,6 +87,116 @@ namespace ElementalBuddies.EditorTools
             return sb.ToString();
         }
 
+        // ---------------- Ork-Rammbock (Walddorf, Etappe 3, 2026-10-16) ----------------
+        // Eigenes Modell aus art-src/ram/ork.py (gleiche Teilenamen/Pivots/Maße wie Ramme.fbx → RamVisual unverändert).
+        // Aktualisiert das bestehende Prefab Prefabs/Enemies/Forest/Ork_Rammbock (GUID → Netz-Hash bleibt): Wurzel (Agent,
+        // Collider, EnemyBrain inkl. NexusAttackRange, Netz) bleibt 1:1 wie die Untoten-Ramme (Balance), nur die Kinder von
+        // „Visual“ werden ersetzt und RamVisual neu verdrahtet. Materialien: Dorfpalette (Models/Village/Materials, angelegt von
+        // VillageSetup) + OrkRam_* (hier angelegt, Farben = ORK_PALETTE in ork.py). Icon = Blender-Render ork_ram_codex.png.
+        public const string OrkPrefab = "Assets/_Game/Prefabs/Enemies/Forest/Ork_Rammbock.prefab";
+        public const string OrkConfig = "Assets/ScriptableObjects/Configs/Forest/Ork_Rammbock.asset";
+        private const string OrkModelPath = ModelDir + "Ork_Rammbock.fbx";
+        private const string OrkDebrisPath = ModelDir + "Ork_Rammbock_Truemmer.fbx";
+        private const string OrkIconPath = "Assets/_Game/UI/Icons/icon_enemy_ork_rammbock.png";
+        private const string OrkBlenderIcon = "../art-src/ram/ork/renders/ork_ram_codex.png";
+        private static readonly string[] OrkVillageSlots =
+            { "Village_BarkLog", "Village_BarkLogDark", "Village_LogCut", "Village_Timber", "Village_Wood", "Village_Rope", "Village_Leather", "Village_Flame" };
+
+        [MenuItem("BuddyTD/Ramme/Ork-Rammbock bauen (Walddorf)")]
+        private static void BuildOrkMenu() => Debug.Log(BuildOrk());
+
+        public static string BuildOrk(bool renderIcon = true)
+        {
+            var sb = new StringBuilder("RamBuilder (Ork-Rammbock):");
+            if (EditorApplication.isPlayingOrWillChangePlaymode) { sb.Append(" nur im Edit-Modus."); return sb.ToString(); }
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(OrkPrefab) == null) { sb.Append("\n  Abbruch: " + OrkPrefab + " fehlt (erst „Dorf-Gegner bauen“)."); return sb.ToString(); }
+            NetworkSetup.EnsureFolder(MatDir.TrimEnd('/'));
+            var mats = new Dictionary<string, Material>();
+            foreach (var n in OrkVillageSlots)
+            {
+                var m = AssetDatabase.LoadAssetAtPath<Material>(VillageSetup.VillageMaterialFolder + "/" + n + ".mat");
+                if (m != null) mats[n] = m; else sb.Append($"\n  Warnung: {n}.mat fehlt (VillageSetup)");
+            }
+            mats["OrkRam_Hide"] = LitMaterial("OrkRam_Hide", Hex("7a5a3e"), 0.12f, null);
+            mats["OrkRam_HideDark"] = LitMaterial("OrkRam_HideDark", Hex("5a4232"), 0.12f, null);
+            mats["OrkRam_Fur"] = LitMaterial("OrkRam_Fur", Hex("958670"), 0.08f, null);
+            mats["OrkRam_Iron"] = LitMaterial("OrkRam_Iron", Hex("45423f"), 0.35f, null);
+            mats["OrkRam_Rust"] = LitMaterial("OrkRam_Rust", Hex("8a5a3c"), 0.2f, null);
+            mats["OrkRam_Bone"] = LitMaterial("OrkRam_Bone", Hex("ddd0b0"), 0.15f, null);
+            mats["OrkRam_Cloth"] = LitMaterial("OrkRam_Cloth", Hex("7d2a22"), 0.1f, null);
+            mats["OrkRam_Paint"] = LitMaterial("OrkRam_Paint", Hex("d8d0b8"), 0.1f, null);
+            Color glow = Hex("ffd24a");
+            mats["OrkRam_Glow"] = LitMaterial("OrkRam_Glow", glow, 0.3f, glow * 2.2f);
+            if (!ImportModel(OrkModelPath, mats, sb)) { sb.Append("\n  Abbruch: " + OrkModelPath + " fehlt (art-src/ram/ork.py -- export)."); return sb.ToString(); }
+            bool debris = ImportModel(OrkDebrisPath, mats, sb);
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(OrkModelPath);
+
+            var root = PrefabUtility.LoadPrefabContents(OrkPrefab);
+            try
+            {
+                var visual = root.transform.Find("Visual");
+                if (visual == null) { sb.Append("\n  Abbruch: Kind „Visual“ fehlt."); return sb.ToString(); }
+                for (int i = visual.childCount - 1; i >= 0; i--) Object.DestroyImmediate(visual.GetChild(i).gameObject);
+                var inst = (GameObject)PrefabUtility.InstantiatePrefab(model, visual);
+                inst.name = "Ramme";
+                if (TryLocalBounds(inst.transform, visual, null, out Bounds mb))
+                    sb.Append($"\n  Modell: {mb.size.z:0.00} m lang, {mb.size.x:0.00} m breit, {mb.size.y:0.00} m hoch (Soll {NominalSize.z}/{NominalSize.x}/{NominalSize.y}), Boden bei y={mb.min.y:0.00}");
+                var rv = visual.GetComponent<RamVisual>();
+                if (rv == null) rv = visual.gameObject.AddComponent<RamVisual>();
+                rv.Model = inst.transform;
+                var wheels = new List<Transform>();
+                foreach (var n in new[] { "Rad_VL", "Rad_VR", "Rad_HL", "Rad_HR" })
+                {
+                    var w = RamVisual.Find(inst.transform, n);
+                    if (w != null) wheels.Add(w); else sb.Append($"\n  Warnung: Rad „{n}“ fehlt");
+                }
+                rv.Wheels = wheels.ToArray();
+                rv.Beam = RamVisual.Find(inst.transform, "Rammbalken");
+                if (rv.Beam == null) sb.Append("\n  Warnung: „Rammbalken“ fehlt – kein Rammstoß");
+                if (wheels.Count > 0 && TryLocalBounds(wheels[0], visual, null, out Bounds wb))
+                    rv.WheelRadius = Mathf.Max(0.1f, Mathf.Max(wb.size.y, wb.size.z) * 0.5f);
+                rv.DebrisPrefab = debris ? AssetDatabase.LoadAssetAtPath<GameObject>(OrkDebrisPath) : null;
+                if (rv.ImpactVfx == null) rv.ImpactVfx = AssetDatabase.LoadAssetAtPath<GameObject>(DustVfx);
+                var cfg = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(OrkConfig);
+                var brain = root.GetComponent<EnemyBrain>();
+                if (brain != null && cfg != null) brain.Config = cfg;
+                PrefabUtility.SaveAsPrefabAsset(root, OrkPrefab);
+                ForestEnemyBuilder.MarkOwnBuilder(OrkPrefab); // „Dorf-Gegner bauen“ überschreibt den Rammbock nicht mehr (#405)
+                var box = root.GetComponent<BoxCollider>();
+                sb.Append($"\n  Prefab: {OrkPrefab} aktualisiert (GUID {AssetDatabase.AssetPathToGUID(OrkPrefab)}), Wurzel unverändert" +
+                          (box != null ? $" (Collider {box.size.x:0.00}×{box.size.y:0.00}×{box.size.z:0.00} lokal)" : "") +
+                          $", Rad-Radius {rv.WheelRadius:0.00} m, {wheels.Count} Räder, Trümmer {(rv.DebrisPrefab != null ? "ja" : "nein")}");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+
+            if (renderIcon && File.Exists(OrkBlenderIcon))
+            {
+                File.Copy(OrkBlenderIcon, OrkIconPath, true);
+                AssetDatabase.ImportAsset(OrkIconPath, ImportAssetOptions.ForceUpdate);
+                var imp = AssetImporter.GetAtPath(OrkIconPath) as TextureImporter;
+                if (imp != null)
+                {
+                    imp.textureType = TextureImporterType.Sprite;
+                    imp.spriteImportMode = SpriteImportMode.Single;
+                    imp.alphaIsTransparency = true;
+                    imp.mipmapEnabled = false;
+                    imp.SaveAndReimport();
+                }
+                var cfg = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(OrkConfig);
+                if (cfg != null)
+                {
+                    var icon = AssetDatabase.LoadAssetAtPath<Sprite>(OrkIconPath);
+                    if (icon != null && cfg.Icon != icon) { cfg.Icon = icon; EditorUtility.SetDirty(cfg); }
+                }
+                sb.Append("\n  Icon: " + OrkIconPath + " (Blender-Render)");
+            }
+            AssetDatabase.SaveAssets();
+            return sb.ToString();
+        }
+
         // ---------------- 1. Materialien & Import ----------------
 
         private static Dictionary<string, Material> EnsureMaterials(StringBuilder sb)

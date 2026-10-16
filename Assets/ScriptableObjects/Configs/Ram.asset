@@ -20,6 +20,7 @@ MonoBehaviour:
   Prefab: {fileID: 2998355834605593025, guid: 9a251c2423650468fb2aaeef954bd125, type: 3}
   BuddyMaxHP: 0
   BossDamageMultiplier: 1
+  Role: 9
   BaseHP: 170
   Speed: 2.5
   AttackDamage: 22
