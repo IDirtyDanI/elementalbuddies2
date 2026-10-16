@@ -12,7 +12,10 @@ namespace ElementalBuddies
         public static readonly Color WetTint = new Color(0.6f, 0.8f, 1.15f);
         public static readonly Color CurseTint = new Color(0.75f, 0.45f, 1.1f);
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-        private static readonly MaterialPropertyBlock Block = new MaterialPropertyBlock();
+        // Erst bei Bedarf anlegen: ein Feld-Initialisierer kann beim Skript-Neuladen im Komponenten-Konstruktor laufen,
+        // wo Unity MaterialPropertyBlock verbietet → TypeInitializationException für die ganze Sitzung (#435)
+        private static MaterialPropertyBlock _block;
+        private static MaterialPropertyBlock Block => _block ??= new MaterialPropertyBlock();
 
         public static void Refresh(GameObject root)
         {

@@ -7,7 +7,10 @@ namespace ElementalBuddies
     public class HitFlash : MonoBehaviour
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-        private static readonly MaterialPropertyBlock Block = new MaterialPropertyBlock();
+        // Erst bei Bedarf anlegen: ein Feld-Initialisierer kann beim Skript-Neuladen im Komponenten-Konstruktor laufen,
+        // wo Unity MaterialPropertyBlock verbietet → TypeInitializationException für die ganze Sitzung (#435)
+        private static MaterialPropertyBlock _block;
+        private static MaterialPropertyBlock Block => _block ??= new MaterialPropertyBlock();
 
         private Renderer[] _renderers;
         private float _until;

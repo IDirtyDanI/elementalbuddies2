@@ -611,6 +611,8 @@ namespace ElementalBuddies
 
         void Update()
         {
+            // Nach Skript-Neuladen im Play Mode ist _motor (nicht serialisiert) leer und Start läuft nicht erneut (#435)
+            if (_motor == null) EnsureMotor();
             if (_attackSfxTime >= 0f && Time.time >= _attackSfxTime)
             {
                 _attackSfxTime = -1f;

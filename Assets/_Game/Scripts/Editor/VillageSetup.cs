@@ -697,57 +697,8 @@ namespace ElementalBuddies.EditorTools
         static void BuildWater(Transform dorf, Plan plan, StringBuilder sb)
         {
             var g = ClearGroup(dorf, "Wasser");
-            EnsureFolder(MeshFolder);
-            const float level = -0.12f;
-            var verts = new List<Vector3>();
-            var tris = new List<int>();
             var s = plan.Stream;
-            float rib = StreamHalf + 0.55f;
-            for (int i = 0; i < s.Count; i++)
-            {
-                Vector2 dir = (i == 0 ? s[1] - s[0] : (i == s.Count - 1 ? s[i] - s[i - 1] : (s[i + 1] - s[i - 1]))).normalized;
-                Vector2 n = new Vector2(-dir.y, dir.x);
-                verts.Add(new Vector3(s[i].x + n.x * rib, level, s[i].y + n.y * rib));
-                verts.Add(new Vector3(s[i].x - n.x * rib, level, s[i].y - n.y * rib));
-                if (i > 0)
-                {
-                    int b = verts.Count - 4;
-                    tris.AddRange(new[] { b, b + 2, b + 1, b + 1, b + 2, b + 3 });
-                }
-            }
-            foreach (var pond in plan.Ponds)
-            {
-                int c = verts.Count;
-                verts.Add(new Vector3(pond.x, level, pond.y));
-                const int seg = 40;
-                for (int k = 0; k < seg; k++)
-                {
-                    float a = k * Mathf.PI * 2f / seg;
-                    verts.Add(new Vector3(pond.x + Mathf.Cos(a) * (pond.z + 0.35f), level, pond.y + Mathf.Sin(a) * (pond.z + 0.35f)));
-                }
-                for (int k = 0; k < seg; k++) tris.AddRange(new[] { c, c + 1 + (k + 1) % seg, c + 1 + k });
-            }
-            string meshPath = MeshFolder + "/Wasser.asset";
-            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
-            if (mesh == null) { mesh = new Mesh(); AssetDatabase.CreateAsset(mesh, meshPath); }
-            mesh.Clear();
-            mesh.SetVertices(verts);
-            mesh.SetTriangles(tris, 0);
-            var uv = new List<Vector2>();
-            foreach (var v in verts) uv.Add(new Vector2(v.x / 4f, v.z / 4f));
-            mesh.SetUVs(0, uv);
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-            EditorUtility.SetDirty(mesh);
-
-            var water = new GameObject("Wasserflaeche");
-            water.transform.SetParent(g, false);
-            water.layer = WaterLayer;
-            water.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var mr = water.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Models/Town/Materials/Town_Water.mat");
-            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            IgnoreInNavMesh(water);
+            BuildWaterSurface(g, plan, sb);
 
             // Furt-Volumen + Bauverbot entlang des Bachs
             int furt = 0;
@@ -801,6 +752,314 @@ namespace ElementalBuddies.EditorTools
                 bv.AddComponent<BoxCollider>().size = new Vector3(pond.z * 2f, 0.3f, pond.z * 2f);
             }
             sb.AppendLine($"Wasser: Mühlbach + {plan.Ponds.Count} Teiche, {furt} Furt-Volumen (Humanoid: Bereich „{WaterAreaName}“, Kosten {WaterCost}; Ramme: nicht begehbar)");
+        }
+
+        // ---------------------------------------------------------------- Wasser-Optik und Bachgeräusch (2026-10-16)
+        // Eigener Shader BuddyTD/StylizedWater (Assets/_Game/Shaders/StylizedWater.shader), Texturen aus
+        // art-src/village/water_textures.py, Klänge aus art-src/audio/synth_ambience.py. Rein optisch/akustisch:
+        // Furt-Volumen, Bauverbot-Kästen und NavMesh bleiben unberührt.
+        public const string WaterMaterialFolder = Folder + "/Materials";
+        public const string WaterShaderName = "BuddyTD/StylizedWater";
+        const float WaterLevel = -0.12f;
+        const string StreamClipPath = "Assets/_Game/Audio/Generated/amb_bach.wav";
+        const string WheelClipPath = "Assets/_Game/Audio/Generated/amb_muehlrad.wav";
+
+        [MenuItem("BuddyTD/Walddorf/Wasser: Oberfläche, Material, Bachgeräusch (ohne NavMesh)")]
+        public static void RebuildWaterLookMenu() => Debug.Log(RebuildWaterLook());
+
+        public static string RebuildWaterLook()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (scene.path != ScenePath) return "VillageSetup: erst " + ScenePath + " öffnen (aktive Szene).";
+            var sb = new StringBuilder();
+            var plan = Plan.Load();
+            var env = GameObject.Find("Environment");
+            var g = Child(Child(env.transform, "Dorf"), "Wasser");
+            BuildWaterSurface(g, plan, sb);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return sb.ToString();
+        }
+
+        // Ersetzt nur die Wasserflächen und Geräusch-Objekte in der Gruppe „Wasser“ (idempotent).
+        static void BuildWaterSurface(Transform g, Plan plan, StringBuilder sb)
+        {
+            foreach (var n in new[] { "Wasserflaeche", "Wasserflaeche_Teiche", "Bachgeraeusch", "Muehlrad_Rauschen" })
+                for (int i = g.childCount - 1; i >= 0; i--)
+                    if (g.GetChild(i).name == n) Object.DestroyImmediate(g.GetChild(i).gameObject);
+            EnsureFolder(MeshFolder);
+            EnsureFolder(WaterMaterialFolder);
+            var tex = EnsureWaterTextures();
+            var wheel = GameObject.Find("Muehlrad");
+            var matBach = EnsureWaterMaterial("Water_Bach", 3000, tex, null);
+            var matTeich = EnsureWaterMaterial("Water_Teich", 2999, tex, wheel != null ? wheel.transform : null);
+
+            var bach = BuildStreamMesh(plan, out float length);
+            var teiche = BuildPondMesh(plan);
+            // Wasser.asset behält seine GUID (Bach), Teiche in eigenem Mesh
+            var mb = SaveMesh(bach, MeshFolder + "/Wasser.asset");
+            var mt = SaveMesh(teiche, MeshFolder + "/Wasser_Teiche.asset");
+            MakeWaterRenderer(g, "Wasserflaeche", mb, matBach);
+            MakeWaterRenderer(g, "Wasserflaeche_Teiche", mt, matTeich);
+            sb.AppendLine($"Wasser-Optik: Bach {mb.vertexCount} Vertices ({length:F1} m, UV V entlang), Teiche {mt.vertexCount} Vertices; Shader {WaterShaderName}, Materialien Water_Bach/Water_Teich");
+
+            // Bachgeräusch: eine Quelle, die auf den nächsten Punkt der Bachlinie wandert
+            EnsureLoopImport(StreamClipPath);
+            EnsureLoopImport(WheelClipPath);
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(StreamClipPath);
+            if (clip != null && plan.Stream.Count > 1)
+            {
+                var go = new GameObject("Bachgeraeusch");
+                go.transform.SetParent(g, false);
+                var amb = go.AddComponent<StreamAmbience>();
+                var pts = new Vector3[plan.Stream.Count];
+                for (int i = 0; i < pts.Length; i++) pts[i] = new Vector3(plan.Stream[i].x, WaterLevel, plan.Stream[i].y);
+                amb.Points = pts; amb.Clip = clip; amb.Volume = 0.42f; amb.FullDistance = 3.5f; amb.FadeDistance = 17f; amb.SpatialBlend = 0.6f;
+                sb.AppendLine($"Bachgeräusch: {pts.Length} Linienpunkte, voll ≤ {amb.FullDistance} m, still ab {amb.FadeDistance} m, Lautstärke {amb.Volume}");
+            }
+            else sb.AppendLine("WARNUNG: " + StreamClipPath + " fehlt (art-src/audio/synth_ambience.py ausführen)");
+            var wclip = AssetDatabase.LoadAssetAtPath<AudioClip>(WheelClipPath);
+            if (wclip != null && wheel != null)
+            {
+                var go = new GameObject("Muehlrad_Rauschen");
+                go.transform.SetParent(g, false);
+                var amb = go.AddComponent<StreamAmbience>();
+                var w = wheel.transform.position;
+                amb.Points = new[] { new Vector3(w.x, 0.3f, w.z) };
+                amb.Clip = wclip; amb.Volume = 0.36f; amb.FullDistance = 2.5f; amb.FadeDistance = 13f; amb.SpatialBlend = 0.7f; amb.Height = 0.5f;
+                sb.AppendLine($"Mühlrad-Rauschen bei ({w.x:F1}; {w.z:F1}), voll ≤ {amb.FullDistance} m, still ab {amb.FadeDistance} m");
+            }
+        }
+
+        // Loops: PCM (keine Kodierlücke an der Naht), ohne Unity-„Normalize“ (Pegel kommt aus dem Mastering in
+        // synth_ambience.py), beim Laden entpackt, im Hintergrund geladen.
+        static void EnsureLoopImport(string path)
+        {
+            var ai = AssetImporter.GetAtPath(path) as AudioImporter;
+            if (ai == null) return;
+            var st = ai.defaultSampleSettings;
+            var so = new SerializedObject(ai);
+            var norm = so.FindProperty("m_Normalize") ?? so.FindProperty("normalize");
+            bool dirty = (norm != null && norm.boolValue) || !ai.forceToMono || !ai.loadInBackground
+                || st.compressionFormat != AudioCompressionFormat.PCM || st.loadType != AudioClipLoadType.DecompressOnLoad;
+            if (!dirty) return;
+            if (norm != null) { norm.boolValue = false; so.ApplyModifiedPropertiesWithoutUndo(); }
+            ai.forceToMono = true;
+            ai.loadInBackground = true;
+            st.compressionFormat = AudioCompressionFormat.PCM;
+            st.loadType = AudioClipLoadType.DecompressOnLoad;
+            ai.defaultSampleSettings = st;
+            ai.SaveAndReimport();
+        }
+
+        static void MakeWaterRenderer(Transform g, string name, Mesh mesh, Material mat)
+        {
+            var water = new GameObject(name);
+            water.transform.SetParent(g, false);
+            water.layer = WaterLayer;
+            water.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = water.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = mat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = true;
+            mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+            mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+            IgnoreInNavMesh(water);
+        }
+
+        static Mesh SaveMesh(Mesh src, string path)
+        {
+            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (mesh == null) { mesh = new Mesh(); AssetDatabase.CreateAsset(mesh, path); }
+            mesh.Clear();
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            mesh.SetVertices(src.vertices);
+            mesh.SetUVs(0, src.uv);
+            mesh.SetUVs(1, src.uv2);
+            mesh.SetColors(src.colors);
+            mesh.SetTriangles(src.triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            EditorUtility.SetDirty(mesh);
+            Object.DestroyImmediate(src);
+            return mesh;
+        }
+
+        // Strömungs-Faktor: 0 im Teich (stehendes Wasser), steigt nach dem Teichrand über 4 m auf 1
+        static float FlowFactor(Plan plan, Vector2 p)
+        {
+            float f = 1f;
+            foreach (var pond in plan.Ponds)
+            {
+                float d = Vector2.Distance(p, new Vector2(pond.x, pond.y)) - (pond.z + 1.3f);
+                f = Mathf.Min(f, Smooth(d / 4f));
+            }
+            return f;
+        }
+
+        static Color WaterVertexColor(Plan plan, Vector2 p, float flow)
+        {
+            float depth = Mathf.Clamp01(WaterLevel - Height(plan, p.x, p.y));
+            return new Color(flow, depth, 0f, 1f);
+        }
+
+        // Bach als Band: U quer (m, + = links der Fließrichtung), V entlang (m ab Quelle), Fließrichtung in uv1.
+        // Die Mittellinie folgt den Plansegmenten (wie das Bachbett im Gelände); Querrichtung weich zwischen den Ecken.
+        static Mesh BuildStreamMesh(Plan plan, out float length)
+        {
+            var s = plan.Stream;
+            // bis über die Uferlinie hinaus (Wasser −0,12 trifft die Böschung bei ≈ 2,5 m), der Rest liegt unter dem Gelände
+            float rib = StreamHalf + StreamBank + 0.1f;
+            const int cols = 8;
+            const float step = 0.75f;
+            var verts = new List<Vector3>(); var uv = new List<Vector2>(); var uv2 = new List<Vector2>(); var colr = new List<Color>(); var tris = new List<int>();
+            var corner = new Vector2[s.Count];
+            for (int i = 0; i < s.Count; i++)
+                corner[i] = (i == 0 ? s[1] - s[0] : (i == s.Count - 1 ? s[i] - s[i - 1] : (s[i + 1] - s[i]).normalized + (s[i] - s[i - 1]).normalized)).normalized;
+            float v = 0f;
+            int rows = 0;
+            for (int k = 0; k + 1 < s.Count; k++)
+            {
+                float segLen = Vector2.Distance(s[k], s[k + 1]);
+                int n = Mathf.Max(1, Mathf.CeilToInt(segLen / step));
+                for (int j = (k == 0 ? 0 : 1); j <= n; j++)
+                {
+                    float f = j / (float)n;
+                    Vector2 c = Vector2.Lerp(s[k], s[k + 1], f);
+                    Vector2 dir = Vector2.Lerp(corner[k], corner[k + 1], f).normalized;
+                    Vector2 nrm = new Vector2(-dir.y, dir.x);
+                    float vv = v + segLen * f;
+                    for (int q = 0; q <= cols; q++)
+                    {
+                        float u = rib - 2f * rib * q / cols;
+                        Vector2 p = c + nrm * u;
+                        verts.Add(new Vector3(p.x, WaterLevel, p.y));
+                        uv.Add(new Vector2(u, vv));
+                        uv2.Add(dir);
+                        colr.Add(WaterVertexColor(plan, p, FlowFactor(plan, p)));
+                    }
+                    if (rows > 0)
+                    {
+                        int b = (rows - 1) * (cols + 1), t0 = rows * (cols + 1);
+                        for (int q = 0; q < cols; q++)
+                            tris.AddRange(new[] { b + q, t0 + q, b + q + 1, b + q + 1, t0 + q, t0 + q + 1 });
+                    }
+                    rows++;
+                }
+                v += segLen;
+            }
+            length = v;
+            var m = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            m.SetVertices(verts); m.SetUVs(0, uv); m.SetUVs(1, uv2); m.SetColors(colr); m.SetTriangles(tris, 0);
+            return m;
+        }
+
+        // Teiche als Ringe (Vertex-Tiefe als Rückfall gut aufgelöst), UV = Welt-XZ, Strömung 0 = stehendes Wasser
+        static Mesh BuildPondMesh(Plan plan)
+        {
+            var verts = new List<Vector3>(); var uv = new List<Vector2>(); var uv2 = new List<Vector2>(); var colr = new List<Color>(); var tris = new List<int>();
+            const int seg = 48, rings = 8;
+            foreach (var pond in plan.Ponds)
+            {
+                float R = pond.z + 1.3f; // Uferlinie bei ≈ r + 0,7 m, Rand unter dem Gelände
+                int c = verts.Count;
+                for (int r = 0; r <= rings; r++)
+                {
+                    float rad = R * r / rings;
+                    int cnt = r == 0 ? 1 : seg;
+                    for (int k = 0; k < cnt; k++)
+                    {
+                        float a = k * Mathf.PI * 2f / seg;
+                        var p = new Vector2(pond.x + Mathf.Cos(a) * rad, pond.y + Mathf.Sin(a) * rad);
+                        verts.Add(new Vector3(p.x, WaterLevel, p.y));
+                        uv.Add(p);
+                        uv2.Add(new Vector2(0f, 1f));
+                        colr.Add(WaterVertexColor(plan, p, 0f));
+                    }
+                }
+                for (int k = 0; k < seg; k++) tris.AddRange(new[] { c, c + 1 + (k + 1) % seg, c + 1 + k });
+                for (int r = 1; r < rings; r++)
+                {
+                    int a0 = c + 1 + (r - 1) * seg, a1 = c + 1 + r * seg;
+                    for (int k = 0; k < seg; k++)
+                    {
+                        int k1 = (k + 1) % seg;
+                        tris.AddRange(new[] { a0 + k, a0 + k1, a1 + k, a1 + k, a0 + k1, a1 + k1 });
+                    }
+                }
+            }
+            var m = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            m.SetVertices(verts); m.SetUVs(0, uv); m.SetUVs(1, uv2); m.SetColors(colr); m.SetTriangles(tris, 0);
+            return m;
+        }
+
+        static Texture2D[] EnsureWaterTextures()
+        {
+            string nPath = TextureFolder + "/walddorf_wasser_normal.png", zPath = TextureFolder + "/walddorf_wasser_noise.png";
+            if (!File.Exists(nPath) || !File.Exists(zPath))
+            {
+                Debug.LogWarning("VillageSetup: Wasser-Texturen fehlen (art-src/village/water_textures.py ausführen)");
+                return new Texture2D[2];
+            }
+            foreach (var path in new[] { nPath, zPath })
+            {
+                var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+                if (ti == null) { AssetDatabase.ImportAsset(path); ti = (TextureImporter)AssetImporter.GetAtPath(path); }
+                bool isNormal = path == nPath;
+                bool dirty = false;
+                if (isNormal && ti.textureType != TextureImporterType.NormalMap) { ti.textureType = TextureImporterType.NormalMap; dirty = true; }
+                if (!isNormal && (ti.sRGBTexture || ti.alphaSource != TextureImporterAlphaSource.FromInput || ti.alphaIsTransparency))
+                { ti.sRGBTexture = false; ti.alphaSource = TextureImporterAlphaSource.FromInput; ti.alphaIsTransparency = false; dirty = true; }
+                if (ti.wrapMode != TextureWrapMode.Repeat || ti.anisoLevel != 4 || !ti.mipmapEnabled)
+                { ti.wrapMode = TextureWrapMode.Repeat; ti.anisoLevel = 4; ti.mipmapEnabled = true; dirty = true; }
+                if (ti.maxTextureSize != 512) { ti.maxTextureSize = 512; dirty = true; }
+                if (dirty) ti.SaveAndReimport();
+            }
+            return new[] { AssetDatabase.LoadAssetAtPath<Texture2D>(nPath), AssetDatabase.LoadAssetAtPath<Texture2D>(zPath) };
+        }
+
+        // Material anlegen, falls es fehlt; vorhandene Werte (im Inspector abgestimmt) bleiben erhalten.
+        // Immer gesetzt: Shader, Queue (Teich vor Bach → Stencil), Texturen, Strudel-Mitte am Mühlrad.
+        static Material EnsureWaterMaterial(string name, int queue, Texture2D[] tex, Transform wheel)
+        {
+            string path = WaterMaterialFolder + "/" + name + ".mat";
+            var shader = Shader.Find(WaterShaderName);
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool created = false;
+            if (mat == null)
+            {
+                mat = new Material(shader) { name = name };
+                AssetDatabase.CreateAsset(mat, path);
+                created = true;
+            }
+            if (mat.shader != shader && shader != null) mat.shader = shader;
+            mat.renderQueue = queue;
+            if (tex[0] != null) mat.SetTexture("_NormalTex", tex[0]);
+            if (tex[1] != null) mat.SetTexture("_NoiseTex", tex[1]);
+            if (created && name == "Water_Teich")
+            {
+                mat.SetFloat("_WaveStrength", 0.45f);
+                mat.SetFloat("_StreakStrength", 0f);
+            }
+            if (wheel != null)
+            {
+                // Strudel am Teichrand unter dem Mühlrad (dort fällt das Wasser aus dem Rad zurück)
+                var pond = Plan.Load().Ponds;
+                Vector2 w = new Vector2(wheel.position.x, wheel.position.z);
+                Vector2 best = w; float bd = float.MaxValue;
+                foreach (var p in pond)
+                {
+                    var c = new Vector2(p.x, p.y);
+                    float d = Vector2.Distance(w, c) - p.z;
+                    if (d < bd) { bd = d; best = c + (w - c).normalized * (p.z - 0.4f); }
+                }
+                var sw = mat.GetVector("_SwirlPos");
+                if (created || sw.w <= 0f) { sw.z = 2.6f; sw.w = 0.85f; }
+                sw.x = best.x; sw.y = best.y;
+                mat.SetVector("_SwirlPos", sw);
+            }
+            EditorUtility.SetDirty(mat);
+            return mat;
         }
 
         static void SetAgents(NavMeshModifierVolume v, int agentType)
