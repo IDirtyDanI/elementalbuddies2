@@ -6,7 +6,7 @@ namespace ElementalBuddies
 {
     // Automatisierter Mehrspieler-Test (nur mit Startparameter -nettest aktiv):
     // protokolliert alle 2 s den Spielzustand aus Sicht dieses Rechners ("[NetTest] …"), meldet sich zur Welle bereit,
-    // wählt die erste angebotene Karte, schließt den Händlerladen, läuft im Kreis und wirkt die Primärfähigkeit.
+    // nimmt im Kartenladen die Gratis-Karte und kauft (wenn der Anteil reicht) eine zweite, schließt den Händlerladen, läuft im Kreis und wirkt die Primärfähigkeit.
     public class NetAutoTest : MonoBehaviour
     {
         private static bool? _enabled;
@@ -28,6 +28,7 @@ namespace ElementalBuddies
             go.AddComponent<NetAutoTest>();
         }
 
+        private static readonly bool NoBuild = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-nettestbuy") >= 0;
         private float _nextLog;
         private float _nextAct;
         private float _angle;
@@ -54,14 +55,26 @@ namespace ElementalBuddies
             var um = UpgradeManager.Instance;
             if (UpgradeManager.IsLocalChoosing && um != null)
             {
-                var f = typeof(UpgradeManager).GetField("_localOffer", BindingFlags.Instance | BindingFlags.NonPublic);
-                var offer = f != null ? f.GetValue(um) as System.Collections.IList : null;
-                if (offer != null && offer.Count > 0)
+                // Kartenladen: Gratis-Karte nehmen, dann (falls der eigene Anteil reicht) eine Karte dazukaufen, dann „Fertig“
+                if (um.IsRequestPending) return;
+                var offer = um.LocalOffer;
+                if (um.OfferPicks < 2)
                 {
-                    var card = offer[0] as UpgradeDefinitionSO;
-                    Debug.Log("[NetTest] wähle Karte " + (card != null ? card.name : "?"));
-                    um.SelectUpgrade(card);
+                    for (int i = 0; i < offer.Count; i++)
+                    {
+                        if (!um.IsSlotAvailable(i)) continue;
+                        if (um.OfferPicks == 0 || um.CanAffordCard)
+                        {
+                            Debug.Log($"[NetTest] Kartenladen: {(um.OfferPicks == 0 ? "nehme Gratis-Karte" : "kaufe Karte")} {offer[i].name} " +
+                                      $"(Preis {um.OfferCardPrice}, Anteil {um.SpendableShards}, Kasse {(EconomyManager.Instance != null ? EconomyManager.Instance.CurrentShards : 0f):F0})");
+                            um.BuyCard(i);
+                            return;
+                        }
+                        break;
+                    }
                 }
+                Debug.Log($"[NetTest] Kartenladen fertig: {um.OfferPicks} Karte(n), Rest-Anteil {um.SpendableShards}");
+                um.FinishDraft();
                 return;
             }
             if (MerchantManager.IsLocalShopOpen)
@@ -73,6 +86,8 @@ namespace ElementalBuddies
             var wm = WaveManager.Instance;
             var gm = GameManager.Instance;
             // Einmal pro Spiel einen Feuer-Buddy über den Server-RPC bauen (prüft Client → Server-Bauweg)
+            // -nettestbuy: keinen Buddy bauen, damit nach Welle 1 genug Splitter für einen Kauf im Kartenladen da sind
+            if (!_built && NoBuild) _built = true;
             if (!_built && gm != null && gm.CurrentState == GameState.Building && NetBootstrap.Instance != null && PlayerAvatar.Local != null)
             {
                 _built = true;

@@ -8,6 +8,9 @@ namespace ElementalBuddies
     // Wellenkarte im Draft. Seit Sprint 3 (Plan „Fesselung“ D2/D3): Seltenheit als farbiger Rand + Banner,
     // Schlüsselwörter unter der Beschreibung, „Kombo!“-Hinweis und Aufdeck-Animation mit Klang je Seltenheit.
     // Die Zusatz-Elemente entstehen zur Laufzeit (BuffCard.prefab wird auch vom Händler genutzt).
+    // Kartenladen (2026-10-16): Preisschild unter der Karte („Gratis“ bzw. Preis + Splitter-Symbol, rot wenn der eigene
+    // Anteil nicht reicht), „Gekauft“-Stempel, Abdunkeln; nicht mehr zulässige Karten (MaxPicks, Build-Karte …) ausgegraut.
+    // Nutzt die Kinder PriceTag/Price/PriceIcon/Bought aus BuffCard.prefab (wie MerchantCardUI).
     public class UpgradeCardUI : MonoBehaviour
     {
         public TextMeshProUGUI TitleText;
@@ -15,7 +18,27 @@ namespace ElementalBuddies
         public Image IconImage;
         public Button SelectButton;
 
+        [Header("Kartenladen (optional, sonst per Namen gefunden)")]
+        public TMP_Text PriceText;
+        public Image PriceIcon;
+        public GameObject PriceTag;
+        public GameObject BoughtOverlay;
+        public CanvasGroup CanvasGroup;
+        public Color UnaffordableColor = new Color(0.78f, 0.15f, 0.12f);
+        [Range(0f, 1f)] public float BoughtAlpha = 0.55f;
+        [Range(0f, 1f)] public float UnavailableAlpha = 0.45f;
+
+        // Slot im Angebot (−1 = ohne Laden, alter Ablauf)
+        public int Slot { get; private set; } = -1;
+        public UpgradeDefinitionSO Data => _data;
+        public bool IsRevealed => _revealed;
+
         private UpgradeDefinitionSO _data;
+        private bool _revealed = true;
+        private bool _shopRefsRead;
+        private Color _priceColor = Color.white;
+        private TMP_Text _buttonLabel;
+        private Coroutine _shake;
         private readonly System.Collections.Generic.List<Image> _trim = new System.Collections.Generic.List<Image>();
         private Coroutine _pulse;
 
@@ -29,9 +52,13 @@ namespace ElementalBuddies
         public static string RarityName(CardRarity r) =>
             r == CardRarity.Epic ? "Episch" : r == CardRarity.Rare ? "Selten" : "Gewöhnlich";
 
-        public void Setup(UpgradeDefinitionSO data)
+        public void Setup(UpgradeDefinitionSO data) => Setup(data, -1);
+
+        public void Setup(UpgradeDefinitionSO data, int slot)
         {
             _data = data;
+            Slot = slot;
+            ReadShopRefs();
             if (TitleText) TitleText.text = data.LocalTitle; // Klassen-Variante (z. B. Wut statt Mana beim Berserker)
             if (DescriptionText)
             {
@@ -57,6 +84,95 @@ namespace ElementalBuddies
 
             SelectButton.onClick.RemoveAllListeners();
             SelectButton.onClick.AddListener(OnClick);
+            RefreshShopState();
+        }
+
+        private void ReadShopRefs()
+        {
+            if (_shopRefsRead) return;
+            _shopRefsRead = true;
+            if (PriceText == null) PriceText = Find<TMP_Text>("Price");
+            if (PriceIcon == null) PriceIcon = Find<Image>("PriceIcon");
+            if (PriceTag == null) { var t = Find<Transform>("PriceTag"); if (t != null) PriceTag = t.gameObject; }
+            if (BoughtOverlay == null) { var t = Find<Transform>("Bought"); if (t != null) BoughtOverlay = t.gameObject; }
+            if (CanvasGroup == null) CanvasGroup = GetComponent<CanvasGroup>();
+            if (CanvasGroup == null) CanvasGroup = gameObject.AddComponent<CanvasGroup>();
+            if (PriceText != null) _priceColor = PriceText.color;
+            if (SelectButton != null) _buttonLabel = SelectButton.GetComponentInChildren<TMP_Text>(true);
+            if (_buttonLabel != null)
+            {
+                _buttonLabel.enableAutoSizing = true;
+                _buttonLabel.fontSizeMax = _buttonLabel.fontSize;
+                _buttonLabel.fontSizeMin = Mathf.Min(14f, _buttonLabel.fontSize);
+            }
+        }
+
+        // Preis/Gekauft/Zulässig aus dem UpgradeManager übernehmen (Slot ≥ 0, sonst alter „Wählen“-Knopf)
+        public void RefreshShopState()
+        {
+            var um = UpgradeManager.Instance;
+            if (Slot < 0 || um == null || !um.IsChoosing)
+            {
+                if (PriceTag != null) PriceTag.SetActive(false);
+                if (BoughtOverlay != null) BoughtOverlay.SetActive(false);
+                return;
+            }
+            bool bought = um.IsSlotBought(Slot);
+            bool available = !bought && um.IsSlotAvailable(Slot);
+            int price = um.OfferCardPrice;
+            bool affordable = um.CanAffordCard;
+
+            if (BoughtOverlay != null) BoughtOverlay.SetActive(bought);
+            if (PriceTag != null) PriceTag.SetActive(available);
+            if (CanvasGroup != null) CanvasGroup.alpha = bought ? BoughtAlpha : available ? 1f : UnavailableAlpha;
+            if (PriceText != null)
+            {
+                if (PriceTag == null) PriceText.gameObject.SetActive(available);
+                PriceText.text = price <= 0 ? "Gratis" : price.ToString();
+                PriceText.color = affordable ? _priceColor : UnaffordableColor;
+            }
+            if (PriceIcon != null) PriceIcon.gameObject.SetActive(available && price > 0);
+
+            if (SelectButton != null) SelectButton.interactable = _revealed && available;
+            if (_buttonLabel != null)
+            {
+                string label = bought ? "Gekauft"
+                    : !available ? um.UnavailableReason(_data)
+                    : price <= 0 ? "Nehmen"
+                    : PriceText != null ? "Kaufen" : $"Kaufen ({price})";
+                _buttonLabel.text = label;
+            }
+        }
+
+        // Zu wenig Splitter: Preisschild kurz wackeln (Echtzeit, Spiel steht)
+        public void Shake()
+        {
+            if (!isActiveAndEnabled) return;
+            if (_shake != null) StopCoroutine(_shake);
+            _shake = StartCoroutine(ShakeRoutine());
+        }
+
+        private IEnumerator ShakeRoutine()
+        {
+            Transform target = PriceTag != null && PriceTag.activeInHierarchy ? PriceTag.transform : transform;
+            Vector3 basePos = target.localPosition;
+            float t = 0f;
+            while (t < 0.35f)
+            {
+                t += Time.unscaledDeltaTime;
+                float a = (1f - t / 0.35f) * 10f;
+                target.localPosition = basePos + new Vector3(Mathf.Sin(t * 70f) * a, 0f, 0f);
+                yield return null;
+            }
+            target.localPosition = basePos;
+            _shake = null;
+        }
+
+        private T Find<T>(string childName) where T : Component
+        {
+            foreach (var t in GetComponentsInChildren<Transform>(true))
+                if (t.name == childName) return t.GetComponent<T>();
+            return null;
         }
 
         private void BuildRarity(CardRarity rarity)
@@ -155,6 +271,7 @@ namespace ElementalBuddies
         {
             var t = transform;
             t.localScale = new Vector3(0f, 1f, 1f);
+            _revealed = false;
             if (SelectButton != null) SelectButton.interactable = false;
             float end = Time.unscaledTime + delay;
             while (Time.unscaledTime < end) yield return null;
@@ -172,12 +289,17 @@ namespace ElementalBuddies
                 yield return null;
             }
             t.localScale = Vector3.one;
+            _revealed = true;
             if (SelectButton != null) SelectButton.interactable = true;
+            RefreshShopState();
         }
 
         private void OnClick()
         {
-            UpgradeManager.Instance.SelectUpgrade(_data);
+            var um = UpgradeManager.Instance;
+            if (um == null) return;
+            if (Slot >= 0) um.BuyCard(Slot);
+            else um.SelectUpgrade(_data);
         }
     }
 }

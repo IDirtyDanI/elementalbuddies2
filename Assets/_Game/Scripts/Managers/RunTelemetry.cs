@@ -33,7 +33,8 @@ namespace ElementalBuddies
             "slots,buddies,buddy_level_sum,buddy_levels,fusions,supers,fusions_made,tower_dps_sum," +
             "tower_dmg,player_dmg,boss_name,boss_hp,boss_ttk_s,boss_reached_nexus," +
             "card_offered,card_picked,merchant_bought,p_estimate,game_over_reason," +
-            "draft_rerolls_free,draft_rerolls_paid,draft_reroll_shards";
+            "draft_rerolls_free,draft_rerolls_paid,draft_reroll_shards," +
+            "draft_cards,draft_cards_paid,draft_card_shards,draft_share";
 
         // Datensatz einer Welle (+ folgende Bauphase)
         private class Row
@@ -54,6 +55,8 @@ namespace ElementalBuddies
             public bool BossReachedNexus;
             public string Offered = "", Picked = "", MerchantBought = "";
             public int RerollsFree, RerollsPaid, RerollShards; // Neuwürfe der Kartenwahl (alle Spieler)
+            public int DraftCards, DraftCardsPaid, DraftCardShards; // Kartenladen: genommene/gekaufte Karten, Splitter (alle Spieler)
+            public int DraftShare = -1; // Anteil je Spieler beim Öffnen der Kartenwahl
         }
 
         private Row _row;           // laufende Welle bzw. Bauphase danach (noch nicht geschrieben)
@@ -146,6 +149,7 @@ namespace ElementalBuddies
                 um.OnUpgradesAvailable += HandleOffered;
                 um.OnUpgradePicked += HandlePicked;
                 um.OnServerRerolled += HandleRerolled;
+                um.OnServerCardTaken += HandleCardTaken;
             }
             if (MerchantManager.Instance != null) MerchantManager.Instance.OnCardPicked += HandleMerchantCard;
             if (FusionManager.Instance != null) FusionManager.Instance.OnFused += HandleFused;
@@ -178,6 +182,7 @@ namespace ElementalBuddies
                 um.OnUpgradesAvailable -= HandleOffered;
                 um.OnUpgradePicked -= HandlePicked;
                 um.OnServerRerolled -= HandleRerolled;
+                um.OnServerCardTaken -= HandleCardTaken;
             }
             if (MerchantManager.Instance != null) MerchantManager.Instance.OnCardPicked -= HandleMerchantCard;
             if (FusionManager.Instance != null) FusionManager.Instance.OnFused -= HandleFused;
@@ -378,11 +383,28 @@ namespace ElementalBuddies
             if (_row != null && up != null) _row.Picked = Append(_row.Picked, up.name);
         }
 
+        // Kartenladen: Karte genommen (Server, alle Spieler) – Preis 0 = Gratis-Karte
+        private void HandleCardTaken(ulong clientId, UpgradeDefinitionSO up, int price)
+        {
+            if (_row == null) return;
+            _row.DraftCards++;
+            if (price > 0) { _row.DraftCardsPaid++; _row.DraftCardShards += price; }
+            NoteShare(clientId);
+        }
+
+        // Anteil je Spieler beim Öffnen der Kartenwahl (Koop: alle gleich)
+        private void NoteShare(ulong clientId)
+        {
+            if (_row != null && _row.DraftShare < 0 && UpgradeManager.Instance != null)
+                _row.DraftShare = UpgradeManager.Instance.ServerDraftShareAtOpen(clientId);
+        }
+
         private void HandleRerolled(ulong clientId, int shards)
         {
             if (_row == null) return;
             if (shards > 0) { _row.RerollsPaid++; _row.RerollShards += shards; }
             else _row.RerollsFree++;
+            NoteShare(clientId);
         }
 
         private void HandleMerchantCard(MerchantCardSO card)
@@ -431,7 +453,8 @@ namespace ElementalBuddies
                 F(r.TowerDmg), F(r.PlayerDmg), Q(r.BossName), r.BossSpawnTime >= 0f ? F(r.BossHp) : "",
                 r.BossTtk >= 0f ? F(r.BossTtk, 1) : "", r.BossSpawnTime >= 0f ? (r.BossReachedNexus ? "1" : "0") : "",
                 Q(r.Offered), Q(r.Picked), Q(r.MerchantBought), F(p, 3), Q(gameOverReason),
-                I(r.RerollsFree), I(r.RerollsPaid), I(r.RerollShards)
+                I(r.RerollsFree), I(r.RerollsPaid), I(r.RerollShards),
+                I(r.DraftCards), I(r.DraftCardsPaid), I(r.DraftCardShards), I(r.DraftShare)
             };
             try { File.AppendAllText(FilePath, string.Join(",", c) + "\n", Encoding.UTF8); }
             catch (System.Exception e) { Debug.LogWarning("RunTelemetry: Zeile nicht geschrieben – " + e.Message); }

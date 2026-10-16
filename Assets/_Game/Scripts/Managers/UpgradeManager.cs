@@ -3,14 +3,16 @@ using System.Collections.Generic;
 
 namespace ElementalBuddies
 {
-    // Upgrade-Draft am Wellenende – pro Spieler:
+    // Upgrade-Draft am Wellenende – pro Spieler, seit 2026-10-16 als „Kartenladen“:
     //   Server (WaveManager.EndWave → PresentUpgrades) zieht für JEDEN Spieler eigene Karten (eigene Pick-Zählung/MaxPicks)
-    //   und schickt sie gezielt an dessen Rechner (NetGame.SendUpgradeOffer). Der Client zeigt die Auswahl
-    //   (OnUpgradesAvailable → UpgradeScreenUI), wählt (SelectUpgrade → NetGame.RequestSelectUpgrade), der Server prüft
-    //   und lässt die Karte auf ALLEN Rechnern anwenden (NetGame.BroadcastApplyUpgrade → ApplyPicked).
-    //   Spieler-Karten wirken auf die Figur des Wählenden, Team-Karten (Buddy-Werte, Slots, Splitter) einmal global.
-    // Die nächste Welle startet erst, wenn alle gewählt haben (WaveGate). Im Einzelspiel pausiert die Auswahl weiter
-    // per Time.timeScale (Net.CanPauseTime).
+    //   und schickt den Zustand gezielt an dessen Rechner (NetGame.SendUpgradeOffer). Die erste Karte ist gratis, weitere
+    //   kosten Seelensplitter (60, 90, 120 … je Kartenwahl), Neu würfeln ersetzt die nicht gekauften Karten (Gratis-Neuwürfe,
+    //   sonst 25, 40, 55 …). Bezahlt wird aus dem eigenen Anteil = Teamkasse beim Wellenende ÷ Spielerzahl (DraftLedger).
+    //   Der Client (UpgradeScreenUI) fragt an (BuyCard/RequestReroll/SkipDraft/FinishDraft → NetGame.RequestSelectUpgrade),
+    //   der Server prüft/zieht, bucht erst dann ab und lässt die Karte auf ALLEN Rechnern anwenden (BroadcastApplyUpgrade →
+    //   ApplyPicked). Spieler-Karten wirken auf die Figur des Wählenden, Team-Karten (Buddy-Werte, Slots, Splitter) einmal global.
+    // Die nächste Welle startet erst, wenn alle „Fertig“ bzw. „Überspringen“ gedrückt haben (WaveGate). Im Einzelspiel
+    // pausiert die Auswahl weiter per Time.timeScale (Net.CanPauseTime).
     public class UpgradeManager : MonoBehaviour
     {
         public static UpgradeManager Instance { get; private set; }
@@ -19,17 +21,24 @@ namespace ElementalBuddies
         public static bool IsLocalChoosing => Instance != null && Instance.IsChoosing;
 
         public const int CardsPerDraft = 3;
-        // Steuercodes für ServerSelect (statt Kartenindex): Überspringen bzw. Neu würfeln
-        public const int SkipCode = -1, RerollCode = -2;
+        // Steuercodes für ServerSelect (statt Slot): Überspringen, Neu würfeln, Fertig
+        public const int SkipCode = -1, RerollCode = -2, DoneCode = -3;
+
+        [Header("Kartenladen nach der Welle (2026-10-16)")]
+        [Tooltip("Erste Karte jeder Kartenwahl gratis, jede weitere kostet Seelensplitter: Basis + Schritt · (n−1) " +
+                 "(Standard 60, 90, 120 …). Staffel pro Spieler, beginnt mit jeder Kartenwahl neu. Bezahlt wird aus dem " +
+                 "eigenen Anteil (Teamkasse beim Öffnen ÷ Spielerzahl).")]
+        public int DraftCardBaseCost = 60;
+        public int DraftCardCostStep = 30;
 
         [Header("Draft (Plan Fesselung D2/D5/D6)")]
         [Tooltip("Gratis-Neuwürfe zu Beginn des Runs (pro Spieler); jeder Boss-Kill gibt allen einen weiteren.")]
         public int StartRerolls = 1;
-        [Tooltip("Ohne Gratis-Neuwurf kostet Neu würfeln Seelensplitter (Teamkasse): Basis + Schritt · bisherige bezahlte Würfe " +
+        [Tooltip("Ohne Gratis-Neuwurf kostet Neu würfeln Seelensplitter (aus dem eigenen Anteil): Basis + Schritt · bisherige bezahlte Würfe " +
                  "dieser Kartenwahl (Standard 25, 40, 55 … wie beim Händler). Zähler beginnt mit jeder Kartenwahl neu.")]
         public int DraftRerollBaseCost = 25;
         public int DraftRerollCostStep = 15;
-        [Tooltip("Überspringen gibt SkipShardsBase + SkipShardsPerWave · Welle Seelensplitter (× Einkommen der Schwierigkeit).")]
+        [Tooltip("Überspringen (nur ohne genommene Karte) gibt SkipShardsBase + SkipShardsPerWave · Welle Seelensplitter (× Einkommen der Schwierigkeit).")]
         public float SkipShardsBase = 10f;
         public float SkipShardsPerWave = 2f;
         [Tooltip("Wahrscheinlichkeit Selten bzw. Episch je Karte: linear von Welle 1 (bzw. EpicFromWave) bis RarityRampWave.")]
@@ -53,7 +62,13 @@ namespace ElementalBuddies
 
         // UI-Events (lokal)
         public event System.Action<List<UpgradeDefinitionSO>> OnUpgradesAvailable;
-        // Lokale Auswahl geschlossen (gewählt oder abgebrochen)
+        // Offene Kartenwahl geändert (Kauf, Neu würfeln, Anteil) – UI aktualisiert Karten und Knöpfe
+        public event System.Action OnOfferChanged;
+        // Kauf/Neuwurf abgelehnt (lokal): Slot (−1 = Neu würfeln, −2 = Überspringen), Grund
+        public event System.Action<int, DraftDenial> OnDraftRejected;
+        // Lokaler Spieler hat in der Kartenwahl eine Karte genommen: Karte, bezahlter Preis (0 = Gratis-Karte)
+        public event System.Action<UpgradeDefinitionSO, int> OnLocalCardTaken;
+        // Lokale Auswahl geschlossen (Fertig, Überspringen oder abgebrochen)
         public event System.Action OnUpgradeSelected;
         // Eigene Karte angewendet (lokaler Spieler)
         public event System.Action<UpgradeDefinitionSO> OnUpgradePicked;
@@ -61,6 +76,8 @@ namespace ElementalBuddies
         public event System.Action<ulong, UpgradeDefinitionSO> OnAnyUpgradePicked;
         // Nur Server: ein Spieler hat neu gewürfelt – Client-Id, bezahlte Splitter (0 = Gratis-Neuwurf)
         public event System.Action<ulong, int> OnServerRerolled;
+        // Nur Server: ein Spieler hat in der Kartenwahl eine Karte genommen – Client-Id, Karte, Preis (0 = gratis)
+        public event System.Action<ulong, UpgradeDefinitionSO, int> OnServerCardTaken;
 
         // Bisher gewählte Karten des lokalen Spielers (in Wahl-Reihenfolge, Mehrfachwahl möglich)
         private readonly List<UpgradeDefinitionSO> _picked = new List<UpgradeDefinitionSO>();
@@ -68,31 +85,55 @@ namespace ElementalBuddies
         // Gewählte Karten aller Spieler (auf allen Rechnern gleich, da per ApplyPicked gepflegt)
         private readonly Dictionary<ulong, List<UpgradeDefinitionSO>> _pickedByClient = new Dictionary<ulong, List<UpgradeDefinitionSO>>();
 
+        // ---------------- Client: Abbild der eigenen offenen Kartenwahl (vom Server) ----------------
         // Lokale Upgrade-Auswahl gerade offen
         public bool IsChoosing { get; private set; }
-        // Zur offenen Auswahl: verfügbare Gratis-Neuwürfe und Splitter fürs Überspringen (vom Server)
+        // Gratis-Neuwürfe (Run) bzw. Preis des nächsten bezahlten Neuwurfs (gilt nur, wenn OfferRerolls == 0)
         public int OfferRerolls { get; private set; }
-        // Preis des nächsten bezahlten Neuwurfs in Seelensplittern (gilt nur, wenn OfferRerolls == 0)
         public int OfferRerollCost { get; private set; }
-        // Lokal: Neu würfeln jetzt möglich (Gratis-Neuwurf übrig oder genug Splitter in der Teamkasse)?
-        public bool CanAffordReroll => OfferRerolls > 0 ||
-            (EconomyManager.Instance != null && EconomyManager.Instance.CanAfford(OfferRerollCost));
         public int OfferSkipShards { get; private set; }
-        // Neu würfeln angefragt, Antwort steht aus (UI sperrt die Knöpfe)
-        public bool IsRerollPending { get; private set; }
+        // Preis der nächsten Karte (0 = Gratis-Karte), genommene Karten dieser Wahl, Rest-Anteil (Splitter)
+        public int OfferCardPrice { get; private set; }
+        public int OfferPicks { get; private set; }
+        public int OfferShareLeft { get; private set; }
+        // Koop: Anteil statt ganzer Kasse (Anzeige „Dein Anteil“)
+        public bool IsSharedTreasury => Net.IsMultiplayer;
+        // Ausgebbar: Rest-Anteil, höchstens die (gespiegelte) Teamkasse
+        public int SpendableShards
+        {
+            get
+            {
+                float team = EconomyManager.Instance != null ? EconomyManager.Instance.CurrentShards : 0f;
+                return Mathf.Max(0, Mathf.Min(OfferShareLeft, Mathf.FloorToInt(team + 0.0001f)));
+            }
+        }
+        public bool CanAffordCard => OfferCardPrice <= 0 || OfferCardPrice <= SpendableShards;
+        // Lokal: Neu würfeln jetzt möglich (Gratis-Neuwurf übrig oder genug Splitter im eigenen Anteil)?
+        public bool CanAffordReroll => OfferRerolls > 0 || OfferRerollCost <= SpendableShards;
+        // Überspringen nur, solange in dieser Wahl noch keine Karte genommen wurde
+        public bool CanSkip => IsChoosing && OfferPicks == 0;
+        // Anfrage an den Server läuft (UI sperrt die Knöpfe)
+        public bool IsRequestPending { get; private set; }
+        public bool IsRerollPending => IsRequestPending; // alte API
+        public IReadOnlyList<UpgradeDefinitionSO> LocalOffer => _localOffer;
+        public bool IsSlotBought(int slot) => slot >= 0 && slot < _localBought.Count && _localBought[slot];
+        // Offener Slot, dessen Karte für den lokalen Spieler noch zulässig ist (MaxPicks, Build-Karte, Klasse, Slot-Deckel)
+        public bool IsSlotAvailable(int slot) => slot >= 0 && slot < _localOffer.Count && !IsSlotBought(slot) && IsDraftable(_localOffer[slot]);
         private int _localSerial = -1;      // Nummer der offenen Auswahl
         private int _localClosedSerial = -1; // zuletzt lokal geschlossene Auswahl (verspätete Pakete ignorieren)
         private readonly List<UpgradeDefinitionSO> _localOffer = new List<UpgradeDefinitionSO>();
+        private readonly List<bool> _localBought = new List<bool>();
 
         // ---------------- Server: Draft-Zustand pro Spieler ----------------
         private class DraftState
         {
             public readonly List<int> Offer = new List<int>();
+            public readonly List<bool> Bought = new List<bool>();
             public bool Open;    // Auswahl liegt beim Spieler
             public bool Pending; // wartet, bis der Händlerladen des Spielers zu ist
             public int Serial;
-            public int Rerolls = -1; // −1 = noch nicht gesetzt (StartRerolls)
-            public int PaidRerolls;  // bezahlte Neuwürfe dieser Kartenwahl (Preisstaffel, je Kartenwahl neu)
+            public int PresetShare = -1; // Anteil, beim Wellenende für alle berechnet (−1 = beim Öffnen berechnen)
+            public DraftLedger Ledger;   // Anteil, Preisstaffeln, Gratis-Neuwürfe
         }
         private readonly Dictionary<ulong, DraftState> _drafts = new Dictionary<ulong, DraftState>();
         private int _serialCounter;
@@ -161,18 +202,15 @@ namespace ElementalBuddies
         private void HandleEnemyKilled(EnemyBrain e)
         {
             if (!Net.IsServer || e == null || !e.IsBoss) return;
-            foreach (ulong id in PlayerIds())
-            {
-                var st = GetDraft(id);
-                st.Rerolls = RerollsOf(st) + 1;
-            }
+            foreach (ulong id in PlayerIds()) GetDraft(id).Ledger.FreeRerolls++;
             ToastUI.Show("Gratis-Neuwurf für die Kartenwahl erhalten!");
         }
 
-        private int RerollsOf(DraftState st) => st.Rerolls < 0 ? StartRerolls : st.Rerolls;
-
         // Preis des nächsten bezahlten Neuwurfs nach paidSoFar bezahlten Würfen dieser Kartenwahl (25, 40, 55 …)
         public int DraftRerollPrice(int paidSoFar) => GoldRules.RerollPrice(paidSoFar, DraftRerollBaseCost, DraftRerollCostStep);
+
+        // Preis der nächsten Karte nach picksSoFar genommenen Karten dieser Kartenwahl (gratis, 60, 90, 120 …)
+        public int DraftCardPrice(int picksSoFar) => GoldRules.CardPrice(picksSoFar, DraftCardBaseCost, DraftCardCostStep);
 
         public int SkipShards(int waveNumber)
         {
@@ -208,13 +246,19 @@ namespace ElementalBuddies
 
         // ======================= Server: Draft =======================
 
-        // Wellenende (Server): zuerst fällige Händlerläden öffnen, dann für jeden Spieler den Draft (wartet ggf. auf den Laden)
+        // Wellenende (Server): zuerst fällige Händlerläden öffnen, dann für jeden Spieler den Draft (wartet ggf. auf den Laden).
+        // Kartenladen: Anteil jedes Spielers = Teamkasse JETZT ÷ Spielerzahl (auch für Drafts, die erst nach dem Laden öffnen).
         public void PresentUpgrades()
         {
             if (!Net.IsServer || IsGameOver) return;
             if (MerchantManager.Instance != null) MerchantManager.Instance.ServerOpenDueShops();
-            foreach (ulong id in PlayerIds()) ServerBeginDraft(id);
+            var ids = PlayerIds();
+            int share = GoldRules.DraftShare(TeamShards, ids.Count);
+            foreach (ulong id in ids) GetDraft(id).PresetShare = share;
+            foreach (ulong id in ids) ServerBeginDraft(id);
         }
+
+        private static float TeamShards => EconomyManager.Instance != null ? EconomyManager.Instance.CurrentShards : 0f;
 
         // Alte API: wartender Draft (nach dem Händlerladen) – jetzt pro Spieler über ServerOnShopClosed
         public bool PresentPendingUpgrades()
@@ -237,31 +281,50 @@ namespace ElementalBuddies
                 return;
             }
             st.Pending = false;
-            st.PaidRerolls = 0; // neue Kartenwahl → Preisstaffel von vorn
 
             var selection = GetRandomUpgrades(CardsPerDraft, clientId);
             st.Offer.Clear();
+            st.Bought.Clear();
             foreach (var up in selection)
             {
                 int idx = IndexOfUpgrade(up);
-                if (idx >= 0) st.Offer.Add(idx);
+                if (idx >= 0)
+                {
+                    st.Offer.Add(idx);
+                    st.Bought.Add(false);
+                }
             }
             if (st.Offer.Count == 0)
             {
                 // Pool leer → keine Auswahl; ggf. wartender Laden darf öffnen
                 st.Open = false;
+                st.PresetShare = -1;
                 if (MerchantManager.Instance != null) MerchantManager.Instance.ServerOnDraftFinished(clientId);
                 return;
             }
+            // neue Kartenwahl → Anteil und Preisstaffeln von vorn
+            ApplyCosts(st.Ledger);
+            st.Ledger.Open(st.PresetShare >= 0 ? st.PresetShare : GoldRules.DraftShare(TeamShards, PlayerIds().Count));
+            st.PresetShare = -1;
             st.Open = true;
             st.Serial = ++_serialCounter;
             SendOffer(clientId, st);
         }
 
+        private void ApplyCosts(DraftLedger l)
+        {
+            l.CardBaseCost = DraftCardBaseCost;
+            l.CardCostStep = DraftCardCostStep;
+            l.RerollBaseCost = DraftRerollBaseCost;
+            l.RerollCostStep = DraftRerollCostStep;
+        }
+
         private void SendOffer(ulong clientId, DraftState st)
         {
-            NetGame.SendUpgradeOffer(clientId, st.Serial, st.Offer.ToArray(), RerollsOf(st), SkipShards(CompletedWave),
-                DraftRerollPrice(st.PaidRerolls));
+            var l = st.Ledger;
+            NetGame.SendUpgradeOffer(clientId, st.Serial, st.Offer.ToArray(), st.Bought.ToArray(), l.FreeRerolls,
+                SkipShards(CompletedWave), GoldRules.RerollPrice(l.PaidRerolls, l.RerollBaseCost, l.RerollCostStep),
+                l.NextCardPrice, l.Share, l.Picks, st.Open);
         }
 
         // Server: Laden des Spielers geschlossen → wartenden Draft zeigen. true, wenn einer wartete.
@@ -275,69 +338,145 @@ namespace ElementalBuddies
             return true;
         }
 
-        // Server: Wahl eines Spielers prüfen und auf allen Rechnern anwenden
-        public void ServerSelect(ulong clientId, int serial, int cardIndex)
+        // Server: Aktion eines Spielers in seiner Kartenwahl prüfen. action = Slot (Karte nehmen/kaufen) oder
+        // SkipCode / RerollCode / DoneCode. Die Wahl bleibt nach einem Kauf offen, bis der Spieler „Fertig“ drückt.
+        public void ServerSelect(ulong clientId, int serial, int action)
         {
             if (!Net.IsServer) return;
             if (!_drafts.TryGetValue(clientId, out var st) || !st.Open || st.Serial != serial) return;
             if (IsGameOver) { st.Open = false; return; }
-            if (cardIndex == RerollCode)
+            switch (action)
             {
-                // Neu würfeln: neue drei Karten (möglichst ohne die bisherigen), neue Nummer.
-                // Zuerst Gratis-Neuwürfe, danach gegen Seelensplitter aus der Teamkasse (Preis steigt je Kartenwahl).
-                // Abgelehnt (zu teuer / keine Karten) → dasselbe Angebot erneut, der Client gibt die Knöpfe wieder frei.
-                ServerReroll(clientId, st);
-                SendOffer(clientId, st);
-                return;
+                case RerollCode:
+                    // Neu würfeln: alle nicht gekauften Karten ersetzen (sind alle gekauft: drei neue). Zuerst
+                    // Gratis-Neuwürfe, danach Splitter aus dem eigenen Anteil. Erst ziehen, dann abbuchen.
+                    ServerReroll(clientId, st);
+                    SendOffer(clientId, st);
+                    return;
+                case SkipCode:
+                    if (st.Ledger.Picks > 0)
+                    {
+                        // Überspringen gibt Splitter nur, solange keine Karte genommen wurde
+                        Reject(clientId, st, -2, DraftDenial.Invalid);
+                        SendOffer(clientId, st);
+                        return;
+                    }
+                    CloseDraft(clientId, st);
+                    if (EconomyManager.Instance != null) EconomyManager.Instance.EarnShards(SkipShards(CompletedWave));
+                    if (MerchantManager.Instance != null) MerchantManager.Instance.ServerOnDraftFinished(clientId);
+                    return;
+                case DoneCode:
+                    CloseDraft(clientId, st);
+                    if (MerchantManager.Instance != null) MerchantManager.Instance.ServerOnDraftFinished(clientId);
+                    return;
             }
-            if (cardIndex == SkipCode)
-            {
-                // Überspringen: keine Karte, dafür Splitter in die Teamkasse
-                st.Open = false;
-                st.Offer.Clear();
-                int shards = SkipShards(CompletedWave);
-                if (EconomyManager.Instance != null) EconomyManager.Instance.EarnShards(shards);
-                if (MerchantManager.Instance != null) MerchantManager.Instance.ServerOnDraftFinished(clientId);
-                return;
-            }
-            if (!st.Offer.Contains(cardIndex))
-            {
-                // ungültig → Auswahl erneut schicken
-                SendOffer(clientId, st);
-                return;
-            }
+            ServerBuy(clientId, st, action);
+        }
+
+        private void CloseDraft(ulong clientId, DraftState st)
+        {
             st.Open = false;
+            SendOffer(clientId, st); // Abschluss bestätigen (Client hat lokal schon geschlossen)
             st.Offer.Clear();
+            st.Bought.Clear();
+        }
+
+        // Karte im Slot nehmen: erste gratis, weitere aus dem Anteil. Erst prüfen (zulässig, leistbar), dann abbuchen, dann anwenden.
+        private void ServerBuy(ulong clientId, DraftState st, int slot)
+        {
+            if (slot < 0 || slot >= st.Offer.Count || st.Bought[slot])
+            {
+                Reject(clientId, st, slot, DraftDenial.Invalid);
+                SendOffer(clientId, st);
+                return;
+            }
+            int cardIndex = st.Offer[slot];
+            var up = GetUpgrade(cardIndex);
+            var eco = EconomyManager.Instance;
+            var d = st.Ledger.TryBuy(TeamShards,
+                () => up != null && IsDraftable(up, clientId),
+                price => eco != null && eco.TrySpendShards(price));
+            if (d != DraftDenial.None)
+            {
+                Reject(clientId, st, slot, d);
+                SendOffer(clientId, st);
+                return;
+            }
+            st.Bought[slot] = true;
             NetGame.BroadcastApplyUpgrade(clientId, cardIndex);
-            if (MerchantManager.Instance != null) MerchantManager.Instance.ServerOnDraftFinished(clientId);
+            OnServerCardTaken?.Invoke(clientId, up, st.Ledger.LastPrice);
+            SendOffer(clientId, st);
         }
 
         private void ServerReroll(ulong clientId, DraftState st)
         {
-            bool free = RerollsOf(st) > 0;
-            int price = free ? 0 : DraftRerollPrice(st.PaidRerolls);
-            if (!free && (EconomyManager.Instance == null || !EconomyManager.Instance.CanAfford(price))) return;
+            // zu ersetzende Slots: alle offenen; sind alle gekauft, alle
+            var slots = new List<int>();
+            for (int i = 0; i < st.Offer.Count; i++) if (!st.Bought[i]) slots.Add(i);
+            if (slots.Count == 0) for (int i = 0; i < st.Offer.Count; i++) slots.Add(i);
+            if (slots.Count == 0) for (int i = 0; i < CardsPerDraft; i++) slots.Add(i);
 
             var avoid = new List<UpgradeDefinitionSO>();
-            foreach (int i in st.Offer) avoid.Add(GetUpgrade(i));
+            foreach (int i in slots) if (i < st.Offer.Count) avoid.Add(GetUpgrade(st.Offer[i]));
             var fresh = new List<int>();
-            foreach (var up in GetRandomUpgrades(CardsPerDraft, clientId, avoid))
+            var eco = EconomyManager.Instance;
+            var d = st.Ledger.TryReroll(TeamShards,
+                () =>
+                {
+                    foreach (var up in GetRandomUpgrades(slots.Count, clientId, avoid))
+                    {
+                        int idx = IndexOfUpgrade(up);
+                        if (idx >= 0) fresh.Add(idx);
+                    }
+                    return fresh.Count > 0;
+                },
+                price => eco != null && eco.TrySpendShards(price));
+            if (d != DraftDenial.None)
             {
-                int idx = IndexOfUpgrade(up);
-                if (idx >= 0) fresh.Add(idx);
+                Reject(clientId, st, -1, d);
+                return;
             }
-            if (fresh.Count == 0) return; // nichts zu ziehen → nichts abbuchen
 
-            if (free) st.Rerolls = RerollsOf(st) - 1;
-            else
+            // übernehmen: Slots der Reihe nach neu belegen, überzählige (Pool zu klein) entfallen
+            var remove = new List<int>();
+            for (int k = 0; k < slots.Count; k++)
             {
-                if (!EconomyManager.Instance.TrySpendShards(price)) return;
-                st.PaidRerolls++;
+                int slot = slots[k];
+                if (k < fresh.Count)
+                {
+                    while (st.Offer.Count <= slot) { st.Offer.Add(fresh[k]); st.Bought.Add(false); }
+                    st.Offer[slot] = fresh[k];
+                    st.Bought[slot] = false;
+                }
+                else if (slot < st.Offer.Count) remove.Add(slot);
             }
-            st.Offer.Clear();
-            st.Offer.AddRange(fresh);
-            st.Serial = ++_serialCounter;
-            OnServerRerolled?.Invoke(clientId, price);
+            for (int r = remove.Count - 1; r >= 0; r--)
+            {
+                st.Offer.RemoveAt(remove[r]);
+                st.Bought.RemoveAt(remove[r]);
+            }
+            OnServerRerolled?.Invoke(clientId, st.Ledger.LastPrice);
+        }
+
+        private void Reject(ulong clientId, DraftState st, int slot, DraftDenial reason)
+        {
+            NetGame.SendDraftRejected(clientId, st.Serial, slot, (int)reason, st.Ledger.Share);
+        }
+
+        // Nur Server: Anteil des Spielers beim Öffnen seiner letzten Kartenwahl (−1 = keine)
+        public int ServerDraftShareAtOpen(ulong clientId) =>
+            _drafts.TryGetValue(clientId, out var st) && st.Ledger != null ? st.Ledger.ShareAtOpen : -1;
+
+        // Nur Server (Tests/DevTools): Rest-Anteil und Staffel eines Spielers in der offenen Kartenwahl
+        public bool ServerTryGetDraftLedger(ulong clientId, out int shareLeft, out int picks, out int paidRerolls, out int freeRerolls)
+        {
+            shareLeft = picks = paidRerolls = freeRerolls = 0;
+            if (!_drafts.TryGetValue(clientId, out var st) || st.Ledger == null) return false;
+            shareLeft = st.Ledger.Share;
+            picks = st.Ledger.Picks;
+            paidRerolls = st.Ledger.PaidRerolls;
+            freeRerolls = st.Ledger.FreeRerolls;
+            return st.Open;
         }
 
         // Server: hat dieser Spieler noch eine offene oder wartende Auswahl?
@@ -351,6 +490,7 @@ namespace ElementalBuddies
             if (!_drafts.TryGetValue(clientId, out var st))
             {
                 st = new DraftState();
+                st.Ledger = new DraftLedger(StartRerolls);
                 _drafts[clientId] = st;
             }
             return st;
@@ -408,67 +548,137 @@ namespace ElementalBuddies
 
         // ======================= Client: Auswahl =======================
 
-        // Server-Angebot empfangen → Auswahl zeigen
-        public void ClientReceiveOffer(int serial, int[] cards, int rerolls = 0, int skipShards = 0, int rerollCost = 0)
+        // Server-Zustand der eigenen Kartenwahl empfangen (Öffnen, Kauf, Neu würfeln, Abschluss)
+        public void ClientReceiveOffer(int serial, int[] cards, bool[] bought, int rerolls, int skipShards, int rerollCost,
+            int cardPrice, int shareLeft, int picks, bool open)
         {
-            bool wasPending = IsRerollPending;
-            IsRerollPending = false;
+            IsRequestPending = false;
+            if (IsGameOver || cards == null) return;
+            if (!open)
+            {
+                if (IsChoosing && serial == _localSerial) CloseLocal();
+                return;
+            }
+            if (serial == _localClosedSerial) return; // bereits geschlossen (verspätetes Paket)
+
+            bool first = !IsChoosing || serial != _localSerial;
+            // neu genommene Karten (Statistik): Slot war offen und ist jetzt gekauft, gleiche Karte
+            var taken = new List<UpgradeDefinitionSO>();
+            int takenPrice = OfferCardPrice;
+            if (!first)
+                for (int i = 0; i < cards.Length && i < _localOffer.Count; i++)
+                    if (bought != null && i < bought.Length && bought[i] && !_localBought[i] && _localOffer[i] == GetUpgrade(cards[i]))
+                        taken.Add(_localOffer[i]);
+
             OfferRerolls = rerolls;
             OfferSkipShards = skipShards;
             OfferRerollCost = rerollCost;
-            if (IsGameOver || cards == null) return;
-            if (serial == _localClosedSerial) return; // bereits gewählt
-            if (IsChoosing && serial == _localSerial)
-            {
-                // Dasselbe Angebot zurück = Neuwurf abgelehnt (z. B. Mitspieler hat die Splitter gerade ausgegeben)
-                if (wasPending) ToastUI.Show(CanAffordReroll ? "Keine anderen Karten zum Neu würfeln" : "Nicht genug Seelensplitter zum Neu würfeln");
-                return;
-            }
+            OfferCardPrice = cardPrice;
+            OfferShareLeft = shareLeft;
+            OfferPicks = picks;
+
             _localOffer.Clear();
-            foreach (int idx in cards)
+            _localBought.Clear();
+            for (int i = 0; i < cards.Length; i++)
             {
-                var up = GetUpgrade(idx);
-                if (up != null) _localOffer.Add(up);
+                var up = GetUpgrade(cards[i]);
+                if (up == null) continue;
+                _localOffer.Add(up);
+                _localBought.Add(bought != null && i < bought.Length && bought[i]);
             }
             if (_localOffer.Count == 0) return;
 
-            _localSerial = serial;
-            if (Net.CanPauseTime) Time.timeScale = 0f; // Einzelspieler: Spiel pausiert wie bisher
-            IsChoosing = true;
-            OnUpgradesAvailable?.Invoke(new List<UpgradeDefinitionSO>(_localOffer));
+            foreach (var t in taken) OnLocalCardTaken?.Invoke(t, takenPrice);
+            if (first)
+            {
+                _localSerial = serial;
+                if (Net.CanPauseTime) Time.timeScale = 0f; // Einzelspieler: Spiel pausiert wie bisher
+                IsChoosing = true;
+                OnUpgradesAvailable?.Invoke(new List<UpgradeDefinitionSO>(_localOffer));
+            }
+            else OnOfferChanged?.Invoke();
         }
 
-        // Von der UI (UpgradeCardUI): Karte wählen
+        // Server: Kauf/Neuwurf abgelehnt (nichts abgebucht). shareLeft = aktueller Rest-Anteil.
+        public void ClientDraftRejected(int serial, int slot, int reason, int shareLeft)
+        {
+            if (!IsChoosing || serial != _localSerial) return;
+            IsRequestPending = false;
+            OfferShareLeft = shareLeft;
+            RaiseRejected(slot, (DraftDenial)reason);
+        }
+
+        private void RaiseRejected(int slot, DraftDenial reason)
+        {
+            string msg = DenialText(reason, slot);
+            if (!string.IsNullOrEmpty(msg)) ToastUI.Show(msg);
+            OnDraftRejected?.Invoke(slot, reason);
+        }
+
+        public string DenialText(DraftDenial reason, int slot)
+        {
+            switch (reason)
+            {
+                case DraftDenial.Share:
+                case DraftDenial.Team:
+                    if (IsSharedTreasury)
+                        return reason == DraftDenial.Team ? "Die Teamkasse reicht nicht mehr"
+                            : $"Dein Anteil reicht nicht ({SpendableShards} Seelensplitter übrig)";
+                    return slot == -1 ? "Nicht genug Seelensplitter zum Neu würfeln" : "Nicht genug Seelensplitter";
+                case DraftDenial.Unavailable: return "Diese Karte ist nicht mehr wählbar";
+                case DraftDenial.NothingToDraw: return "Keine anderen Karten zum Neu würfeln";
+                default: return null;
+            }
+        }
+
+        // Von der UI (UpgradeCardUI): Karte im Slot nehmen bzw. kaufen. Die Wahl bleibt offen („Fertig“ schließt).
+        // true = Anfrage gesendet.
+        public bool BuyCard(int slot)
+        {
+            if (PauseManager.IsPaused || !IsChoosing || IsRequestPending) return false;
+            if (slot < 0 || slot >= _localOffer.Count || IsSlotBought(slot)) return false;
+            if (!IsDraftable(_localOffer[slot])) { RaiseRejected(slot, DraftDenial.Unavailable); return false; }
+            if (!CanAffordCard) { RaiseRejected(slot, DraftDenial.Share); return false; }
+            IsRequestPending = true;
+            NetGame.RequestSelectUpgrade(_localSerial, slot);
+            return true;
+        }
+
+        // Alte API (Karte statt Slot): ersten offenen Slot mit dieser Karte nehmen
         public void SelectUpgrade(UpgradeDefinitionSO upgrade)
         {
-            // Pause-Menü liegt darüber -> keine Wahl (defensiv)
-            if (PauseManager.IsPaused || upgrade == null || !IsChoosing) return;
-            if (!_localOffer.Contains(upgrade)) return;
-            int idx = IndexOfUpgrade(upgrade);
-            if (idx < 0) return;
-
-            int serial = _localSerial;
-            CloseLocal();
-            NetGame.RequestSelectUpgrade(serial, idx);
+            if (upgrade == null) return;
+            for (int i = 0; i < _localOffer.Count; i++)
+                if (_localOffer[i] == upgrade && !IsSlotBought(i)) { BuyCard(i); return; }
         }
 
-        // Von der UI: Karten neu würfeln (Fenster bleibt offen, der Server schickt ein neues Angebot)
+        // Von der UI: Karten neu würfeln (Fenster bleibt offen, der Server schickt das neue Angebot)
         public void RequestReroll()
         {
-            if (PauseManager.IsPaused || !IsChoosing || IsRerollPending || !CanAffordReroll) return;
-            IsRerollPending = true;
+            if (PauseManager.IsPaused || !IsChoosing || IsRequestPending) return;
+            if (!CanAffordReroll) { RaiseRejected(-1, DraftDenial.Share); return; }
+            IsRequestPending = true;
             NetGame.RequestSelectUpgrade(_localSerial, RerollCode);
         }
 
-        // Von der UI: Kartenwahl überspringen (Splitter statt Karte)
+        // Von der UI: Kartenwahl überspringen (Splitter statt Karte) – nur solange keine Karte genommen wurde
         public void SkipDraft()
         {
-            if (PauseManager.IsPaused || !IsChoosing || IsRerollPending) return;
+            if (PauseManager.IsPaused || !IsChoosing || IsRequestPending || !CanSkip) return;
             int serial = _localSerial;
             int shards = OfferSkipShards;
             CloseLocal();
             NetGame.RequestSelectUpgrade(serial, SkipCode);
             ToastUI.Show($"Übersprungen: +{shards} Seelensplitter");
+        }
+
+        // Von der UI: „Fertig“ – Kartenwahl schließen (übriger Anteil bleibt in der Teamkasse)
+        public void FinishDraft()
+        {
+            if (PauseManager.IsPaused || !IsChoosing || IsRequestPending) return;
+            int serial = _localSerial;
+            CloseLocal();
+            NetGame.RequestSelectUpgrade(serial, DoneCode);
         }
 
         // Teilt die Karte ein Schlüsselwort mit einer bereits gewählten Karte des lokalen Spielers?
@@ -489,10 +699,11 @@ namespace ElementalBuddies
 
         private void CloseLocal()
         {
-            IsRerollPending = false;
+            IsRequestPending = false;
             _localClosedSerial = _localSerial;
             IsChoosing = false;
             _localOffer.Clear();
+            _localBought.Clear();
             // Einzelspieler: weiter, sofern nicht noch der Händlerladen offen ist
             if (Net.CanPauseTime && !MerchantManager.IsLocalShopOpen) Time.timeScale = 1f;
             OnUpgradeSelected?.Invoke();
@@ -712,6 +923,19 @@ namespace ElementalBuddies
                 foreach (var p in Instance.GetPickedUpgrades(clientId))
                     if (CardEffects.IsBuildCard(p)) return false;
             return true;
+        }
+
+        // Kurzer Grund, warum eine Karte für den lokalen Spieler nicht (mehr) wählbar ist (Knopf-Beschriftung im Kartenladen)
+        public string UnavailableReason(UpgradeDefinitionSO up)
+        {
+            ulong id = Net.LocalClientId;
+            if (up == null) return "Nicht wählbar";
+            if (!up.AppliesTo(ChampionClassOf(id))) return "Nicht für deine Klasse";
+            var slots = BuddySlotManager.Instance;
+            if (up.StatToBuff == StatType.BuddySlot && slots != null && slots.IsAtCap) return "Alle Slots offen";
+            if (up.MaxPicks > 0 && GetPickCount(up, id) >= up.MaxPicks) return $"Höchstens {up.MaxPicks}×";
+            if (CardEffects.IsBuildCard(up)) return "Nur 1 Build-Karte";
+            return "Nicht wählbar";
         }
 
         // Champion-Klasse eines Spielers (Server: Figur des Spielers; ohne Figur die lokale bzw. die Menü-Wahl)

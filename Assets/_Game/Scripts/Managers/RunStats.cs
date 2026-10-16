@@ -19,6 +19,9 @@ namespace ElementalBuddies
         public int EarlyStarts { get; private set; }
         public int Fusions { get; private set; }
         public int EliteKills { get; private set; }
+        // Kartenladen (2026-10-16): gekaufte Karten (ohne die Gratis-Karte) und dafür ausgegebene Splitter, lokaler Spieler
+        public int DraftCardsBought { get; private set; }
+        public int DraftCardShards { get; private set; }
         public int BuddiesBuilt => _seenBuddies.Count;
         public readonly List<string> BossesKilled = new List<string>();
         public readonly Dictionary<string, int> Leaks = new Dictionary<string, int>();
@@ -60,6 +63,7 @@ namespace ElementalBuddies
             if (_eco != null) _eco.OnShardsEarned += HandleEarned;
             _upgrades = UpgradeManager.Instance;
             if (_upgrades != null) _upgrades.OnUpgradePicked += HandleUpgrade;
+            if (_upgrades != null) _upgrades.OnLocalCardTaken += HandleCardTaken;
             _merchants = MerchantManager.Instance;
             if (_merchants != null) _merchants.OnCardPicked += HandleMerchantCard;
             _fusion = FusionManager.Instance;
@@ -75,6 +79,7 @@ namespace ElementalBuddies
             if (_waves != null) _waves.OnWaveStart -= HandleWaveStart;
             if (_eco != null) _eco.OnShardsEarned -= HandleEarned;
             if (_upgrades != null) _upgrades.OnUpgradePicked -= HandleUpgrade;
+            if (_upgrades != null) _upgrades.OnLocalCardTaken -= HandleCardTaken;
             if (_merchants != null) _merchants.OnCardPicked -= HandleMerchantCard;
             if (_fusion != null) _fusion.OnFused -= HandleFused;
             if (Instance == this) Instance = null;
@@ -87,6 +92,13 @@ namespace ElementalBuddies
             _nextScan = Time.unscaledTime + 1f;
             foreach (var b in ElementalBuddy.Active)
                 if (b != null && b.isActiveAndEnabled) _seenBuddies.Add(b.GetInstanceID());
+        }
+
+        private void HandleCardTaken(UpgradeDefinitionSO up, int price)
+        {
+            if (price <= 0) return;
+            DraftCardsBought++;
+            DraftCardShards += price;
         }
 
         private void HandleKilled(EnemyBrain e)

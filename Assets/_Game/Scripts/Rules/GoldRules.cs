@@ -28,6 +28,17 @@ namespace ElementalBuddies
             return Mathf.Max(0, baseCost + step * Mathf.Max(0, rerollsSoFar));
         }
 
+        // Kartenladen nach der Welle (2026-10-16): Splitter-Anteil eines Spielers für Kartenkäufe und bezahlte Neuwürfe
+        // dieser Kartenwahl = Teamkasse beim Öffnen ÷ Spielerzahl, abgerundet (Solo: ganze Kasse). Der Rest bleibt in der Kasse.
+        public static int DraftShare(float treasury, int players)
+        {
+            if (treasury <= 0f) return 0;
+            return Mathf.FloorToInt(treasury / Mathf.Max(1, players) + 0.0001f);
+        }
+
+        // Preis der nächsten Karte in der Kartenwahl nach picksSoFar genommenen Karten (Standard: gratis, 60, 90, 120 …)
+        public static int DraftCardPrice(int picksSoFar, int baseCost = 60, int step = 30) => CardPrice(picksSoFar, baseCost, step);
+
         // Zählt ein Spieler zu den Einnehmenden? Wer beim Abschluss im Kreis steht, oder wer insgesamt
         // mindestens minSeconds im Kreis verbracht hat (kurzes Durchlaufen zählt nicht).
         public static bool IsCaptureContributor(float secondsInside, bool insideAtCompletion, float minSeconds)

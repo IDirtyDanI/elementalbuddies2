@@ -109,7 +109,7 @@ namespace ElementalBuddies
             Show("boss", "Ein <b>Boss</b>! Rote Flächen am Boden zeigen seine Angriffe – geh raus, bevor sie zuschlagen. Bosse geben viele Splitter.");
 
         private void HandleDraft(List<UpgradeDefinitionSO> cards) =>
-            Show("draft", "Nach jeder Welle wählst du eine <b>Karte</b>. Blau = selten, violett = episch. „Kombo!“ passt zu deinen bisherigen Karten. Gratis-Neuwürfe gibt es für jeden Boss.",
+            Show("draft", "Nach jeder Welle gibt es eine <b>Karte</b> gratis – weitere kaufst du mit Seelensplittern, dann „Fertig“. Blau = selten, violett = episch. „Kombo!“ passt zu deinen bisherigen Karten. Gratis-Neuwürfe gibt es für jeden Boss.",
                 () => !UpgradeManager.IsLocalChoosing);
 
         private void HandleGameOver(string reason)

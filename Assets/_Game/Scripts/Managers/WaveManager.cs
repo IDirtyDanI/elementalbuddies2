@@ -67,6 +67,11 @@ namespace ElementalBuddies
         public float HpGrowthPerWave = 1.031f;
         [Tooltip("Boss-HP: BaseHP · w · min(1, w/BossRampWave)² – Anlauf für frühe Bosse (0 = kein Anlauf).")]
         public float BossRampWave = 12f;
+        [Tooltip("Spät-Rampe (Kartenladen nach der Welle, 2026-10-16): HP aller Gegner (Normalgegner und Bosse) zusätzlich × " +
+                 "(1 + HpLatePerWave·max(0, w − HpLateFromWave)) → W15 ×1,25, W20 ×1,5, W30 ×2. 0 = aus. Gleicht die gekauften Karten aus.")]
+        public float HpLatePerWave = 0.05f;
+        [Tooltip("Letzte Welle ohne Spät-Rampe (ab der Welle danach wirkt HpLatePerWave).")]
+        public int HpLateFromWave = 10;
 
         [Header("Balancing – Gegner-Anzahl und Spawn-Tempo")]
         [Tooltip("Anzahl-Multiplikator M(w) = (1 + CountGrowth·(w−1))^CountExponent auf alle Nicht-Boss-Gruppen.")]
@@ -204,20 +209,26 @@ namespace ElementalBuddies
             return m * (Difficulty != null ? Difficulty.CountMultiplier : 1f) * PlayerFactor(CountPerExtraPlayer);
         }
 
-        // HP-Multiplikator der Normalgegner inkl. Schwierigkeit
+        // HP-Multiplikator der Normalgegner (Kurve · Spät-Rampe) inkl. Schwierigkeit
         public float HpMultiplier(int wave)
         {
             int n = Mathf.Max(0, wave - 1);
-            float m = (1f + HpLinearPerWave * n) * Mathf.Pow(HpGrowthPerWave, n);
+            float m = (1f + HpLinearPerWave * n) * Mathf.Pow(HpGrowthPerWave, n) * LateHpFactor(wave);
             return m * (Difficulty != null ? Difficulty.HpMultiplier : 1f) * PlayerFactor(HpPerExtraPlayer);
         }
 
-        // HP-Multiplikator der Bosse: w · min(1, w/BossRampWave)² inkl. Schwierigkeit
+        // Spät-Rampe der Gegner-HP (Normalgegner und Bosse): 1 + HpLatePerWave · max(0, w − HpLateFromWave)
+        public float LateHpFactor(int wave)
+        {
+            return 1f + Mathf.Max(0f, HpLatePerWave) * Mathf.Max(0, wave - HpLateFromWave);
+        }
+
+        // HP-Multiplikator der Bosse: w · min(1, w/BossRampWave)² · Spät-Rampe inkl. Schwierigkeit
         public float BossHpMultiplier(int wave)
         {
             float w = Mathf.Max(1, wave);
             float ramp = BossRampWave > 0f ? Mathf.Min(1f, w / BossRampWave) : 1f;
-            return w * ramp * ramp * (Difficulty != null ? Difficulty.BossHpMultiplier : 1f) * PlayerFactor(BossHpPerExtraPlayer);
+            return w * ramp * ramp * LateHpFactor(wave) * (Difficulty != null ? Difficulty.BossHpMultiplier : 1f) * PlayerFactor(BossHpPerExtraPlayer);
         }
 
         // HP-Multiplikator für einen Gegnertyp (Boss-Zweig über Config.IsBoss)

@@ -182,6 +182,8 @@ MonoBehaviour:
   HpLinearPerWave: 0.02
   HpGrowthPerWave: 1.031
   BossRampWave: 12
+  HpLatePerWave: 0.05
+  HpLateFromWave: 10
   CountGrowth: 0.05
   CountExponent: 1.2
   MaxEnemiesPerWave: 260

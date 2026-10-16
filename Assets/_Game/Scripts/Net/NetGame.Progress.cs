@@ -13,22 +13,44 @@ namespace ElementalBuddies
     {
         // ======================= Upgrade-Draft =======================
 
-        // Server → ein Client: eigene Kartenauswahl (Indizes in UpgradeManager.AllUpgrades)
-        // rerolls/skipShards: verfügbare Gratis-Neuwürfe und Splitter fürs Überspringen
-        // rerollCost: Splitter-Preis des nächsten bezahlten Neuwurfs (greift, wenn keine Gratis-Neuwürfe übrig sind)
-        public static void SendUpgradeOffer(ulong clientId, int serial, int[] cards, int rerolls, int skipShards, int rerollCost)
+        // Server → ein Client: Zustand der eigenen Kartenwahl (Indizes in UpgradeManager.AllUpgrades, gekauft je Slot)
+        // rerolls/skipShards: Gratis-Neuwürfe und Splitter fürs Überspringen; rerollCost: Preis des nächsten bezahlten
+        // Neuwurfs; cardPrice: Preis der nächsten Karte (0 = gratis); shareLeft: Rest-Anteil; picks: genommene Karten;
+        // open=false: Wahl geschlossen
+        public static void SendUpgradeOffer(ulong clientId, int serial, int[] cards, bool[] bought, int rerolls, int skipShards,
+            int rerollCost, int cardPrice, int shareLeft, int picks, bool open)
         {
-            if (Ready) Instance.UpgradeOfferRpc(serial, cards, rerolls, skipShards, rerollCost, Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
-            else if (clientId == Net.LocalClientId && UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards, rerolls, skipShards, rerollCost);
+            if (Ready) Instance.UpgradeOfferRpc(serial, cards, bought, rerolls, skipShards, rerollCost, cardPrice, shareLeft, picks, open,
+                Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
+            else if (clientId == Net.LocalClientId && UpgradeManager.Instance != null)
+                UpgradeManager.Instance.ClientReceiveOffer(serial, cards, bought, rerolls, skipShards, rerollCost, cardPrice, shareLeft, picks, open);
         }
 
         [Rpc(SendTo.SpecifiedInParams)]
-        private void UpgradeOfferRpc(int serial, int[] cards, int rerolls, int skipShards, int rerollCost, RpcParams p)
+        private void UpgradeOfferRpc(int serial, int[] cards, bool[] bought, int rerolls, int skipShards, int rerollCost,
+            int cardPrice, int shareLeft, int picks, bool open, RpcParams p)
         {
-            if (UpgradeManager.Instance != null) UpgradeManager.Instance.ClientReceiveOffer(serial, cards, rerolls, skipShards, rerollCost);
+            if (UpgradeManager.Instance != null)
+                UpgradeManager.Instance.ClientReceiveOffer(serial, cards, bought, rerolls, skipShards, rerollCost, cardPrice, shareLeft, picks, open);
         }
 
-        // Client → Server: Karte gewählt (card = Index) bzw. UpgradeManager.SkipCode / RerollCode
+        // Server → ein Client: Kauf/Neuwurf in der Kartenwahl abgelehnt (nichts abgebucht). slot −1 = Neu würfeln,
+        // reason = DraftDenial, shareLeft = aktueller Rest-Anteil
+        public static void SendDraftRejected(ulong clientId, int serial, int slot, int reason, int shareLeft)
+        {
+            if (Ready) Instance.DraftRejectedRpc(serial, slot, reason, shareLeft, Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
+            else if (clientId == Net.LocalClientId && UpgradeManager.Instance != null)
+                UpgradeManager.Instance.ClientDraftRejected(serial, slot, reason, shareLeft);
+        }
+
+        [Rpc(SendTo.SpecifiedInParams)]
+        private void DraftRejectedRpc(int serial, int slot, int reason, int shareLeft, RpcParams p)
+        {
+            if (UpgradeManager.Instance != null) UpgradeManager.Instance.ClientDraftRejected(serial, slot, reason, shareLeft);
+        }
+
+        // Client → Server: Aktion in der Kartenwahl – card = Slot (nehmen/kaufen) bzw. UpgradeManager.SkipCode /
+        // RerollCode / DoneCode
         public static void RequestSelectUpgrade(int serial, int card)
         {
             if (Ready) Instance.SelectUpgradeRpc(serial, card);
