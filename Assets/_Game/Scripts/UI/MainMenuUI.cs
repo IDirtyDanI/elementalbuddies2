@@ -114,12 +114,20 @@ namespace ElementalBuddies
         [Header("Map (Walddorf, Paket C-Menü)")]
         [Tooltip("Zeile der Map-Kacheln zwischen Champion-Karten und Schwierigkeit; die Kacheln entstehen zur Laufzeit aus MapRegistry.All.")]
         public RectTransform MapSelect;
-        [Tooltip("Inaktive Vorlage einer Map-Kachel (Button); Kinder: Thumb (Image), Lock (Image), Name (TMP), Sub (TMP).")]
+        [Tooltip("Inaktive Vorlage einer Map-Kachel (Button, Rahmen = Holz/Pergament); Kinder: Thumb (RawImage, füllt die Kachel), Lock (Image), Name (TMP), Sub (TMP) auf dem Caption-Band.")]
         public GameObject MapTileTemplate;
         [Tooltip("Ersatzbilder je Map-Id (MapPreviewRenderer schreibt Assets/_Game/UI/Maps/map_preview_<id>.png).")]
         public MapPreviewEntry[] MapPreviews = new MapPreviewEntry[0];
         public Sprite MapPreviewPlaceholder;
         public float MapTileGap = 12f;
+        [Tooltip("Vorschaubild nicht gewählter (freier) Maps leicht abgedunkelt, damit die Wahl auffällt.")]
+        public Color MapUnselectedThumbTint = new Color(0.66f, 0.66f, 0.66f, 1f);
+        public Color MapLockedThumbTint = new Color(0.42f, 0.42f, 0.44f, 1f);
+        public Color MapNameColor = new Color(0.98f, 0.93f, 0.8f);
+        public Color MapSubColor = new Color(1f, 0.88f, 0.7f);
+        public Color MapLockedSubColor = new Color(1f, 0.66f, 0.5f);
+        [Tooltip("Caption-Band nicht gewählter Maps (gewählte: Holz-Sprite der Schwierigkeit).")]
+        public Color MapBandColor = new Color(0.08f, 0.05f, 0.03f, 0.66f);
 
         [Header("Übergang")]
         [Tooltip("Schwarzer Vollbild-Überblender (Alpha 0..1) beim Spielstart.")]
@@ -627,7 +635,8 @@ namespace ElementalBuddies
         {
             public MapDefinitionSO Map;
             public Button Button;
-            public Image Thumb, Lock;
+            public RawImage Thumb;
+            public Image Lock, Band, SelectFrame;
             public TextMeshProUGUI Name, Sub;
         }
 
@@ -697,8 +706,10 @@ namespace ElementalBuddies
                 {
                     Map = m,
                     Button = go.GetComponent<Button>(),
-                    Thumb = FindChild<Image>(go.transform, "Thumb"),
+                    Thumb = FindChild<RawImage>(go.transform, "Thumb"),
                     Lock = FindChild<Image>(go.transform, "Lock"),
+                    Band = FindChild<Image>(go.transform, "Caption"),
+                    SelectFrame = FindChild<Image>(go.transform, "SelectFrame"),
                     Name = FindChild<TextMeshProUGUI>(go.transform, "Name"),
                     Sub = FindChild<TextMeshProUGUI>(go.transform, "Sub"),
                 };
@@ -806,26 +817,65 @@ namespace ElementalBuddies
                 if (t.Thumb != null)
                 {
                     var spr = PreviewFor(t.Map);
-                    t.Thumb.sprite = spr;
-                    t.Thumb.enabled = spr != null;
-                    t.Thumb.color = showLock ? LockedPortraitTint : Color.white;
+                    SetThumb(t.Thumb, spr);
+                    t.Thumb.color = showLock ? MapLockedThumbTint : (sel ? Color.white : MapUnselectedThumbTint);
                 }
                 if (t.Lock != null) t.Lock.gameObject.SetActive(showLock);
-                Color textCol = sel ? DifficultySelectedTextColor : (showLock ? LockedNameColor : DifficultyNormalTextColor);
+                // Gewählt: Goldrahmen (wie die gewählte Champion-Karte) + Holzleiste unter dem Namen (wie die Schwierigkeit);
+                // sonst dunkles, halbtransparentes Band
+                if (t.SelectFrame != null) t.SelectFrame.gameObject.SetActive(sel);
+                if (t.Band != null)
+                {
+                    t.Band.sprite = sel ? DifficultySelectedSprite : null;
+                    t.Band.color = sel ? (showLock ? LockedCardTint : Color.white) : MapBandColor;
+                }
                 if (t.Name != null)
                 {
                     t.Name.text = t.Map.DisplayName;
-                    t.Name.color = textCol;
+                    Color nc = MapNameColor;
+                    if (showLock) nc = Color.Lerp(MapNameColor, Color.gray, 0.45f);
+                    else if (!sel) nc.a = 0.9f;
+                    t.Name.color = nc;
                 }
                 if (t.Sub != null)
                 {
-                    t.Sub.text = showLock ? "Gesperrt: Morgengrauen" : t.Map.Tagline;
-                    if (showLock && t.Map.UnlockAchievementId != "dawn") t.Sub.text = "Gesperrt";
-                    Color sub = sel ? DifficultySelectedTextColor : (showLock ? LockedTextColor : DifficultyNormalTextColor);
-                    sub.a = 0.85f;
-                    t.Sub.color = sub;
+                    t.Sub.text = showLock
+                        ? (t.Map.UnlockAchievementId == "dawn" ? "Gesperrt: Morgengrauen" : "Gesperrt")
+                        : ShortTagline(t.Map.Tagline);
+                    t.Sub.color = showLock ? MapLockedSubColor : MapSubColor;
                 }
             }
+        }
+
+        // Kachel-Unterzeile: nur der erste Teil der Tagline (vor " – "), damit sie einzeilig in gut lesbarer Größe passt
+        // ("Ein Dorf mitten im Wald – Goblins, …" → "Ein Dorf mitten im Wald"); die volle Tagline bleibt im Asset.
+        public static string ShortTagline(string tagline)
+        {
+            if (string.IsNullOrEmpty(tagline)) return "";
+            string s = tagline.Replace('\n', ' ').Trim();
+            foreach (var sep in new[] { " – ", " — ", " - ", ": " })
+            {
+                int i = s.IndexOf(sep, System.StringComparison.Ordinal);
+                if (i > 0) return s.Substring(0, i).Trim();
+            }
+            return s;
+        }
+
+        // Vorschaubild füllt die Kachel: RawImage mit der Sprite-Textur, mittig auf das Seitenverhältnis der Kachel
+        // zugeschnitten (kein Verzerren, keine Ränder)
+        private static void SetThumb(RawImage img, Sprite spr)
+        {
+            img.enabled = spr != null && spr.texture != null;
+            if (!img.enabled) return;
+            var tex = spr.texture;
+            img.texture = tex;
+            Rect r = spr.textureRect;
+            Rect box = img.rectTransform.rect;
+            float target = box.height > 1f ? box.width / box.height : 16f / 9f;
+            float src = r.height > 0f ? r.width / r.height : target;
+            if (target > src) { float h = r.width / target; r.y += (r.height - h) * 0.5f; r.height = h; }
+            else { float w = r.height * target; r.x += (r.width - w) * 0.5f; r.width = w; }
+            img.uvRect = new Rect(r.x / tex.width, r.y / tex.height, r.width / tex.width, r.height / tex.height);
         }
 
         // Gamepad (wie Tastatur Q/E bzw. M): Schultertasten = Schwierigkeit, Trigger = Map; nur Hauptbildschirm/Lobby ohne Overlays

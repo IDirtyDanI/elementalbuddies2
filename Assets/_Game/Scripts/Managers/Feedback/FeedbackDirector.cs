@@ -240,10 +240,12 @@ namespace ElementalBuddies
                 BossMoment(e, pos);
                 return;
             }
-            if (EnemyDeathVfx != null && _deathBudget >= 1f)
+            // eigener Tod-Effekt der Config (Dorf-Gegner, Flieger – #409), sonst Knochensplitter
+            GameObject deathFx = e.Config != null && e.Config.DeathVfx != null ? e.Config.DeathVfx : EnemyDeathVfx;
+            if (deathFx != null && _deathBudget >= 1f)
             {
                 _deathBudget -= 1f;
-                var fx = Spawn(EnemyDeathVfx, pos + Vector3.up * 0.4f, 2.5f);
+                var fx = Spawn(deathFx, pos + Vector3.up * 0.4f, 2.5f);
                 if (fx != null) fx.transform.localScale = Vector3.one * Mathf.Max(0.6f, e.transform.localScale.y);
             }
             CountKill();
@@ -253,7 +255,8 @@ namespace ElementalBuddies
         {
             TimeWarp.SlowMo(0.3f, 1.1f);
             CameraFollow.AddTrauma(0.65f);
-            if (BossDeathVfx != null) Spawn(BossDeathVfx, pos + Vector3.up * 1f, 5f);
+            GameObject bossFx = e.Config != null && e.Config.DeathVfx != null ? e.Config.DeathVfx : BossDeathVfx;
+            if (bossFx != null) Spawn(bossFx, pos + Vector3.up * 1f, 5f);
             GameAudio.Play(SfxId.BossDeath, pos);
             GameAudio.Play(SfxId.BossDefeated);
             _fc.ShowBanner(e.DisplayName + " besiegt!", MapContext.Current.BossRelief, new Color(1f, 0.84f, 0.35f), 3f);

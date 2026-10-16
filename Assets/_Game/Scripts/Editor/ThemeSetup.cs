@@ -104,6 +104,7 @@ namespace ElementalBuddies.EditorTools
             Sprite oldIcon = null;
             float oldDeath = 0f, oldSpawnHeight = float.NaN;
             EnemyConfigSO oldSound = null; // Ton-Felder (Dorf-Klänge, #406)
+            GameObject oldDeathVfx = null;
             if (cfg == null)
             {
                 cfg = ScriptableObject.CreateInstance<EnemyConfigSO>();
@@ -117,6 +118,7 @@ namespace ElementalBuddies.EditorTools
                 oldDeath = cfg.DeathClipDuration;        // Tod-Clip-Länge aus dem Modell-Import behalten (#361)
                 oldSpawnHeight = cfg.ProjectileSpawnHeight; // an die Bogenhöhe des Modells angepasst (#360)
                 oldSound = Object.Instantiate(cfg);
+                oldDeathVfx = cfg.DeathVfx;               // eigener Tod-Effekt (DeathVfxBuilder, #409)
             }
 
             EditorUtility.CopySerialized(canonical, cfg);
@@ -128,6 +130,7 @@ namespace ElementalBuddies.EditorTools
             cfg.Icon = oldIcon != null ? oldIcon : canonical.Icon;
             if (oldProjectile != null) cfg.ProjectilePrefab = oldProjectile;
             if (oldDeath > 0f) cfg.DeathClipDuration = oldDeath;
+            if (oldDeathVfx != null) cfg.DeathVfx = oldDeathVfx;
             if (!float.IsNaN(oldSpawnHeight)) cfg.ProjectileSpawnHeight = oldSpawnHeight;
             if (oldSound != null)
             {

@@ -55,3 +55,4 @@ MonoBehaviour:
   ObstacleClearance: 1.5
   DiveHeight: 0.8
   DeathClipDuration: 1
+  DeathVfx: {fileID: 6985285882018208966, guid: 2949abce69dea40978195cbc68e57109, type: 3}

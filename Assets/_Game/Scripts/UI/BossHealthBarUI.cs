@@ -19,6 +19,12 @@ namespace ElementalBuddies
         public Image Frame;
         [Tooltip("Füllung zusätzlich mit ThemeColor färben.")]
         public bool TintFill = false;
+        [Tooltip("Optional: Porträt des Bosses (Config.Icon) links neben Name/Leiste; ohne Icon ausgeblendet.")]
+        public Image Portrait;
+        [Tooltip("Optional: Porträt-Rahmen/-Hintergrund (wird mit dem Porträt ein-/ausgeblendet).")]
+        public GameObject PortraitRoot;
+        [Tooltip("Optional: Ring um das Porträt, eingefärbt mit Config.ThemeColor.")]
+        public Image PortraitRing;
         public float ChipDelay = 0.4f;
         public float ChipSpeed = 0.8f;
 
@@ -69,6 +75,15 @@ namespace ElementalBuddies
             Color theme = boss.Config != null ? boss.Config.ThemeColor : Color.white;
             if (Frame != null) Frame.color = theme;
             if (TintFill && Fill != null) Fill.color = theme;
+            Sprite icon = boss.Config != null ? boss.Config.Icon : null;
+            if (Portrait != null)
+            {
+                Portrait.sprite = icon;
+                Portrait.enabled = icon != null;
+                Portrait.preserveAspect = true;
+            }
+            if (PortraitRoot != null) PortraitRoot.SetActive(icon != null);
+            if (PortraitRing != null) PortraitRing.color = theme;
             if (boss.MaxHP > 0f) _chip = _last = Mathf.Clamp01(boss.CurrentHP / boss.MaxHP);
             SetFill(_last);
             SetChip(_chip);

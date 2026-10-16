@@ -20,6 +20,7 @@ namespace ElementalBuddies.EditorTools.Tests
             "m_Script", "m_Name", "Prefab", "VisualScale", "DisplayName", "PreviewHint", "Icon", "ThemeColor",
             "MeleeHitSfx", "MeleeHitSound", "ProjectilePrefab", "DeathClipDuration", "ProjectileSpawnHeight",
             "AttackSound", "AttackSfx", "DeathSound", "DeathSfx", "SpawnSound", "SpawnSfx", // Klänge (Walddorf Etappe 3)
+            "DeathVfx", // Tod-Partikel je Gegnerart (#409)
         };
 
         private static EnemyThemeSO Forest => AssetDatabase.LoadAssetAtPath<EnemyThemeSO>(ThemeSetup.ForestThemePath);

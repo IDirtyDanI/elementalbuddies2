@@ -419,7 +419,7 @@ namespace ElementalBuddies.EditorTools
 
         // ---------------- 3. VFX ----------------
 
-        private static Material ParticleMat(string name, string template, string tex)
+        internal static Material ParticleMat(string name, string template, string tex)
         {
             string p = MatDir + name + ".mat";
             var m = AssetDatabase.LoadAssetAtPath<Material>(p);
@@ -577,7 +577,7 @@ namespace ElementalBuddies.EditorTools
             });
         }
 
-        private static void Build(string path, System.Action<Transform> fill)
+        internal static void Build(string path, System.Action<Transform> fill)
         {
             bool exists = AssetDatabase.LoadAssetAtPath<GameObject>(path) != null;
             GameObject root = exists ? PrefabUtility.LoadPrefabContents(path) : new GameObject();
@@ -590,7 +590,7 @@ namespace ElementalBuddies.EditorTools
         }
 
         // Einmaliger Ausstoß (kein Loop), Weltraum, skalierbar über das Wurzel-Objekt
-        private static ParticleSystem Burst(Transform parent, string name, Material mat, int count, Vector2 life, Vector2 size,
+        internal static ParticleSystem Burst(Transform parent, string name, Material mat, int count, Vector2 life, Vector2 size,
             Vector2 speed, Color color, int max)
         {
             var go = new GameObject(name);
@@ -618,7 +618,7 @@ namespace ElementalBuddies.EditorTools
             return ps;
         }
 
-        private static void MeshParticles(ParticleSystem ps, Mesh mesh)
+        internal static void MeshParticles(ParticleSystem ps, Mesh mesh)
         {
             var r = ps.GetComponent<ParticleSystemRenderer>();
             r.renderMode = ParticleSystemRenderMode.Mesh;
@@ -632,7 +632,7 @@ namespace ElementalBuddies.EditorTools
             main.startRotationZ = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
         }
 
-        private static void Cone(ParticleSystem ps, float angle, float radius)
+        internal static void Cone(ParticleSystem ps, float angle, float radius)
         {
             var sh = ps.shape; sh.enabled = true;
             sh.shapeType = ParticleSystemShapeType.Cone;
@@ -640,16 +640,16 @@ namespace ElementalBuddies.EditorTools
             sh.rotation = new Vector3(-90f, 0f, 0f); // nach oben
         }
 
-        private static void Sphere(ParticleSystem ps, float radius)
+        internal static void Sphere(ParticleSystem ps, float radius)
         {
             var sh = ps.shape; sh.enabled = true;
             sh.shapeType = ParticleSystemShapeType.Sphere;
             sh.radius = radius;
         }
 
-        private static void Gravity(ParticleSystem ps, float g) { var main = ps.main; main.gravityModifier = g; }
+        internal static void Gravity(ParticleSystem ps, float g) { var main = ps.main; main.gravityModifier = g; }
 
-        private static void Spin(ParticleSystem ps)
+        internal static void Spin(ParticleSystem ps)
         {
             var rot = ps.rotationOverLifetime; rot.enabled = true; rot.separateAxes = true;
             rot.x = new ParticleSystem.MinMaxCurve(-8f, 8f);
@@ -657,7 +657,7 @@ namespace ElementalBuddies.EditorTools
             rot.z = new ParticleSystem.MinMaxCurve(-8f, 8f);
         }
 
-        private static void Collide(ParticleSystem ps)
+        internal static void Collide(ParticleSystem ps)
         {
             var c = ps.collision; c.enabled = true;
             c.type = ParticleSystemCollisionType.World;
@@ -667,7 +667,7 @@ namespace ElementalBuddies.EditorTools
             c.radiusScale = 0.5f;
         }
 
-        private static void Rise(ParticleSystem ps, float speed)
+        internal static void Rise(ParticleSystem ps, float speed)
         {
             var v = ps.velocityOverLifetime; v.enabled = true;
             v.space = ParticleSystemSimulationSpace.World;
@@ -676,7 +676,7 @@ namespace ElementalBuddies.EditorTools
             v.z = new ParticleSystem.MinMaxCurve(0f, 0f);
         }
 
-        private static void Grow(ParticleSystem ps, float from, float to)
+        internal static void Grow(ParticleSystem ps, float from, float to)
         {
             var s = ps.sizeOverLifetime; s.enabled = true;
             s.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, from / Mathf.Max(from, to), 1f, to / Mathf.Max(from, to)));
@@ -685,7 +685,7 @@ namespace ElementalBuddies.EditorTools
         }
 
         // Alpha-Verlauf (und optional Schrumpfen am Ende)
-        private static void Fade(ParticleSystem ps, float[] alphas, float[] times, bool size = false)
+        internal static void Fade(ParticleSystem ps, float[] alphas, float[] times, bool size = false)
         {
             var g = new Gradient();
             var ak = new GradientAlphaKey[alphas.Length];

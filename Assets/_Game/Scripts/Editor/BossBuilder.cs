@@ -1005,7 +1005,45 @@ namespace ElementalBuddies.EditorTools
             ui.DamageChip = chip.rectTransform;
             ui.Frame = frame;
             ui.TintFill = false;
+            AddPortrait(panel, ui);
             panel.gameObject.SetActive(false);
+        }
+
+        // #390: Boss-Porträt (Config.Icon) links neben Name/Leiste – Holzrahmen mit Pergament wie die HUD-Karten,
+        // ragt 16 Einheiten in das Panel hinein; Rahmen in ThemeColor (wie der Panel-Rahmen). Ohne Icon ausgeblendet.
+        // Mehrfach ausführbar (ersetzt ein vorhandenes „Portrait“-Kind). Auch direkt auf das Kern-Prefab Canvas anwendbar.
+        public static void AddPortrait(RectTransform panel, BossHealthBarUI ui)
+        {
+            var old = panel.Find("Portrait");
+            if (old != null) Object.DestroyImmediate(old.gameObject);
+            var frame = Img("Portrait", panel, "frame_wood_parchment.png", Image.Type.Sliced, Color.white);
+            frame.pixelsPerUnitMultiplier = 2.4f;
+            var rt = frame.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(1f, 0.5f);
+            rt.anchoredPosition = new Vector2(16f, 0f);
+            rt.sizeDelta = new Vector2(112f, 112f);
+            rt.SetAsLastSibling();
+            // Innenfläche maskiert; das Ganzkörper-Icon ist 1,5× so groß und oben bündig → Kopf und Oberkörper im Bild
+            var mask = UI("Mask", rt);
+            Stretch(mask, 13f, 13f, 13f, 13f);
+            mask.gameObject.AddComponent<RectMask2D>();
+            var bg = mask.gameObject.AddComponent<Image>(); // dunkler Grund wie die Porträts im TeamHUD (Kontrast zum Icon)
+            bg.color = new Color(0.13f, 0.09f, 0.06f, 0.92f);
+            bg.raycastTarget = false;
+            var icon = UI("Icon", mask);
+            icon.anchorMin = icon.anchorMax = new Vector2(0.5f, 1f);
+            icon.pivot = new Vector2(0.5f, 1f);
+            icon.anchoredPosition = new Vector2(0f, 6f);
+            icon.sizeDelta = new Vector2(132f, 132f);
+            var img = icon.gameObject.AddComponent<Image>();
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            img.sprite = null;
+            img.enabled = false;
+            ui.Portrait = img;
+            ui.PortraitRoot = frame.gameObject;
+            ui.PortraitRing = frame;
         }
 
         private static string FindAsset(string name, string filter)

@@ -91,5 +91,8 @@ namespace ElementalBuddies
         [Tooltip("> 0: Beim Tod löst sich das Modell, spielt den Animator-Trigger „Die“ so lange (s) und verschwindet dann " +
                  "(Flieger stürzen dabei ab). 0 = wie bisher sofort weg.")]
         public float DeathClipDuration = 0f;
+        [Tooltip("Partikel beim Tod (nur Optik, auf allen Rechnern über EnemyBrain.OnEnemyKilled). Leer = Standard des " +
+                 "FeedbackDirector (Untote: Knochensplitter, Bosse: Knochen-Explosion). Dorf/Flieger: DeathVfxBuilder.")]
+        public GameObject DeathVfx;
     }
 }

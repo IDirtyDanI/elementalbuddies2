@@ -561,6 +561,7 @@ namespace ElementalBuddies.EditorTools
             BuildDifficultyExtras(root, ui);
             BuildMultiplayerExtras(root, ui);
             BuildMapExtras(root, ui);
+            if (four) ApplyLeftColumn4(root, ui);
 
             // Überblender (zuletzt = oben)
             var fader = Rect("Fader", root, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -576,9 +577,13 @@ namespace ElementalBuddies.EditorTools
         private static float _cardHeight = 150f;
 
         // Layout der linken Spalte ab 4 Champions (seit der Map-Zeile, Walddorf C-Menü 2026-10-15)
-        private const float ChooseHeaderY4 = -232f, CardTop4 = -298f, CardStep4 = 115f, CardHeight4 = 108f;
-        private const float MedallionSize4 = 100f, MedallionX4 = 92f, LockSize4 = 68f;
-        private const float MapRowY = 522f, MapRowH = 60f, MapRowW = 540f;
+        // #303 (2026-10-16): Map-Kacheln 150 hoch mit großem Vorschaubild → Titel/Untertitel/Überschrift rücken hoch,
+        // Karten 90 hoch im Abstand 96 (4. Karte unten 692 über dem Rand, ausgewählt ×1,06: 687), Map-Zeile 526–676,
+        // Schwierigkeit 462–514 unverändert. Früher: Überschrift −232, Karten −298/115/108, Map-Zeile 522–582 (60 hoch).
+        private const float TitleY4 = -36f, SubtitleY4 = -172f;
+        private const float ChooseHeaderY4 = -214f, CardTop4 = -280f, CardStep4 = 96f, CardHeight4 = 90f;
+        private const float MedallionSize4 = 82f, MedallionX4 = 86f, LockSize4 = 56f, CardFramePpu4 = 1.55f;
+        private const float MapRowY = 526f, MapRowH = 150f, MapRowW = 540f, MapTileGap = 10f;
 
         private static bool count4Plus(ChampionDefinitionSO[] defs)
         {
@@ -1560,26 +1565,7 @@ namespace ElementalBuddies.EditorTools
                 if (old != null) Object.DestroyImmediate(old.gameObject);
 
                 // Linke Spalte zusammenrücken (nur bei 4+ Karten nötig)
-                if (ui.Cards != null && ui.Cards.Length > 3)
-                {
-                    var hdr = root.Find("ChooseHeader") as RectTransform;
-                    if (hdr != null) hdr.anchoredPosition = new Vector2(hdr.anchoredPosition.x, ChooseHeaderY4);
-                    for (int i = 0; i < ui.Cards.Length; i++)
-                    {
-                        var card = ui.Cards[i];
-                        if (card == null || card.Button == null) continue;
-                        var rt = (RectTransform)card.Button.transform;
-                        rt.anchoredPosition = new Vector2(80f, CardTop4 - i * CardStep4);
-                        rt.sizeDelta = new Vector2(rt.sizeDelta.x, CardHeight4);
-                        if (card.PortraitBg != null)
-                        {
-                            var med = card.PortraitBg.rectTransform;
-                            med.anchoredPosition = new Vector2(MedallionX4, 0f);
-                            med.sizeDelta = Vector2.one * MedallionSize4;
-                        }
-                        if (card.Lock != null) card.Lock.rectTransform.sizeDelta = Vector2.one * LockSize4;
-                    }
-                }
+                if (ui.Cards != null && ui.Cards.Length > 3) ApplyLeftColumn4(root, ui);
 
                 BuildMapExtras(root, ui);
                 if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
@@ -1602,42 +1588,62 @@ namespace ElementalBuddies.EditorTools
             var row = Rect("MapSelect", root, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(80f, MapRowY), new Vector2(MapRowW, MapRowH));
             ui.MapSelect = row;
 
-            var tile = MakeButton(row, "MapTileTemplate", "", false, 26f, Vector2.zero, new Vector2(264f, MapRowH));
+            // Kachel = Button mit Holz-/Pergament-Sprite als Rahmen (wie die Schwierigkeit); das Vorschaubild füllt die
+            // Kachel bis auf den Rand, unten ein halbtransparentes Band mit Name + Kurz-Tagline (Cremeschrift mit Kontur)
+            float tileW = (MapRowW - MapTileGap) / 2f;
+            var tile = MakeButton(row, "MapTileTemplate", "", false, 26f, Vector2.zero, new Vector2(tileW, MapRowH));
             tile.navigation = new Navigation { mode = Navigation.Mode.None };
             tile.image.raycastTarget = true;
             var oldText = tile.transform.Find("Text");
             if (oldText != null) Object.DestroyImmediate(oldText.gameObject);
 
-            float th = MapRowH - 12f, tw = Mathf.Round(th * 16f / 9f);
-            var frame = Rect("ThumbFrame", tile.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(5f, 0f), new Vector2(tw + 4f, th + 4f));
-            Img(frame, null, new Color(Ink.r, Ink.g, Ink.b, 0.85f), false);
-            var thumbRt = Rect("Thumb", frame, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-4f, -4f));
-            var thumb = Img(thumbRt, null, Color.white, false);
-            thumb.preserveAspect = false;
-            var lockRt = Rect("Lock", frame, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(th * 0.72f, th * 0.72f));
+            const float pad = 12f, bandH = 58f;
+            var thumbRt = Rect("Thumb", tile.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-2f * pad, -2f * pad));
+            var thumb = thumbRt.gameObject.AddComponent<RawImage>();
+            thumb.raycastTarget = false;
+
+            var band = Rect("Caption", thumbRt, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(0f, bandH));
+            var bandImg = Img(band, null, new Color(0.08f, 0.05f, 0.03f, 0.66f), false);
+            bandImg.type = Image.Type.Sliced;
+            bandImg.pixelsPerUnitMultiplier = 1.3f;
+
+            var lockRt = Rect("Lock", thumbRt, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -35f), new Vector2(66f, 66f));
             Img(lockRt, Icon("icon_lock"), Color.white, false).preserveAspect = true;
             lockRt.gameObject.SetActive(false);
 
-            float textX = 5f + tw + 4f + 10f;
-            var name = Text(tile.transform, "Name", "Stadt", _fBold, 26f, Ink, TextAlignmentOptions.BottomLeft, null);
+            var name = Text(band, "Name", "Stadt", _fBold, 28f, Cream, TextAlignmentOptions.BottomLeft, _mBoldOutline);
             var nrt = name.rectTransform;
-            nrt.anchorMin = new Vector2(0f, 0.46f); nrt.anchorMax = new Vector2(1f, 1f); nrt.pivot = new Vector2(0f, 0.5f);
-            nrt.offsetMin = new Vector2(textX, 0f); nrt.offsetMax = new Vector2(-8f, -3f);
+            nrt.anchorMin = new Vector2(0f, 0.44f); nrt.anchorMax = new Vector2(1f, 1f); nrt.pivot = new Vector2(0f, 0.5f);
+            nrt.offsetMin = new Vector2(10f, 0f); nrt.offsetMax = new Vector2(-8f, 0f);
             name.textWrappingMode = TextWrappingModes.NoWrap;
             name.overflowMode = TextOverflowModes.Ellipsis;
-            name.enableAutoSizing = true; name.fontSizeMin = 18f; name.fontSizeMax = 26f;
+            name.enableAutoSizing = true; name.fontSizeMin = 22f; name.fontSizeMax = 28f;
 
-            var sub = Text(tile.transform, "Sub", "Die belagerte Stadt", _fBold, 17f, InkLight, TextAlignmentOptions.TopLeft, null);
+            var sub = Text(band, "Sub", "Die belagerte Stadt", _fBold, 22f, new Color(1f, 0.88f, 0.7f), TextAlignmentOptions.TopLeft, _mBoldOutline);
             var srt = sub.rectTransform;
-            srt.anchorMin = new Vector2(0f, 0f); srt.anchorMax = new Vector2(1f, 0.46f); srt.pivot = new Vector2(0f, 0.5f);
-            srt.offsetMin = new Vector2(textX + 1f, 3f); srt.offsetMax = new Vector2(-8f, 0f);
+            srt.anchorMin = new Vector2(0f, 0f); srt.anchorMax = new Vector2(1f, 0.44f); srt.pivot = new Vector2(0f, 0.5f);
+            srt.offsetMin = new Vector2(11f, 2f); srt.offsetMax = new Vector2(-8f, 0f);
             sub.textWrappingMode = TextWrappingModes.NoWrap;
             sub.overflowMode = TextOverflowModes.Ellipsis;
-            sub.enableAutoSizing = false; sub.fontSize = 17f;
+            sub.enableAutoSizing = true; sub.fontSizeMin = 19f; sub.fontSizeMax = 22f;
+
+            // Goldrahmen der gewählten Kachel (wie slot_card_selected der Champion-Karten, nur der Rand), ganz oben
+            var sel = Rect("SelectFrame", tile.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(10f, 10f));
+            var selImg = Img(sel, UISprite("slot_card_selected"), Color.white, false);
+            selImg.type = Image.Type.Sliced;
+            selImg.fillCenter = false;
+            selImg.pixelsPerUnitMultiplier = 1.55f;
+            sel.gameObject.SetActive(false);
 
             tile.gameObject.SetActive(false);
             ui.MapTileTemplate = tile.gameObject;
-            ui.MapTileGap = 12f;
+            ui.MapTileGap = MapTileGap;
+            ui.MapUnselectedThumbTint = new Color(0.66f, 0.66f, 0.66f, 1f);
+            ui.MapLockedThumbTint = new Color(0.42f, 0.42f, 0.44f, 1f);
+            ui.MapNameColor = new Color(0.98f, 0.93f, 0.8f);
+            ui.MapSubColor = new Color(1f, 0.88f, 0.7f);
+            ui.MapLockedSubColor = new Color(1f, 0.66f, 0.5f);
+            ui.MapBandColor = new Color(0.08f, 0.05f, 0.03f, 0.66f);
             AssignMapPreviews(ui);
 
             // Reihenfolge: hinter den Karten, vor der Schwierigkeit
@@ -1649,6 +1655,49 @@ namespace ElementalBuddies.EditorTools
             var kt = keyHint != null ? keyHint.GetComponent<TextMeshProUGUI>() : null;
             if (kt != null) kt.text = KeyHintText;
             if (ui.Fader != null) ui.Fader.transform.SetAsLastSibling();
+        }
+
+        // Linke Spalte bei 4+ Champions (#303): Titel, Untertitel, Überschrift und Karten so setzen, dass die 150 hohe
+        // Map-Zeile (526–676) zwischen der 4. Karte und der Schwierigkeit Platz hat. Für Neubau und Nachrüstung.
+        private static void ApplyLeftColumn4(Transform root, MainMenuUI ui)
+        {
+            SetTopY(root, "Title", TitleY4);
+            SetTopY(root, "Subtitle", SubtitleY4);
+            SetTopY(root, "ChooseHeader", ChooseHeaderY4);
+            if (ui.Cards == null) return;
+            for (int i = 0; i < ui.Cards.Length; i++)
+            {
+                var card = ui.Cards[i];
+                if (card == null || card.Button == null) continue;
+                var rt = (RectTransform)card.Button.transform;
+                rt.anchoredPosition = new Vector2(80f, CardTop4 - i * CardStep4);
+                rt.sizeDelta = new Vector2(rt.sizeDelta.x, CardHeight4);
+                if (card.PortraitBg != null)
+                {
+                    var med = card.PortraitBg.rectTransform;
+                    med.anchoredPosition = new Vector2(MedallionX4, 0f);
+                    med.sizeDelta = Vector2.one * MedallionSize4;
+                }
+                if (card.Lock != null) card.Lock.rectTransform.sizeDelta = Vector2.one * LockSize4;
+                // Rahmen dünner zeichnen (9-Slice-Ränder ÷ CardFramePpu): Pergament-Innenfläche wie früher bei 108 px
+                // Höhe (~54), Name/Tagline daher an den alten Positionen und Größen (dunkle Schrift nie auf dem Holzrand)
+                if (card.Frame != null) card.Frame.pixelsPerUnitMultiplier = CardFramePpu4;
+                if (card.Name != null)
+                {
+                    Place(card.Name.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 0f), new Vector2(160f, -6f), new Vector2(-224f, 50f));
+                    card.Name.fontSizeMin = 30f;
+                    card.Name.fontSizeMax = 38f;
+                }
+                if (card.Tagline != null)
+                    Place(card.Tagline.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 1f), new Vector2(162f, -8f), new Vector2(-188f, 40f));
+                if (card.Initial != null) card.Initial.fontSize = 50f;
+            }
+        }
+
+        private static void SetTopY(Transform root, string name, float y)
+        {
+            var rt = root.Find(name) as RectTransform;
+            if (rt != null) rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, y);
         }
 
         // Ersatz-Vorschaubilder aus Assets/_Game/UI/Maps/map_preview_<id>.png (MapPreviewRenderer) eintragen
