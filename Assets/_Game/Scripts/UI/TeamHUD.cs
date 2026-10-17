@@ -7,7 +7,10 @@ namespace ElementalBuddies
 {
     // Mitspieler-Anzeige (nur im Mehrspieler): kleine Liste links unter der Top-Bar (Name, Champion-Porträt,
     // LP-Balken, "Gefallen – Wiederbelebung in Xs") und Namensschilder über fremden Spielfiguren.
-    // Baut ein eigenes Overlay-Canvas zur Laufzeit; wird von HUDManager angelegt.
+    // Baut zur Laufzeit zwei eigene Overlay-Canvases (wird von HUDManager angelegt):
+    // - Namensschilder (sortingOrder NameTagSortingOrder = −10): Welt-UI, liegt unter dem HUD (Spieltest 2026-10-17 #1)
+    // - Gruppenliste (ListSortingOrder = −5): unter dem HUD-Canvas (0), damit Buddy-Menü, Händler, Kartenwahl,
+    //   Pause usw. sie überdecken (#5). Die Liste ist rein informativ (kein raycastTarget).
     public class TeamHUD : MonoBehaviour
     {
         public static readonly Color[] SlotColors =
@@ -42,7 +45,12 @@ namespace ElementalBuddies
 
         private TMP_FontAsset _font;
         private Sprite[] _portraits = new Sprite[0];
-        private Canvas _canvas;
+        // Ebenen (siehe Wiki UI-HUD, „Canvas-Ebenen“): FeedbackCanvas −20 < Namensschilder < Gruppenliste < HUD 0
+        public const int NameTagSortingOrder = -10;
+        public const int ListSortingOrder = -5;
+
+        private Canvas _canvas;      // Gruppenliste
+        private Canvas _tagCanvas;   // Namensschilder
         private RectTransform _list;
         private RectTransform _tags;
         private readonly List<Row> _rows = new List<Row>();
@@ -65,30 +73,39 @@ namespace ElementalBuddies
         void OnDestroy()
         {
             if (_canvas != null) Destroy(_canvas.gameObject);
+            if (_tagCanvas != null) Destroy(_tagCanvas.gameObject);
         }
 
         private void Build()
         {
-            var go = new GameObject("TeamHUD", typeof(RectTransform));
-            _canvas = go.AddComponent<Canvas>();
-            _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = 5; // über dem HUD, unter Pause/Game-Over sollte es nicht stören (nicht interaktiv)
-            var scaler = go.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(2400f, 1350f);
-            scaler.matchWidthOrHeight = 0.5f;
-
-            _tags = NewRect("NameTags", go.transform);
+            _tagCanvas = NewOverlayCanvas("TeamHUD_NameTags", NameTagSortingOrder);
+            _tags = NewRect("NameTags", _tagCanvas.transform);
             _tags.anchorMin = Vector2.zero;
             _tags.anchorMax = Vector2.one;
             _tags.offsetMin = _tags.offsetMax = Vector2.zero;
 
-            _list = NewRect("TeamList", go.transform);
+            _canvas = NewOverlayCanvas("TeamHUD", ListSortingOrder);
+            _list = NewRect("TeamList", _canvas.transform);
             _list.anchorMin = _list.anchorMax = new Vector2(0f, 1f);
             _list.pivot = new Vector2(0f, 1f);
             _list.anchoredPosition = ListOrigin;
             _list.sizeDelta = new Vector2(RowWidth, RowHeight * 3f);
-            go.SetActive(false);
+            _canvas.gameObject.SetActive(false);
+            _tagCanvas.gameObject.SetActive(false);
+        }
+
+        // Overlay-Canvas mit derselben Skalierung wie der HUD-Canvas (Liste rechnet mit MinimapUI.BottomOffset)
+        private static Canvas NewOverlayCanvas(string name, int order)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            var canvas = go.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = order;
+            var scaler = go.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(2400f, 1350f);
+            scaler.matchWidthOrHeight = 0.5f;
+            return canvas;
         }
 
         void LateUpdate()
@@ -96,6 +113,7 @@ namespace ElementalBuddies
             if (_canvas == null) return;
             bool show = Net.IsMultiplayer;
             if (_canvas.gameObject.activeSelf != show) _canvas.gameObject.SetActive(show);
+            if (_tagCanvas != null && _tagCanvas.gameObject.activeSelf != show) _tagCanvas.gameObject.SetActive(show);
             if (!show) return;
 
             // Liste unter die Minimap schieben (gleiche Canvas-Skalierung → gleiche Einheiten)
@@ -177,8 +195,9 @@ namespace ElementalBuddies
             r.Name.text = name;
             r.Name.color = SlotColors[slot];
 
-            int c = (int)a.Champion;
-            Sprite portrait = c >= 0 && c < _portraits.Length ? _portraits[c] : null;
+            // Jeden Frame neu (kein Cache): ein spät ankommender NetPlayer.Champion wird sofort übernommen. Solange der
+            // NetPlayer noch fehlt, würde PlayerAvatar.Champion auf die EIGENE Menü-Wahl zurückfallen → Porträt aus.
+            Sprite portrait = np != null ? PortraitFor(np.ChampionClass) : null;
             r.Portrait.enabled = portrait != null;
             r.Portrait.sprite = portrait;
             r.PortraitBg.color = SlotColors[slot] * 0.8f;
@@ -194,11 +213,42 @@ namespace ElementalBuddies
             if (!alive) r.Status.text = DownedText(a);
         }
 
+        // Porträt zu einer Champion-Klasse. HUDManager.ChampionPortraits ist nach ChampionClass sortiert; ein falsch
+        // belegter Eintrag (Spieltest 2026-10-17 #4: Berserker zeigte das Ritter-Bild) wird über den Spritenamen
+        // erkannt und übersprungen – dann wird per Name ("portrait_champion_<klasse>") im Array gesucht.
+        private Sprite PortraitFor(ChampionClass c)
+        {
+            int i = (int)c;
+            Sprite s = i >= 0 && i < _portraits.Length ? _portraits[i] : null;
+            if (s != null && MatchesClass(s.name, c)) return s;
+            foreach (var p in _portraits)
+                if (p != null && MatchesClass(p.name, c)) return p;
+            return null; // lieber kein Porträt als das eines anderen Champions
+        }
+
+        public static string PortraitName(ChampionClass c) => "portrait_champion_" + c.ToString().ToLowerInvariant();
+
+        private static bool MatchesClass(string spriteName, ChampionClass c) =>
+            spriteName.StartsWith("portrait_champion_") ? spriteName == PortraitName(c) : true;
+
         // "Gefallen – Wiederbelebung in 7 s" (Restzeit vom Server über PlayerAvatar.RespawnRemaining)
         private static string DownedText(PlayerAvatar a)
         {
             float left = a.RespawnRemaining;
             return left > 0.05f ? $"Gefallen – Wiederbelebung in {Mathf.CeilToInt(left)} s" : "Gefallen – Wiederbelebung …";
+        }
+
+        // Zustand der Gruppenliste für Log-Tests (NetAutoTest): "Name:Porträt" je sichtbarer Zeile
+        public string DebugRows()
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < _rows.Count && i < _others.Count; i++)
+            {
+                var r = _rows[i];
+                if (sb.Length > 0) sb.Append(',');
+                sb.Append(r.Name.text).Append(':').Append(r.Portrait.enabled && r.Portrait.sprite != null ? r.Portrait.sprite.name : "-");
+            }
+            return sb.ToString();
         }
 
         // ---------------- Namensschilder ----------------

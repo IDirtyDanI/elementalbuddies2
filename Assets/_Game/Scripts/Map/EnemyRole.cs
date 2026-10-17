@@ -15,5 +15,8 @@ namespace ElementalBuddies
         BossCaster,
         BossHunter,
         Ram,
+        // Champion-Bedrohungen (2026-10-17): nur der Champion kann sie verletzen (Bannschild)
+        Summoner, // Beschwörer: errichtet abseits einen Ritualkreis und ruft Verstärkung
+        Hexer,    // Bannwirker: bannt Buddy-Gruppen (keine Aktionen), solange er lebt und nah genug ist
     }
 }

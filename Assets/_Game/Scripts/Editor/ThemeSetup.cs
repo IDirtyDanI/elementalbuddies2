@@ -51,6 +51,9 @@ namespace ElementalBuddies.EditorTools
             new Variant(EnemyRole.BossCaster, "Bosses/BossNecromancer", "Goblin_Schamane", true),
             new Variant(EnemyRole.BossHunter, "Bosses/BossDeathHunter", "Ork_Faehrtenmeister", true),
             new Variant(EnemyRole.Ram, "Ram", "Ork_Rammbock"),
+            // Champion-Bedrohungen (2026-10-17, ChampionThreatSetup legt die Platzhalter-Prefabs an)
+            new Variant(EnemyRole.Summoner, "Knochenbeschwoerer", "Goblin_Trommler"),
+            new Variant(EnemyRole.Hexer, "Grabhexe", "Dornenhexe"),
         };
 
         [MenuItem("BuddyTD/Walddorf/Dorf-Theme einrichten (Configs, Theme, Map)")]
@@ -94,7 +97,7 @@ namespace ElementalBuddies.EditorTools
         }
 
         // Dorf-Config = Kopie der kanonischen Config; Optik (Prefab, Icon, Projektil, Tod-Clip, Abschusshöhe) bleibt bei erneutem Lauf erhalten
-        private static EnemyConfigSO SetupVariant(Variant v)
+        internal static EnemyConfigSO SetupVariant(Variant v)
         {
             var canonical = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(v.CanonicalPath);
             if (canonical == null) { Debug.LogWarning("ThemeSetup: kanonische Config fehlt: " + v.CanonicalPath); return null; }

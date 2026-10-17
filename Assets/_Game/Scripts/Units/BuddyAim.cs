@@ -270,7 +270,7 @@ namespace ElementalBuddies
                         var hit = _scanBuffer[i];
                         if (hit == null || !hit.CompareTag("Enemy")) continue;
                         var e = hit.GetComponentInParent<EnemyBrain>();
-                        if (e == null || e.IsDead || !FusionBuddy.IsTargetable(e)) continue;
+                        if (e == null || e.IsDead || !FusionBuddy.IsTargetable(e) || !ElementalBuddy.CanTarget(e)) continue;
                         Vector3 d = e.transform.position - c;
                         d.y = 0f;
                         if (d.sqrMagnitude < best)

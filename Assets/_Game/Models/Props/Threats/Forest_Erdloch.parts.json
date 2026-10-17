@@ -1,0 +1,76 @@
+{
+ "model": "Forest_Erdloch",
+ "rig": "None",
+ "parts": [
+  {
+   "name": "Rift_Ground",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 196,
+   "open_edges": 0,
+   "slots": [
+    "Village_BarkLogDark",
+    "Village_Soil",
+    "Rift_Hole",
+    "Veg_Bark",
+    "Village_StoneDark"
+   ],
+   "local_min_z": -0.02
+  },
+  {
+   "name": "Rift_Hand",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 140,
+   "open_edges": 0,
+   "slots": [
+    "Veg_BarkDark",
+    "Veg_Bark"
+   ],
+   "local_min_z": -0.02
+  }
+ ],
+ "materials": [
+  {
+   "name": "Village_BarkLogDark",
+   "hex": "#463224",
+   "emission": 0.0
+  },
+  {
+   "name": "Village_Soil",
+   "hex": "#6b4c33",
+   "emission": 0.0
+  },
+  {
+   "name": "Rift_Hole",
+   "hex": "#1e1612",
+   "emission": 0.0
+  },
+  {
+   "name": "Veg_Bark",
+   "hex": "#6e4a2e",
+   "emission": 0.0
+  },
+  {
+   "name": "Village_StoneDark",
+   "hex": "#898378",
+   "emission": 0.0
+  },
+  {
+   "name": "Veg_BarkDark",
+   "hex": "#4a3020",
+   "emission": 0.0
+  }
+ ],
+ "tris": 336
+}

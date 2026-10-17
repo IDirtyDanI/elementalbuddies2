@@ -29,6 +29,13 @@ namespace ElementalBuddies
         [Tooltip("Ton der Boss-Ankündigung (Untote: BossSpawn = Schlachtruf; Dorf später ein Ork-Kriegsschrei).")]
         public SfxId BossSpawnSfx = SfxId.BossSpawn;
 
+        [Header("Bannschild (Champion-Bedrohungen)")]
+        [Tooltip("Einheitliche Farbe des Bannschilds (Stadt: geisterhaftes Violett, Dorf: Bernstein) – Schild, Bann-Strahl, Minimap.")]
+        public Color WardColor = new Color(0.66f, 0.42f, 1f);
+        [Tooltip("Schild-Modell (Kind „Ward_Shell“, Durchmesser 1 m um den Pivot; optional „Ward_Shards“ für den Bruch). " +
+                 "Leer = prozedurale Kugel in WardColor.")]
+        public GameObject WardShellPrefab;
+
         // Ohne Einträge ändert das Theme nichts
         public bool IsIdentity => Roles == null || Roles.Count == 0;
 

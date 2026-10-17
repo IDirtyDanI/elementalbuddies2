@@ -110,7 +110,7 @@ namespace ElementalBuddies
         protected override bool TryPerformAction()
         {
             _candidates.Clear();
-            foreach (var e in FindEnemies(transform.position, EffectiveRange))
+            foreach (var e in FindTargets(transform.position, EffectiveRange))
                 if (e != null && !e.IsDead) _candidates.Add(e);
             if (_candidates.Count == 0) return false;
 

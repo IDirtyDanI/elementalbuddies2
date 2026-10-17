@@ -18,3 +18,5 @@ MonoBehaviour:
   - Role: 5
     Config: {fileID: 11400000, guid: c397bd7dc462a47049a4de67821333b8, type: 2}
   BossSpawnSfx: 12
+  WardColor: {r: 0.66, g: 0.42, b: 1, a: 1}
+  WardShellPrefab: {fileID: 1371234526768296210, guid: 1770b7a65e7894fa09f5257a05bbbbad, type: 3}

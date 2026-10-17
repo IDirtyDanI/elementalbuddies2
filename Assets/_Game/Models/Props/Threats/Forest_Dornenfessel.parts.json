@@ -1,0 +1,93 @@
+{
+ "model": "Forest_Dornenfessel",
+ "rig": "None",
+ "parts": [
+  {
+   "name": "Bind_Ring",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 152,
+   "open_edges": 0,
+   "slots": [
+    "Hex_Vine",
+    "Enemy_Claw",
+    "Hex_Moss"
+   ],
+   "local_min_z": -0.138
+  },
+  {
+   "name": "Bind_Chain_1",
+   "type": "MESH",
+   "origin": [
+    -0.0,
+    0.8,
+    0.0
+   ],
+   "parent": null,
+   "tris": 46,
+   "open_edges": 0,
+   "slots": [
+    "Hex_Vine",
+    "Enemy_Claw"
+   ],
+   "local_min_z": -1.2
+  },
+  {
+   "name": "Bind_Chain_2",
+   "type": "MESH",
+   "origin": [
+    0.693,
+    -0.4,
+    0.0
+   ],
+   "parent": null,
+   "tris": 46,
+   "open_edges": 0,
+   "slots": [
+    "Hex_Vine",
+    "Enemy_Claw"
+   ],
+   "local_min_z": -1.2
+  },
+  {
+   "name": "Bind_Chain_3",
+   "type": "MESH",
+   "origin": [
+    -0.693,
+    -0.4,
+    0.0
+   ],
+   "parent": null,
+   "tris": 46,
+   "open_edges": 0,
+   "slots": [
+    "Hex_Vine",
+    "Enemy_Claw"
+   ],
+   "local_min_z": -1.2
+  }
+ ],
+ "materials": [
+  {
+   "name": "Hex_Vine",
+   "hex": "#556b2f",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Claw",
+   "hex": "#2f2622",
+   "emission": 0.0
+  },
+  {
+   "name": "Hex_Moss",
+   "hex": "#7da23e",
+   "emission": 0.0
+  }
+ ],
+ "tris": 290
+}

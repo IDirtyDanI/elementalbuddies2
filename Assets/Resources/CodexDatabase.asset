@@ -123,6 +123,31 @@ MonoBehaviour:
     Description: "Fernkampf-Boss mit Speerhagel \u2013 in Bewegung bleiben"
     Icon: {fileID: 21300000, guid: 585624df310284bf58e9d4ea5e4f3ca9, type: 3}
     Extra: Boss
+  - Key: enemy:Knochenbeschwoerer
+    Category: 0
+    Title: "Knochenbeschw\xF6rer"
+    Description: "Beschw\xF6rt Verst\xE4rkung \u2013 nur dein Champion kann ihn verletzen"
+    Icon: {fileID: 21300000, guid: 37a774b42e9354a44a1ea9b8ac85ec48, type: 3}
+    Extra: Bannschild
+  - Key: enemy:Grabhexe
+    Category: 0
+    Title: Grabhexe
+    Description: "Bannt Buddy-Gruppen \u2013 nur dein Champion kann sie verletzen"
+    Icon: {fileID: 21300000, guid: 934b811e547b34394b241011d24ded51, type: 3}
+    Extra: Bannschild
+  - Key: enemy:Goblin_Trommler
+    Category: 0
+    Title: Goblin-Trommler
+    Description: "Trommelt Verst\xE4rkung herbei \u2013 nur dein Champion kann ihn
+      verletzen"
+    Icon: {fileID: 21300000, guid: f66b2d604d42641629b1917f72eaa11e, type: 3}
+    Extra: Bannschild
+  - Key: enemy:Dornenhexe
+    Category: 0
+    Title: Dornenhexe
+    Description: "Fesselt Buddy-Gruppen \u2013 nur dein Champion kann sie verletzen"
+    Icon: {fileID: 21300000, guid: 6df00580fdbaa487b947802beddec25b, type: 3}
+    Extra: Bannschild
   - Key: elite:Fireproof
     Category: 2
     Title: 'Elite: Feuerfest'
@@ -153,6 +178,13 @@ MonoBehaviour:
     Description: "Flink, bringt viele Splitter. 2,5\xD7 Leben, 3\xD7 Splitter."
     Icon: {fileID: 21300000, guid: 9eb5fbfd3a7814575aed54a40f77b723, type: 3}
     Extra: ab Welle 12
+  - Key: elite:Warded
+    Category: 2
+    Title: 'Elite: Gebannt'
+    Description: "Bannschild schluckt Buddy-, Fusions- und Schrein-Schaden, bis dein
+      Champion die H\xE4lfte ihres Lebens abgetragen hat. 2,5\xD7 Leben, 3\xD7 Splitter."
+    Icon: {fileID: 21300000, guid: cbbc566b56ede41cbbaec0c20861d594, type: 3}
+    Extra: ab Welle 14
   - Key: event:BloodMoon
     Category: 3
     Title: Blutmond

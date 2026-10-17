@@ -32,7 +32,7 @@ namespace ElementalBuddies
         public TextMeshProUGUI BuddySlotText; // Optional
 
         [Header("Mitspieler")]
-        [Tooltip("Porträts in der Reihenfolge von ChampionClass (Magier, Schwertkämpfer, Bogenschütze) für TeamHUD.")]
+        [Tooltip("Porträts in der Reihenfolge von ChampionClass (Magier, Schwertkämpfer, Bogenschütze, Berserker) für TeamHUD.")]
         public Sprite[] ChampionPortraits = new Sprite[0];
 
         private PlayerStats _playerStats;

@@ -10,6 +10,9 @@ namespace ElementalBuddies
         public EnemyConfigSO EnemyType;
         public int Count;
         public float SpawnInterval; // Delay between spawning each enemy of this type
+        // Laufzeit (Zusatzgruppe mit ExtraEnemyGroup.FixedCount, z. B. Beschwörer): Anzahl nicht durch Wellen-Rampe,
+        // Boss-Eskorte, Ernte oder Deckel verändern
+        [System.NonSerialized] public bool FixedCount;
     }
 
     [CreateAssetMenu(fileName = "WaveConfig", menuName = "ElementalBuddies/Wave Config", order = 2)]

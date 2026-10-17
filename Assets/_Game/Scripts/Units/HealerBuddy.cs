@@ -59,7 +59,7 @@ namespace ElementalBuddies
 
             foreach (var hit in hits)
             {
-                if (!hit.CompareTag("Enemy")) continue;
+                if (!hit.CompareTag("Enemy") || !CanTarget(hit)) continue;
                 float d = Vector3.Distance(transform.position, hit.transform.position);
                 if (d < closestDist)
                 {

@@ -63,7 +63,7 @@ namespace ElementalBuddies
                     if (tauntable != null)
                     {
                         if (Net.IsServer) tauntable.Taunt(transform, TauntDuration); // Spott nur auf dem Server
-                        tauntedAny = true;
+                        if (CanTarget(hit)) tauntedAny = true; // nur Bannschild-Träger in Reichweite → keine Abklingzeit verschwenden
                     }
                 }
             }

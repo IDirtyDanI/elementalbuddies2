@@ -52,7 +52,8 @@ namespace ElementalBuddies
         {
             _targets.Clear();
             _targets.AddRange(FindEnemies(transform.position, EffectiveRange));
-            if (_targets.Count == 0) return false;
+            // Böe trifft alle (Bannschild-Träger prallen ab), ausgelöst wird sie nur für mindestens ein anvisierbares Ziel
+            if (!_targets.Exists(CanTarget)) return false;
 
             // Brand verteilen (vor Rückstoß/Schaden, damit Positionen und Status noch stimmen)
             _burningPositions.Clear();
@@ -79,7 +80,7 @@ namespace ElementalBuddies
             {
                 if (e == null) continue;
                 float d = (e.transform.position - transform.position).sqrMagnitude;
-                if (d < nearestDist)
+                if (d < nearestDist && CanTarget(e))
                 {
                     nearestDist = d;
                     nearest = e;

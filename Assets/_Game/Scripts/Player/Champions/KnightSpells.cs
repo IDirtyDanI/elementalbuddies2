@@ -55,9 +55,9 @@ namespace ElementalBuddies
             {
                 if (enemy == null) continue;
                 if (BurnDps > 0f && BurnDuration > 0f)
-                    BurnEffect.Apply(enemy.gameObject, BurnDps * ctx.DamageMultiplier, BurnDuration, BurnVfxPrefab);
+                    BurnEffect.Apply(enemy.gameObject, BurnDps * ctx.DamageMultiplier, BurnDuration, BurnVfxPrefab, fromChampion: true);
                 if (Knockback > 0f)
-                    enemy.Knockback(CombatUtil.FlatDirection(ctx.Origin, enemy.transform.position, ctx.AimDirection), Knockback, 0.2f);
+                    using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(ctx.Origin, enemy.transform.position, ctx.AimDirection), Knockback, 0.2f);
                 EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
             }
             GameAudio.Play(SfxId.FireWave, ctx.Origin);
@@ -109,7 +109,7 @@ namespace ElementalBuddies
             foreach (var enemy in CombatUtil.FindEnemiesInCone(ctx.Origin, ctx.AimDirection, Range, ConeAngle))
             {
                 if (enemy == null) continue;
-                if (FreezeDuration > 0f) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
+                if (FreezeDuration > 0f) using (EnemyBrain.PlayerSource()) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
                 EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
             }
             GameAudio.Play(SfxId.FrostNova, ctx.Origin);
@@ -189,9 +189,9 @@ namespace ElementalBuddies
             foreach (var enemy in FindEnemies(center, Radius))
             {
                 if (enemy == null) continue;
-                if (StunDuration > 0f) enemy.Stun(StunDuration, StunVfxPrefab);
+                if (StunDuration > 0f) using (EnemyBrain.PlayerSource()) enemy.Stun(StunDuration, StunVfxPrefab);
                 if (Knockback > 0f)
-                    enemy.Knockback(CombatUtil.FlatDirection(center, enemy.transform.position, ctx.AimDirection), Knockback, 0.3f);
+                    using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(center, enemy.transform.position, ctx.AimDirection), Knockback, 0.3f);
                 EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
             }
             GameAudio.Play(SfxId.StoneWall, center);
@@ -263,7 +263,7 @@ namespace ElementalBuddies
             if (Net.IsServer && caster != null && TauntDuration > 0f)
             {
                 foreach (var enemy in FindEnemies(ctx.Origin, Radius))
-                    if (enemy != null) enemy.Taunt(caster, TauntDuration);
+                    if (enemy != null) using (EnemyBrain.PlayerSource()) enemy.Taunt(caster, TauntDuration);
             }
 
             var kit = ctx.Caster != null ? ctx.Caster.ActiveKit as KnightKit : null;

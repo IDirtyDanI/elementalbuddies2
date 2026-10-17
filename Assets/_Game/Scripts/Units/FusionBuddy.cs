@@ -142,16 +142,25 @@ namespace ElementalBuddies
             return _enemyBuffer;
         }
 
+        // Wie FindEnemies, aber nur anvisierbare Gegner (ohne aktiven Bannschild, ElementalBuddy.CanTarget) – für die
+        // Zielwahl; Flächenwirkung nutzt weiter FindEnemies. Gleiche wiederverwendete Liste → sofort verarbeiten/kopieren
+        protected static List<EnemyBrain> FindTargets(Vector3 center, float radius)
+        {
+            var list = FindEnemies(center, radius);
+            list.RemoveAll(e => !CanTarget(e));
+            return list;
+        }
+
         // Gegner als Ziel nutzbar. Clients: Gegner-Logik läuft nur auf dem Server (EnemyBrain evtl. deaktiviert) -> aktives Objekt genügt
         internal static bool IsTargetable(EnemyBrain e) =>
             e != null && (e.isActiveAndEnabled || (Net.IsClientOnly && e.gameObject.activeInHierarchy));
 
-        // Nächster Gegner im Radius, optional ohne bereits getroffene
+        // Nächster anvisierbarer Gegner im Radius (ohne Bannschild-Träger), optional ohne bereits getroffene
         protected static EnemyBrain FindNearestEnemy(Vector3 center, float radius, ICollection<EnemyBrain> exclude = null)
         {
             EnemyBrain best = null;
             float bestDist = float.MaxValue;
-            foreach (var e in FindEnemies(center, radius))
+            foreach (var e in FindTargets(center, radius))
             {
                 if (exclude != null && exclude.Contains(e)) continue;
                 float d = (e.transform.position - center).sqrMagnitude;

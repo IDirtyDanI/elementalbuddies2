@@ -46,7 +46,7 @@ namespace ElementalBuddies
             {
                 if (enemy == null) continue;
                 // Freeze first: damage may kill (destroy) the enemy
-                if (FreezeDuration > 0f) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
+                if (FreezeDuration > 0f) using (EnemyBrain.PlayerSource()) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
                 EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
             }
         }

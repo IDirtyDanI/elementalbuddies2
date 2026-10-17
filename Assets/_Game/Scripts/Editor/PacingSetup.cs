@@ -49,6 +49,11 @@ namespace ElementalBuddies.EditorTools
             new EnemyInfo("Forest/Goblin_Schamane", "Goblin-Schamane", "Beschwört Diener und heilt sie – zuerst ausschalten"),
             new EnemyInfo("Forest/Ork_Faehrtenmeister", "Ork-Fährtenmeister", "Fernkampf-Boss mit Speerhagel – in Bewegung bleiben"),
             new EnemyInfo("Forest/Ork_Rammbock", "Ork-Rammbock", null),
+            // Champion-Bedrohungen (Bannschild – nur der Champion kann sie verletzen)
+            new EnemyInfo("Knochenbeschwoerer", ChampionThreatSetup.SummonerName, ChampionThreatSetup.SummonerHint),
+            new EnemyInfo("Grabhexe", ChampionThreatSetup.HexerName, ChampionThreatSetup.HexerHint),
+            new EnemyInfo("Forest/Goblin_Trommler", ChampionThreatSetup.DrummerName, ChampionThreatSetup.DrummerHint),
+            new EnemyInfo("Forest/Dornenhexe", ChampionThreatSetup.ThornHagName, ChampionThreatSetup.ThornHagHint),
         };
 
         // Name/Hinweis aus der Tabelle auf eine Config schreiben (ThemeSetup beim Anlegen der Dorf-Configs)
@@ -140,9 +145,10 @@ namespace ElementalBuddies.EditorTools
 
         // ---------------- Icon-Render (wie PortraitRenderer: Schwarz/Weiß-Differenz → Alpha, Supersampling) ----------------
 
-        public static void RenderIcon(GameObject prefab, string path)
+        // size/yaw/up/frame optional (Elite-Symbole: 256 px, eigener Blickwinkel)
+        public static void RenderIcon(GameObject prefab, string path, int size = Size, float yaw = 25f, float up = 0.35f, float frame = 0.88f)
         {
-            int n = Size * Super;
+            int n = size * Super;
             var holder = new GameObject("__IconHolder") { hideFlags = HideFlags.HideAndDontSave };
             holder.transform.position = new Vector3(0f, -600f, 0f);
             var camGo = new GameObject("__IconCam") { hideFlags = HideFlags.HideAndDontSave };
@@ -188,16 +194,16 @@ namespace ElementalBuddies.EditorTools
                 cam.targetTexture = rt;
                 cam.clearFlags = CameraClearFlags.SolidColor;
                 float radius = Mathf.Max(b.extents.y, Mathf.Max(b.extents.x, b.extents.z) * 0.9f);
-                float dist = radius * 0.88f / Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
-                Vector3 dir = Quaternion.Euler(0f, 25f, 0f) * inst.transform.forward + Vector3.up * 0.35f;
+                float dist = radius * frame / Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+                Vector3 dir = Quaternion.Euler(0f, yaw, 0f) * inst.transform.forward + Vector3.up * up;
                 cam.transform.position = b.center + dir.normalized * dist;
                 cam.transform.LookAt(b.center);
 
                 var black = Grab(cam, rt, Color.black);
                 var white = Grab(cam, rt, Color.white);
-                var outPx = new Color[Size * Size];
-                for (int y = 0; y < Size; y++)
-                    for (int x = 0; x < Size; x++)
+                var outPx = new Color[size * size];
+                for (int y = 0; y < size; y++)
+                    for (int x = 0; x < size; x++)
                     {
                         float r = 0f, g = 0f, bl = 0f, al = 0f;
                         for (int sy = 0; sy < Super; sy++)
@@ -210,9 +216,9 @@ namespace ElementalBuddies.EditorTools
                             }
                         float k = 1f / (Super * Super);
                         al *= k;
-                        outPx[y * Size + x] = al > 0.001f ? new Color(Mathf.Clamp01(r * k / al), Mathf.Clamp01(g * k / al), Mathf.Clamp01(bl * k / al), al) : new Color(0f, 0f, 0f, 0f);
+                        outPx[y * size + x] = al > 0.001f ? new Color(Mathf.Clamp01(r * k / al), Mathf.Clamp01(g * k / al), Mathf.Clamp01(bl * k / al), al) : new Color(0f, 0f, 0f, 0f);
                     }
-                var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false);
+                var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
                 tex.SetPixels(outPx);
                 tex.Apply();
                 File.WriteAllBytes(path, tex.EncodeToPNG());

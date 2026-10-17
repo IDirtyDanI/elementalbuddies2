@@ -164,6 +164,8 @@ namespace ElementalBuddies.EditorTools
                     Icon = Icon(eliteIcons[i - 1]), Extra = "ab Welle 12",
                 });
             }
+            // Elite „Gebannt“ (Champion-Bedrohungen, eigenes Gewicht ab W14)
+            db.Entries.Add(ChampionThreatSetup.WardedCodexEntry());
             string[] eventIcons = { null, "event_bloodmoon", "event_soulstorm", "icon_enemy_ram" }; // Ramme: Bild des eigenen Modells (RamBuilder)
             foreach (var ev in new[] { WaveEvent.BloodMoon, WaveEvent.SoulStorm, WaveEvent.Ram })
                 db.Entries.Add(new CodexDatabaseSO.Entry

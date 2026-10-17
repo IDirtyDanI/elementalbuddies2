@@ -138,6 +138,13 @@ namespace ElementalBuddies
         public void ShowNumber(Vector3 world, float amount, Color color, float size, float duration = 0.8f)
         {
             if (amount < 0.5f) return;
+            ShowText(world, Format(amount), color, size, duration);
+        }
+
+        // Schwebender Text (z. B. „Immun“ am Bannschild) – gleiche Animation wie die Schadenszahlen
+        public void ShowText(Vector3 world, string text, Color color, float size, float duration = 0.8f)
+        {
+            if (string.IsNullOrEmpty(text)) return;
             var n = _numbers[_next];
             _next = (_next + 1) % _numbers.Count;
             n.World = world;
@@ -148,7 +155,7 @@ namespace ElementalBuddies
             n.Rise = 70f + Random.Range(-10f, 15f);
             n.Drift = Random.Range(-28f, 28f);
             n.Active = true;
-            n.Text.text = Format(amount);
+            n.Text.text = text;
             n.Text.gameObject.SetActive(true);
             n.Text.transform.SetAsLastSibling(); // neuere Zahlen oben
         }

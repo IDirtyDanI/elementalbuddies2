@@ -30,6 +30,7 @@ namespace ElementalBuddies.EditorTools
             new Row { Path = ForestDir + "Ork_Krieger.asset", Hit = SfxId.OrkGrunt, Death = SfxId.OrkDeath },
             new Row { Path = ForestDir + "Wolf.asset", Hit = SfxId.WolfBite, Death = SfxId.WolfYelp, Spawn = SfxId.WolfHowl },
             new Row { Path = ForestDir + "Waldspinne.asset", Hit = SfxId.SpiderBite, Death = SfxId.SpiderDeath },
+            new Row { Path = ForestDir + "Goblin_Trommler.asset", Death = SfxId.GoblinScreech }, // Champion-Bedrohung (P5)
             new Row { Path = ConfigDir + "Flyer_Wyvern.asset", Attack = SfxId.WingFlap, Death = SfxId.WyvernScreech, Spawn = SfxId.WyvernScreech },
             new Row { Path = ConfigDir + "Flyer_Bat.asset", Attack = SfxId.BatFlap, Death = SfxId.BatScreech, Spawn = SfxId.BatScreech },
         };

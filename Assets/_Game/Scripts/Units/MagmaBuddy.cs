@@ -51,12 +51,12 @@ namespace ElementalBuddies
         protected override bool TryPerformAction()
         {
             _inRange.Clear();
-            _inRange.AddRange(FindEnemies(transform.position, EffectiveRange));
+            _inRange.AddRange(FindTargets(transform.position, EffectiveRange));
             if (_inRange.Count == 0) return false;
 
-            // Kandidaten = Gegner-Positionen; gewählt wird die mit den meisten Gegnern im ImpactRadius
+            // Kandidaten = anvisierbare Gegner-Positionen; gewählt wird die mit den meisten (verwundbaren) Gegnern im ImpactRadius
             _nearby.Clear();
-            _nearby.AddRange(FindEnemies(transform.position, EffectiveRange + ImpactRadius));
+            _nearby.AddRange(FindTargets(transform.position, EffectiveRange + ImpactRadius));
             EnemyBrain best = null;
             int bestCount = -1;
             float r2 = ImpactRadius * ImpactRadius;

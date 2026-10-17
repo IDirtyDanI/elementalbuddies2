@@ -13,12 +13,17 @@ namespace ElementalBuddies
         Swift,        // +40 % Tempo
         Shieldbearer, // Gegner in der Nähe nehmen −30 % Schaden
         ShardThief,   // schnell, bringt viele Splitter
-        Ram           // Belagerungsramme (Wellen-Ereignis): viel Leben, nur der Nexus zählt – nie zufällig gewürfelt
+        Ram,          // Belagerungsramme (Wellen-Ereignis): viel Leben, nur der Nexus zählt – nie zufällig gewürfelt
+        Warded        // Gebannt (ab W14, eigenes Gewicht in PlanElites): Bannschild schluckt Nicht-Champion-Schaden, bricht nach
+                      // Champion-Schaden ≥ WardBreakFraction × Max-HP
     }
 
     public static class EliteInfo
     {
-        public const int Count = 5; // zufällig würfelbare Eigenschaften (ohne Ramme)
+        public const int Count = 5; // zufällig würfelbare Eigenschaften (ohne Ramme und Gebannt)
+        public const int MaxAffix = (int)EliteAffix.Warded; // höchster Wert (Array-Größen: MaxAffix + 1)
+        // Gebannt: Schild bricht nach so viel Champion-Schaden (Anteil der Max-HP)
+        public const float WardBreakFraction = 0.5f;
 
         // Grundwerte jeder Elite
         public const float HpFactor = 2.5f;
@@ -38,6 +43,7 @@ namespace ElementalBuddies
                 case EliteAffix.Shieldbearer: return "Schildträger";
                 case EliteAffix.ShardThief: return "Splitterdieb";
                 case EliteAffix.Ram: return "Belagerungsramme";
+                case EliteAffix.Warded: return "Gebannt";
                 default: return "";
             }
         }
@@ -52,6 +58,7 @@ namespace ElementalBuddies
                 case EliteAffix.Shieldbearer: return "schützt Gegner in der Nähe";
                 case EliteAffix.ShardThief: return "flink, bringt viele Splitter";
                 case EliteAffix.Ram: return "marschiert stur zum Nexus – aufhalten!";
+                case EliteAffix.Warded: return "Bannschild – nur dein Champion kann ihn brechen";
                 default: return "";
             }
         }
@@ -66,6 +73,7 @@ namespace ElementalBuddies
                 case EliteAffix.Shieldbearer: return new Color(0.95f, 0.9f, 0.55f);
                 case EliteAffix.ShardThief: return new Color(0.75f, 0.45f, 1f);
                 case EliteAffix.Ram: return new Color(0.85f, 0.12f, 0.08f);
+                case EliteAffix.Warded: return new Color(0.42f, 0.55f, 1f);
                 default: return UnityEngine.Color.white;
             }
         }

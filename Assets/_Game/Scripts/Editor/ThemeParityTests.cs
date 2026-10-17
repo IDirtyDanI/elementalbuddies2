@@ -209,6 +209,46 @@ namespace ElementalBuddies.EditorTools.Tests
             }
         }
 
+        // Champion-Bedrohungen: feste Anzahl laut Plan/Balancing (Stufen), Beschwörer nie in Ernte-Wellen und in Boss-Wellen
+        // höchstens 1; keine Rampe, kein Deckel; nie Elite; Dorf = Stadt (über BuildWave_1To40 oben)
+        [Test]
+        public void ChampionThreats_FixedCountsPerWave()
+        {
+            var wm = LoadWaveManager();
+            try
+            {
+                wm.ThemeOverride = Undead;
+                int firstSummoner = -1, firstHexer = -1;
+                for (int w = 1; w <= 40; w++)
+                {
+                    var wc = wm.BuildWave(w);
+                    int s = 0, h = 0;
+                    foreach (var g in wc.EnemiesToSpawn)
+                    {
+                        if (g == null || g.EnemyType == null) continue;
+                        if (g.EnemyType.Role == EnemyRole.Summoner) s += g.Count;
+                        if (g.EnemyType.Role == EnemyRole.Hexer) h += g.Count;
+                    }
+                    int expS = ChampionThreatRules.StepCount(ChampionThreatSetup.SummonerSteps, w);
+                    if (wm.IsHarvestWave(w)) expS = 0;
+                    else if (wm.IsBossWave(w)) expS = Mathf.Min(expS, 1);
+                    int expH = ChampionThreatRules.StepCount(ChampionThreatSetup.HexerSteps, w);
+                    Assert.AreEqual(expS, s, "Welle " + w + ": Beschwörer");
+                    Assert.AreEqual(expH, h, "Welle " + w + ": Bannwirker");
+                    if (s > 0 && firstSummoner < 0) firstSummoner = w;
+                    if (h > 0 && firstHexer < 0) firstHexer = w;
+                    foreach (var e in wm.PlanElites(w)) Assert.AreNotEqual(EliteAffix.None, e);
+                }
+                Assert.AreEqual(ChampionThreatSetup.SummonerSteps[0], firstSummoner, "erster Beschwörer");
+                Assert.AreEqual(ChampionThreatSetup.HexerSteps[0], firstHexer, "erster Bannwirker");
+                var summoner = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(ChampionThreatSetup.SummonerConfigPath);
+                Assert.IsTrue(summoner.WardShield && summoner.IsChampionThreat);
+                // ohne Spät-Rampe (Balancing-Modell P4)
+                Assert.AreEqual(wm.HpMultiplier(25) / wm.LateHpFactor(25), wm.HpMultiplierFor(summoner, 25), 1e-4f);
+            }
+            finally { wm.ThemeOverride = null; }
+        }
+
         [Test]
         public void ForestBosses_CountAsSameBossKinds()
         {

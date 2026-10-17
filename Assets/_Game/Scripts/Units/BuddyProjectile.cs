@@ -136,7 +136,7 @@ namespace ElementalBuddies
             float bestScore = float.MaxValue;
             foreach (var e in CombatUtil.FindEnemies(from, _pierceRange))
             {
-                if (e == null || _hit.Contains(e) || e.IsDead) continue;
+                if (e == null || _hit.Contains(e) || e.IsDead || !ElementalBuddy.CanTarget(e)) continue; // Bannschild: nicht anvisieren
                 Vector3 d = e.transform.position - from;
                 d.y = 0f;
                 float score = d.sqrMagnitude;

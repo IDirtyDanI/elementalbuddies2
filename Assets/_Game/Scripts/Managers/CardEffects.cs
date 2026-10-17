@@ -147,12 +147,19 @@ namespace ElementalBuddies
             float damage = dead.MaxHP * Value(CardEffect.FrostShatter) / 100f;
             Vector3 pos = dead.transform.position;
             _shatterDepth++;
+            // Karten-Flächenschaden ist kein Champion-Treffer, auch wenn der Todesstoß einer war (läuft synchron in
+            // DealPlayerDamage) → Bannschild blockt ihn, und er zählt nicht zum Schildbruch der Elite „Gebannt“
+            var nonPlayer = EnemyBrain.NonPlayerSource();
             try
             {
                 foreach (var e in CombatUtil.FindEnemies(pos, radius))
                     if (e != null && e != dead && !e.IsDead) e.TakeDamage(damage);
             }
-            finally { _shatterDepth--; }
+            finally
+            {
+                nonPlayer.Dispose();
+                _shatterDepth--;
+            }
             OnShatter?.Invoke(pos, radius);
         }
 

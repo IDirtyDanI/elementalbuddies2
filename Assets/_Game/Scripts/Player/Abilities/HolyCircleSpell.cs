@@ -89,7 +89,7 @@ namespace ElementalBuddies
                 foreach (var enemy in FindEnemies(ctx.Origin, Radius))
                 {
                     if (enemy == null) continue;
-                    enemy.ApplySlow(BlindSlow, BlindDuration);
+                    using (EnemyBrain.PlayerSource()) enemy.ApplySlow(BlindSlow, BlindDuration);
                     BlindEffect.Apply(enemy.gameObject, BlindDuration, BlindVfxPrefab);
                 }
             }

@@ -119,7 +119,7 @@ namespace ElementalBuddies
             var elites = wm.PlanElites(wc, wave);
             if (elites.Count > 0)
             {
-                var counts = new int[EliteInfo.Count + 1];
+                var counts = new int[EliteInfo.MaxAffix + 1]; // inkl. Gebannt
                 foreach (var e in elites) counts[(int)e]++;
                 var parts = new List<string>();
                 for (int i = 1; i < counts.Length; i++)

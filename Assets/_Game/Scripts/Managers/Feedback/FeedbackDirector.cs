@@ -81,6 +81,7 @@ namespace ElementalBuddies
             EnemyBrain.OnLocalHit += HandleHit;
             EnemyBrain.OnEnemyKilled += HandleKilled;
             EnemyBrain.OnEliteSpawned += HandleEliteSpawned;
+            EnemyBrain.OnWardImmune += HandleWardImmune;
             CardEffects.OnShatter += HandleShatter;
             GameManager.OnTeamWipe += HandleTeamWipe;
 
@@ -105,6 +106,7 @@ namespace ElementalBuddies
             EnemyBrain.OnLocalHit -= HandleHit;
             EnemyBrain.OnEnemyKilled -= HandleKilled;
             EnemyBrain.OnEliteSpawned -= HandleEliteSpawned;
+            EnemyBrain.OnWardImmune -= HandleWardImmune;
             CardEffects.OnShatter -= HandleShatter;
             GameManager.OnTeamWipe -= HandleTeamWipe;
             if (_waves != null) { _waves.OnWaveStart -= HandleWaveStart; _waves.OnWaveEnd -= HandleWaveEnd; _waves.OnDawn -= HandleDawn; }
@@ -133,6 +135,14 @@ namespace ElementalBuddies
             }
             if (_eliteSeen.Add(e.Elite))
                 ToastUI.Show($"Elite: <color=#{EliteInfo.Hex(e.Elite)}>{EliteInfo.Name(e.Elite)}</color> – {EliteInfo.Hint(e.Elite)}");
+        }
+
+        // Bannschild hat einen Treffer geschluckt (alle Rechner, EnemyBrain drosselt auf 1× je 0,4 s): „Immun“ über dem Kopf
+        private void HandleWardImmune(EnemyBrain e)
+        {
+            if (e == null || _fc == null || GameFeel.Numbers == GameFeel.NumberMode.Off) return;
+            Color c = Color.Lerp(ThreatVisuals.WardColor, Color.white, 0.35f);
+            _fc.ShowText(HeadPosition(e), "Immun", c, ChampionSize * 0.85f, 0.6f);
         }
 
         private float _nextShatterSound;
@@ -386,8 +396,8 @@ namespace ElementalBuddies
             float now = Time.unscaledTime;
             if (_shardSince >= 0f && now - _shardSince >= 0.35f)
             {
-                SpawnShardPop(_shardSum);
-                _shardSum = 0f;
+                // Beträge < 0,5 (z. B. Rest-Pool am Wellenende) nicht verwerfen, sondern ins nächste Popup übernehmen
+                if (SpawnShardPop(_shardSum)) _shardSum = 0f;
                 _shardSince = -1f;
             }
             for (int i = _shardPops.Count - 1; i >= 0; i--)
@@ -408,9 +418,11 @@ namespace ElementalBuddies
             }
         }
 
-        private void SpawnShardPop(float amount)
+        // false = (noch) kein Popup, Betrag bleibt stehen
+        private bool SpawnShardPop(float amount)
         {
-            if (_hud == null || _hud.ShardText == null || amount < 0.5f) return;
+            if (amount < 0.5f) return false;
+            if (_hud == null || _hud.ShardText == null) return true;
             var src = _hud.ShardText;
             var t = new GameObject("ShardPop", typeof(RectTransform)).AddComponent<TextMeshProUGUI>();
             t.transform.SetParent(src.transform, false);
@@ -426,6 +438,7 @@ namespace ElementalBuddies
             t.outlineColor = new Color32(20, 30, 50, 255);
             t.text = "+" + Mathf.RoundToInt(amount);
             _shardPops.Add((t, Time.unscaledTime));
+            return true;
         }
 
         // ---------------- Wellen, Karten, Fusion ----------------

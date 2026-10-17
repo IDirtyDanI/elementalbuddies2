@@ -1,0 +1,212 @@
+{
+ "model": "Undead_Bannschild",
+ "rig": "None",
+ "parts": [
+  {
+   "name": "Ward_Shell",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 273,
+   "open_edges": 91,
+   "slots": [
+    "Ward_Undead"
+   ],
+   "local_min_z": -0.894
+  },
+  {
+   "name": "Ward_Shards",
+   "type": "EMPTY",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null
+  },
+  {
+   "name": "Ward_Shard_1",
+   "type": "MESH",
+   "origin": [
+    -0.912,
+    -0.0,
+    0.326
+   ],
+   "parent": "Ward_Shards",
+   "tris": 20,
+   "open_edges": 0,
+   "slots": [
+    "Ward_Undead"
+   ],
+   "local_min_z": -0.33,
+   "dir": [
+    -0.9417,
+    -0.0,
+    0.3364
+   ]
+  },
+  {
+   "name": "Ward_Shard_2",
+   "type": "MESH",
+   "origin": [
+    0.895,
+    -0.0,
+    0.347
+   ],
+   "parent": "Ward_Shards",
+   "tris": 20,
+   "open_edges": 0,
+   "slots": [
+    "Ward_Undead"
+   ],
+   "local_min_z": -0.352,
+   "dir": [
+    0.9323,
+    -0.0,
+    0.3616
+   ]
+  },
+  {
+   "name": "Ward_Shard_3",
+   "type": "MESH",
+   "origin": [
+    -0.01,
+    0.905,
+    0.334
+   ],
+   "parent": "Ward_Shards",
+   "tris": 20,
+   "open_edges": 0,
+   "slots": [
+    "Ward_Undead"
+   ],
+   "local_min_z": -0.338,
+   "dir": [
+    -0.0104,
+    0.9382,
+    0.346
+   ]
+  },
+  {
+   "name": "Ward_Shard_4",
+   "type": "MESH",
+   "origin": [
+    -0.01,
+    -0.905,
+    0.334
+   ],
+   "parent": "Ward_Shards",
+   "tris": 20,
+   "open_edges": 0,
+   "slots": [
+    "Ward_Undead"
+   ],
+   "local_min_z": -0.338,
+   "dir": [
+    -0.0104,
+    -0.9382,
+    0.346
+   ]
+  },
+  {
+   "name": "Ward_Shard_5",
+   "type": "MESH",
+   "origin": [
+    -0.643,
+    0.604,
+    -0.398
+   ],
+   "parent": "Ward_Shards",
+   "tris": 20,
+   "open_edges": 0,
+   "slots": [
+    "Ward_Undead"
+   ],
+   "local_min_z": -0.26,
+   "dir": [
+    -0.6646,
+    0.6242,
+    -0.4107
+   ]
+  },
+  {
+   "name": "Ward_Shard_6",
+   "type": "MESH",
+   "origin": [
+    0.598,
+    -0.62,
+    -0.426
+   ],
+   "parent": "Ward_Shards",
+   "tris": 20,
+   "open_edges": 0,
+   "slots": [
+    "Ward_Undead"
+   ],
+   "local_min_z": -0.298,
+   "dir": [
+    0.6223,
+    -0.6452,
+    -0.4432
+   ]
+  },
+  {
+   "name": "Ward_Shard_7",
+   "type": "MESH",
+   "origin": [
+    -0.643,
+    -0.604,
+    -0.398
+   ],
+   "parent": "Ward_Shards",
+   "tris": 20,
+   "open_edges": 0,
+   "slots": [
+    "Ward_Undead"
+   ],
+   "local_min_z": -0.26,
+   "dir": [
+    -0.6646,
+    -0.6242,
+    -0.4107
+   ]
+  },
+  {
+   "name": "Ward_Shard_8",
+   "type": "MESH",
+   "origin": [
+    0.598,
+    0.62,
+    -0.426
+   ],
+   "parent": "Ward_Shards",
+   "tris": 20,
+   "open_edges": 0,
+   "slots": [
+    "Ward_Undead"
+   ],
+   "local_min_z": -0.298,
+   "dir": [
+    0.6223,
+    0.6452,
+    -0.4432
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "Ward_Undead",
+   "hex": "#9b6bff",
+   "emission": 1.2
+  }
+ ],
+ "emissive": [
+  "Ward_Undead"
+ ],
+ "tris": 433,
+ "mirrored_x": true
+}

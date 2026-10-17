@@ -239,7 +239,7 @@ namespace ElementalBuddies
                     CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up * HitHeight, Quaternion.LookRotation(dir), 1.5f);
                 if (!Net.IsServer) continue; // Treffer entscheidet der Server, Clients zeigen nur Funken
                 if (finisher && FinisherKnockback > 0f)
-                    enemy.Knockback(CombatUtil.FlatDirection(origin, enemy.transform.position, dir), FinisherKnockback, 0.25f);
+                    using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(origin, enemy.transform.position, dir), FinisherKnockback, 0.25f);
                 EnemyBrain.DealPlayerDamage(enemy, damage); // Quelle Spieler (Telemetrie)
             }
 

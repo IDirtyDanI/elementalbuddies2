@@ -20,6 +20,7 @@ namespace ElementalBuddies
         public readonly NetworkVariable<int> Parents = new NetworkVariable<int>(0);          // Eltern-Elemente (gepackt, siehe Pack)
         public readonly NetworkVariable<ulong> BuilderClientId = new NetworkVariable<ulong>(0); // wer gebaut hat (nur Anzeige/Telemetrie)
         public readonly NetworkVariable<bool> Reborn = new NetworkVariable<bool>(false);     // durch Phönix wiedergeboren (Effekt beim Erscheinen)
+        public readonly NetworkVariable<ulong> HexSourceId = new NetworkVariable<ulong>(0);  // NetworkObjectId des Bannwirkers (0 = frei)
 
         private ElementalBuddy _buddy;
         public ElementalBuddy Buddy
@@ -102,6 +103,19 @@ namespace ElementalBuddies
             if (end > StunEnd.Value) StunEnd.Value = end;
         }
 
+        // Server: Bann (Bannwirker) für die Clients; null = frei
+        public void ServerSetHex(EnemyBrain source)
+        {
+            if (!IsSpawned || !IsServer) return;
+            ulong id = 0;
+            if (source != null)
+            {
+                var no = source.GetComponent<NetworkObject>();
+                if (no != null && no.IsSpawned) id = no.NetworkObjectId;
+            }
+            if (HexSourceId.Value != id) HexSourceId.Value = id;
+        }
+
         // Server: Tod melden (vor dem Despawn) -> Clients zeigen Tod-Optik, wählen ab, feuern OnBuddyDestroyed
         public void ServerNotifyDeath()
         {
@@ -128,6 +142,12 @@ namespace ElementalBuddies
 
         void Update()
         {
+            // Clients: Bannwirker beim Spawn/Spät-Beitritt noch nicht bekannt → gedrosselt erneut auflösen
+            if (_hexPending && IsSpawned && !IsServer && Time.unscaledTime >= _nextHexRetry)
+            {
+                _nextHexRetry = Time.unscaledTime + HexRetryInterval;
+                ApplyHex();
+            }
             if (!IsSpawned || !IsServer) return;
             var b = Buddy;
             if (b == null || b.IsDead) return;
@@ -155,6 +175,7 @@ namespace ElementalBuddies
             Shield.OnValueChanged += HandleShield;
             StunEnd.OnValueChanged += HandleStun;
             PaidCost.OnValueChanged += HandlePaid;
+            HexSourceId.OnValueChanged += HandleHex;
 
             // Erst-Synchronisation (vor Start des Buddys): still, ohne Level-Up-Effekte
             Unpack(Parents.Value, b);
@@ -163,6 +184,7 @@ namespace ElementalBuddies
             if (HP.Value > 0f) b.NetApplyHP(HP.Value);
             b.NetApplyShield(Shield.Value);
             ApplyStun(false);
+            ApplyHex();
             if (Reborn.Value) PhoenixRebirth.NotifyRebornRemote(b);
         }
 
@@ -173,6 +195,7 @@ namespace ElementalBuddies
             Shield.OnValueChanged -= HandleShield;
             StunEnd.OnValueChanged -= HandleStun;
             PaidCost.OnValueChanged -= HandlePaid;
+            HexSourceId.OnValueChanged -= HandleHex;
 
             // Verkauft/verschmolzen/zerstört: Auswahl lösen
             var im = InteractionManager.Instance;
@@ -195,6 +218,31 @@ namespace ElementalBuddies
         }
 
         private void HandleStun(double previous, double current) => ApplyStun(true);
+
+        private void HandleHex(ulong previous, ulong current) => ApplyHex();
+
+        // Bannwirker über die NetworkObjectId auflösen (noch nicht gespawnt, z. B. Spawn-Reihenfolge oder Spät-Beitritt →
+        // vorerst frei, Update versucht es gedrosselt erneut, bis aufgelöst oder die ID 0 ist)
+        private bool _hexPending;
+        private float _nextHexRetry;
+        private const float HexRetryInterval = 0.25f;
+
+        private void ApplyHex()
+        {
+            _hexPending = false;
+            if (Buddy == null) return;
+            EnemyBrain source = null;
+            ulong id = HexSourceId.Value;
+            if (id != 0 && NetworkManager != null && NetworkManager.SpawnManager != null
+                && NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(id, out var no) && no != null)
+                source = no.GetComponent<EnemyBrain>();
+            if (id != 0 && source == null)
+            {
+                _hexPending = true;
+                _nextHexRetry = Time.unscaledTime + HexRetryInterval;
+            }
+            Buddy.NetApplyHex(source);
+        }
 
         private void HandlePaid(float previous, float current)
         {

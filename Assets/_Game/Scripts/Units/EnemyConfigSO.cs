@@ -80,6 +80,14 @@ namespace ElementalBuddies
         [Header("Flieger (Walddorf-Plan)")]
         [Tooltip("Fliegt direkt aufs Ziel (FlyingMotor statt NavMesh), Trefferkapsel bis zum Boden, Bodenschatten.")]
         public bool IsFlyer;
+
+        [Header("Bannschild (Champion-Bedrohungen)")]
+        [Tooltip("Dauerhafter Bannschild: nur Champion-Schaden (EnemyBrain.DealPlayerDamage) und Champion-Kontrolle wirken – " +
+                 "Buddy-, Fusions-, DoT- und Schrein-Schaden sowie Buddy-Verlangsamung/-Betäubung prallen ab.")]
+        public bool WardShield;
+
+        // Beschwörer/Bannwirker: feste Anzahl in den Zusatzgruppen, nie Elite, nicht in der Verstärkung
+        public bool IsChampionThreat => Role == EnemyRole.Summoner || Role == EnemyRole.Hexer;
         [Tooltip("Flughöhe über dem Boden (m).")]
         public float FlyHeight = 2f;
         [Tooltip("Abstand über Hindernissen (Dächer, Mauern, Bäume) in m.")]

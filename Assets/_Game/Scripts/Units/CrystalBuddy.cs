@@ -75,7 +75,7 @@ namespace ElementalBuddies
             foreach (var e in FindEnemies(transform.position, EffectiveRange))
             {
                 if (Net.IsServer) ((ITauntable)e).Taunt(transform, TauntDuration);
-                any = true;
+                if (CanTarget(e)) any = true; // nur Bannschild-Träger → Spott halten
             }
             if (!any) return false;
 

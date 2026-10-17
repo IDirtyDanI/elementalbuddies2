@@ -5,22 +5,31 @@ namespace ElementalBuddies
     // Damage over time added to an enemy by the Flammenwelle. Lives on the enemy, so it dies with it.
     // Mehrspieler: Apply darf überall laufen (Optik, z. B. von Paket B auf Clients nachgespielt); die Spieler-Fähigkeiten
     // rufen es nur auf dem Server auf. Der DoT-Schaden tickt nur auf dem Server.
+    // Quelle: Champion-Brand (fromChampion, z. B. Flammenwelle, Ritter-/Berserker-Zauber, Feuerpfeilregen) und Buddy-Brand
+    // laufen getrennt mit. Champion-Ticks laufen im Player-Scope (EnemyBrain.PlayerSource) und treffen Bannschild-Träger;
+    // Buddy-Ticks prallen ab. Brennt beides, gilt wie bisher der höhere DPS (Buddy-Anteil nur über dem Champion-DPS).
     public class BurnEffect : MonoBehaviour
     {
         public const float TickInterval = 0.5f;
 
-        private float _dps;
+        private float _dps;              // Buddy-Brand
         private float _remaining;
+        private float _championDps;      // Champion-Brand
+        private float _championRemaining;
         private float _tickTimer;
+        private float _buddyDamage;      // seit dem letzten Tick aufgelaufen
+        private float _championDamage;
         private IDamageable _target;
         private GameObject _vfx;
         private ParticleSystem[] _vfxSystems;
         private static readonly Vector3 VfxOffset = new Vector3(0f, 0.9f, 0f);
 
-        public bool IsActive => enabled && _remaining > 0f;
+        public bool IsActive => enabled && (_remaining > 0f || _championRemaining > 0f);
+        public bool IsChampionBurn => enabled && _championRemaining > 0f;
 
-        // Adds or refreshes the burn (re-applying resets the duration and keeps the higher dps)
-        public static BurnEffect Apply(GameObject target, float dps, float duration, GameObject vfxPrefab = null)
+        // Adds or refreshes the burn (re-applying resets the duration and keeps the higher dps).
+        // fromChampion: Brand eines Champion-Angriffs/-Zaubers (durchdringt den Bannschild).
+        public static BurnEffect Apply(GameObject target, float dps, float duration, GameObject vfxPrefab = null, bool fromChampion = false)
         {
             if (target == null || dps <= 0f || duration <= 0f) return null;
 
@@ -35,8 +44,16 @@ namespace ElementalBuddies
             var burn = target.GetComponent<BurnEffect>();
             if (burn == null) burn = target.AddComponent<BurnEffect>();
             burn._target = target.GetComponent<IDamageable>();
-            burn._dps = Mathf.Max(burn._remaining > 0f ? burn._dps : 0f, dps);
-            burn._remaining = Mathf.Max(burn._remaining, duration);
+            if (fromChampion)
+            {
+                burn._championDps = Mathf.Max(burn._championRemaining > 0f ? burn._championDps : 0f, dps);
+                burn._championRemaining = Mathf.Max(burn._championRemaining, duration);
+            }
+            else
+            {
+                burn._dps = Mathf.Max(burn._remaining > 0f ? burn._dps : 0f, dps);
+                burn._remaining = Mathf.Max(burn._remaining, duration);
+            }
             burn.enabled = true;
             burn.StartVfx(vfxPrefab);
             return burn;
@@ -46,31 +63,47 @@ namespace ElementalBuddies
         public void Stop()
         {
             _remaining = 0f;
+            _championRemaining = 0f;
             _tickTimer = 0f;
+            _buddyDamage = 0f;
+            _championDamage = 0f;
             enabled = false;
         }
 
         void Update()
         {
-            if (_target == null || _remaining <= 0f)
+            if (_target == null || (_remaining <= 0f && _championRemaining <= 0f))
             {
                 enabled = false;
                 return;
             }
 
-            float dt = Mathf.Min(Time.deltaTime, _remaining);
-            _remaining -= dt;
-            _tickTimer += dt;
+            float dtChampion = Mathf.Min(Time.deltaTime, Mathf.Max(0f, _championRemaining));
+            float dtBuddy = Mathf.Min(Time.deltaTime, Mathf.Max(0f, _remaining));
+            // Gemeinsam gilt der höhere DPS: der Buddy-Brand trägt nur den Teil über dem laufenden Champion-Brand bei
+            float championDps = dtChampion > 0f ? _championDps : 0f;
+            _championDamage += championDps * dtChampion;
+            _buddyDamage += Mathf.Max(0f, _dps - championDps) * dtBuddy;
+            _championRemaining -= dtChampion;
+            _remaining -= dtBuddy;
+            _tickTimer += Mathf.Max(dtChampion, dtBuddy);
 
-            if (_tickTimer >= TickInterval || _remaining <= 0f)
+            bool over = _remaining <= 0f && _championRemaining <= 0f;
+            if (_tickTimer >= TickInterval || over)
             {
-                float damage = _dps * _tickTimer;
+                float buddy = _buddyDamage, champion = _championDamage;
                 _tickTimer = 0f;
-                // Schaden nur auf dem Server (auf Clients ist der Brand reine Optik)
-                if (Net.IsServer) _target.TakeDamage(damage); // may destroy the enemy (and this component) at frame end
+                _buddyDamage = 0f;
+                _championDamage = 0f;
+                // Schaden nur auf dem Server (auf Clients ist der Brand reine Optik); kann den Gegner zerstören (Frame-Ende)
+                if (Net.IsServer)
+                {
+                    if (champion > 0f) using (EnemyBrain.PlayerSource()) _target.TakeDamage(champion);
+                    if (buddy > 0f && _target != null) _target.TakeDamage(buddy);
+                }
             }
 
-            if (_remaining <= 0f) enabled = false;
+            if (over) enabled = false;
         }
 
         // Flammen am Körper, solange der Brand läuft

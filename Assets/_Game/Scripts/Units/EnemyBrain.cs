@@ -84,12 +84,14 @@ namespace ElementalBuddies
         public void MakeElite(EliteAffix affix)
         {
             if (!Net.IsServer || affix == EliteAffix.None || IsBoss || IsElite) return;
+            if (Config != null && Config.IsChampionThreat) return; // Beschwörer/Bannwirker tragen schon den Bannschild
             Elite = affix;
             _currentHP *= EliteInfo.Hp(affix);
             _maxHP = _currentHP;
             _speedFactor *= EliteInfo.SpeedFactor(affix);
             DamageMultiplier *= EliteInfo.Damage(affix);
             if (affix == EliteAffix.Shieldbearer && !_shieldbearers.Contains(this)) _shieldbearers.Add(this);
+            if (affix == EliteAffix.Warded) SetWard(true, EliteInfo.WardBreakFraction);
             SyncHealth();
             if (_started) ApplyEliteLook();
             OnEliteSpawned?.Invoke(this);
@@ -260,6 +262,124 @@ namespace ElementalBuddies
             try { target.TakeDamage(amount); }
             finally { _playerSourceDepth--; }
         }
+        // Champion-Quelle für Kontrolleffekte (Verlangsamen, Einfrieren, Betäuben, Rückstoß, Spott), die nicht über
+        // DealPlayerDamage laufen: using (EnemyBrain.PlayerSource()) enemy.Freeze(...). Bannschild-Träger lassen nur
+        // Champion-Kontrolle zu; Buddy-Kontrolle (Eis, Kristall, Wasser, Luft, Super-Buddies) prallt ab.
+        public static PlayerSourceScope PlayerSource()
+        {
+            _playerSourceDepth++;
+            return new PlayerSourceScope(true);
+        }
+        public struct PlayerSourceScope : System.IDisposable
+        {
+            private bool _active;
+            public PlayerSourceScope(bool active) { _active = active; }
+            public void Dispose()
+            {
+                if (!_active) return;
+                _active = false;
+                _playerSourceDepth = Mathf.Max(0, _playerSourceDepth - 1);
+            }
+        }
+        // Läuft gerade ein Champion-Treffer bzw. Champion-Effekt?
+        public static bool IsChampionSource => _playerSourceDepth > 0;
+
+        // Gegenstück zu PlayerSource: Folgeschaden, der synchron in einem Champion-Treffer ausgelöst wird, aber NICHT vom
+        // Champion stammt (Splitterfrost-Karte beim Tod eines eingefrorenen Gegners u. ä.). Sichert die Tiefe, setzt sie auf 0
+        // und stellt sie beim Dispose wieder her: using (EnemyBrain.NonPlayerSource()) e.TakeDamage(...).
+        public static NonPlayerSourceScope NonPlayerSource()
+        {
+            var scope = new NonPlayerSourceScope(_playerSourceDepth);
+            _playerSourceDepth = 0;
+            return scope;
+        }
+        public struct NonPlayerSourceScope : System.IDisposable
+        {
+            private readonly int _savedDepth;
+            private bool _active;
+            public NonPlayerSourceScope(int savedDepth) { _savedDepth = savedDepth; _active = true; }
+            public void Dispose()
+            {
+                if (!_active) return;
+                _active = false;
+                _playerSourceDepth = _savedDepth;
+            }
+        }
+
+        // ---------------- Bannschild (Champion-Bedrohungen) ----------------
+        // Dauerhaft (Config.WardShield: Beschwörer, Bannwirker) oder brechbar (Elite „Gebannt“: nach Champion-Schaden
+        // ≥ breakFraction × Max-HP). Solange aktiv, kommt nur Champion-Schaden/-Kontrolle durch. Server entscheidet,
+        // Clients sehen den Zustand über EnemyNet.Ward (WardVisual).
+        private bool _ward;
+        private float _wardBreakFraction;   // 0 = dauerhaft
+        private float _wardChampionDamage;
+        private float _nextWardImmune;
+        private const float WardImmuneInterval = 0.4f; // „Immun“-Funkeln höchstens so oft
+        public bool IsWarded => _ward && !_isDead;
+        // Champion-Treffer bisher (brechbarer Schild) – für Tests/Anzeige
+        public float WardChampionDamage => _wardChampionDamage;
+        public static event System.Action<EnemyBrain> OnWardImmune; // alle Rechner: Treffer abgeprallt (Optik/„Immun“)
+        public static event System.Action<EnemyBrain> OnWardBroken; // alle Rechner: Schild gebrochen
+
+        // Server: Bannschild an (breakFraction 0 = dauerhaft) bzw. aus
+
+        public void SetWard(bool active, float breakFraction = 0f)
+        {
+            if (!Net.IsServer) return;
+            bool was = _ward;
+            _ward = active;
+            _wardBreakFraction = Mathf.Max(0f, breakFraction);
+            _wardChampionDamage = 0f;
+            if (_net != null) _net.ServerSetWard(active);
+            if (active) WardVisual.Ensure(this);
+            else if (was) BreakWardVisual();
+        }
+
+        // Client: Zustand vom Server (EnemyNet.Ward); broke = true → war an und ist jetzt aus
+        public void ApplyRemoteWard(bool active, bool broke)
+        {
+            _ward = active;
+            if (active) WardVisual.Ensure(this);
+            else if (broke) BreakWardVisual();
+        }
+
+        private void BreakWardVisual()
+        {
+            var v = GetComponent<WardVisual>();
+            if (v != null) v.Break();
+            GameAudio.PlayOr(SfxId.WardBreak, transform.position);
+            OnWardBroken?.Invoke(this);
+        }
+
+        // Server: Treffer/Effekt geschluckt → gedrosselte Rückmeldung auf allen Rechnern
+        private void WardBlocked()
+        {
+            if (Time.time < _nextWardImmune) return;
+            _nextWardImmune = Time.time + WardImmuneInterval;
+            PlayWardImmune();
+            if (_net != null) _net.ServerWardImmune();
+        }
+
+        // Alle Rechner: „Immun“-Funkeln + Klang
+        public void PlayWardImmune()
+        {
+            if (_isDead) return;
+            var v = GetComponent<WardVisual>();
+            if (v != null) v.Flash();
+            GameAudio.PlayOr(SfxId.WardImmune, transform.position);
+            OnWardImmune?.Invoke(this);
+        }
+
+        // Kontrolleffekt erlaubt? (Bannschild: nur Champion)
+        private bool ControlBlockedByWard => _ward && !_isDead && !IsChampionSource;
+
+        // Kopfgeld-Faktor dieses Gegners (z. B. Beschworene 0,25 – Anti-Farm); multipliziert im EconomyManager
+        public float BountyFactor { get; private set; } = 1f;
+        public void SetBountyFactor(float factor)
+        {
+            if (Net.IsServer) BountyFactor = Mathf.Max(0f, factor);
+        }
+
         private bool _isDead;
         public bool IsDead => _isDead;
 
@@ -306,6 +426,8 @@ namespace ElementalBuddies
             OnLocalHit = null;
             DamageSource = null;
             OnEliteSpawned = null;
+            OnWardImmune = null;
+            OnWardBroken = null;
             _shieldbearers.Clear();
             _playerSourceDepth = 0;
             _activeBosses.Clear();
@@ -317,6 +439,7 @@ namespace ElementalBuddies
         void Awake()
         {
             _net = GetComponent<EnemyNet>();
+            _threat = GetComponent<ThreatBrain>();
             // Prefab-Größe merken: VisualScale wird absolut gesetzt (Clients bekommen evtl. schon skalierte Werte)
             _prefabScale = transform.localScale;
         }
@@ -348,6 +471,7 @@ namespace ElementalBuddies
         // Sofort anhalten (Festhalten, z. B. Weltenbaum-Wurzeln): Tempo 0 bis zum nächsten UpdateSpeed
         public void HaltMotor()
         {
+            if (ControlBlockedByWard) return;
             var m = Motor;
             if (m == null || !m.IsReady) return;
             m.Speed = 0f;
@@ -400,6 +524,8 @@ namespace ElementalBuddies
                 transform.localScale = _prefabScale * Config.VisualScale;
 
             _started = true;
+            // Dauerhafter Bannschild (Beschwörer/Bannwirker); Elite „Gebannt“ setzt ihn in MakeElite
+            if (!IsRemote && Config != null && Config.WardShield && !_ward) SetWard(true, 0f);
             if (IsElite) ApplyEliteLook(); // vor der HP-Leiste (misst die Höhe)
             // Ramme hat keinen eigenen Gegner-Eintrag – sie wird als Ereignis entdeckt (ApplyEliteLook)
             if (Elite != EliteAffix.Ram) Codex.Discover(Codex.EnemyKey(Config));
@@ -641,6 +767,7 @@ namespace ElementalBuddies
 
             if (IsFrozen || IsStunned)
             {
+                InterruptThreat();
                 _shotPending = false; // laufender Schuss bricht ab
                 CancelSwing();        // ebenso ein laufender Nahkampf-Hieb
                 UpdateAnimator(0f);
@@ -658,6 +785,7 @@ namespace ElementalBuddies
             // Boss-Zauber: steht still, kein Grundangriff (Neustart des Agents über _wasFrozen)
             if (IsCasting)
             {
+                InterruptThreat();
                 _shotPending = false;
                 CancelSwing();
                 _wasFrozen = true;
@@ -671,6 +799,7 @@ namespace ElementalBuddies
             // Rückstoß: Bewegung und Angriff kurz unterbrochen
             if (_knockedBack)
             {
+                InterruptThreat();
                 if (_motor.IsReady) _motor.IsStopped = true;
                 _stuckTimer = 0f;
                 _shotPending = false;
@@ -680,11 +809,25 @@ namespace ElementalBuddies
             }
 
             UpdateSpeed();
+            // Champion-Bedrohung (Beschwörer/Bannwirker): eigene Bewegung, kein Angriff, kein Anti-Cheese/Nachzügler
+            if (_threat != null && _threat.isActiveAndEnabled)
+            {
+                _threat.ServerTick();
+                UpdateAnimator(_motor.Velocity.magnitude);
+                return;
+            }
             HandleMovement();
             HandleAntiCheese();
             HandleStraggler();
             HandleAttack();
             UpdateAnimator(_motor.Velocity.magnitude);
+        }
+
+        // Champion-Bedrohung: Frost/Betäubung/Zauber-Sperre/Rückstoß unterbrechen (Bannwirker bricht das Wirken ab,
+        // Beschwörer-Uhr steht, solange ServerTick ausbleibt) – explizit statt über Zeitlücken (Host-Ruckler)
+        private void InterruptThreat()
+        {
+            if (_threat != null && _threat.isActiveAndEnabled) _threat.MarkInterrupted();
         }
 
         private void UpdateAnimator(float speed)
@@ -712,18 +855,29 @@ namespace ElementalBuddies
             if (_noProgressTimer < StragglerRescueTime) return;
 
             _noProgressTimer = 0f;
+            WarpToRescue("hing fest");
+        }
+
+        // Server: an ein offenes Portal (bzw. einen Spawnpunkt) zurücksetzen – Nachzügler-Rettung und Notbremse der
+        // Champion-Bedrohungen (ThreatBrain). false = kein Rettungspunkt gefunden.
+        public bool WarpToRescue(string reason)
+        {
+            if (!Net.IsServer || _isDead) return false;
+            EnsureMotor();
             var wm = WaveManager.Instance;
-            if (wm == null || !wm.TryGetRescuePosition(out Vector3 pos)) return;
+            if (wm == null || !wm.TryGetRescuePosition(out Vector3 pos)) return false;
             Vector3 rescue;
             if (NavMesh.SamplePosition(pos, out NavMeshHit hit, 4f, NavMesh.AllAreas)) rescue = hit.position;
             else if (IsFlyer) rescue = pos; // Flieger brauchen kein NavMesh
-            else return;
+            else return false;
 
-            Debug.LogWarning($"EnemyBrain: {name} hing bei {transform.position} fest – zurück an ein Portal.");
+            Debug.LogWarning($"EnemyBrain: {name} {reason} bei {transform.position} – zurück an ein Portal.");
             ForcedTarget = null;
             _motor.Warp(rescue);
             _progressPos = IsFlyer ? transform.position : rescue;
             _stuckTimer = 0f;
+            _noProgressTimer = 0f;
+            return true;
         }
 
         // Priority: Taunt > Buddy (Jäger) > Player (within aggro radius) > Buddy > ForcedTarget > Nexus > Player (fallback if no Nexus)
@@ -979,6 +1133,35 @@ namespace ElementalBuddies
                 var buddy = BuddyOf(target);
                 RequestDestination(buddy != null ? BuddyDestination(buddy) : target.position);
             }
+        }
+
+        // ---------------- Steuerung durch ThreatBrain (Beschwörer, Bannwirker) ----------------
+
+        private ThreatBrain _threat;
+
+        // Laufziel setzen (gleiches Ziel nicht jeden Frame neu, siehe RequestDestination)
+        public void MoveTo(Vector3 dest)
+        {
+            if (_motor == null || !_motor.IsReady) return;
+            if (_motor.IsStopped) _motor.IsStopped = false;
+            RequestDestination(dest);
+        }
+
+        // Anhalten (Pfad verwerfen)
+        public void StopMoving()
+        {
+            if (_motor == null || !_motor.IsReady) return;
+            if (_motor.HasPath) _motor.ResetPath();
+            _motor.Velocity = Vector3.zero;
+        }
+
+        // Weich zu einem Punkt drehen
+        public void FacePoint(Vector3 p)
+        {
+            Vector3 d = p - transform.position;
+            d.y = 0f;
+            if (d.sqrMagnitude < 0.0001f) return;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(d), 540f * Time.deltaTime);
         }
 
         // Gleiches Ziel nicht jeden Frame neu setzen: bei unerreichbarem Ziel (Teil-Pfad, z. B. Buddy auf einer
@@ -1330,6 +1513,8 @@ namespace ElementalBuddies
         public void TakeDamage(float amount)
         {
             if (!Net.IsServer || _isDead || amount <= 0f) return;
+            // Bannschild: nur Champion-Treffer (DealPlayerDamage) – Buddy-, Fusions-, DoT-, Schrein-Schaden prallt ab
+            if (ChampionThreatRules.WardBlocks(_ward, IsChampionSource)) { WardBlocked(); return; }
             if (IsCursed) amount *= 1f + _curse.DamageTakenBonus;
             else amount *= 1f - Armor;
             // Kartensynergien (Spottmal, Dampfschock …) und Elite-Eigenschaften (Feuerfest, Schildträger)
@@ -1342,7 +1527,15 @@ namespace ElementalBuddies
         public void TakeTrueDamage(float amount)
         {
             if (!Net.IsServer || _isDead) return;
+            if (amount > 0f && ChampionThreatRules.WardBlocks(_ward, IsChampionSource)) { WardBlocked(); return; }
             float dealt = Mathf.Min(amount, Mathf.Max(0f, _currentHP));
+            // Brechbarer Schild (Elite „Gebannt“): Champion-Schaden zählt, ab der Schwelle bricht er (danach normal)
+            if (_ward && _wardBreakFraction > 0f && amount > 0f)
+            {
+                _wardChampionDamage += dealt;
+                if (ChampionThreatRules.WardBreaks(_wardChampionDamage, _maxHP, _wardBreakFraction) && _currentHP - amount > 0f)
+                    SetWard(false);
+            }
             if (amount > 0f && OnDamageDealt != null) OnDamageDealt(this, dealt, _playerSourceDepth > 0);
             _currentHP -= amount;
             if (amount > 0f && OnLocalHit != null) OnLocalHit(this, dealt, _playerSourceDepth > 0, _currentHP <= 0f);
@@ -1379,7 +1572,7 @@ namespace ElementalBuddies
         // Mehrere Slows überschreiben sich nicht mehr: es gilt der stärkste noch laufende
         public void ApplySlow(float percentage, float duration)
         {
-            if (!Net.IsServer || _isDead || Elite == EliteAffix.Frostguard) return;
+            if (!Net.IsServer || _isDead || Elite == EliteAffix.Frostguard || ControlBlockedByWard) return;
             percentage = Mathf.Clamp01(percentage);
             duration *= ControlFactor;
             bool active = Time.time < _slowUntil;
@@ -1398,7 +1591,7 @@ namespace ElementalBuddies
         // Komplett einfrieren (Frostnova): steht still, greift nicht an, Animation pausiert
         public void Freeze(float duration, GameObject vfxPrefab = null)
         {
-            if (!Net.IsServer || _isDead || duration <= 0f || Elite == EliteAffix.Frostguard) return;
+            if (!Net.IsServer || _isDead || duration <= 0f || Elite == EliteAffix.Frostguard || ControlBlockedByWard) return;
             if (IsWet) duration *= 2f; // Nass + Frost: friert doppelt so lange ein
             duration *= ControlFactor;
             _freeze = FreezeEffect.Apply(gameObject, duration, vfxPrefab);
@@ -1414,7 +1607,7 @@ namespace ElementalBuddies
         // Betäubt (Erdbeben): steht still und greift nicht an, Animation läuft weiter. Optik: kreisende Sterne (BlindEffect).
         public void Stun(float duration, GameObject vfxPrefab = null)
         {
-            if (!Net.IsServer || _isDead || duration <= 0f) return;
+            if (!Net.IsServer || _isDead || duration <= 0f || ControlBlockedByWard) return;
             duration *= ControlFactor;
             _stunUntil = Mathf.Max(_stunUntil, Time.time + duration);
             if (vfxPrefab != null) BlindEffect.Apply(gameObject, duration, vfxPrefab);
@@ -1451,7 +1644,7 @@ namespace ElementalBuddies
         // Rückstoß entlang des NavMesh (agent.Move, verlässt das NavMesh nicht); unterbricht kurz die Bewegung
         public void Knockback(Vector3 direction, float distance, float duration = 0.25f)
         {
-            if (!Net.IsServer) return;
+            if (!Net.IsServer || ControlBlockedByWard) return;
             distance *= ControlFactor;
             if (Elite == EliteAffix.Ram) distance *= RamKnockbackFactor; // 4,6-m-Belagerungsramme lässt sich kaum schieben
             if (_isDead || distance <= 0f) return;
@@ -1460,6 +1653,8 @@ namespace ElementalBuddies
             EnsureMotor();
             if (_knockbackRoutine != null) StopCoroutine(_knockbackRoutine);
             _knockbackRoutine = StartCoroutine(KnockbackRoutine(direction.normalized, distance, Mathf.Max(0.01f, duration)));
+            // Sofort melden: ein sehr kurzer Stoß (großes deltaTime) kann enden, bevor ServerUpdate den Zweig sieht
+            InterruptThreat();
         }
 
         private IEnumerator KnockbackRoutine(Vector3 dir, float distance, float duration)
@@ -1521,7 +1716,7 @@ namespace ElementalBuddies
 
         public void Taunt(Transform target, float duration)
         {
-            if (!Net.IsServer || _isDead || !isActiveAndEnabled) return;
+            if (!Net.IsServer || _isDead || !isActiveAndEnabled || ControlBlockedByWard) return;
             StartCoroutine(TauntRoutine(target, duration * ControlFactor));
         }
 

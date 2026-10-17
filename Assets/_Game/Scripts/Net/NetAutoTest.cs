@@ -136,6 +136,9 @@ namespace ElementalBuddies
                   .Append(" pos=").Append(a.transform.position.ToString("F1"))
                   .Append(" hp=").Append(a.Stats != null ? a.Stats.CurrentHP.ToString("F0") : "?").Append(']');
             }
+            // Gruppenanzeige (Porträt je Mitspieler-Zeile, Spieltest 2026-10-17 #4)
+            var team = FindFirstObjectByType<TeamHUD>();
+            if (team != null) sb.Append(" team=[").Append(team.DebugRows()).Append(']');
             var wm = WaveManager.Instance;
             var gm = GameManager.Instance;
             if (gm != null) sb.Append(" state=").Append(gm.CurrentState);

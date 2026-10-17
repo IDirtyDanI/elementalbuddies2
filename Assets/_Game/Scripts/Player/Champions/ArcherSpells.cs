@@ -265,7 +265,7 @@ namespace ElementalBuddies
                 if (!Net.IsServer) continue; // Blenden + Schaden nur auf dem Server
                 if (BlindDuration > 0f)
                 {
-                    enemy.ApplySlow(BlindSlow, BlindDuration);
+                    using (EnemyBrain.PlayerSource()) enemy.ApplySlow(BlindSlow, BlindDuration);
                     BlindEffect.Apply(enemy.gameObject, BlindDuration, BlindVfxPrefab);
                 }
                 EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)

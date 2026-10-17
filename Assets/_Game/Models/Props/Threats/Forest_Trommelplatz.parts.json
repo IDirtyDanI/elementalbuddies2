@@ -1,0 +1,168 @@
+{
+ "model": "Forest_Trommelplatz",
+ "rig": "None",
+ "parts": [
+  {
+   "name": "Ritual_Base",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 722,
+   "open_edges": 0,
+   "slots": [
+    "Village_BarkLogDark",
+    "Village_Soil",
+    "Village_BarkLog",
+    "Enemy_WoodDark",
+    "Gob_WarPaint",
+    "Gob_WarPaintLight",
+    "Enemy_Wood",
+    "Enemy_Horn",
+    "Drum_Bone",
+    "Rift_Hole",
+    "Drum_Feather",
+    "Drum_FeatherLight",
+    "Drum_FeatherDark",
+    "Enemy_Rust",
+    "Ork_Cloth",
+    "Enemy_IronDark"
+   ],
+   "local_min_z": -0.03
+  },
+  {
+   "name": "Ritual_Runes",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 86,
+   "open_edges": 172,
+   "slots": [
+    "Ritual_Rune_Forest"
+   ],
+   "local_min_z": 0.045
+  },
+  {
+   "name": "Ritual_Fire",
+   "type": "MESH",
+   "origin": [
+    1.485,
+    -1.485,
+    0.72
+   ],
+   "parent": null,
+   "tris": 80,
+   "open_edges": 0,
+   "slots": [
+    "Enemy_Ember",
+    "Enemy_Flame"
+   ],
+   "local_min_z": -0.07
+  }
+ ],
+ "materials": [
+  {
+   "name": "Village_BarkLogDark",
+   "hex": "#463224",
+   "emission": 0.0
+  },
+  {
+   "name": "Village_Soil",
+   "hex": "#6b4c33",
+   "emission": 0.0
+  },
+  {
+   "name": "Village_BarkLog",
+   "hex": "#5a4030",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_WoodDark",
+   "hex": "#5b3a22",
+   "emission": 0.0
+  },
+  {
+   "name": "Gob_WarPaint",
+   "hex": "#b8302a",
+   "emission": 0.0
+  },
+  {
+   "name": "Gob_WarPaintLight",
+   "hex": "#e6dcc4",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Wood",
+   "hex": "#865934",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Horn",
+   "hex": "#d9c7a0",
+   "emission": 0.0
+  },
+  {
+   "name": "Drum_Bone",
+   "hex": "#e4d7b4",
+   "emission": 0.0
+  },
+  {
+   "name": "Rift_Hole",
+   "hex": "#1e1612",
+   "emission": 0.0
+  },
+  {
+   "name": "Drum_Feather",
+   "hex": "#b8452a",
+   "emission": 0.0
+  },
+  {
+   "name": "Drum_FeatherLight",
+   "hex": "#e8dcc0",
+   "emission": 0.0
+  },
+  {
+   "name": "Drum_FeatherDark",
+   "hex": "#2a2524",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Rust",
+   "hex": "#8a5a3c",
+   "emission": 0.0
+  },
+  {
+   "name": "Ork_Cloth",
+   "hex": "#7d2a22",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_IronDark",
+   "hex": "#4c4f59",
+   "emission": 0.0
+  },
+  {
+   "name": "Ritual_Rune_Forest",
+   "hex": "#ffb43c",
+   "emission": 1.8
+  },
+  {
+   "name": "Enemy_Ember",
+   "hex": "#ffc04a",
+   "emission": 1.5
+  },
+  {
+   "name": "Enemy_Flame",
+   "hex": "#fe841e",
+   "emission": 1.6
+  }
+ ],
+ "tris": 888
+}

@@ -26,7 +26,7 @@ namespace ElementalBuddies
         protected override bool TryPerformAction()
         {
             _candidates.Clear();
-            _candidates.AddRange(FindEnemies(transform.position, EffectiveRange));
+            _candidates.AddRange(FindTargets(transform.position, EffectiveRange));
             if (_candidates.Count == 0 || Targets <= 0) return false;
 
             // Unverfluchte zuerst, dann höchste aktuelle LP

@@ -248,7 +248,7 @@ namespace ElementalBuddies
                     CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up * HitHeight, Quaternion.LookRotation(dir), 1.5f, finisher ? 1.4f : 1.15f);
                 if (!Net.IsServer) continue; // Treffer entscheidet der Server
                 if (finisher && FinisherKnockback > 0f)
-                    enemy.Knockback(CombatUtil.FlatDirection(origin, enemy.transform.position, dir), FinisherKnockback, 0.25f);
+                    using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(origin, enemy.transform.position, dir), FinisherKnockback, 0.25f);
                 DealDamage(enemy, damage);
                 hits++;
             }
@@ -319,7 +319,7 @@ namespace ElementalBuddies
                 // Rückstoß zur Seite (die Seite, auf der der Gegner steht)
                 Vector3 side = Vector3.Cross(Vector3.up, dir);
                 if (Vector3.Dot(enemy.transform.position - origin, side) < 0f) side = -side;
-                if (ChargeKnockback > 0f) enemy.Knockback(side, ChargeKnockback, 0.2f);
+                if (ChargeKnockback > 0f) using (EnemyBrain.PlayerSource()) enemy.Knockback(side, ChargeKnockback, 0.2f);
                 if (HitFxPrefab != null) CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up * HitHeight, Quaternion.LookRotation(dir), 1.5f);
                 DealDamage(enemy, damage);
                 hits++;

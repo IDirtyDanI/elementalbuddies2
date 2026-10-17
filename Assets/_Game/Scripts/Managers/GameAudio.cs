@@ -97,7 +97,15 @@ namespace ElementalBuddies
         WyvernScreech,
         WingFlap,
         BatScreech,
-        BatFlap
+        BatFlap,
+        // Champion-Bedrohungen (2026-10-17): Bannschild, Beschwörer, Bannwirker. Ohne Clip spielt GameAudio.PlayOr einen
+        // vorhandenen Ersatz (Fallback, siehe GameAudio.Fallback)
+        WardImmune,
+        WardBreak,
+        SummonCall,
+        SummonDrum,
+        HexCast,
+        HexRelease
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.
@@ -265,6 +273,27 @@ namespace ElementalBuddies
         // Hat der Eintrag Clips? (für Fallback-Sounds)
         public static bool Has(SfxId id) =>
             Instance != null && Instance._map.TryGetValue(id, out var e) && e.Clips != null && e.Clips.Length > 0;
+
+        // Ersatzton für neue Einträge ohne Clip (Champion-Bedrohungen; P5 verdrahtet die eigenen Klänge)
+        public static SfxId Fallback(SfxId id)
+        {
+            switch (id)
+            {
+                case SfxId.WardImmune: return SfxId.ShieldBlock;
+                case SfxId.WardBreak: return SfxId.FrostShatter;
+                case SfxId.SummonCall: return SfxId.Curse;
+                case SfxId.SummonDrum: return SfxId.HeavyImpact;
+                case SfxId.HexCast: return SfxId.Curse;
+                case SfxId.HexRelease: return SfxId.LightHeal;
+                default: return id;
+            }
+        }
+
+        // Spielt id oder – ohne Clip – den Ersatzton (Fallback)
+        public static void PlayOr(SfxId id, Vector3? position = null)
+        {
+            Play(Has(id) ? id : Fallback(id), position);
+        }
 
         // Mit zusätzlichem Tonhöhen-Faktor (z. B. Tonleiter beim Splitter-Einsammeln)
         public static void PlayPitched(SfxId id, Vector3? position, float pitchFactor)

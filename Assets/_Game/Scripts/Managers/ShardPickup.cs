@@ -7,7 +7,8 @@ namespace ElementalBuddies
     // Seelensplitter-Drop eines getöteten Gegners. Springt kurz heraus, schwebt dann auf der Stelle und fliegt zur
     // nächsten Spielfigur, sobald eine im Magnet-Radius steht. Nur Spielfiguren sammeln ein (Gutschrift in die Teamkasse);
     // Drops verschwinden nie (auch nicht in der Bauphase). Liegt beim Spawnen schon ein Drop in MergeRadius, wird der Wert
-    // dort aufaddiert.
+    // dort aufaddiert. Werte sind ganzzahlig und ≥ 1 (Nachkomma-Reste sammelt EconomyManager im ShardDropPool, Spieltest
+    // 2026-10-17), damit jeder eingesammelte Kristall die abgerundete Kassen-Anzeige sichtbar erhöht.
     // Mehrspieler: Der Server entscheidet Spawn, Zusammenfassen, Magnet-Ziel und Einsammeln und meldet alles mit Drop-Id
     // über NetGame.Economy. Clients halten reine Abbilder (_replica): gleiche Optik samt Magnet-Flug, aber keine Gutschrift.
     // Optik: GlobalSettings.ShardPickupSmall/Medium/Large (reine Visuals, Collider werden abgeschaltet), sonst Primitive.

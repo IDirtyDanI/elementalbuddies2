@@ -1,0 +1,88 @@
+{
+ "model": "Undead_Geisterkette",
+ "rig": "None",
+ "parts": [
+  {
+   "name": "Bind_Ring",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 132,
+   "open_edges": 0,
+   "slots": [
+    "Bind_Undead"
+   ],
+   "local_min_z": -0.038
+  },
+  {
+   "name": "Bind_Chain_1",
+   "type": "MESH",
+   "origin": [
+    -0.0,
+    0.8,
+    0.0
+   ],
+   "parent": null,
+   "tris": 40,
+   "open_edges": 0,
+   "slots": [
+    "Bind_Chain_Undead"
+   ],
+   "local_min_z": -1.2
+  },
+  {
+   "name": "Bind_Chain_2",
+   "type": "MESH",
+   "origin": [
+    0.693,
+    -0.4,
+    0.0
+   ],
+   "parent": null,
+   "tris": 40,
+   "open_edges": 0,
+   "slots": [
+    "Bind_Chain_Undead"
+   ],
+   "local_min_z": -1.2
+  },
+  {
+   "name": "Bind_Chain_3",
+   "type": "MESH",
+   "origin": [
+    -0.693,
+    -0.4,
+    0.0
+   ],
+   "parent": null,
+   "tris": 40,
+   "open_edges": 0,
+   "slots": [
+    "Bind_Chain_Undead"
+   ],
+   "local_min_z": -1.2
+  }
+ ],
+ "materials": [
+  {
+   "name": "Bind_Undead",
+   "hex": "#6dff9a",
+   "emission": 2.5
+  },
+  {
+   "name": "Bind_Chain_Undead",
+   "hex": "#9fc9ad",
+   "emission": 0.8
+  }
+ ],
+ "emissive": [
+  "Bind_Undead",
+  "Bind_Chain_Undead"
+ ],
+ "tris": 252,
+ "mirrored_x": true
+}

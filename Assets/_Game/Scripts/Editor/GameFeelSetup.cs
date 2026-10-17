@@ -211,6 +211,14 @@ namespace ElementalBuddies.EditorTools
             yield return new Sfx(SfxId.WingFlap, 0.38f, 0.15f, PWide, "wing_flap");
             yield return new Sfx(SfxId.BatScreech, 0.42f, 1f, PWide, "bat_screech");
             yield return new Sfx(SfxId.BatFlap, 0.34f, 0.12f, PWide, "bat_flap");
+            // Champion-Bedrohungen (P5): Bannschild, Beschwörer (Stadt Ruf, Dorf Trommel – SummonerBrain.SummonSfx je Prefab),
+            // Bannwirker. Ritual-Schleifen (ritual_loop/drum_loop) laufen über ThreatLoopAudio am Ritualkreis, nicht hier.
+            yield return new Sfx(SfxId.WardImmune, 0.3f, 0.08f, PWide, "ward_immune");
+            yield return new Sfx(SfxId.WardBreak, 0.55f, 0.1f, P, "ward_break");
+            yield return new Sfx(SfxId.SummonCall, 0.7f, 1f, P, "summon_call");
+            yield return new Sfx(SfxId.SummonDrum, 0.75f, 1f, P, "summon_drum");
+            yield return new Sfx(SfxId.HexCast, 0.6f, 0.1f, P, "hex_cast");
+            yield return new Sfx(SfxId.HexRelease, 0.5f, 0.1f, P, "hex_release");
         }
 
         private static void AssignGameAudio(GameAudio ga)

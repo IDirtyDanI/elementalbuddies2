@@ -1,0 +1,71 @@
+{
+ "model": "Undead_Grabriss",
+ "rig": "None",
+ "parts": [
+  {
+   "name": "Rift_Ground",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 188,
+   "open_edges": 0,
+   "slots": [
+    "Undead_Earth",
+    "Undead_EarthDark",
+    "Undead_Hole",
+    "Undead_StoneDark"
+   ],
+   "local_min_z": -0.013
+  },
+  {
+   "name": "Rift_Hand",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 156,
+   "open_edges": 0,
+   "slots": [
+    "Undead_Bone"
+   ],
+   "local_min_z": -0.021
+  }
+ ],
+ "materials": [
+  {
+   "name": "Undead_Earth",
+   "hex": "#4d3d2f",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_EarthDark",
+   "hex": "#30261d",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Hole",
+   "hex": "#0f0c0b",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_StoneDark",
+   "hex": "#57534c",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Bone",
+   "hex": "#ddd3b6",
+   "emission": 0.0
+  }
+ ],
+ "emissive": [],
+ "tris": 344,
+ "mirrored_x": true
+}

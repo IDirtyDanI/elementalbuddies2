@@ -1,25 +1,29 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 namespace ElementalBuddies
 {
     // Eigene Mauszeiger (Hardware-Cursor, selbst gezeichnet: art-src/cursor/make_cursors.py → Resources/Cursors/).
     //   Zeiger    – Menüs, Pause, Wellen-Draft/Händler, Game Over, Maus über UI, Hauptmenü
     //   Bauen     – Zeiger mit Plus-Plakette, solange ein Buddy zum Platzieren gewählt ist (Ghost aktiv)
-    //   Fadenkreuz – im Spiel beim Zielen (Maus über der Welt)
+    //   Hand      – im Spiel (Maus über der Welt): Zeigehand, Finger oben links; bei gedrückter linker
+    //               Maustaste die abgedunkelte Variante (cursor_hand_press). Fehlt die Hand-Textur,
+    //               greift das Fadenkreuz (cursor_crosshair), danach der Zeiger.
     // Startet sich selbst (RuntimeInitializeOnLoadMethod) und überlebt Szenenwechsel; kein Szenen-Objekt nötig.
     // PlayerSettings.defaultCursor ist ebenfalls der Zeiger (gilt vor dem ersten Frame und in Builds).
     public class CursorManager : MonoBehaviour
     {
-        public enum Mode { None, Pointer, Build, Crosshair }
+        public enum Mode { None, Pointer, Build, Hand, HandPress }
 
         public static CursorManager Instance { get; private set; }
 
-        // Hotspots in Pixeln (Texturen 32×32): Pfeilspitze oben links, Fadenkreuz mittig
+        // Hotspots in Pixeln (Texturen 32×32, Ursprung oben links): Pfeilspitze, Zeigefingerspitze, Fadenkreuz-Mitte
         private static readonly Vector2 PointerHotspot = new Vector2(1f, 1f);
+        private static readonly Vector2 HandHotspot = new Vector2(2f, 1f);
         private static readonly Vector2 CrosshairHotspot = new Vector2(16f, 16f);
 
-        private Texture2D _pointer, _build, _crosshair;
+        private Texture2D _pointer, _build, _hand, _handPress, _crosshair;
         private Mode _current = Mode.None;
 
         public Mode Current => _current;
@@ -43,6 +47,8 @@ namespace ElementalBuddies
             Instance = this;
             _pointer = Resources.Load<Texture2D>("Cursors/cursor_pointer");
             _build = Resources.Load<Texture2D>("Cursors/cursor_build");
+            _hand = Resources.Load<Texture2D>("Cursors/cursor_hand");
+            _handPress = Resources.Load<Texture2D>("Cursors/cursor_hand_press");
             _crosshair = Resources.Load<Texture2D>("Cursors/cursor_crosshair");
             Apply(Mode.Pointer);
         }
@@ -83,7 +89,9 @@ namespace ElementalBuddies
             // Bau-Modus: Buddy zum Platzieren gewählt
             if (im.SelectedIndex >= 0) return Mode.Build;
 
-            return Mode.Crosshair;
+            // Spiel, Maus über der Welt: Zeigehand (gedrückt, solange die linke Maustaste gehalten wird)
+            var mouse = Mouse.current;
+            return mouse != null && mouse.leftButton.isPressed ? Mode.HandPress : Mode.Hand;
         }
 
         public void Apply(Mode mode)
@@ -92,7 +100,13 @@ namespace ElementalBuddies
             _current = mode;
             switch (mode)
             {
-                case Mode.Crosshair: Set(_crosshair, CrosshairHotspot); break;
+                case Mode.HandPress when _handPress != null: Set(_handPress, HandHotspot); break;
+                case Mode.Hand:
+                case Mode.HandPress:
+                    if (_hand != null) Set(_hand, HandHotspot);
+                    else if (_crosshair != null) Set(_crosshair, CrosshairHotspot);
+                    else Set(_pointer, PointerHotspot);
+                    break;
                 case Mode.Build: Set(_build != null ? _build : _pointer, PointerHotspot); break;
                 default: Set(_pointer, PointerHotspot); break;
             }

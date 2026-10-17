@@ -1,0 +1,152 @@
+{
+ "model": "Forest_Bannschild",
+ "rig": "None",
+ "parts": [
+  {
+   "name": "Ward_Shell",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 270,
+   "open_edges": 60,
+   "slots": [
+    "Ward_Forest"
+   ],
+   "local_min_z": -0.894
+  },
+  {
+   "name": "Ward_Shards",
+   "type": "EMPTY",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null
+  },
+  {
+   "name": "Ward_Shard_1",
+   "type": "MESH",
+   "origin": [
+    -0.961,
+    0.0,
+    0.163
+   ],
+   "parent": "Ward_Shards",
+   "tris": 4,
+   "open_edges": 12,
+   "slots": [
+    "Ward_Forest"
+   ],
+   "local_min_z": -0.151
+  },
+  {
+   "name": "Ward_Shard_2",
+   "type": "MESH",
+   "origin": [
+    -0.533,
+    0.575,
+    0.576
+   ],
+   "parent": "Ward_Shards",
+   "tris": 4,
+   "open_edges": 12,
+   "slots": [
+    "Ward_Forest"
+   ],
+   "local_min_z": -0.276
+  },
+  {
+   "name": "Ward_Shard_3",
+   "type": "MESH",
+   "origin": [
+    0.149,
+    0.956,
+    0.092
+   ],
+   "parent": "Ward_Shards",
+   "tris": 4,
+   "open_edges": 12,
+   "slots": [
+    "Ward_Forest"
+   ],
+   "local_min_z": -0.322
+  },
+  {
+   "name": "Ward_Shard_4",
+   "type": "MESH",
+   "origin": [
+    0.708,
+    0.423,
+    0.525
+   ],
+   "parent": "Ward_Shards",
+   "tris": 4,
+   "open_edges": 12,
+   "slots": [
+    "Ward_Forest"
+   ],
+   "local_min_z": -0.252
+  },
+  {
+   "name": "Ward_Shard_5",
+   "type": "MESH",
+   "origin": [
+    0.863,
+    -0.441,
+    0.084
+   ],
+   "parent": "Ward_Shards",
+   "tris": 4,
+   "open_edges": 12,
+   "slots": [
+    "Ward_Forest"
+   ],
+   "local_min_z": -0.338
+  },
+  {
+   "name": "Ward_Shard_6",
+   "type": "MESH",
+   "origin": [
+    0.094,
+    -0.778,
+    0.576
+   ],
+   "parent": "Ward_Shards",
+   "tris": 4,
+   "open_edges": 12,
+   "slots": [
+    "Ward_Forest"
+   ],
+   "local_min_z": -0.276
+  },
+  {
+   "name": "Ward_Shard_7",
+   "type": "MESH",
+   "origin": [
+    -0.682,
+    -0.686,
+    0.092
+   ],
+   "parent": "Ward_Shards",
+   "tris": 4,
+   "open_edges": 12,
+   "slots": [
+    "Ward_Forest"
+   ],
+   "local_min_z": -0.322
+  }
+ ],
+ "materials": [
+  {
+   "name": "Ward_Forest",
+   "hex": "#ffbf47",
+   "emission": 0.8
+  }
+ ],
+ "tris": 298
+}

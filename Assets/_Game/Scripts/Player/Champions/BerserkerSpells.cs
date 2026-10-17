@@ -87,7 +87,7 @@ namespace ElementalBuddies
             foreach (var enemy in FindEnemies(center, Radius))
             {
                 if (enemy == null) continue;
-                if (BurnDps > 0f && BurnDuration > 0f) BurnEffect.Apply(enemy.gameObject, BurnDps * dm, BurnDuration, BurnVfxPrefab);
+                if (BurnDps > 0f && BurnDuration > 0f) BurnEffect.Apply(enemy.gameObject, BurnDps * dm, BurnDuration, BurnVfxPrefab, fromChampion: true);
                 if (kit != null) kit.DealDamage(enemy, TickDamage * dm);
                 else EnemyBrain.DealPlayerDamage(enemy, TickDamage * dm);
                 hits++;
@@ -174,7 +174,7 @@ namespace ElementalBuddies
                     anyShatter = true;
                     if (ShatterFxPrefab != null) CombatUtil.SpawnFx(ShatterFxPrefab, enemy.transform.position + Vector3.up, Quaternion.identity, 2f);
                 }
-                if (FreezeDuration > 0f) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
+                if (FreezeDuration > 0f) using (EnemyBrain.PlayerSource()) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
                 if (kit != null) kit.DealDamage(enemy, dmg);
                 else EnemyBrain.DealPlayerDamage(enemy, dmg);
                 hits++;
@@ -259,8 +259,8 @@ namespace ElementalBuddies
             foreach (var enemy in FindEnemies(center, Radius))
             {
                 if (enemy == null) continue;
-                if (StunDuration > 0f) enemy.Stun(StunDuration, StunVfxPrefab);
-                if (Knockback > 0f) enemy.Knockback(CombatUtil.FlatDirection(center, enemy.transform.position, ctx.AimDirection), Knockback, 0.3f);
+                if (StunDuration > 0f) using (EnemyBrain.PlayerSource()) enemy.Stun(StunDuration, StunVfxPrefab);
+                if (Knockback > 0f) using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(center, enemy.transform.position, ctx.AimDirection), Knockback, 0.3f);
                 if (kit != null) kit.DealDamage(enemy, Damage * ctx.DamageMultiplier);
                 else EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier);
                 hits++;
@@ -336,7 +336,7 @@ namespace ElementalBuddies
                 foreach (var enemy in FindEnemies(ctx.Origin, BlindRadius))
                 {
                     if (enemy == null) continue;
-                    if (Net.IsServer) enemy.ApplySlow(BlindSlow, BlindDuration);
+                    if (Net.IsServer) using (EnemyBrain.PlayerSource()) enemy.ApplySlow(BlindSlow, BlindDuration);
                     BlindEffect.Apply(enemy.gameObject, BlindDuration, BlindVfxPrefab);
                 }
             GameAudio.Play(SfxId.WarRoar, ctx.Origin);

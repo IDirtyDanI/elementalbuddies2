@@ -1,0 +1,173 @@
+{
+ "model": "Undead_Ritualkreis",
+ "rig": "None",
+ "parts": [
+  {
+   "name": "Ritual_Base",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 236,
+   "open_edges": 0,
+   "slots": [
+    "Undead_StoneDark",
+    "Undead_Stone",
+    "Undead_StoneLight"
+   ],
+   "local_min_z": -0.004
+  },
+  {
+   "name": "Ritual_Runes",
+   "type": "MESH",
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "parent": null,
+   "tris": 132,
+   "open_edges": 184,
+   "slots": [
+    "Ritual_Runes_Undead"
+   ],
+   "local_min_z": 0.043
+  },
+  {
+   "name": "Ritual_Candle_1",
+   "type": "MESH",
+   "origin": [
+    -1.004,
+    1.004,
+    0.0
+   ],
+   "parent": null,
+   "tris": 108,
+   "open_edges": 0,
+   "slots": [
+    "Undead_Bone",
+    "Undead_BoneDark",
+    "Undead_Socket",
+    "Ritual_Wax",
+    "Ritual_Flame_Undead"
+   ],
+   "local_min_z": 0.045
+  },
+  {
+   "name": "Ritual_Candle_2",
+   "type": "MESH",
+   "origin": [
+    1.004,
+    1.004,
+    0.0
+   ],
+   "parent": null,
+   "tris": 108,
+   "open_edges": 0,
+   "slots": [
+    "Undead_Bone",
+    "Undead_BoneDark",
+    "Undead_Socket",
+    "Ritual_Wax",
+    "Ritual_Flame_Undead"
+   ],
+   "local_min_z": 0.045
+  },
+  {
+   "name": "Ritual_Candle_3",
+   "type": "MESH",
+   "origin": [
+    1.004,
+    -1.004,
+    0.0
+   ],
+   "parent": null,
+   "tris": 108,
+   "open_edges": 0,
+   "slots": [
+    "Undead_Bone",
+    "Undead_BoneDark",
+    "Undead_Socket",
+    "Ritual_Wax",
+    "Ritual_Flame_Undead"
+   ],
+   "local_min_z": 0.045
+  },
+  {
+   "name": "Ritual_Candle_4",
+   "type": "MESH",
+   "origin": [
+    -1.004,
+    -1.004,
+    0.0
+   ],
+   "parent": null,
+   "tris": 108,
+   "open_edges": 0,
+   "slots": [
+    "Undead_Bone",
+    "Undead_BoneDark",
+    "Undead_Socket",
+    "Ritual_Wax",
+    "Ritual_Flame_Undead"
+   ],
+   "local_min_z": 0.045
+  }
+ ],
+ "materials": [
+  {
+   "name": "Undead_StoneDark",
+   "hex": "#57534c",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Stone",
+   "hex": "#7c776e",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_StoneLight",
+   "hex": "#9a958a",
+   "emission": 0.0
+  },
+  {
+   "name": "Ritual_Runes_Undead",
+   "hex": "#5cff6a",
+   "emission": 2.5
+  },
+  {
+   "name": "Undead_Bone",
+   "hex": "#ddd3b6",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_BoneDark",
+   "hex": "#a59b80",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Socket",
+   "hex": "#1b1a1e",
+   "emission": 0.0
+  },
+  {
+   "name": "Ritual_Wax",
+   "hex": "#d9d1b4",
+   "emission": 0.0
+  },
+  {
+   "name": "Ritual_Flame_Undead",
+   "hex": "#9dff70",
+   "emission": 3.0
+  }
+ ],
+ "emissive": [
+  "Ritual_Runes_Undead",
+  "Ritual_Flame_Undead"
+ ],
+ "tris": 800,
+ "mirrored_x": true
+}

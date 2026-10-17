@@ -58,7 +58,7 @@ namespace ElementalBuddies
                 if (to.sqrMagnitude > 0.25f && Vector3.Angle(ctx.AimDirection, to) > halfAngle) continue;
 
                 if (BurnDps > 0f && BurnDuration > 0f)
-                    BurnEffect.Apply(enemy.gameObject, BurnDps * ctx.DamageMultiplier, BurnDuration, BurnVfxPrefab);
+                    BurnEffect.Apply(enemy.gameObject, BurnDps * ctx.DamageMultiplier, BurnDuration, BurnVfxPrefab, fromChampion: true);
                 EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
             }
         }

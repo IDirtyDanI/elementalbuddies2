@@ -101,6 +101,7 @@ namespace ElementalBuddies
             OnBuddyCountChanged = null;
             OnBuddyDestroyed = null;
             OnAnyLevelUp = null;
+            OnBanishChanged = null;
             _nextAttackedToastTime = 0f;
         }
 
@@ -161,9 +162,65 @@ namespace ElementalBuddies
             _visualAnimator = GetComponentInChildren<Animator>();
         }
 
-        // Betäubt (Boss-Fähigkeiten): keine Aktionen, Auren/Segen der Subklassen pausieren
+        // Betäubt (Boss-Fähigkeiten): keine Aktionen, Auren/Segen der Subklassen pausieren.
+        // Gebannt (Bannwirker) wirkt für alle Aktionsstellen genauso (IsStunned schließt IsBanished ein); Fusion,
+        // Aufwerten und Verkaufen bleiben erlaubt.
         private float _stunUntil;
-        public bool IsStunned => Time.time < _stunUntil;
+        public bool IsStunned => Time.time < _stunUntil || IsBanished;
+
+        // ---------------- Zielwahl gegen Bannschild-Träger ----------------
+        // Gegner mit aktivem Bannschild (Beschwörer, Bannwirker, Elite „Gebannt“ vor dem Bruch) nehmen nur Champion-Schaden:
+        // Buddies wählen sie nicht als Ziel (anderes Ziel nehmen, sonst Feuer halten). Flächenwirkung trifft sie weiter
+        // (prallt am Schild ab). Gemeinsame Stelle für alle Buddy-Zielwahlen (Schütze, Heiler, Spott, Fusions-/Super-Buddies,
+        // Durchschuss, Zielausrichtung).
+        public static bool CanTarget(EnemyBrain e) => e != null && ChampionThreatRules.BuddyMayTarget(e.IsWarded);
+
+        // Collider-Variante (OverlapSphere-Zielwahl): ohne EnemyBrain kein Schild → anvisierbar
+        public static bool CanTarget(Component hit)
+        {
+            if (hit == null) return false;
+            var e = hit.GetComponentInParent<EnemyBrain>();
+            return e == null || CanTarget(e);
+        }
+
+        // ---------------- Bann (Champion-Bedrohung Bannwirker) ----------------
+        // Server setzt den Bannwirker (SetHexed), Clients bekommen ihn über BuddyNet.HexSourceId (NetApplyHex).
+        // Der Bann endet von selbst, sobald der Bannwirker tot/entfernt ist (auf allen Rechnern), sonst entscheidet
+        // HexerBrain (Abstand > 18 m, neue Zielwahl).
+        private EnemyBrain _hexSource;
+        public EnemyBrain HexSource => IsBanished ? _hexSource : null;
+        public bool IsBanished => _hexSource != null && !_hexSource.IsDead && !_isDead;
+        // Alle Rechner: Bann begonnen/geendet (Optik, Statistik)
+        public static event System.Action<ElementalBuddy> OnBanishChanged;
+
+        // Nur Server: von source gebannt (null = frei)
+        public void SetHexed(EnemyBrain source)
+        {
+            if (!Net.IsServer || (_isDead && source != null)) return;
+            if (source == _hexSource) return;
+            _hexSource = source;
+            if (NetState != null) NetState.ServerSetHex(source);
+            ApplyHexVisual();
+        }
+
+        // Nur Server: Bann dieses Bannwirkers lösen (ein anderer Bann bleibt)
+        public void ClearHex(EnemyBrain source)
+        {
+            if (_hexSource == source) SetHexed(null);
+        }
+
+        internal void NetApplyHex(EnemyBrain source)
+        {
+            if (source == _hexSource) return;
+            _hexSource = source;
+            ApplyHexVisual();
+        }
+
+        private void ApplyHexVisual()
+        {
+            if (_hexSource != null) BuddyBindVisual.Attach(this, _hexSource);
+            OnBanishChanged?.Invoke(this);
+        }
 
         // Server: Leben-Faktor geändert (Wellenkarte) → aktuelles Leben anteilig mitziehen
         public void RescaleHealth(float factor)

@@ -72,7 +72,7 @@ namespace ElementalBuddies
 
             foreach (var hit in hits)
             {
-                if (hit.CompareTag("Enemy"))
+                if (hit.CompareTag("Enemy") && CanTarget(hit))
                 {
                     // Scharfschütze: Bosse > Fernkämpfer > Rest, jeweils der nächste
                     int priority = sniper ? SniperPriority(hit) : 0;

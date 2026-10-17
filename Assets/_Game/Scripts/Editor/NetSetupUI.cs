@@ -35,12 +35,10 @@ namespace ElementalBuddies.EditorTools
             var hud = Object.FindFirstObjectByType<HUDManager>(FindObjectsInactive.Include);
             if (hud == null) { Debug.LogWarning("[NetSetup] kein HUDManager in der Spielszene."); return; }
             if (hud.GoldIcon == null) hud.GoldIcon = LoadSprite("icon_gold") ?? LoadSprite("icon_coin");
-            hud.ChampionPortraits = new[]
-            {
-                LoadSprite("portrait_champion_mage"),
-                LoadSprite("portrait_champion_knight"),
-                LoadSprite("portrait_champion_archer"),
-            };
+            // In der Reihenfolge von ChampionClass (inkl. Berserker) – Name aus TeamHUD.PortraitName
+            hud.ChampionPortraits = new Sprite[GameSession.ChampionCount];
+            for (int i = 0; i < hud.ChampionPortraits.Length; i++)
+                hud.ChampionPortraits[i] = LoadSprite(TeamHUD.PortraitName((ChampionClass)i));
             EditorUtility.SetDirty(hud);
         }
 

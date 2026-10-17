@@ -104,13 +104,22 @@ namespace ElementalBuddies
             if (!Net.IsServer) return;
             if (enemy == null || (GameManager.Instance != null && GameManager.Instance.IsGameOver)) return;
             float bounty = GetKillBounty(enemy.Config, CurrentWaveNumber);
+            // Faktor je Gegner (Beschworene des Beschwörers 0,25 – Anti-Farm)
+            bounty *= enemy.BountyFactor;
             // Elite: × Eigenschaft (Splitterdieb mehr); Elite und Boss × Kopfgeld-Karte
             if (enemy.IsElite) bounty *= EliteInfo.Bounty(enemy.Elite);
             if (enemy.IsElite || enemy.IsBoss) bounty *= CardEffects.EliteBountyFactor;
             // Wellen-Ereignis (Blutmond, Seelensturm)
             if (WaveManager.Instance != null) bounty *= WaveManager.Instance.EventBountyFactor;
-            if (bounty > 0f) ShardPickup.Spawn(enemy.transform.position, bounty, settings);
+            // Spieltest 2026-10-17: nur ganzzahlige Kristalle ≥ 1 spawnen, Nachkomma-Rest sammelt der Pool (ShardDropPool).
+            // Sonst wirkten Drops < 1 (Beschworene, Schwarm, Spätspiel) beim Einsammeln, als zählten sie nicht.
+            float drop = _dropPool.Add(bounty);
+            if (drop > 0f) ShardPickup.Spawn(enemy.transform.position, drop, settings);
         }
+
+        // Nur Server: Rest-Pool der Kill-Drops (wird am Wellenende mit der Rückruf-Gutschrift verbucht)
+        private readonly ShardDropPool _dropPool = new ShardDropPool();
+        public float PendingDropRemainder => _dropPool.Remainder;
 
         // Laufende (bzw. zwischen den Wellen: nächste) Welle, 1-basiert
         private static int CurrentWaveNumber => WaveManager.Instance != null ? WaveManager.Instance.UpcomingWaveNumber : 1;
@@ -171,6 +180,7 @@ namespace ElementalBuddies
         }
 
         // Wellenende: alle noch liegenden Seelensplitter fliegen zur nächsten lebenden Spielfigur (Server entscheidet).
+        // Dazu kommt der Rest-Pool der Kill-Drops (ShardDropPool, Spieltest 2026-10-17).
         // #461 (2026-10-16): Ihr Wert wird hier sofort gutgeschrieben – nach Wellenbonus und Zinsen (WaveManager.EndWave),
         // vor dem Anteil der Kartenwahl (UpgradeManager.PresentUpgrades). So ist nach dem Wellenende alles ausgebbar;
         // der Betrag pro Welle bleibt gleich, nur der Zeitpunkt ist früher. Der Einflug ist danach reine Optik.
@@ -181,6 +191,8 @@ namespace ElementalBuddies
             if (!Net.IsServer) return;
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
             float credit = ShardPickup.RecallAll();
+            // Rest-Pool der Kill-Drops (Anteile < 1, die noch keinen Kristall ergeben haben) mitverbuchen – geht nicht verloren
+            credit += _dropPool.TakeRemainder();
             LastRecallCredit = credit;
             if (credit > 0f)
             {

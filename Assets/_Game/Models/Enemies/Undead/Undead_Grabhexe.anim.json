@@ -1,0 +1,160 @@
+{
+ "model": "Undead_Grabhexe",
+ "rig": "Generic",
+ "fps": 30,
+ "visualScale": 1.0,
+ "moveSpeedModel": 3.0,
+ "deathDuration": 1.5,
+ "clips": [
+  {
+   "name": "Hag_Idle",
+   "role": "idle",
+   "loop": true,
+   "frames": 48,
+   "hit": -1.0
+  },
+  {
+   "name": "Hag_Walk",
+   "role": "move",
+   "loop": true,
+   "frames": 14,
+   "hit": -1.0
+  },
+  {
+   "name": "Hag_Channel",
+   "role": "channel",
+   "loop": true,
+   "frames": 48,
+   "hit": -1.0
+  },
+  {
+   "name": "Hag_Cast",
+   "role": "cast",
+   "loop": false,
+   "frames": 51,
+   "hit": 1.5,
+   "release": 1.5
+  },
+  {
+   "name": "Hag_Die",
+   "role": "die",
+   "loop": false,
+   "frames": 40,
+   "hit": -1.0
+  }
+ ],
+ "triggers": [
+  {
+   "trigger": "Cast",
+   "clip": "Hag_Cast"
+  },
+  {
+   "trigger": "Channel",
+   "clip": "Hag_Channel"
+  }
+ ],
+ "tris": 2090,
+ "bones": [
+  "Root",
+  "Hips",
+  "Spine",
+  "Chest",
+  "UpperChest",
+  "Neck",
+  "Head",
+  "Jaw",
+  "LeftShoulder",
+  "LeftUpperArm",
+  "LeftLowerArm",
+  "LeftHand",
+  "Lantern",
+  "RightShoulder",
+  "RightUpperArm",
+  "RightLowerArm",
+  "RightHand",
+  "LeftUpperLeg",
+  "LeftLowerLeg",
+  "LeftFoot",
+  "LeftToes",
+  "RightUpperLeg",
+  "RightLowerLeg",
+  "RightFoot",
+  "RightToes"
+ ],
+ "materials": [
+  {
+   "name": "Hag_Shroud",
+   "hex": "#d2cbb2",
+   "emission": 0.0
+  },
+  {
+   "name": "Hag_ShroudDark",
+   "hex": "#8f8770",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Rope",
+   "hex": "#b29464",
+   "emission": 0.0
+  },
+  {
+   "name": "Hag_Skin",
+   "hex": "#7d9273",
+   "emission": 0.0
+  },
+  {
+   "name": "Hag_SkinDark",
+   "hex": "#56664f",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Socket",
+   "hex": "#1b1a1e",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Eye",
+   "hex": "#72ff7e",
+   "emission": 3.0
+  },
+  {
+   "name": "Hag_Mouth",
+   "hex": "#2a1a1c",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Bone",
+   "hex": "#ddd3b6",
+   "emission": 0.0
+  },
+  {
+   "name": "Hag_Hair",
+   "hex": "#d9d8d0",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Claw",
+   "hex": "#2f2622",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_WoodDark",
+   "hex": "#5b3a22",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_IronDark",
+   "hex": "#4c4f59",
+   "emission": 0.0
+  },
+  {
+   "name": "Hag_LanternLight",
+   "hex": "#5cff6a",
+   "emission": 3.0
+  }
+ ],
+ "emissive": [
+  "Undead_Eye",
+  "Hag_LanternLight"
+ ]
+}

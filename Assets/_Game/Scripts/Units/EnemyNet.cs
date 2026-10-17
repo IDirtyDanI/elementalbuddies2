@@ -33,6 +33,17 @@ namespace ElementalBuddies
         // Laufgeschwindigkeit für den Animator (Speed/Moving), grob quantisiert geschrieben
         public readonly NetworkVariable<float> MoveSpeed = new NetworkVariable<float>(
             0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Champion-Bedrohungen: Bannschild aktiv (Optik; true → false = Schildbruch)
+        public readonly NetworkVariable<bool> Ward = new NetworkVariable<bool>(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Beschwörer/Bannwirker: Zustand (ThreatBrain.State*) und Bezugspunkt (Ritualplatz bzw. Bann-Zentrum) für die Optik
+        public readonly NetworkVariable<byte> ThreatState = new NetworkVariable<byte>(
+            0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        public readonly NetworkVariable<Vector3> ThreatPoint = new NetworkVariable<Vector3>(
+            Vector3.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Fortschritt (0–255) der Ritual-Uhr des Beschwörers (Fortschrittsring)
+        public readonly NetworkVariable<byte> ThreatProgress = new NetworkVariable<byte>(
+            0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         private EnemyBrain _brain;
         private BossBrain _boss;
@@ -57,6 +68,7 @@ namespace ElementalBuddies
             HP.Value = _brain.CurrentHP;
             MaxHP.Value = _brain.MaxHP;
             Elite.Value = (byte)_brain.Elite;
+            Ward.Value = _brain.IsWarded;
         }
 
         public override void OnNetworkSpawn()
@@ -72,14 +84,22 @@ namespace ElementalBuddies
             if (agent != null) agent.enabled = false;
             _brain.ApplyRemoteHealth(HP.Value, MaxHP.Value);
             _brain.ApplyRemoteElite((EliteAffix)Elite.Value);
+            _brain.ApplyRemoteWard(Ward.Value, false);
             HP.OnValueChanged += HandleHealthChanged;
             MaxHP.OnValueChanged += HandleHealthChanged;
+            Ward.OnValueChanged += HandleWardChanged;
         }
 
         public override void OnNetworkDespawn()
         {
             HP.OnValueChanged -= HandleHealthChanged;
             MaxHP.OnValueChanged -= HandleHealthChanged;
+            Ward.OnValueChanged -= HandleWardChanged;
+        }
+
+        private void HandleWardChanged(bool oldValue, bool newValue)
+        {
+            if (_brain != null) _brain.ApplyRemoteWard(newValue, oldValue && !newValue);
         }
 
         private void HandleHealthChanged(float oldValue, float newValue)
@@ -100,6 +120,26 @@ namespace ElementalBuddies
         {
             if (!IsSpawned || !IsServer || Status.Value == flags) return;
             Status.Value = flags;
+        }
+
+        public void ServerSetWard(bool active)
+        {
+            if (!IsSpawned || !IsServer || Ward.Value == active) return;
+            Ward.Value = active;
+        }
+
+        public void ServerSetThreat(byte state, Vector3 point)
+        {
+            if (!IsSpawned || !IsServer) return;
+            if (ThreatState.Value != state) ThreatState.Value = state;
+            if ((ThreatPoint.Value - point).sqrMagnitude > 0.0001f) ThreatPoint.Value = point;
+        }
+
+        public void ServerSetThreatProgress(float progress01)
+        {
+            if (!IsSpawned || !IsServer) return;
+            byte v = (byte)Mathf.RoundToInt(Mathf.Clamp01(progress01) * 255f);
+            if (ThreatProgress.Value != v) ThreatProgress.Value = v;
         }
 
         public void ServerSetMoveSpeed(float speed)
@@ -136,6 +176,31 @@ namespace ElementalBuddies
         private void AttackTriggerRpc()
         {
             if (_brain != null) _brain.PlayAttackTrigger();
+        }
+
+        // Bannschild hat einen Treffer geschluckt („Immun“-Funkeln; Server drosselt)
+        public void ServerWardImmune()
+        {
+            if (HasRemotes) WardImmuneRpc();
+        }
+
+        [Rpc(SendTo.NotServer)]
+        private void WardImmuneRpc()
+        {
+            if (_brain != null) _brain.PlayWardImmune();
+        }
+
+        // Optik-Ereignis einer Champion-Bedrohung (Beschwörungs-Riss, Bann-Telegraph …) – ThreatBrain.PlayFx
+        public void ServerThreatFx(byte id, Vector3 position)
+        {
+            if (HasRemotes) ThreatFxRpc(id, position);
+        }
+
+        [Rpc(SendTo.NotServer)]
+        private void ThreatFxRpc(byte id, Vector3 position)
+        {
+            var t = GetComponent<ThreatBrain>();
+            if (t != null) t.PlayFx(id, position);
         }
 
         // Beliebiger Animator-Trigger (Boss-Zauber), per Hash

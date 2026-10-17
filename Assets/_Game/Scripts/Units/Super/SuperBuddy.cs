@@ -37,14 +37,15 @@ namespace ElementalBuddies
 
         private static readonly List<EnemyBrain> _densityBuffer = new List<EnemyBrain>();
 
-        // Gegner (im Suchradius) mit den meisten Nachbarn im clusterRadius – wie MagmaBuddy; null = keiner
+        // Anvisierbarer Gegner (im Suchradius) mit den meisten anvisierbaren Nachbarn im clusterRadius – wie MagmaBuddy;
+        // Bannschild-Träger zählen nicht (FindTargets); null = keiner
         protected static EnemyBrain FindDensestEnemy(Vector3 center, float searchRadius, float clusterRadius, out int count)
         {
             count = 0;
-            var candidates = new List<EnemyBrain>(FindEnemies(center, searchRadius));
+            var candidates = new List<EnemyBrain>(FindTargets(center, searchRadius));
             if (candidates.Count == 0) return null;
             _densityBuffer.Clear();
-            _densityBuffer.AddRange(FindEnemies(center, searchRadius + clusterRadius));
+            _densityBuffer.AddRange(FindTargets(center, searchRadius + clusterRadius));
             float r2 = clusterRadius * clusterRadius;
             EnemyBrain best = null;
             int bestCount = -1;

@@ -80,7 +80,7 @@ namespace ElementalBuddies
                 }
                 if (!Net.IsServer) continue; // Festhalten + Schaden nur auf dem Server, Dornen-Optik überall
                 // Festhalten = 100 % Verlangsamung (Angriffe bleiben möglich)
-                enemy.ApplySlow(1f, _spell.RootDuration);
+                using (EnemyBrain.PlayerSource()) enemy.ApplySlow(1f, _spell.RootDuration);
                 var agent = enemy.GetComponent<UnityEngine.AI.NavMeshAgent>();
                 if (agent != null && agent.isOnNavMesh)
                 {

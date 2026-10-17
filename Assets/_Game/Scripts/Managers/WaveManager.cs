@@ -19,6 +19,17 @@ namespace ElementalBuddies
         [Tooltip("0 = jede Welle ab StartWave; n > 0 = nur jede n-te Welle (StartWave, StartWave + n, …), z. B. Bosse.")]
         public int EveryNthWave = 0;
 
+        [Header("Champion-Bedrohungen (Stufen, feste Anzahl)")]
+        [Tooltip("Nicht leer: Anzahl = Zahl der Stufen-Wellen ≤ Welle (z. B. 8, 14, 20 → ab W8 1, ab W14 2, ab W20 3); " +
+                 "BaseCount/PerWave werden dann ignoriert, StartWave gilt weiter.")]
+        public int[] CountSteps;
+        [Tooltip("Anzahl fest: nicht durch Wellen-Rampe, Boss-Eskorte, Ernte-Faktor oder MaxEnemiesPerWave verändern.")]
+        public bool FixedCount;
+        [Tooltip("In Ernte-Wellen (nach einer Boss-Welle) entfällt die Gruppe.")]
+        public bool SkipHarvestWaves;
+        [Tooltip("In Boss-Wellen höchstens so viele (−1 = keine Grenze).")]
+        public int MaxInBossWave = -1;
+
         public int GetCount(int waveNumber) => Config == null ? 0 : CountFor(waveNumber);
 
         // Anzahl ohne Config-Prüfung (Rollen-Gruppen wie der Flieger holen die Config erst aus dem Theme)
@@ -26,6 +37,7 @@ namespace ElementalBuddies
         {
             if (waveNumber < StartWave) return 0;
             if (EveryNthWave > 0 && (waveNumber - StartWave) % EveryNthWave != 0) return 0;
+            if (CountSteps != null && CountSteps.Length > 0) return ChampionThreatRules.StepCount(CountSteps, waveNumber);
             return Mathf.Max(0, BaseCount + Mathf.FloorToInt(PerWave * (waveNumber - StartWave)));
         }
     }
@@ -47,11 +59,31 @@ namespace ElementalBuddies
         [Tooltip("Zusätzlicher Puffer für Händler-Wellen: Die Stände liegen vor der Stadtmauer, der Weg vom Nexus ist deutlich länger.")]
         public float MerchantWaveExtraTime = 20f;
 
+        [Header("Verstärkung in Einnahme-Wellen")]
+        [Tooltip("Die Lücke bis zur Einnahme-Dauer füllen gemischte Verstärkungs-Stöße: Anzahl = Lücke × Dichte der Hauptphase × diesen Faktor (mind. so viele wie die frühere Läufer-Füllung).")]
+        public float ReinforceDensity = 0.6f;
+        [Tooltip("Deckel der Verstärkung: höchstens dieser Anteil der Normalgegner der Hauptphase (die frühere Läufer-Füllung bleibt Untergrenze).")]
+        public float ReinforceMaxShare = 0.75f;
+        [Tooltip("Ziel-Abstand der Verstärkungs-Stöße (s); Anzahl Stöße = max(2, Lücke / Abstand).")]
+        public float ReinforcePulseInterval = 7f;
+        [Tooltip("Crescendo: Die Stoßgröße steigt linear, der letzte Stoß ist ≈ (1 + Faktor) × der erste. 0 = gleich große Stöße.")]
+        public float ReinforceCrescendo = 1f;
+        [Tooltip("Abstand der Gegner innerhalb eines Stoßes (s), Obergrenze – große Stöße rücken enger zusammen (mind. 0,08 s).")]
+        public float ReinforcePackSpacing = 0.3f;
+        [Tooltip("Meldung beim letzten Verstärkungs-Stoß (an alle Spieler). Leer = keine Meldung.")]
+        public string ReinforceFinalToast = "Letzter Ansturm!";
+
         [Header("Gemischte Wellen")]
         [Tooltip("Zusatzgruppen (z. B. Schwarm, Ritter), die ab StartWave an jede Welle angehängt werden.")]
         public List<ExtraEnemyGroup> ExtraGroups = new List<ExtraEnemyGroup>();
         [Tooltip("Alle Gruppen einer Welle spawnen parallel; Gruppe i startet i × diesen Versatz (s) nach dem StartDelay.")]
         public float GroupStartOffset = 2f;
+
+        [Header("Schwarm in Rudeln")]
+        [Tooltip("Gruppen mit (skaliertem) Spawn-Intervall unter diesem Wert (s) und mehr als SwarmPackSize Gegnern spawnen in Rudeln, verteilt über die Hauptphase.")]
+        public float PackIntervalThreshold = 0.5f;
+        [Tooltip("Gegner pro Rudel (das letzte Rudel nimmt den Rest). 0 = keine Rudel.")]
+        public int SwarmPackSize = 6;
 
         [Header("Flieger (Walddorf-Plan, Rolle Flyer)")]
         [Tooltip("Zusatzgruppe der Rolle Flyer, hinter den ExtraGroups angehängt. Config leer = Flieger des Map-Themes " +
@@ -115,8 +147,14 @@ namespace ElementalBuddies
         public int MaxElitesPerWave = 8;
         [Tooltip("Aura-Partikel unter einer Elite (wird pro Eigenschaft eingefärbt).")]
         public GameObject EliteAuraPrefab;
-        [Tooltip("Symbole der Eigenschaften in EliteAffix-Reihenfolge ohne None (Feuerfest, Frostgepanzert, Flink, Schildträger, Splitterdieb).")]
+        [Tooltip("Symbole der Eigenschaften in EliteAffix-Reihenfolge ohne None (Feuerfest, Frostgepanzert, Flink, Schildträger, Splitterdieb, Ramme, Gebannt).")]
         public Sprite[] EliteIcons;
+        [Tooltip("Elite „Gebannt“ (Bannschild, nur Champion-Schaden) ab dieser Welle möglich.")]
+        public int WardedEliteFromWave = 14;
+        [Tooltip("Gewicht: Anteil der geplanten Eliten, die „Gebannt“ werden (eigener, deterministischer Wurf je Elite).")]
+        [Range(0f, 1f)] public float WardedEliteChance = 0.25f;
+        [Tooltip("Höchstens so viele „Gebannt“-Eliten pro Welle.")]
+        public int MaxWardedPerWave = 2;
 
         [Header("Wellen-Ereignisse (Plan Fesselung C5)")]
         [Tooltip("Erstes Ereignis frühestens in dieser Welle; danach alle EventEvery Wellen (Boss-/Ernte-Wellen werden übersprungen).")]
@@ -231,10 +269,13 @@ namespace ElementalBuddies
             return w * ramp * ramp * LateHpFactor(wave) * (Difficulty != null ? Difficulty.BossHpMultiplier : 1f) * PlayerFactor(BossHpPerExtraPlayer);
         }
 
-        // HP-Multiplikator für einen Gegnertyp (Boss-Zweig über Config.IsBoss)
+        // HP-Multiplikator für einen Gegnertyp (Boss-Zweig über Config.IsBoss). Champion-Bedrohungen (Beschwörer,
+        // Bannwirker) ohne Spät-Rampe – nur der Champion trifft sie, er wächst nicht mit den Karten (Balancing-Modell P4)
         public float HpMultiplierFor(EnemyConfigSO config, int wave)
         {
-            return config != null && config.IsBoss ? BossHpMultiplier(wave) * SiegeLevels.BossHpFactor : HpMultiplier(wave);
+            if (config != null && config.IsBoss) return BossHpMultiplier(wave) * SiegeLevels.BossHpFactor;
+            if (config != null && config.IsChampionThreat) return HpMultiplier(wave) / Mathf.Max(0.01f, LateHpFactor(wave));
+            return HpMultiplier(wave);
         }
 
         // Gegnerschaden-Multiplikator inkl. Schwierigkeit
@@ -329,9 +370,9 @@ namespace ElementalBuddies
         private bool _spawnPhaseStarted;
         private float _nextAliveCheck;
 
-        // Schrein-Verlängerung: startet erst, wenn die übrigen Gruppen durch sind (Versatz relativ zum StartDelay)
-        private EnemySpawnInfo _shrineExtension;
-        private float _shrineExtensionDelay;
+        // Verstärkung der Einnahme-Welle: startet erst, wenn die Hauptphase durch ist (Versatz relativ zum StartDelay)
+        private WaveReinforcement.Plan<EnemyConfigSO> _reinforcement;
+        private float _reinforcementDelay;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
@@ -410,8 +451,10 @@ namespace ElementalBuddies
         public void DevKillAllEnemies()
         {
             if (!Net.IsServer) return;
-            foreach (var e in FindObjectsByType<EnemyBrain>(FindObjectsSortMode.None))
-                if (e != null) e.TakeDamage(999999f);
+            // als Champion-Treffer – sonst schluckt der Bannschild (Beschwörer, Bannwirker, „Gebannt“) den Dev-Kill
+            using (EnemyBrain.PlayerSource())
+                foreach (var e in FindObjectsByType<EnemyBrain>(FindObjectsSortMode.None))
+                    if (e != null) e.TakeDamage(999999f);
         }
 #endif
 
@@ -628,6 +671,35 @@ namespace ElementalBuddies
             return copy;
         }
 
+        // Boss-Welle ohne Cache und ohne Rückgriff auf AddExtraGroups (für Gruppen-Flags in AddExtraGroups selbst):
+        // Basiswelle oder eine Boss-Zusatzgruppe
+        private bool HasBossGroupRaw(int waveNumber)
+        {
+            if (Waves == null || Waves.Count == 0 || waveNumber < 1) return false;
+            var wave = waveNumber <= Waves.Count ? Waves[waveNumber - 1] : Waves[Waves.Count - 1];
+            if (wave != null && wave.EnemiesToSpawn != null)
+                foreach (var g in wave.EnemiesToSpawn)
+                    if (g != null && g.Count > 0 && g.EnemyType != null && g.EnemyType.IsBoss) return true;
+            if (ExtraGroups != null)
+                foreach (var e in ExtraGroups)
+                    if (e != null && e.Config != null && e.Config.IsBoss && e.GetCount(waveNumber) > 0) return true;
+            return false;
+        }
+
+        // Anzahl einer Zusatzgruppe in dieser Welle inkl. Ernte-/Boss-Flags (Champion-Bedrohungen)
+        private int ExtraGroupCount(ExtraEnemyGroup extra, int waveNumber)
+        {
+            int count = extra.GetCount(waveNumber);
+            if (count <= 0) return 0;
+            if (extra.SkipHarvestWaves || extra.MaxInBossWave >= 0)
+            {
+                bool boss = HasBossGroupRaw(waveNumber);
+                if (extra.SkipHarvestWaves && !boss && HarvestAfterBoss && waveNumber > 1 && HasBossGroupRaw(waveNumber - 1)) return 0;
+                if (extra.MaxInBossWave >= 0 && boss) count = Mathf.Min(count, extra.MaxInBossWave);
+            }
+            return count;
+        }
+
         // Hängt alle Zusatzgruppen mit StartWave <= waveNumber an (auf einer Kopie), danach die Flieger-Gruppe
         private WaveConfigSO AddExtraGroups(WaveConfigSO wave, int waveNumber)
         {
@@ -636,10 +708,10 @@ namespace ElementalBuddies
                 foreach (var extra in ExtraGroups)
                 {
                     if (extra == null) continue;
-                    int count = extra.GetCount(waveNumber);
+                    int count = ExtraGroupCount(extra, waveNumber);
                     if (count <= 0) continue;
                     if (copy == null) copy = CopyWave(wave);
-                    copy.EnemiesToSpawn.Add(new EnemySpawnInfo { EnemyType = extra.Config, Count = count, SpawnInterval = Mathf.Max(0.05f, extra.SpawnInterval) });
+                    copy.EnemiesToSpawn.Add(new EnemySpawnInfo { EnemyType = extra.Config, Count = count, SpawnInterval = Mathf.Max(0.05f, extra.SpawnInterval), FixedCount = extra.FixedCount });
                 }
             int flyers = FlyerGroup != null ? FlyerGroup.CountFor(waveNumber) : 0;
             if (flyers > 0)
@@ -684,9 +756,10 @@ namespace ElementalBuddies
             {
                 if (g == null) continue;
                 // Theme-Auflösung: gleiche Rolle → gleiche Werte (ThemeParityTests), Anzahlen/Rampe bleiben gleich
-                var copy = new EnemySpawnInfo { EnemyType = ResolveConfig(g.EnemyType), Count = g.Count, SpawnInterval = g.SpawnInterval };
+                var copy = new EnemySpawnInfo { EnemyType = ResolveConfig(g.EnemyType), Count = g.Count, SpawnInterval = g.SpawnInterval, FixedCount = g.FixedCount };
                 bool boss = g.EnemyType != null && g.EnemyType.IsBoss;
-                if (!boss && g.Count > 0)
+                // Feste Gruppen (Beschwörer, Bannwirker): Anzahl und Intervall wie eingetragen, zählen nicht zum Deckel
+                if (!boss && g.Count > 0 && !g.FixedCount)
                 {
                     copy.Count = Mathf.Max(1, Mathf.CeilToInt(g.Count * m - 1e-4f));
                     copy.SpawnInterval = Mathf.Max(0.05f, g.SpawnInterval * f);
@@ -699,7 +772,7 @@ namespace ElementalBuddies
             {
                 float s = (float)MaxEnemiesPerWave / normal;
                 foreach (var g in scaled.EnemiesToSpawn)
-                    if (g.Count > 0 && (g.EnemyType == null || !g.EnemyType.IsBoss))
+                    if (g.Count > 0 && !g.FixedCount && (g.EnemyType == null || !g.EnemyType.IsBoss))
                         g.Count = Mathf.Max(1, Mathf.FloorToInt(g.Count * s));
             }
             return scaled;
@@ -719,27 +792,60 @@ namespace ElementalBuddies
         // Startversatz einer Gruppe relativ zum StartDelay (Gruppen laufen parallel)
         private float GetGroupDelay(int index, EnemySpawnInfo group)
         {
-            if (group != null && group == _shrineExtension) return _shrineExtensionDelay;
             return index * Mathf.Max(0f, GroupStartOffset);
         }
 
-        // Ende der Spawn-Phase relativ zum StartDelay: die am längsten laufende Gruppe
+        // Gruppe spawnt in Rudeln (Schwarm): kurzes Intervall, mehr als ein Rudel; nie Bosse/Flieger (Flieger-Deckel)
+        private bool UsesPacks(EnemySpawnInfo g)
+        {
+            if (g == null || g.Count <= 0 || g.EnemyType == null) return false;
+            if (g.EnemyType.IsBoss || g.EnemyType.Role == EnemyRole.Flyer) return false;
+            return WaveReinforcement.UsesPacks(g.SpawnInterval, g.Count, PackIntervalThreshold, SwarmPackSize);
+        }
+
+        // Rudel-Zeitplan der Gruppe index (null = spawnt am Stück): Rudel gleichmäßig vom Gruppen-Start bis zum Ende
+        // der übrigen Nicht-Rudel-Gruppen verteilt (Wellen-Dichte-Plan B)
+        private List<WaveReinforcement.Pack> GetPacks(WaveConfigSO wave, int index)
+        {
+            var g = wave.EnemiesToSpawn[index];
+            if (!UsesPacks(g)) return null;
+            float othersEnd = float.NegativeInfinity;
+            for (int i = 0; i < wave.EnemiesToSpawn.Count; i++)
+            {
+                var o = wave.EnemiesToSpawn[i];
+                if (i == index || o == null || o.Count <= 0 || UsesPacks(o) || IsThreatGroup(o)) continue;
+                othersEnd = Mathf.Max(othersEnd, GetGroupDelay(i, o) + (o.Count - 1) * o.SpawnInterval);
+            }
+            return WaveReinforcement.PackSchedule(GetGroupDelay(index, g), g.Count, g.SpawnInterval, SwarmPackSize, othersEnd);
+        }
+
+        // Feste Bedrohungsgruppen (FixedCount bzw. Champion-Bedrohung: Beschwörer, Bannwirker) bestimmen die Länge der
+        // Hauptphase nicht mit (Rudel-Ende, Spawn-Dauer, Beginn der Einnahme-Verstärkung)
+        private static bool IsThreatGroup(EnemySpawnInfo g) =>
+            g != null && (g.FixedCount || (g.EnemyType != null && g.EnemyType.IsChampionThreat));
+
+        // Ende der Spawn-Phase relativ zum StartDelay: die am längsten laufende Gruppe (Rudel: Ende des letzten Rudels);
+        // ohne feste Bedrohungsgruppen (IsThreatGroup)
         private float GetSpawnDuration(WaveConfigSO wave)
         {
             float longest = 0f;
             for (int i = 0; i < wave.EnemiesToSpawn.Count; i++)
             {
                 var g = wave.EnemiesToSpawn[i];
-                if (g == null || g.Count <= 0) continue;
-                longest = Mathf.Max(longest, GetGroupDelay(i, g) + g.Count * g.SpawnInterval);
+                if (g == null || g.Count <= 0 || IsThreatGroup(g)) continue;
+                var packs = GetPacks(wave, i);
+                float end = packs != null && packs.Count > 0
+                    ? packs[packs.Count - 1].Start + packs[packs.Count - 1].Count * g.SpawnInterval
+                    : GetGroupDelay(i, g) + g.Count * g.SpawnInterval;
+                longest = Mathf.Max(longest, end);
             }
             return longest;
         }
 
-        // Schrein-Welle: so viele Gegner anhängen, dass die Spawn-Phase lang genug für die Einnahme ist.
-        // Vorlage ist die erste Gruppe (Basis-Läufer); die Verlängerung startet, wenn die längste Gruppe fertig ist.
-        // Arbeitet auf einer Kopie, die WaveConfig-Assets bleiben unverändert.
-        private WaveConfigSO ExtendForShrine(WaveConfigSO wave)
+        // Einnahme-Welle (Schrein/Händler): Die Lücke bis zur Einnahme-Dauer füllen Verstärkungs-Stöße (WaveReinforcement):
+        // gemischt wie die Normalgruppen der Welle (ohne Bosse/Flieger), anwachsend bis zum „Letzten Ansturm“.
+        // Die Stöße starten, wenn die Hauptphase durch ist; EnemiesRemaining wird vorab um die Gesamtzahl erhöht.
+        private void ExtendForShrine(WaveConfigSO wave)
         {
             // Längste Ziel-Dauer dieser Welle: erwachter Schrein und/oder geöffneter Händler (Stand vor der Mauer → längerer Weg)
             float target = 0f;
@@ -759,29 +865,47 @@ namespace ElementalBuddies
                 target = merchantTarget;
                 label = merchant.DisplayName;
             }
-            if (label == null || wave.EnemiesToSpawn == null || wave.EnemiesToSpawn.Count == 0) return wave;
+            if (label == null || wave.EnemiesToSpawn == null || wave.EnemiesToSpawn.Count == 0) return;
 
             float groupsDuration = GetSpawnDuration(wave);
             float spawnTime = wave.StartDelay + groupsDuration;
+            float gap = target - spawnTime;
+            if (gap <= 0f) return;
 
+            // Untergrenze: frühere Läufer-Füllung (erste Gruppe im Läufer-Intervall)
             EnemySpawnInfo first = wave.EnemiesToSpawn[0];
-            float interval = Mathf.Max(0.2f, first.SpawnInterval);
-            int extra = Mathf.CeilToInt((target - spawnTime) / interval);
-            if (extra <= 0) return wave;
+            float legacyInterval = Mathf.Max(0.2f, first != null ? first.SpawnInterval : 1f);
 
-            var copy = CopyWave(wave);
-            _shrineExtension = new EnemySpawnInfo { EnemyType = first.EnemyType, Count = extra, SpawnInterval = interval };
-            _shrineExtensionDelay = groupsDuration;
-            copy.EnemiesToSpawn.Add(_shrineExtension);
-            EnemiesRemaining += extra;
-            Debug.Log($"WaveManager: Einnahme-Welle ({label}) – +{extra} Gegner, Spawn-Phase {spawnTime:0}s → {target:0}s.");
-            return copy;
+            var types = new List<EnemyConfigSO>();
+            var counts = new List<int>();
+            foreach (var g in wave.EnemiesToSpawn)
+            {
+                types.Add(g != null ? g.EnemyType : null);
+                counts.Add(g != null ? g.Count : 0);
+            }
+            // ohne Bosse, Flieger und Champion-Bedrohungen (Beschwörer/Bannwirker: feste Anzahl, nie in Stößen)
+            var groups = WaveReinforcement.NormalGroups(types, counts, c => c.IsBoss || c.Role == EnemyRole.Flyer || c.IsChampionThreat, out int mainNormal);
+            var settings = new WaveReinforcement.Settings
+            {
+                Density = ReinforceDensity,
+                MaxShare = ReinforceMaxShare,
+                PulseInterval = ReinforcePulseInterval,
+                Crescendo = ReinforceCrescendo,
+                PackSpacing = ReinforcePackSpacing,
+            };
+            var plan = WaveReinforcement.Build(groups, groupsDuration, mainNormal, gap, legacyInterval, settings);
+            if (plan.Total <= 0) return;
+
+            _reinforcement = plan;
+            _reinforcementDelay = groupsDuration;
+            EnemiesRemaining += plan.Total;
+            Debug.Log($"WaveManager: Einnahme-Welle ({label}) – +{plan.Total} Gegner in {plan.Pulses.Count} Stößen, Spawn-Phase {spawnTime:0}s → {target:0}s.");
         }
 
         private IEnumerator SpawnWaveRoutine(WaveConfigSO wave)
         {
             IsWaveActive = true;
-            _shrineExtension = null;
+            _reinforcement = null;
             _spawnPhaseStarted = false;
             _spawnRoutinesRunning = 0;
 
@@ -794,7 +918,7 @@ namespace ElementalBuddies
             if (NetGame.Ready) NetGame.Instance.ServerWaveStarted(CurrentWaveIndex, EnemiesRemaining);
             OnWaveStart?.Invoke();
             SpawnEventEnemies();
-            wave = ExtendForShrine(wave); // Schrein erwacht erst in OnWaveStart
+            ExtendForShrine(wave); // Schrein erwacht erst in OnWaveStart
             if (GameManager.Instance != null) GameManager.Instance.StartCombat();
             Debug.Log($"WaveManager: Wave {CurrentWaveIndex + 1} Started!");
 
@@ -807,7 +931,15 @@ namespace ElementalBuddies
                 var group = wave.EnemiesToSpawn[g];
                 if (group == null || group.Count <= 0) continue;
                 _spawnRoutinesRunning++;
-                StartCoroutine(SpawnGroupRoutine(group, GetGroupDelay(g, group)));
+                var packs = GetPacks(wave, g);
+                if (packs != null) StartCoroutine(SpawnPackedGroupRoutine(group, packs));
+                else StartCoroutine(SpawnGroupRoutine(group, GetGroupDelay(g, group)));
+            }
+            // Verstärkung der Einnahme-Welle nach der Hauptphase (eigene Routine, zählt fürs Sicherheitsnetz mit)
+            if (_reinforcement != null && _reinforcement.Pulses.Count > 0)
+            {
+                _spawnRoutinesRunning++;
+                StartCoroutine(SpawnReinforcementRoutine(_reinforcement, _reinforcementDelay));
             }
             _spawnPhaseStarted = true;
 
@@ -833,6 +965,66 @@ namespace ElementalBuddies
                 if (i < group.Count - 1) yield return new WaitForSeconds(group.SpawnInterval);
             }
             _spawnRoutinesRunning--;
+        }
+
+        // Schwarm in Rudeln: Rudel zu ihren Startzeiten (relativ zum StartDelay), im Rudel im Gruppen-Intervall.
+        // Zeitpunkte gegen die absolute Spielzeit – Frame-Verspätungen der Waits summieren sich so nicht auf.
+        private IEnumerator SpawnPackedGroupRoutine(EnemySpawnInfo group, List<WaveReinforcement.Pack> packs)
+        {
+            float t0 = Time.time;
+            for (int p = 0; p < packs.Count; p++)
+            {
+                for (int i = 0; i < packs[p].Count; i++)
+                {
+                    float at = t0 + packs[p].Start + i * group.SpawnInterval;
+                    while (Time.time < at) yield return null;
+                    if (IsGameOver) yield break;
+                    SpawnEnemy(group.EnemyType);
+                }
+            }
+            // Kein Warten nach dem letzten Gegner (s. SpawnGroupRoutine)
+            _spawnRoutinesRunning--;
+        }
+
+        // Verstärkungs-Stöße der Einnahme-Welle: delay = Ende der Hauptphase (relativ zum StartDelay), Stoß-Startzeiten
+        // relativ dazu, gegen die absolute Spielzeit. Keine Eliten (der Elite-Plan gilt nur für die Hauptphase).
+        // Beim letzten Stoß Meldung an alle.
+        private IEnumerator SpawnReinforcementRoutine(WaveReinforcement.Plan<EnemyConfigSO> plan, float delay)
+        {
+            float t0 = Time.time + delay;
+            for (int k = 0; k < plan.Pulses.Count; k++)
+            {
+                var pulse = plan.Pulses[k];
+                for (int i = 0; i < pulse.Enemies.Count; i++)
+                {
+                    float at = t0 + pulse.Start + i * pulse.Spacing;
+                    while (Time.time < at) yield return null;
+                    if (IsGameOver) yield break;
+                    if (i == 0 && k == plan.Pulses.Count - 1 && plan.Pulses.Count > 1) AnnounceFinalPulse();
+                    SpawnEnemy(pulse.Enemies[i], false);
+                }
+            }
+            // Kein Warten nach dem letzten Gegner (s. SpawnGroupRoutine)
+            _spawnRoutinesRunning--;
+        }
+
+        // Champion-Bedrohung erstmals in diesem Spiel erschienen → Meldung an alle Spieler (je Rolle einmal)
+        private readonly HashSet<EnemyRole> _announcedThreats = new HashSet<EnemyRole>();
+        public void AnnounceThreat(EnemyBrain enemy)
+        {
+            if (!Net.IsServer || enemy == null || enemy.Config == null || !_announcedThreats.Add(enemy.Config.Role)) return;
+            string msg = $"{enemy.DisplayName}: {enemy.Config.PreviewHint}";
+            // Netz-Toast ist auf 128 Byte begrenzt (FixedString128Bytes)
+            if (string.IsNullOrEmpty(enemy.Config.PreviewHint) || System.Text.Encoding.UTF8.GetByteCount(msg) > 120)
+                msg = $"{enemy.DisplayName} ist erschienen!";
+            foreach (ulong id in UpgradeManager.PlayerIds()) NetGame.SendToast(id, msg);
+        }
+
+        // „Letzter Ansturm!“ – Server → alle Spieler über NetGame.SendToast (offline/Solo: lokal)
+        private void AnnounceFinalPulse()
+        {
+            if (string.IsNullOrEmpty(ReinforceFinalToast)) return;
+            foreach (ulong id in UpgradeManager.PlayerIds()) NetGame.SendToast(id, ReinforceFinalToast);
         }
 
         void Update()
@@ -862,7 +1054,8 @@ namespace ElementalBuddies
             return TryGetSpawnPose(out pos, out _);
         }
 
-        private void SpawnEnemy(EnemyConfigSO config)
+        // allowElite = false: kein Elite-Wurf und der Elite-Zähler der Hauptphase bleibt unverändert (Verstärkung)
+        private void SpawnEnemy(EnemyConfigSO config, bool allowElite = true)
         {
             config = ResolveConfig(config);
             if (!TryGetSpawnPose(out Vector3 pos, out Quaternion rot))
@@ -875,7 +1068,7 @@ namespace ElementalBuddies
 
             if (config != null && config.Prefab != null)
             {
-                InstantiateEnemy(config, pos, rot, HpMultiplierFor(config, UpcomingWaveNumber), NextEliteFor(config));
+                InstantiateEnemy(config, pos, rot, HpMultiplierFor(config, UpcomingWaveNumber), allowElite ? NextEliteFor(config) : EliteAffix.None);
             }
             else
             {
@@ -905,6 +1098,9 @@ namespace ElementalBuddies
                 brain.Initialize(hpMultiplier, DamageMultiplier(UpcomingWaveNumber));
                 brain.SetSpeedFactor(SiegeLevels.EnemySpeedFactor * (ActiveEvent == WaveEvent.BloodMoon ? BloodMoonSpeed : 1f));
                 if (elite != EliteAffix.None) brain.MakeElite(elite); // vor dem Netz-Spawn (HP, Eigenschaft)
+                // Dauerhafter Bannschild (Beschwörer/Bannwirker) ebenfalls vor dem Netz-Spawn: erster Frame und Clients
+                // haben ihn sofort (EnemyNet schreibt Ward beim Spawn); EnemyBrain.Start bleibt als Rückfall
+                if (config.WardShield && !brain.IsWarded) brain.SetWard(true, 0f);
             }
             // HP-NetworkVariables setzt EnemyNet.OnNetworkSpawn (vor dem Spawn geschrieben warnt Netcode)
             var no = go.GetComponent<Unity.Netcode.NetworkObject>();
@@ -993,7 +1189,7 @@ namespace ElementalBuddies
             if (wave == null || waveNumber < from || IsHarvestWave(waveNumber)) return plan;
             int normal = 0;
             foreach (var g in wave.EnemiesToSpawn)
-                if (g != null && g.EnemyType != null && !g.EnemyType.IsBoss) normal += Mathf.Max(0, g.Count);
+                if (IsEliteCandidate(g)) normal += Mathf.Max(0, g.Count);
             float share = Mathf.Min(EliteShareMax, EliteShareStart + EliteSharePerWave * Mathf.Max(0, waveNumber - EliteFromWave))
                           * SiegeLevels.EliteShareFactor;
             var rng = new System.Random(waveNumber * 7919 + 101);
@@ -1008,8 +1204,25 @@ namespace ElementalBuddies
                 if (a == EliteAffix.ShardThief) thief = true;
                 plan.Add(a);
             }
+            // „Gebannt“ (Champion-Bedrohungen): eigener Wurf je Elite, damit der bisherige Plan der übrigen Eigenschaften
+            // unverändert bleibt (gleicher Seed)
+            if (waveNumber >= WardedEliteFromWave && WardedEliteChance > 0f && MaxWardedPerWave > 0)
+            {
+                var wardRng = new System.Random(waveNumber * 104729 + 7);
+                int warded = 0;
+                for (int i = 0; i < plan.Count && warded < MaxWardedPerWave; i++)
+                {
+                    if (wardRng.NextDouble() >= WardedEliteChance) continue;
+                    plan[i] = EliteAffix.Warded;
+                    warded++;
+                }
+            }
             return plan;
         }
+
+        // Normalgegner, der Elite werden kann (keine Bosse, keine Champion-Bedrohungen)
+        private static bool IsEliteCandidate(EnemySpawnInfo g) =>
+            g != null && g.EnemyType != null && !g.EnemyType.IsBoss && !g.EnemyType.IsChampionThreat;
 
         // Server, Wellenstart: Plan merken; Eliten werden gleichmäßig über die Normal-Spawns verteilt
         private void PrepareElites(WaveConfigSO wave, int waveNumber)
@@ -1020,12 +1233,12 @@ namespace ElementalBuddies
             _normalSpawned = 0;
             _eliteNormalTotal = 0;
             foreach (var g in wave.EnemiesToSpawn)
-                if (g != null && g.EnemyType != null && !g.EnemyType.IsBoss) _eliteNormalTotal += Mathf.Max(0, g.Count);
+                if (IsEliteCandidate(g)) _eliteNormalTotal += Mathf.Max(0, g.Count);
         }
 
         private EliteAffix NextEliteFor(EnemyConfigSO config)
         {
-            if (config == null || config.IsBoss || _eliteNext >= _elitePlan.Count) return EliteAffix.None;
+            if (config == null || config.IsBoss || config.IsChampionThreat || _eliteNext >= _elitePlan.Count) return EliteAffix.None;
             int k = Mathf.Max(1, _eliteNormalTotal / Mathf.Max(1, _elitePlan.Count));
             int i = _normalSpawned++;
             if (i % k != k / 2) return EliteAffix.None;

@@ -68,6 +68,8 @@ namespace ElementalBuddies
         public Color BossColor = new Color(0.62f, 0.03f, 0.06f);
         public Color RamColor = new Color(1f, 0.58f, 0.15f);
         public Color PortalColor = new Color(0.75f, 0.35f, 1f);
+        [Tooltip("Champion-Bedrohungen: Beschwörer = Raute, Bannwirker = Ring, Farbe = Bannschild des Themes (pulsiert).")]
+        public float ThreatSize = 15f;
         public Color ClosedColor = new Color(0.55f, 0.48f, 0.4f, 0.75f);
 
         // ---------------- Zustand ----------------
@@ -398,7 +400,14 @@ namespace ElementalBuddies
             foreach (var e in EnemyBrain.All)
             {
                 if (e == null || e.IsDead || !e.isActiveAndEnabled) continue;
-                if (e.Elite == EliteAffix.Ram)
+                var role = e.Config != null ? e.Config.Role : EnemyRole.Runner;
+                if (role == EnemyRole.Summoner || role == EnemyRole.Hexer)
+                {
+                    // Champion-Bedrohung: eigene Form in Schildfarbe, leicht pulsierend (über den Normalgegnern)
+                    float pulse = 1f + 0.12f * Mathf.Sin(Time.unscaledTime * 5f);
+                    Place(Next(_bosses, role == EnemyRole.Summoner ? _diamond : _ring), e.transform.position, ThreatSize * pulse, ThreatVisuals.WardColor);
+                }
+                else if (e.Elite == EliteAffix.Ram)
                     Place(Next(_bosses, _square), e.transform.position, RamSize, RamColor);
                 else if (e.IsBoss)
                     Place(Next(_bosses, _dot), e.transform.position, BossSize, BossColor);

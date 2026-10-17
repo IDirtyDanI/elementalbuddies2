@@ -7388,7 +7388,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 7e429fdaa06d14a05b458aa7b9364f41, type: 3}
   - {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
   - {fileID: 21300000, guid: 21a989a888e3f462691b04f407000f2d, type: 3}
-  - {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
+  - {fileID: 21300000, guid: e2dd2762c0c06406b8f7e1a5feacec6a, type: 3}
   ManaIcon: {fileID: 0}
   WaveTextMaxWidth: 380
   WaveTextRightInset: 40

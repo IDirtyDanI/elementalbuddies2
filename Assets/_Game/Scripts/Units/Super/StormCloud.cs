@@ -23,6 +23,7 @@ namespace ElementalBuddies
         public Vector3 GroundPosition => _ground;
 
         private readonly List<EnemyBrain> _under = new List<EnemyBrain>();
+        private readonly List<EnemyBrain> _strikeable = new List<EnemyBrain>();
         private const float FadeTime = 0.5f;
 
         public static StormCloud Spawn(StormLordBuddy owner, Vector3 targetPos)
@@ -99,7 +100,10 @@ namespace ElementalBuddies
             if (_strikeTimer >= _strikeInterval && _under.Count > 0)
             {
                 _strikeTimer -= _strikeInterval;
-                Strike(_under[Random.Range(0, _under.Count)]);
+                // Blitz nur auf anvisierbare Gegner (Bannschild-Träger auslassen); keiner da → dieser Einschlag entfällt
+                _strikeable.Clear();
+                foreach (var e in _under) if (ElementalBuddy.CanTarget(e)) _strikeable.Add(e);
+                if (_strikeable.Count > 0) Strike(_strikeable[Random.Range(0, _strikeable.Count)]);
             }
 
             // Ausklingen
@@ -151,7 +155,7 @@ namespace ElementalBuddies
             float bestD = float.MaxValue;
             foreach (var e in CombatUtil.FindEnemies(origin, _chainRange))
             {
-                if (e == null || e == target || e.IsDead) continue;
+                if (e == null || e == target || e.IsDead || !ElementalBuddy.CanTarget(e)) continue;
                 float d = (e.transform.position - origin).sqrMagnitude;
                 if (d < bestD)
                 {

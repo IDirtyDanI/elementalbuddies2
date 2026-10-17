@@ -1,0 +1,149 @@
+{
+ "model": "Undead_Knochenbeschwoerer",
+ "rig": "Generic",
+ "fps": 30,
+ "visualScale": 1.0,
+ "moveSpeedModel": 2.8,
+ "deathDuration": 1.4,
+ "clips": [
+  {
+   "name": "Necro_Idle",
+   "role": "idle",
+   "loop": true,
+   "frames": 60,
+   "hit": -1.0
+  },
+  {
+   "name": "Necro_Walk",
+   "role": "move",
+   "loop": true,
+   "frames": 18,
+   "hit": -1.0
+  },
+  {
+   "name": "Necro_Channel",
+   "role": "channel",
+   "loop": true,
+   "frames": 60,
+   "hit": -1.0
+  },
+  {
+   "name": "Necro_Summon",
+   "role": "summon",
+   "loop": false,
+   "frames": 30,
+   "hit": 0.6,
+   "summon": 0.6
+  },
+  {
+   "name": "Necro_Die",
+   "role": "die",
+   "loop": false,
+   "frames": 36,
+   "hit": -1.0
+  }
+ ],
+ "triggers": [
+  {
+   "trigger": "Summon",
+   "clip": "Necro_Summon"
+  },
+  {
+   "trigger": "Channel",
+   "clip": "Necro_Channel"
+  }
+ ],
+ "tris": 2414,
+ "bones": [
+  "Root",
+  "Hips",
+  "Spine",
+  "Chest",
+  "UpperChest",
+  "Neck",
+  "Head",
+  "LeftShoulder",
+  "LeftUpperArm",
+  "LeftLowerArm",
+  "LeftHand",
+  "RightShoulder",
+  "RightUpperArm",
+  "RightLowerArm",
+  "RightHand",
+  "Lantern",
+  "LeftUpperLeg",
+  "LeftLowerLeg",
+  "LeftFoot",
+  "LeftToes",
+  "RightUpperLeg",
+  "RightLowerLeg",
+  "RightFoot",
+  "RightToes"
+ ],
+ "materials": [
+  {
+   "name": "Necro_Robe",
+   "hex": "#3d3548",
+   "emission": 0.0
+  },
+  {
+   "name": "Necro_RobeTrim",
+   "hex": "#6e5a8a",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Rope",
+   "hex": "#b29464",
+   "emission": 0.0
+  },
+  {
+   "name": "Necro_RobeDark",
+   "hex": "#272130",
+   "emission": 0.0
+  },
+  {
+   "name": "Necro_HoodInner",
+   "hex": "#120f15",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Bone",
+   "hex": "#ddd3b6",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Socket",
+   "hex": "#1b1a1e",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Eye",
+   "hex": "#72ff7e",
+   "emission": 3.0
+  },
+  {
+   "name": "Undead_BoneDark",
+   "hex": "#a59b80",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_LeatherDark",
+   "hex": "#4f301c",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_IronDark",
+   "hex": "#4c4f59",
+   "emission": 0.0
+  },
+  {
+   "name": "Necro_LanternLight",
+   "hex": "#5cff6a",
+   "emission": 3.0
+  }
+ ],
+ "emissive": [
+  "Undead_Eye",
+  "Necro_LanternLight"
+ ]
+}
