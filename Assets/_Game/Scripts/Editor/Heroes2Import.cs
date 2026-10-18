@@ -84,12 +84,13 @@ namespace ElementalBuddies.EditorTools
         }
 
         // Schleifen-Clips: Lauf-Animationen (Loco_Walk_F … Loco_Run_R), Trage-Haltung (Berserker_HoldIdle/HoldRun),
-        // Glutsturm (Berserker_SpinLoop), Ansturm (Berserker_Charge) und Flugphase (Berserker_InAir); alle übrigen (Hiebe,
-        // Absprung/Landung …) laufen einmal
+        // Glutsturm (Berserker_SpinLoop), Ansturm (Berserker_Charge), Flugphase (Berserker_InAir, Hero2_InAir) und Stand-Idle
+        // (Hero2_Idle; „_Idle“ trifft nicht „_HoldIdle“); alle übrigen (Hiebe, Absprung/Landung, Schuss, Zauber …) laufen einmal
         public static bool IsLoopClip(string name)
         {
             return name.StartsWith("Loco_") || name.EndsWith("_HoldIdle") || name.EndsWith("_HoldRun")
-                || name.EndsWith("_SpinLoop") || name.EndsWith("_Charge") || name.EndsWith("_InAir");
+                || name.EndsWith("_SpinLoop") || name.EndsWith("_Charge") || name.EndsWith("_InAir")
+                || name.EndsWith("_Idle");
         }
 
         // Clip je Datei: Name = Dateiname, Wurzel (Hüfte) in die Pose gebacken (Rotation, Höhe, XZ – in-place, die Figur

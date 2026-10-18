@@ -26,6 +26,7 @@ namespace ElementalBuddies.EditorTools
             public string Name, Bone;
             public Vector3 Offset, Rot;
             public bool Weapon;
+            public float Scale = 1f; // Größe relativ zum Modell (Teile wurden für die Meshy-Figuren gebaut, Buddies2-Körper sind anders proportioniert)
             public Vector3 IdleTilt; // Waffen: gewünschte Ausrichtung in der Idle-Pose (Modellraum-Euler: X = nach vorn, Z < 0 = nach außen)
             public Piece(string name, string bone, Vector3 offset, Vector3 rot) { Name = name; Bone = bone; Offset = offset; Rot = rot; }
         }
@@ -33,42 +34,43 @@ namespace ElementalBuddies.EditorTools
         private class Element
         {
             public string Name, Prefab, Icon;
-            public float HeadY; // Kopf-Knochen (Bind-Pose, unskaliert) laut placement.json → Maßstab des Modells in Unity
+            public float HeadY; // Kopf-Knochen (Bind-Pose, unskaliert, Blender-Meter der Buddies2-Modelle) → Maßstab des Modells in Unity
+            public float PieceScale = 1f; // alle Teile: Größe relativ zum Modell (Kronen ≈ Weltgröße wie auf den alten Meshy-Köpfen; Körperteile zusätzlich Piece.Scale)
             public Piece[] Pieces;
         }
 
-        private static Piece W(string name, Vector3 offset, Vector3 rot, Vector3 idleTilt)
+        private static Piece W(string name, Vector3 offset, Vector3 rot, Vector3 idleTilt, float scale = 1f)
         {
-            return new Piece(name, "RightHand", offset, rot) { Weapon = true, IdleTilt = idleTilt };
+            return new Piece(name, "RightHand", offset, rot) { Weapon = true, IdleTilt = idleTilt, Scale = scale };
         }
 
         private static readonly Element[] Elements =
         {
-            new Element { Name = "Fire", Prefab = "Fire", Icon = "fire", HeadY = 1.0556f, Pieces = new[]
+            new Element { Name = "Fire", Prefab = "Fire", Icon = "fire", HeadY = 0.9045f, PieceScale = 0.77f, Pieces = new[]
             {
                 new Piece("S4_Fire_Crown", "Head", Vector3.zero, Vector3.zero),
-                new Piece("S4_Fire_Cape", "Spine", Vector3.zero, Vector3.zero),
-                W("S4_Fire_Lance", new Vector3(0.0313f, 0.001f, 0.0702f), Vector3.zero, new Vector3(8f, 0f, -12f)),
+                new Piece("S4_Fire_Cape", "Chest", Vector3.zero, Vector3.zero) { Scale = 0.78f }, // kürzer: sonst schleift der Saum auf dem Sockel
+                W("S4_Fire_Lance", new Vector3(0.0313f, 0.001f, 0.0702f), Vector3.zero, new Vector3(8f, 0f, -12f), 0.9f),
             } },
-            new Element { Name = "Ice", Prefab = "Ice", Icon = "ice", HeadY = 1.1725f, Pieces = new[]
+            new Element { Name = "Ice", Prefab = "Ice", Icon = "ice", HeadY = 1.005f, PieceScale = 0.92f, Pieces = new[]
             {
                 new Piece("S4_Ice_Crown", "Head", Vector3.zero, Vector3.zero),
-                new Piece("S4_Ice_Mantle", "Spine", Vector3.zero, Vector3.zero),
+                new Piece("S4_Ice_Mantle", "Chest", Vector3.zero, Vector3.zero) { Scale = 0.82f },
                 W("S4_Ice_Scepter", new Vector3(0.0606f, -0.0047f, -0.0574f), Vector3.zero, new Vector3(8f, 0f, -10f)),
             } },
-            new Element { Name = "Earth", Prefab = "Earth", Icon = "earth", HeadY = 1.2763f, Pieces = new[]
+            new Element { Name = "Earth", Prefab = "Earth", Icon = "earth", HeadY = 1.12f, PieceScale = 1.05f, Pieces = new[]
             {
                 new Piece("S4_Earth_Crown", "Head", Vector3.zero, Vector3.zero),
-                new Piece("S4_Earth_Pauldron_L", "LeftArm", Vector3.zero, Vector3.zero),
-                new Piece("S4_Earth_Pauldron_R", "RightArm", Vector3.zero, Vector3.zero),
-                W("S4_Earth_Hammer", new Vector3(0.0248f, -0.098f, 0.0007f), new Vector3(0f, 0f, -20f), new Vector3(38f, 0f, -12f)), // nach vorn geneigt: senkrecht kollidiert der Kopf mit dem Fels-Schulterteil, Kopf nach unten verschwindet im Sockel
+                new Piece("S4_Earth_Pauldron_L", "LeftArm", Vector3.zero, Vector3.zero) { Scale = 0.68f },
+                new Piece("S4_Earth_Pauldron_R", "RightArm", Vector3.zero, Vector3.zero) { Scale = 0.68f },
+                W("S4_Earth_Hammer", new Vector3(0.0248f, -0.098f, 0.0007f), new Vector3(0f, 0f, -20f), new Vector3(38f, 0f, -12f), 0.72f), // nach vorn geneigt: senkrecht kollidiert der Kopf mit dem Fels-Schulterteil, Kopf nach unten verschwindet im Sockel
             } },
-            new Element { Name = "Light", Prefab = "Light", Icon = "light", HeadY = 0.9674f, Pieces = new[]
+            new Element { Name = "Light", Prefab = "Light", Icon = "light", HeadY = 0.871f, PieceScale = 0.70f, Pieces = new[]
             {
                 new Piece("S4_Light_Halo", "Head", Vector3.zero, Vector3.zero),
-                new Piece("S4_Light_Laurel", "Head", Vector3.zero, Vector3.zero),
-                new Piece("S4_Light_Wings_L", "Spine", Vector3.zero, Vector3.zero),
-                new Piece("S4_Light_Wings_R", "Spine", Vector3.zero, Vector3.zero),
+                new Piece("S4_Light_Laurel", "Head", new Vector3(0f, 0.08f, 0f), Vector3.zero), // über die Augen gehoben
+                new Piece("S4_Light_Wings_L", "Chest", Vector3.zero, Vector3.zero),
+                new Piece("S4_Light_Wings_R", "Chest", Vector3.zero, Vector3.zero),
                 W("S4_Light_Spear", new Vector3(0.054f, 0.0166f, -0.0007f), Vector3.zero, new Vector3(8f, 0f, -10f)),
             } },
         };
@@ -195,9 +197,11 @@ namespace ElementalBuddies.EditorTools
                 foreach (var o in old) if (o != null) Object.DestroyImmediate(o);
 
                 var head = Bone(visual, "Head");
-                // Light-FBX ist mit globalScale 0,5 importiert → Teile (für das unskalierte Modell gebaut) mitskalieren
+                // Import-Maßstab des Modells erkennen (früher Licht-Meshy-FBX mit globalScale 0,5) → Teile mitskalieren
                 float k = head != null ? visual.InverseTransformPoint(head.position).y / el.HeadY : 1f;
-                if (Mathf.Abs(k - 1f) < 0.02f) k = 1f;
+                // nur Import-Maßstäbe (z. B. 0,5) erkennen; Buddies2-Standpose weicht bis ~7 % von der Blender-Bind-Pose ab
+                if (Mathf.Abs(k - 1f) < 0.1f) k = 1f;
+                k *= el.PieceScale;
 
                 var extras = new List<GameObject>();
                 var weapons = new List<KeyValuePair<Transform, Piece>>();
@@ -262,7 +266,7 @@ namespace ElementalBuddies.EditorTools
             t.SetParent(bone, false);
             t.position = bone.position + visual.TransformVector(p.Offset * k);
             t.rotation = visual.rotation * Quaternion.Euler(p.Rot) * srcRot;
-            Vector3 vs = visual.lossyScale * k, bs = bone.lossyScale;
+            Vector3 vs = visual.lossyScale * (k * p.Scale), bs = bone.lossyScale;
             t.localScale = new Vector3(vs.x / bs.x * srcScale.x, vs.y / bs.y * srcScale.y, vs.z / bs.z * srcScale.z);
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))
             {

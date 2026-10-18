@@ -1212,15 +1212,6 @@ MonoBehaviour:
   - FullBody
   FadeSpeed: 8
   States:
-  - State: Shoot
-    UseCarry: 0
-    GripOffset: {x: -0.06, y: 1.4, z: 0.52}
-    WeaponAxis: {x: -0.17, y: 1, z: 0}
-    WeaponForward: {x: -1, y: -0.17, z: 0}
-    ElbowHint: {x: 0.3, y: -0.4, z: 0}
-    FullFollow: 0
-    Window: {x: 0, y: 1}
-    WindowBlend: 0.08
   - State: ArrowRain
     UseCarry: 0
     GripOffset: {x: -0.03, y: 1.78, z: 0.4}
@@ -1360,15 +1351,6 @@ MonoBehaviour:
   - FullBody
   FadeSpeed: 8
   States:
-  - State: Shoot
-    UseCarry: 0
-    GripOffset: {x: 0.07, y: 1.45, z: 0.05}
-    WeaponAxis: {x: 0, y: 1, z: 0}
-    WeaponForward: {x: 0, y: 0, z: 0}
-    ElbowHint: {x: 0.7, y: -0.25, z: -0.05}
-    FullFollow: 0
-    Window: {x: 0, y: 1}
-    WindowBlend: 0.08
   - State: ArrowRain
     UseCarry: 0
     GripOffset: {x: -0.08, y: 1.42, z: 0.05}

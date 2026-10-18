@@ -35,9 +35,15 @@ MonoBehaviour:
   AttackInterval: 1.8
   ProjectileSpeed: 20
   AttackWindup: 0.35
-  ProjectileSpawnHeight: -0.3
+  ProjectileSpawnHeight: -0.1
   MeleeHitSound: 0
   MeleeHitSfx: 21
+  AttackSound: 0
+  AttackSfx: 21
+  DeathSound: 0
+  DeathSfx: 7
+  SpawnSound: 0
+  SpawnSfx: 23
   IsBoss: 1
   DisplayName: "Totenj\xE4ger"
   ControlResistance: 0.6
@@ -45,7 +51,9 @@ MonoBehaviour:
   Icon: {fileID: 21300000, guid: 61fc27d2875404de386e888be3b77af1, type: 3}
   PreviewHint: "Fernkampf-Boss mit Pfeilhagel \u2013 in Bewegung bleiben"
   IsFlyer: 0
+  WardShield: 0
   FlyHeight: 2
   ObstacleClearance: 1.5
   DiveHeight: 0.8
   DeathClipDuration: 0
+  DeathVfx: {fileID: 0}

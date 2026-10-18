@@ -280,7 +280,7 @@ namespace ElementalBuddies.EditorTools
                 {
                     Right = HandPose.Relaxed, Left = HandPose.Fist,
                     // Bogen: Tragehaltung links neben dem Körper, unterer Wurfarm nach außen, Pfeilrichtung nach vorn;
-                    // Schuss/Frost-/Lichtpfeil: Arm nach vorn, Bogen senkrecht (oben leicht nach innen gekippt), Pfeil nach vorn;
+                    // Schuss/Frost-/Lichtpfeil: Animation führt (Archer2_Shoot, siehe Zughand);
                     // Feuerpfeil-Regen: Arm schräg nach oben; Rolle/Falle: Tragehaltung dreht mit dem Oberkörper
                     // (Achsen in Modell-Achsen mit x zur Bogenhand; WeaponForward = Bogen-+Z = −Kreuz(Sehnenseite, Wurfarm))
                     IK = new HoldIK
@@ -295,12 +295,6 @@ namespace ElementalBuddies.EditorTools
                         {
                             new ChampionWeaponHold.StateTarget
                             {
-                                State = "Shoot", UseCarry = false,
-                                GripOffset = new Vector3(-0.06f, 1.4f, 0.52f), WeaponAxis = new Vector3(-0.17f, 1f, 0f), WeaponForward = new Vector3(-1f, -0.17f, 0f),
-                                ElbowHint = new Vector3(0.3f, -0.4f, 0f),
-                            },
-                            new ChampionWeaponHold.StateTarget
-                            {
                                 State = "ArrowRain", UseCarry = false,
                                 GripOffset = new Vector3(-0.03f, 1.78f, 0.4f), WeaponAxis = new Vector3(-0.1f, 0.65f, -0.75f), WeaponForward = new Vector3(-0.985f, -0.065f, 0.075f),
                                 ElbowHint = new Vector3(0.4f, -0.3f, 0f),
@@ -309,13 +303,16 @@ namespace ElementalBuddies.EditorTools
                             new ChampionWeaponHold.StateTarget { State = "PlaceTrap", UseCarry = true, FullFollow = true },
                         },
                     },
-                    // Zughand: nur beim Schuss an die Sehne (Ankerpunkt am Kinn), sonst Animation
+                    // Zughand: nur beim Feuerpfeil-Regen an die Sehne, sonst Animation
+                    // Schuss/Frost-/Lichtpfeil (eigener Clip Archer2_Shoot, 2026-10-18): KEIN Shoot-Eintrag bei Bogen- und Zughand –
+                    // die Animation führt beide Hände (Ankerpunkt, Lösen bei 0,07 s, Rückstoß, erneutes Ziehen). Die frühere feste
+                    // Bogenhand-IK (Griff 1,4 m vor der Brust) setzte den Bogen dorthin, wo die Zughand beim Zurückholen durchgreift
+                    // (Waffen-Clipping 7,8 cm), die Zughand-IK am Kinn überdeckte Lösen und Rückstoß.
                     IK2 = new HoldIK
                     {
                         RightHand = true, HandOnly = true, IdleCarry = false, FollowBone = HumanBodyBones.UpperChest, FollowHipsYaw = true, HipsFollow = new Vector3(1f, 1f, 1f),
                         States = new[]
                         {
-                            new ChampionWeaponHold.StateTarget { State = "Shoot", UseCarry = false, GripOffset = new Vector3(0.07f, 1.45f, 0.05f), ElbowHint = new Vector3(0.7f, -0.25f, -0.05f) },
                             new ChampionWeaponHold.StateTarget { State = "ArrowRain", UseCarry = false, GripOffset = new Vector3(-0.08f, 1.42f, 0.05f), ElbowHint = new Vector3(0.7f, -0.3f, -0.05f) },
                         },
                     },

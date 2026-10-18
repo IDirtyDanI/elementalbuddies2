@@ -11,17 +11,18 @@ namespace ElementalBuddies.EditorTools
     public static class ChampionAnimatorBuilder
     {
         private const string AnimDir = "Assets/_Game/Animations/";
-        private const string Mixamo = "Assets/MixamoAnimations/";
         private const string H2Anim = "Assets/_Game/Animations/Heroes2/";
         private const string KnightFbx = "Assets/_Game/Models/Characters/KnightChampion.fbx";
         private const string ArcherFbx = "Assets/_Game/Models/Characters/ArcherChampion.fbx";
-        private const string MeshyEnemy = "Assets/3D Models/Enemy/Meshy_Merged_Animations.fbx";
 
         [MenuItem("BuddyTD/Champion-Animatoren neu bauen")]
         public static void BuildAll()
         {
-            // Basis zuerst: die Kopien (CopyBase) übernehmen den richtungsabhängigen Locomotion-Blend aus PlayerVisual
-            ApplyLocomotion(AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimDir + "PlayerVisual.controller"));
+            // Basis zuerst: die Kopien (CopyBase) übernehmen den richtungsabhängigen Locomotion-Blend und den Sprung aus PlayerVisual
+            var basis = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimDir + "PlayerVisual.controller");
+            ApplyLocomotion(basis);
+            ApplyHeroes2Jumps(basis);
+            ApplyMageCast(basis);
             BuildKnight();
             BuildArcher();
             BuildBerserkerController();
@@ -87,9 +88,8 @@ namespace ElementalBuddies.EditorTools
 
             var upper = UpperLayer(ac);
             var empty = upper.defaultState;
-            var shootClip = Clip(Mixamo + "Erika Archer@Standing Aim Recoil.fbx", null);
-            if (shootClip == null) shootClip = Clip(MeshyEnemy, "Archery_Shot_3");
-            Action(upper, empty, "Shoot", shootClip, "Shoot", 1.6f, 0.7f);
+            // Schuss (auch Frost-/Lichtpfeil): eigener Clip Archer2_Shoot (0,6 s = ArrowCooldown, Lösen bei 0,07 s)
+            Action(upper, empty, "Shoot", Clip(H2Anim + "Archer2_Shoot.fbx", "Archer2_Shoot"), "Shoot", ShootSpeed, ShootExit);
             Action(upper, empty, "ArrowRain", Clip(ArcherFbx, "Archer_ArrowRain"), "ArrowRain", 1.2f, 0.85f);
 
             var full = FullBodyLayer(ac);
@@ -97,6 +97,117 @@ namespace ElementalBuddies.EditorTools
             Action(full, fEmpty, "Roll", Clip(ArcherFbx, "Archer_Roll"), "Roll", 1.0f, 0.9f);
             Action(full, fEmpty, "PlaceTrap", Clip(ArcherFbx, "Archer_PlaceTrap"), "PlaceTrap", 1.2f, 0.85f);
             EditorUtility.SetDirty(ac);
+        }
+
+        // ---------------- Eigene Grundclips (Heroes2, ersetzen StarterAssets/Mixamo/Meshy) ----------------
+
+        // Archer2_Shoot / Mage2_Cast: Tempo und Rückkehr nach Empty (normierte Zeit)
+        public const float ShootSpeed = 1f, ShootExit = 0.95f;
+        public const float CastSpeed = 1f, CastExit = 0.85f;
+        private const string IdleClipPath = H2Anim + "Hero2_Idle.fbx";
+        private const string MerchantController = AnimDir + "MerchantFigure.controller";
+
+        // Alle Controller an Ort und Stelle umstellen (GUIDs, Layer und übrige States bleiben): Locomotion-Idle → Hero2_Idle
+        // (alle Champions), Sprung → Hero2_JumpStart/InAir/JumpLand (Magier, Ritter, Bogenschütze; Berserker eigene),
+        // Bogenschütze Shoot → Archer2_Shoot, Magier Cast → Mage2_Cast, Händler-Figur Idle → Hero2_Idle.
+        [MenuItem("BuddyTD/Champions/Heroes2-Grundclips einbauen")]
+        public static void ApplyHeroes2Clips()
+        {
+            var paths = new System.Collections.Generic.List<string> { AnimDir + "PlayerVisual.controller" };
+            foreach (var spec in ChampionPlayerSetup.Specs) if (!paths.Contains(spec.Controller)) paths.Add(spec.Controller);
+            var log = new System.Text.StringBuilder();
+            foreach (var path in paths)
+            {
+                var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+                if (ac == null) continue;
+                int n = SetLocoIdle(ac);
+                n += ac.name == "BerserkerVisual" ? ApplyBerserkerJumps(ac) : ApplyHeroes2Jumps(ac);
+                n += ApplyMageCast(ac) + ApplyArcherShoot(ac);
+                log.Append(ac.name).Append(": ").Append(n).Append("  ");
+            }
+            var merchant = AssetDatabase.LoadAssetAtPath<AnimatorController>(MerchantController);
+            if (merchant != null) log.Append("MerchantFigure: ").Append(SetState(merchant, 0, "Idle", IdleClip(), null, null));
+            AssetDatabase.SaveAssets();
+            Debug.Log("ChampionAnimatorBuilder: Heroes2-Grundclips – geänderte States/Kinder je Controller: " + log);
+        }
+
+        public static AnimationClip IdleClip()
+        {
+            return Clip(IdleClipPath, "Hero2_Idle");
+        }
+
+        // Idle-Kind (Schwelle 0) des Locomotion-1D-Blends
+        private static int SetLocoIdle(AnimatorController ac)
+        {
+            var idle = Clip(IdleClipPath, "Hero2_Idle");
+            if (idle == null) return 0;
+            foreach (var cs in ac.layers[0].stateMachine.states)
+            {
+                if (cs.state.name != "Locomotion" || !(cs.state.motion is BlendTree bt)) continue;
+                var ch = bt.children;
+                for (int i = 0; i < ch.Length; i++)
+                    if (ch[i].threshold == 0f && !(ch[i].motion is BlendTree) && ch[i].motion != idle)
+                    {
+                        ch[i].motion = idle;
+                        bt.children = ch;
+                        EditorUtility.SetDirty(bt);
+                        EditorUtility.SetDirty(ac);
+                        return 1;
+                    }
+            }
+            return 0;
+        }
+
+        // Sprung im Base Layer: eigene Clips Hero2_JumpStart/InAir/JumpLand (Absprung 0,4 s, Flug-Loop 1 s, Landung 0,6 s)
+        public static int ApplyHeroes2Jumps(AnimatorController ac)
+        {
+            int n = 0;
+            if (ac == null) return 0;
+            foreach (var kv in new[] { new[] { "JumpStart", "Hero2_JumpStart" }, new[] { "InAir", "Hero2_InAir" }, new[] { "JumpLand", "Hero2_JumpLand" } })
+            {
+                var clip = Clip(H2Anim + kv[1] + ".fbx", kv[1]);
+                if (clip != null) n += SetState(ac, 0, kv[0], clip, null, null);
+            }
+            return n;
+        }
+
+        // Magier (PlayerVisual) UpperBody „Cast“ → Mage2_Cast (Stoß bei 0,1 s = MageKit-Geschoss)
+        public static int ApplyMageCast(AnimatorController ac)
+        {
+            var clip = Clip(H2Anim + "Mage2_Cast.fbx", "Mage2_Cast");
+            return clip == null || ac == null ? 0 : SetState(ac, LayerIndex(ac, "UpperBody"), "Cast", clip, CastSpeed, CastExit);
+        }
+
+        // Bogenschütze UpperBody „Shoot“ → Archer2_Shoot
+        public static int ApplyArcherShoot(AnimatorController ac)
+        {
+            var clip = Clip(H2Anim + "Archer2_Shoot.fbx", "Archer2_Shoot");
+            return clip == null || ac == null ? 0 : SetState(ac, LayerIndex(ac, "UpperBody"), "Shoot", clip, ShootSpeed, ShootExit);
+        }
+
+        private static int LayerIndex(AnimatorController ac, string name)
+        {
+            for (int i = 0; i < ac.layers.Length; i++) if (ac.layers[i].name == name) return i;
+            return -1;
+        }
+
+        // State „name“ im Layer: Motion (und optional Tempo / Exit-Zeit der Rückkehr-Übergänge) setzen; 1 = geändert
+        private static int SetState(AnimatorController ac, int layer, string name, Motion clip, float? speed, float? exit)
+        {
+            if (layer < 0 || layer >= ac.layers.Length) return 0;
+            bool changed = false;
+            foreach (var cs in ac.layers[layer].stateMachine.states)
+            {
+                if (cs.state.name != name) continue;
+                var s = cs.state;
+                if (s.motion != clip) { s.motion = clip; changed = true; }
+                if (speed.HasValue && !Mathf.Approximately(s.speed, speed.Value)) { s.speed = speed.Value; changed = true; }
+                if (exit.HasValue)
+                    foreach (var t in s.transitions)
+                        if (t.hasExitTime && !Mathf.Approximately(t.exitTime, exit.Value)) { t.exitTime = exit.Value; EditorUtility.SetDirty(t); changed = true; }
+                if (changed) { EditorUtility.SetDirty(s); EditorUtility.SetDirty(ac); }
+            }
+            return changed ? 1 : 0;
         }
 
         // ---------------- Berserker ----------------
@@ -250,11 +361,6 @@ namespace ElementalBuddies.EditorTools
         public static readonly float[] WalkTimeScale = { 1f, 1f, 1f, 1f };
         public static readonly float[] RunTimeScale = { 1f, 1f, 1f, 1f };
 
-        // Bisherige Clips (1D-Blend über Speed) – Rückfall, solange die Loco_*-Clips fehlen
-        private const string LegacyIdle = "Assets/StarterAssets/ThirdPersonController/Character/Animations/Stand--Idle.anim.fbx";
-        private const string LegacyWalk = "Assets/3D Models/Elemental/Light/Animation_Walking_withSkin.fbx";
-        private const string LegacyRun = "Assets/3D Models/Elemental/Light/Animation_Running_withSkin.fbx";
-
         // Alle Champion-Controller (Magier = PlayerVisual) an Ort und Stelle umbauen: GUIDs, andere Layer und States bleiben
         [MenuItem("BuddyTD/Champions/Lauf-Animationen einbauen")]
         public static void ApplyLocomotionAll()
@@ -316,14 +422,14 @@ namespace ElementalBuddies.EditorTools
             move.blendParameterY = MoveZParam;
             move.useAutomaticThresholds = false;
             var children = new System.Collections.Generic.List<ChildMotion>();
-            AddRing(children, "Walk", WalkRing, LegacyWalk, WalkTimeScale);
-            AddRing(children, "Run", RunRing, LegacyRun, RunTimeScale);
+            AddRing(children, "Walk", WalkRing, WalkTimeScale);
+            AddRing(children, "Run", RunRing, RunTimeScale);
             move.children = children.ToArray();
             EditorUtility.SetDirty(move);
 
             bt.children = new[]
             {
-                new ChildMotion { motion = Clip(LegacyIdle, "Idle") ?? Clip(LegacyIdle, null), threshold = 0f, timeScale = 1f, directBlendParameter = "Blend" },
+                new ChildMotion { motion = IdleClip(), threshold = 0f, timeScale = 1f, directBlendParameter = "Blend" },
                 new ChildMotion { motion = move, threshold = MoveThreshold, timeScale = 1f, directBlendParameter = "Blend" },
             };
 
@@ -347,9 +453,11 @@ namespace ElementalBuddies.EditorTools
         public static float WalkBackStrafeCycleOffset = 0.44f;
         public static float RunBackStrafeCycleOffset = 0.72f;
 
-        private static void AddRing(System.Collections.Generic.List<ChildMotion> children, string gait, float radius, string legacy, float[] timeScale)
+        // (Der frühere Rückfall auf die Elementar-Lauf-Clips unter „3D Models/Elemental/Light“ ist entfallen – die Dateien
+        // existieren nicht mehr; ohne Loco_*-Clip bleibt der Ring leer und es gibt eine Warnung.)
+        private static void AddRing(System.Collections.Generic.List<ChildMotion> children, string gait, float radius, float[] timeScale)
         {
-            var fwd = LocoClip(gait, "F") ?? Clip(legacy, null);
+            var fwd = LocoClip(gait, "F");
             var clips = new AnimationClip[LocoDirs.Length];
             var ts = new float[LocoDirs.Length];
             for (int i = 0; i < LocoDirs.Length; i++)

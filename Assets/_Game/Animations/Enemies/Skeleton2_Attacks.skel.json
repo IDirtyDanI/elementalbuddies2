@@ -1,0 +1,66 @@
+{
+ "file": "Assets/_Game/Animations/Enemies/Skeleton2_Attacks.fbx",
+ "rig": "Humanoid",
+ "avatar": "CopyFromOther Assets/_Game/Models/Enemies/Skeleton2/Skeleton2.fbx",
+ "fps": 30,
+ "rootMotion": false,
+ "method": "Welt-Rotations-Uebertragung Meshy-Rig -> Skeleton2_Rig (art-src/enemies/skeleton_retarget.py)",
+ "clips": [
+  {
+   "name": "Skeleton2_Runner_Attack",
+   "take": "Skeleton2_Runner_Attack",
+   "source": "Assets/_Game/Animations/Enemies/Runner_Attack.fbx",
+   "frames": 27,
+   "seconds": 0.9,
+   "loop": false,
+   "hit": 0.35,
+   "hitPoseFrame": 10.5,
+   "sourceFrames": [
+    1.0,
+    28.0
+   ]
+  },
+  {
+   "name": "Skeleton2_Swarm_Attack",
+   "take": "Skeleton2_Swarm_Attack",
+   "source": "Assets/_Game/Animations/Enemies/Swarm_Attack.fbx",
+   "frames": 18,
+   "seconds": 0.6,
+   "loop": false,
+   "hit": 0.2,
+   "hitPoseFrame": 6.0,
+   "sourceFrames": [
+    1.0,
+    19.0
+   ]
+  },
+  {
+   "name": "Skeleton2_Knight_Attack",
+   "take": "Skeleton2_Knight_Attack",
+   "source": "Assets/_Game/Animations/Enemies/Knight_Attack.fbx",
+   "frames": 36,
+   "seconds": 1.2,
+   "loop": false,
+   "hit": 0.55,
+   "hitPoseFrame": 17.0,
+   "sourceFrames": [
+    1.0,
+    37.0
+   ]
+  },
+  {
+   "name": "Skeleton2_BoneLord_Attack",
+   "take": "Skeleton2_BoneLord_Attack",
+   "source": "Assets/_Game/Animations/Enemies/BoneLord_Attack.fbx",
+   "frames": 36,
+   "seconds": 1.2,
+   "loop": false,
+   "hit": 0.55,
+   "hitPoseFrame": 17.0,
+   "sourceFrames": [
+    1.0,
+    37.0
+   ]
+  }
+ ]
+}

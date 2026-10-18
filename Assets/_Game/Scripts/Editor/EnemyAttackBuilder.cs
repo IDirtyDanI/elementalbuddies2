@@ -6,32 +6,32 @@ using UnityEngine;
 namespace ElementalBuddies.EditorTools
 {
     // Nahkampf-Angriffe der Gegner (2026-10-12): Einzelhiebe statt Dauerschaden (EnemyBrain.HandleMeleeAttack).
-    //  1. Angriffs-FBX (Animations/Enemies/<Typ>_Attack.fbx, eigene Blender-Clips, Rig „Armature“ wie Skeletton.fbx)
-    //     als Humanoid mit dem Avatar von Skeletton.fbx (CopyFromOther), kein Loop, Wurzel fest (keine Root Motion)
+    //  1. Angriffs-Clips: seit 2026-10-18 (Fremd-Assets-Ersatz Paket C) aus Animations/Enemies/Skeleton2_Attacks.fbx
+    //     (Skeleton2_<Typ>_Attack, aus den eigenen Blender-Clips <Typ>_Attack.fbx aufs eigene Skelett übertragen), Import
+    //     Humanoid mit dem Avatar von Skeleton2.fbx über Skeleton2Builder.Import (kein Loop, Wurzel fest)
     //  2. Controller <Typ>Attack.controller: Running ↔ Idle über Moving, Attack per Any-State-Trigger
-    //  3. Controller an Runner/Swarm/Knight.prefab (RunnerVisual.controller bleibt unverändert)
+    //  3. Controller an Runner/Swarm/Knight.prefab
     //  4. Config-Werte: AttackWindup = Trefferframe, AttackInterval, Trefferton – auch Grabspinne und Knochenfürst
-    //     (Knochenfürst: eigener Clip BoneLord_Attack.fbx im Attack-State von BossBoneLordVisual.controller)
+    //     (Knochenfürst: Clip Skeleton2_BoneLord_Attack im Attack-State von BossBoneLordVisual.controller)
     //  5. Block-Funken/-Ton des Schwertkämpfers (Player.prefab) auf Einzelhiebe abgestimmt
     // Menü: BuddyTD → Gegner → Nahkampf-Angriffe einrichten. Mehrfach ausführbar (Controller behalten ihre GUID).
     // Die Sounds (SfxId.EnemyClaw/EnemySnap/EnemyChop) danach über BuddyTD → Game Feel → Nur Sounds zuweisen.
     public static class EnemyAttackBuilder
     {
         public const string AnimDir = "Assets/_Game/Animations/Enemies/";
-        private const string SkelFbx = "Assets/3D Models/Enemy/Skeletton.fbx";
         private const string PrefabDir = "Assets/_Game/Prefabs/";
         private const string ConfigDir = "Assets/ScriptableObjects/Configs/";
         private const string SpiderController = "Assets/_Game/Animations/GraveSpiderVisual.controller";
-        private const string SpiderBiteClip = "Assets/_Game/Animations/GraveSpider_Bite.anim";
         private const string PlayerPrefab = "Assets/_Game/Prefabs/Player.prefab";
 
         // Knochenfürst (seit 2026-10-15 eigener Clip BoneLord_Attack, art-src/enemy_attacks, ersetzt Mixamo „Sword Outward
-        // Slash“): Bihänder-Schräghieb 1,2 s, Treffer bei 0,55 s, Attack-State Tempo 1 → Windup = Trefferzeit (unverändert 0,55)
+        // Slash“; seit 2026-10-18 Skeleton2_BoneLord_Attack aufs eigene Skelett): Bihänder-Schräghieb 1,2 s, Treffer bei 0,55 s,
+        // Attack-State Tempo 1 → Windup = Trefferzeit (unverändert 0,55)
         public const float BoneLordWindup = 0.55f;
         public const float BoneLordInterval = 1.6f;
         public const float BoneLordExit = 0.85f;   // Ausstieg nach 1,02 s (Überblendung 0,2 s), vor dem nächsten Hieb nach 1,6 s
         public const string BoneLordController = "Assets/_Game/Animations/Bosses/BossBoneLordVisual.controller";
-        // Grabspinne: Biss-Clip 0,45 s, Zubeißen am Clip-Ende → State-Tempo 0,45 / 0,25 = 1,8
+        // Grabspinne: Biss-Treffer bei 0,25 s (seit 2026-10-18 GraveSpider2_Bite, Tempo 1; vorher alter Clip 0,45 s × Tempo 1,8)
         public const float SpiderWindup = 0.25f;
         public const float SpiderInterval = 1f;
         // Block-Funken/-Ton: fängt nur gleichzeitige Treffer ab (vorher 0,25 / 0,2 s gegen Dauerschaden)
@@ -40,16 +40,21 @@ namespace ElementalBuddies.EditorTools
         private struct AttackType
         {
             public string Name; public float Windup, Interval; public SfxId Sfx;
-            public AttackType(string name, float windup, float interval, SfxId sfx)
-            { Name = name; Windup = windup; Interval = interval; Sfx = sfx; }
+            public string Run; public float RunSpeed; public bool IdleFromAttack;
+            public AttackType(string name, float windup, float interval, SfxId sfx, string run, float runSpeed, bool idleFromAttack)
+            { Name = name; Windup = windup; Interval = interval; Sfx = sfx; Run = run; RunSpeed = runSpeed; IdleFromAttack = idleFromAttack; }
         }
 
-        // Clip-Längen 0,9 / 0,6 / 1,2 s, Trefferframe 0,35 / 0,2 / 0,55 s → State-Tempo 1, Windup = Trefferzeit
+        // Clip-Längen 0,9 / 0,6 / 1,2 s, Trefferframe 0,35 / 0,2 / 0,55 s → State-Tempo 1, Windup = Trefferzeit.
+        // Lauf-Tempo = Config.Speed / (Clip-Tempo Modell × 0,808 × VisualScale) → Füße rutschen nicht:
+        // Runner 3,5 / (4,33 × 0,808) = 1,0; Schwarm 5,2 / (5,0 × 0,808 × 0,6) = 2,15; Ritter 2,5 / (2,58 × 0,808 × 1,2) = 1,0.
+        // Idle: Skeleton_Idle; Ritter: Kampfhaltung = erster Frame des Hiebs (Tempo 0, Schild vorn) – Skeleton_Idle ließe den
+        // Schild hängen
         private static readonly AttackType[] Types =
         {
-            new AttackType("Runner", 0.35f, 1.0f, SfxId.EnemyClaw),
-            new AttackType("Swarm", 0.2f, 0.7f, SfxId.EnemySnap),
-            new AttackType("Knight", 0.55f, 1.6f, SfxId.EnemyChop),
+            new AttackType("Runner", 0.35f, 1.0f, SfxId.EnemyClaw, "Skeleton_Run", 1f, false),
+            new AttackType("Swarm", 0.2f, 0.7f, SfxId.EnemySnap, "SkeletonSwarm_Run", 2.15f, false),
+            new AttackType("Knight", 0.55f, 1.6f, SfxId.EnemyChop, "SkeletonKnight_Run", 1f, true),
         };
 
         [MenuItem("BuddyTD/Gegner/Nahkampf-Angriffe einrichten")]
@@ -61,31 +66,13 @@ namespace ElementalBuddies.EditorTools
         public static string Build()
         {
             var log = new StringBuilder("EnemyAttackBuilder:\n");
-            var avatar = SkeletonAvatar();
-            var running = Clip(SkelFbx, "Running");
-            if (avatar == null) log.AppendLine("  FEHLER: kein Avatar in " + SkelFbx);
-            if (running == null) log.AppendLine("  FEHLER: Clip „Running“ fehlt in " + SkelFbx);
-
             foreach (var t in Types)
-            {
                 // Config immer (die Einzelhiebe laufen auch ohne neue Animation)
                 SetConfig(t.Name, t.Windup, t.Interval, t.Sfx, log);
-                if (avatar == null || running == null) continue;
-                var clip = ImportAttack(AnimDir + t.Name + "_Attack.fbx", t.Name + "_Attack", avatar, log);
-                if (clip == null) continue;
-                var ctrl = BuildController(t.Name + "Attack", running, clip);
-                log.AppendLine("  Controller " + AssetDatabase.GetAssetPath(ctrl) + " (Running/Idle/Attack)");
-                AssignController(t.Name, ctrl, log);
-            }
-
             SetConfig("GraveSpider", SpiderWindup, SpiderInterval, SfxId.EnemySnap, log);
             TuneSpiderBite(log);
             SetConfig("Bosses/BossBoneLord", BoneLordWindup, BoneLordInterval, SfxId.EnemyChop, log);
-            if (avatar != null)
-            {
-                var boneClip = ImportAttack(AnimDir + "BoneLord_Attack.fbx", "BoneLord_Attack", avatar, log);
-                if (boneClip != null) TuneBoneLordAttack(boneClip, log);
-            }
+            if (Skeleton2Builder.Import(log)) BuildSkeletonControllers(log);
             TuneKnightBlock(log);
 
             AssetDatabase.SaveAssets();
@@ -93,102 +80,36 @@ namespace ElementalBuddies.EditorTools
             return log.ToString();
         }
 
-        // ---------------- 1. Import ----------------
-
-        private static Avatar SkeletonAvatar()
+        // Controller der Skelett-Nahkämpfer (Runner/Swarm/Knight) + Knochenfürst-Hieb aus den Skeleton2-Clips; setzt voraus,
+        // dass Skeleton2Builder.Import gelaufen ist (auch von Skeleton2Builder.Build aufgerufen)
+        public static void BuildSkeletonControllers(StringBuilder log)
         {
-            foreach (var o in AssetDatabase.LoadAllAssetsAtPath(SkelFbx))
-                if (o is Avatar a) return a;
-            return null;
-        }
-
-        private static AnimationClip Clip(string path, string name)
-        {
-            foreach (var o in AssetDatabase.LoadAllAssetsAtPath(path))
+            var idleClip = Skeleton2Builder.Clip("Skeleton_Idle");
+            foreach (var t in Types)
             {
-                var c = o as AnimationClip;
-                if (c == null || c.name.StartsWith("__preview")) continue;
-                if (name == null || c.name == name) return c;
+                var clip = Skeleton2Builder.Clip("Skeleton2_" + t.Name + "_Attack");
+                var run = Skeleton2Builder.Clip(t.Run);
+                if (clip == null || run == null || idleClip == null)
+                {
+                    log.Append("\n  FEHLER: Clip fehlt für " + t.Name + " (Skeleton2_" + t.Name + "_Attack / " + t.Run + " / Skeleton_Idle)");
+                    continue;
+                }
+                var ctrl = BuildController(t.Name + "Attack", run, t.RunSpeed, t.IdleFromAttack ? clip : idleClip, t.IdleFromAttack ? 0f : 1f, clip);
+                log.Append(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "\n  Controller {0}: Running {1} ×{2:0.##}, Idle {3}, Attack {4} ({5:0.00} s, Treffer {6:0.00} s)",
+                    AssetDatabase.GetAssetPath(ctrl), run.name, t.RunSpeed, t.IdleFromAttack ? clip.name + " Frame 0" : idleClip.name, clip.name, clip.length, t.Windup));
+                AssignController(t.Name, ctrl, log);
             }
-            return null;
-        }
-
-        // Humanoid mit dem Skeletton-Avatar, ein Clip (Name = clipName), kein Loop, Wurzel fest; nur bei Abweichung neu importieren
-        private static AnimationClip ImportAttack(string path, string clipName, Avatar avatar, StringBuilder log)
-        {
-            var mi = AssetImporter.GetAtPath(path) as ModelImporter;
-            if (mi == null)
-            {
-                log.AppendLine("  " + path + " fehlt – Controller/Prefab übersprungen");
-                return null;
-            }
-
-            if (mi.animationType != ModelImporterAnimationType.Human || mi.avatarSetup != ModelImporterAvatarSetup.CopyFromOther
-                || mi.sourceAvatar != avatar || !mi.importAnimation || mi.materialImportMode != ModelImporterMaterialImportMode.None)
-            {
-                mi.importCameras = false;
-                mi.importLights = false;
-                mi.importBlendShapes = false;
-                mi.importConstraints = false;
-                mi.useFileScale = true;
-                mi.globalScale = 1f;
-                mi.materialImportMode = ModelImporterMaterialImportMode.None;
-                mi.importAnimation = true;
-                mi.animationType = ModelImporterAnimationType.Human;
-                mi.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
-                mi.sourceAvatar = avatar;
-                mi.resampleCurves = true;
-                mi.animationCompression = ModelImporterAnimationCompression.Optimal;
-                mi.SaveAndReimport();
-            }
-
-            var current = mi.clipAnimations;
-            var defs = current != null && current.Length > 0 ? current : mi.defaultClipAnimations;
-            if (defs == null || defs.Length == 0)
-            {
-                log.AppendLine("  " + path + ": keine Animation im FBX");
-                return null;
-            }
-            // Take mit passendem Namen bevorzugen (Blender exportiert ggf. „Armature|Runner_Attack“)
-            var c = defs[0];
-            foreach (var d in defs)
-                if ((d.takeName != null && d.takeName.Contains(clipName)) || d.name == clipName) { c = d; break; }
-
-            bool clipDirty = current == null || current.Length != 1 || c.name != clipName || c.loopTime || c.loopPose
-                             || !c.lockRootRotation || !c.lockRootHeightY || !c.lockRootPositionXZ
-                             || !c.keepOriginalOrientation || !c.keepOriginalPositionY || !c.keepOriginalPositionXZ;
-            if (clipDirty)
-            {
-                c.name = clipName;
-                c.loopTime = false;
-                c.loopPose = false;
-                c.lockRootRotation = true;
-                c.lockRootHeightY = true;
-                c.lockRootPositionXZ = true;
-                c.keepOriginalOrientation = true;
-                c.keepOriginalPositionY = true;
-                c.keepOriginalPositionXZ = true;
-                mi.clipAnimations = new[] { c };
-                mi.SaveAndReimport();
-            }
-
-            var clip = Clip(path, clipName);
-            if (clip == null)
-            {
-                log.AppendLine("  " + path + ": Clip " + clipName + " nicht gefunden");
-                return null;
-            }
-            log.AppendLine(string.Format("  {0}: {1} {2:0.00} s, Humanoid {3}, Loop {4}{5}", path, clipName, clip.length,
-                clip.isHumanMotion ? "ja" : "NEIN", clip.isLooping ? "ja" : "nein",
-                clip.isHumanMotion ? "" : " – WARNUNG: Rig passt nicht zum Skeletton-Avatar?"));
-            return clip;
+            var boneClip = Skeleton2Builder.Clip("Skeleton2_BoneLord_Attack");
+            if (boneClip != null) TuneBoneLordAttack(boneClip, log);
+            else log.Append("\n  FEHLER: Clip Skeleton2_BoneLord_Attack fehlt");
         }
 
         // ---------------- 2. Controller ----------------
 
-        // Running (Skeletton-Laufclip, wie RunnerVisual) ↔ Idle (Kampfhaltung = erster Frame des Angriffs, Tempo 0) über Moving;
-        // Attack per Any-State-Trigger, am Ende zurück nach Running bzw. Idle. Speed-Parameter nur für EnemyBrain vorhanden.
-        private static AnimatorController BuildController(string name, AnimationClip running, AnimationClip attack)
+        // Running (Lauf-Clip, festes Tempo) ↔ Idle über Moving; Attack per Any-State-Trigger, am Ende zurück nach Running bzw.
+        // Idle. Speed-Parameter nur für EnemyBrain vorhanden.
+        private static AnimatorController BuildController(string name, AnimationClip running, float runSpeed, AnimationClip idleClip, float idleSpeed, AnimationClip attack)
         {
             // Bestehenden Controller leeren statt löschen (GUID bleibt, Prefab-Referenzen bleiben gültig)
             string path = AnimDir + name + ".controller";
@@ -204,10 +125,10 @@ namespace ElementalBuddies.EditorTools
 
             var run = sm.AddState("Running", new Vector3(300, 0, 0));
             run.motion = running;
-            run.speed = 1f;
+            run.speed = runSpeed;
             var idle = sm.AddState("Idle", new Vector3(300, 120, 0));
-            idle.motion = attack;
-            idle.speed = 0f; // steht zwischen zwei Hieben in der Ausgangspose des Angriffs
+            idle.motion = idleClip;
+            idle.speed = idleSpeed; // Tempo 0 = steht zwischen zwei Hieben in der Ausgangspose des Angriffs
             sm.defaultState = run;
 
             var toIdle = run.AddTransition(idle);
@@ -289,30 +210,14 @@ namespace ElementalBuddies.EditorTools
                 name, windup, interval, c.AttackDamage, c.AttackDamage * interval, sfx));
         }
 
-        // Grabspinne: Biss-State so schnell, dass das Zubeißen (Clip-Ende) auf AttackWindup fällt; Ausgang erst am Clip-Ende
+        // Grabspinne: seit 2026-10-18 eigenes Modell GraveSpider2 – Controller samt Biss (Tempo 1, Treffer bei 0,25 s =
+        // SpiderWindup) kommt aus GraveSpiderBuilder; der alte Biss-Clip GraveSpider_Bite.anim (Rig „Fiese Spinne“) ist gelöscht.
         private static void TuneSpiderBite(StringBuilder log)
         {
             var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(SpiderController);
-            var bite = AssetDatabase.LoadAssetAtPath<AnimationClip>(SpiderBiteClip);
-            if (ac == null || bite == null)
-            {
-                log.AppendLine("  Grabspinne: Controller oder Biss-Clip fehlt");
-                return;
-            }
-            float speed = Mathf.Round(bite.length / SpiderWindup * 100f) / 100f;
-            bool found = false;
-            foreach (var s in ac.layers[0].stateMachine.states)
-            {
-                if (s.state.motion != bite) continue;
-                found = true;
-                s.state.speed = speed;
-                foreach (var t in s.state.transitions)
-                    if (t.hasExitTime) t.exitTime = 1f;
-            }
-            EditorUtility.SetDirty(ac);
-            log.AppendLine(found
-                ? string.Format(System.Globalization.CultureInfo.InvariantCulture, "  Grabspinne: Biss {0:0.00} s × Tempo {1:0.00} → Zubeißen bei {2:0.00} s", bite.length, speed, bite.length / speed)
-                : "  Grabspinne: kein State mit " + SpiderBiteClip);
+            log.AppendLine(ac != null && AssetDatabase.GetAssetPath(ac.layers[0].stateMachine.defaultState?.motion) == GraveSpiderBuilder.Fbx
+                ? "  Grabspinne: eigenes Modell (GraveSpiderBuilder) – Biss-Tempo bleibt 1"
+                : "  Grabspinne: Controller nicht von GraveSpiderBuilder gebaut – erst BuddyTD → Gegner → Grabspinne bauen");
         }
 
         // Knochenfürst: eigener Hieb-Clip in den Attack-State von BossBoneLordVisual.controller (Tempo 1, Ausstieg BoneLordExit);

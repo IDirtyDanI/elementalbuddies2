@@ -1,0 +1,93 @@
+{
+ "model": "Skeleton2",
+ "rig": "Humanoid",
+ "rigObject": "Skeleton2_Rig",
+ "avatar": "Skeleton2 (CreateFromThisModel)",
+ "restPose": "T-Pose",
+ "heightModel": 1.673,
+ "prefabVisualScale": 0.808,
+ "tris": 2146,
+ "bones": [
+  "Root",
+  "Hips",
+  "Spine",
+  "Chest",
+  "UpperChest",
+  "Neck",
+  "Head",
+  "Jaw",
+  "LeftShoulder",
+  "LeftUpperArm",
+  "LeftLowerArm",
+  "LeftHand",
+  "BowNock",
+  "Arrow",
+  "RightShoulder",
+  "RightUpperArm",
+  "RightLowerArm",
+  "RightHand",
+  "LeftUpperLeg",
+  "LeftLowerLeg",
+  "LeftFoot",
+  "LeftToes",
+  "RightUpperLeg",
+  "RightLowerLeg",
+  "RightFoot",
+  "RightToes"
+ ],
+ "humanoidMap": {
+  "Hips": "Hips",
+  "Spine": "Spine",
+  "Chest": "Chest",
+  "UpperChest": "UpperChest",
+  "Neck": "Neck",
+  "Head": "Head",
+  "Jaw": "Jaw",
+  "LeftShoulder": "LeftShoulder",
+  "LeftUpperArm": "LeftUpperArm",
+  "LeftLowerArm": "LeftLowerArm",
+  "LeftHand": "LeftHand",
+  "LeftUpperLeg": "LeftUpperLeg",
+  "LeftLowerLeg": "LeftLowerLeg",
+  "LeftFoot": "LeftFoot",
+  "LeftToes": "LeftToes",
+  "RightShoulder": "RightShoulder",
+  "RightUpperArm": "RightUpperArm",
+  "RightLowerArm": "RightLowerArm",
+  "RightHand": "RightHand",
+  "RightUpperLeg": "RightUpperLeg",
+  "RightLowerLeg": "RightLowerLeg",
+  "RightFoot": "RightFoot",
+  "RightToes": "RightToes"
+ },
+ "extraBones": [
+  "Root",
+  "BowNock",
+  "Arrow"
+ ],
+ "materials": [
+  {
+   "name": "Undead_Bone",
+   "hex": "#ddd3b6",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Socket",
+   "hex": "#1b1a1e",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Eye",
+   "hex": "#72ff7e",
+   "emission": 3.0
+  },
+  {
+   "name": "Undead_BoneDark",
+   "hex": "#a59b80",
+   "emission": 0.0
+  }
+ ],
+ "emissive": [
+  "Undead_Eye"
+ ]
+}

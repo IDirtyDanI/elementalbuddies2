@@ -226,6 +226,17 @@ namespace ElementalBuddies.EditorTools
             yield return new Sfx(SfxId.ArcaneBallCast, 0.3f, 0.08f, new Vector2(0.93f, 1.07f), "arcane_cast");
             yield return new Sfx(SfxId.ArcaneBallHit, 0.42f, 0.06f, PWide, "arcane_hit");
             yield return new Sfx(SfxId.ArcaneBallLoop, 0.35f, 0.1f, PFix, "arcane_loop");
+            // Fremd-Assets-Ersatz Paket E (2026-10-18): eigene Synthese-Clips statt der alten Projekt-Clips explosion.wav,
+            // IceShot.wav, Getting DMG.wav, battleshout.wav. Lautstärke/Abstand/Tonhöhe wie die bisherigen (von Hand gesetzten)
+            // Einträge im Managers-Prefab – ein Clip deckt mehrere Ids ab, die Tonhöhe macht den Unterschied.
+            yield return new Sfx(SfxId.FireWave, 0.55f, 0.1f, new Vector2(1f, 1.1f), "explosion2");
+            yield return new Sfx(SfxId.StoneWall, 0.6f, 0.1f, new Vector2(0.55f, 0.6f), "explosion2");
+            yield return new Sfx(SfxId.Fusion, 0.6f, 0.2f, new Vector2(1.35f, 1.45f), "explosion2");
+            yield return new Sfx(SfxId.FrostNova, 0.8f, 0.1f, new Vector2(0.75f, 0.8f), "ice_shot2");
+            yield return new Sfx(SfxId.HolyCircle, 0.6f, 0.1f, new Vector2(1.35f, 1.45f), "ice_shot2");
+            yield return new Sfx(SfxId.PlayerHurt, 0.55f, 0.7f, P, "player_hurt2");
+            yield return new Sfx(SfxId.ShrineCaptured, 0.7f, 1f, PFix, "battleshout2");
+            yield return new Sfx(SfxId.BossSpawn, 0.9f, 1f, new Vector2(0.55f, 0.6f), "battleshout2");
         }
 
         private static void AssignGameAudio(GameAudio ga)

@@ -165,6 +165,8 @@ namespace ElementalBuddies.EditorTools
                 foreach (var anim in inst.GetComponentsInChildren<Animator>(true))
                 {
                     if (anim.runtimeAnimatorController == null) continue;
+                    // Instanz liegt außerhalb jeder Kamera: mit CullUpdateTransforms bliebe sie in der Ruhe-/T-Pose
+                    anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                     anim.Rebind();
                     anim.Update(0f);
                 }

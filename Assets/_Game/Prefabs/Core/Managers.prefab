@@ -441,25 +441,25 @@ MonoBehaviour:
     MinInterval: 0.1
   - Id: 3
     Clips:
-    - {fileID: 8300000, guid: 2dc6394d24b2faf48afd63c874bf6a1a, type: 3}
+    - {fileID: 8300000, guid: 79256ac80cf5e4ef0b3b4b8a0009bfd4, type: 3}
     Volume: 0.55
     Pitch: {x: 1, y: 1.1}
     MinInterval: 0.1
   - Id: 4
     Clips:
-    - {fileID: 8300000, guid: 7dbc55010d256cc40843e4f087b15352, type: 3}
+    - {fileID: 8300000, guid: c471452cdc2ea47c4a225749d91118c0, type: 3}
     Volume: 0.8
     Pitch: {x: 0.75, y: 0.8}
     MinInterval: 0.1
   - Id: 5
     Clips:
-    - {fileID: 8300000, guid: 2dc6394d24b2faf48afd63c874bf6a1a, type: 3}
+    - {fileID: 8300000, guid: 79256ac80cf5e4ef0b3b4b8a0009bfd4, type: 3}
     Volume: 0.6
     Pitch: {x: 0.55, y: 0.6}
     MinInterval: 0.1
   - Id: 6
     Clips:
-    - {fileID: 8300000, guid: 7dbc55010d256cc40843e4f087b15352, type: 3}
+    - {fileID: 8300000, guid: c471452cdc2ea47c4a225749d91118c0, type: 3}
     Volume: 0.6
     Pitch: {x: 1.35, y: 1.45}
     MinInterval: 0.1
@@ -473,19 +473,19 @@ MonoBehaviour:
     MinInterval: 0.06
   - Id: 8
     Clips:
-    - {fileID: 8300000, guid: 756099f7db9cf4e0191a08bcef562072, type: 3}
+    - {fileID: 8300000, guid: 64dcfeac1f6fe43a0a171c99429505b5, type: 3}
     Volume: 0.55
     Pitch: {x: 0.95, y: 1.05}
     MinInterval: 0.7
   - Id: 9
     Clips:
-    - {fileID: 8300000, guid: 57df5e058756446a2979cbc82cfcc1e0, type: 3}
+    - {fileID: 8300000, guid: 0154d131c9f8c451cbb9f5be5c844792, type: 3}
     Volume: 0.7
     Pitch: {x: 1, y: 1}
     MinInterval: 1
   - Id: 10
     Clips:
-    - {fileID: 8300000, guid: 2dc6394d24b2faf48afd63c874bf6a1a, type: 3}
+    - {fileID: 8300000, guid: 79256ac80cf5e4ef0b3b4b8a0009bfd4, type: 3}
     Volume: 0.6
     Pitch: {x: 1.35, y: 1.45}
     MinInterval: 0.2
@@ -497,7 +497,7 @@ MonoBehaviour:
     MinInterval: 0.3
   - Id: 12
     Clips:
-    - {fileID: 8300000, guid: 57df5e058756446a2979cbc82cfcc1e0, type: 3}
+    - {fileID: 8300000, guid: 0154d131c9f8c451cbb9f5be5c844792, type: 3}
     Volume: 0.9
     Pitch: {x: 0.55, y: 0.6}
     MinInterval: 1

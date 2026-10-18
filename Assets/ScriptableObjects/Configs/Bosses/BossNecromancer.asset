@@ -38,6 +38,12 @@ MonoBehaviour:
   ProjectileSpawnHeight: 0.6
   MeleeHitSound: 0
   MeleeHitSfx: 21
+  AttackSound: 0
+  AttackSfx: 21
+  DeathSound: 0
+  DeathSfx: 7
+  SpawnSound: 0
+  SpawnSfx: 23
   IsBoss: 1
   DisplayName: Nekromant
   ControlResistance: 0.6
@@ -45,7 +51,9 @@ MonoBehaviour:
   Icon: {fileID: 21300000, guid: 43a10db6b61cf481594088d6c1a51426, type: 3}
   PreviewHint: "Beschw\xF6rt Diener und heilt sie \u2013 zuerst ausschalten"
   IsFlyer: 0
+  WardShield: 0
   FlyHeight: 2
   ObstacleClearance: 1.5
   DiveHeight: 0.8
   DeathClipDuration: 0
+  DeathVfx: {fileID: 0}

@@ -1,0 +1,121 @@
+{
+ "model": "GraveSpider2",
+ "rig": "Generic",
+ "fps": 60,
+ "visualScale": 1.0,
+ "moveSpeedModel": 4.6,
+ "walkStateSpeed": 0.21739,
+ "deathDuration": 1.0,
+ "triggers": [
+  {
+   "trigger": "Attack",
+   "clip": "GraveSpider2_Bite"
+  },
+  {
+   "trigger": "Die",
+   "clip": "GraveSpider2_Die"
+  }
+ ],
+ "clips": [
+  {
+   "name": "GraveSpider2_Idle",
+   "role": "idle",
+   "loop": true,
+   "frames": 120,
+   "length": 2.0,
+   "hit": -1.0
+  },
+  {
+   "name": "GraveSpider2_Walk",
+   "role": "move",
+   "loop": true,
+   "frames": 15,
+   "length": 0.25,
+   "hit": -1.0
+  },
+  {
+   "name": "GraveSpider2_Bite",
+   "role": "attack",
+   "loop": false,
+   "frames": 48,
+   "length": 0.8,
+   "hit": 0.25
+  },
+  {
+   "name": "GraveSpider2_Die",
+   "role": "death",
+   "loop": false,
+   "frames": 54,
+   "length": 0.9,
+   "hit": -1.0
+  }
+ ],
+ "tris": 2012,
+ "bones": [
+  "Root",
+  "Body",
+  "Head",
+  "Fang_L",
+  "Fang_R",
+  "Abdomen",
+  "Leg1_1_L",
+  "Leg1_2_L",
+  "Leg1_3_L",
+  "Leg2_1_L",
+  "Leg2_2_L",
+  "Leg2_3_L",
+  "Leg3_1_L",
+  "Leg3_2_L",
+  "Leg3_3_L",
+  "Leg4_1_L",
+  "Leg4_2_L",
+  "Leg4_3_L",
+  "Leg1_1_R",
+  "Leg1_2_R",
+  "Leg1_3_R",
+  "Leg2_1_R",
+  "Leg2_2_R",
+  "Leg2_3_R",
+  "Leg3_1_R",
+  "Leg3_2_R",
+  "Leg3_3_R",
+  "Leg4_1_R",
+  "Leg4_2_R",
+  "Leg4_3_R"
+ ],
+ "materials": [
+  {
+   "name": "GraveSpider_Chitin",
+   "hex": "#3b3542",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_BoneDark",
+   "hex": "#a59b80",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Bone",
+   "hex": "#ddd3b6",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Socket",
+   "hex": "#1b1a1e",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Eye",
+   "hex": "#72ff7e",
+   "emission": 3.0
+  },
+  {
+   "name": "GraveSpider_ChitinDark",
+   "hex": "#221e27",
+   "emission": 0.0
+  }
+ ],
+ "emissive": [
+  "Undead_Eye"
+ ]
+}

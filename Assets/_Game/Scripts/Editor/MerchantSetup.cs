@@ -641,7 +641,7 @@ namespace ElementalBuddies.EditorTools
             return inst;
         }
 
-        // Kleiner Controller für die Händler-Figur: Idle (StarterAssets) ↔ Winken (Trigger „Winken") / Jubel (Trigger „Jubel")
+        // Kleiner Controller für die Händler-Figur: Idle (Hero2_Idle, gleiches Hero2-Rig) ↔ Winken (Trigger „Winken") / Jubel (Trigger „Jubel")
         public static RuntimeAnimatorController EnsureFigureController()
         {
             var ctrl = AssetDatabase.LoadAssetAtPath<UnityEditor.Animations.AnimatorController>(FigureControllerPath);
@@ -655,9 +655,7 @@ namespace ElementalBuddies.EditorTools
                 if (clip.name == "Merchant_Beckon") beckon = clip;
                 if (clip.name == "Merchant_Cheer") cheer = clip;
             }
-            AnimationClip idle = null;
-            foreach (var o in AssetDatabase.LoadAllAssetsAtPath("Assets/StarterAssets/ThirdPersonController/Character/Animations/Stand--Idle.anim.fbx"))
-                if (o is AnimationClip && !o.name.StartsWith("__")) idle = (AnimationClip)o;
+            AnimationClip idle = ChampionAnimatorBuilder.IdleClip();
 
             ctrl = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(FigureControllerPath);
             ctrl.AddParameter("Winken", AnimatorControllerParameterType.Trigger);

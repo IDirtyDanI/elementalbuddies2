@@ -1,0 +1,71 @@
+{
+ "file": "Assets/_Game/Animations/Enemies/Skeleton2_Clips.fbx",
+ "rig": "Humanoid",
+ "avatar": "CopyFromOther Assets/_Game/Models/Enemies/Skeleton2/Skeleton2.fbx",
+ "fps": 30,
+ "rootMotion": false,
+ "clips": [
+  {
+   "name": "Skeleton_Idle",
+   "take": "Skeleton_Idle",
+   "frames": 60,
+   "seconds": 2.0,
+   "loop": true
+  },
+  {
+   "name": "Skeleton_Run",
+   "take": "Skeleton_Run",
+   "frames": 12,
+   "seconds": 0.4,
+   "loop": true,
+   "speedModel": 4.3317
+  },
+  {
+   "name": "Skeleton_Walk",
+   "take": "Skeleton_Walk",
+   "frames": 30,
+   "seconds": 1.0,
+   "loop": true,
+   "speedModel": 1.0
+  },
+  {
+   "name": "SkeletonSwarm_Run",
+   "take": "SkeletonSwarm_Run",
+   "frames": 10,
+   "seconds": 0.3333,
+   "loop": true,
+   "speedModel": 5.0
+  },
+  {
+   "name": "SkeletonKnight_Run",
+   "take": "SkeletonKnight_Run",
+   "frames": 20,
+   "seconds": 0.6667,
+   "loop": true,
+   "speedModel": 2.5784
+  },
+  {
+   "name": "SkeletonArcher_Aim",
+   "take": "SkeletonArcher_Aim",
+   "frames": 48,
+   "seconds": 1.6,
+   "loop": true
+  },
+  {
+   "name": "SkeletonArcher_Run",
+   "take": "SkeletonArcher_Run",
+   "frames": 12,
+   "seconds": 0.4,
+   "loop": true,
+   "speedModel": 3.7129
+  },
+  {
+   "name": "SkeletonArcher_Shoot",
+   "take": "SkeletonArcher_Shoot",
+   "frames": 40,
+   "seconds": 1.3333,
+   "loop": false,
+   "release": 0.35
+  }
+ ]
+}

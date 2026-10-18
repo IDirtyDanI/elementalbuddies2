@@ -339,7 +339,7 @@ namespace ElementalBuddies.EditorTools
             ground.transform.localScale = new Vector3(12f, 1f, 12f);
             Object.DestroyImmediate(ground.GetComponent<Collider>());
             ground.GetComponent<Renderer>().sharedMaterial = EnsureLitMaterial("MenuGround",
-                "Assets/Painterly Terrain Textures/Painterly Terrain Textures - Impressionist Grass - Rich.BMP",
+                "Assets/_Game/Textures/Terrain/grass_painterly.png",
                 new Color(0.55f, 0.58f, 0.5f), new Vector2(40f, 40f));
 
             var plaza = GameObject.CreatePrimitive(PrimitiveType.Cylinder);

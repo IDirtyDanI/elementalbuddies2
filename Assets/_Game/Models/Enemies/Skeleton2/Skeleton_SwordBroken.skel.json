@@ -1,0 +1,66 @@
+{
+ "model": "Skeleton_SwordBroken",
+ "rig": "None",
+ "pivot": "Griff",
+ "tris": 188,
+ "size": [
+  0.15,
+  0.052,
+  0.918
+ ],
+ "axes": "Blender: Klinge/Bogen +Z, Schild-Front -Y, Schneide +-X -> Unity: +Y oben, Front +Z",
+ "hand": "RightHand",
+ "gripInHandBoneSpace_blender": [
+  [
+   -0.27463,
+   0.49164,
+   -0.82636,
+   -0.00572
+  ],
+  [
+   -0.55351,
+   -0.78357,
+   -0.28222,
+   0.05146
+  ],
+  [
+   -0.78626,
+   0.37989,
+   0.48732,
+   -0.01039
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "materials": [
+  {
+   "name": "Enemy_IronDark",
+   "hex": "#4c4f59",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_LeatherDark",
+   "hex": "#4f301c",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Leather",
+   "hex": "#7a4c2b",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Rust",
+   "hex": "#8a5a3c",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Iron",
+   "hex": "#8e939e",
+   "emission": 0.0
+  }
+ ]
+}

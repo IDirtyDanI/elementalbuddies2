@@ -1,0 +1,138 @@
+{
+ "model": "Skeleton2_Knight",
+ "rig": "Humanoid",
+ "rigObject": "Skeleton2_Rig",
+ "avatar": "CopyFromOther Skeleton2.fbx",
+ "restPose": "T-Pose",
+ "heightModel": 1.72,
+ "prefabVisualScale": 0.808,
+ "tris": 2670,
+ "bones": [
+  "Root",
+  "Hips",
+  "Spine",
+  "Chest",
+  "UpperChest",
+  "Neck",
+  "Head",
+  "Jaw",
+  "LeftShoulder",
+  "LeftUpperArm",
+  "LeftLowerArm",
+  "LeftHand",
+  "BowNock",
+  "Arrow",
+  "RightShoulder",
+  "RightUpperArm",
+  "RightLowerArm",
+  "RightHand",
+  "LeftUpperLeg",
+  "LeftLowerLeg",
+  "LeftFoot",
+  "LeftToes",
+  "RightUpperLeg",
+  "RightLowerLeg",
+  "RightFoot",
+  "RightToes"
+ ],
+ "humanoidMap": {
+  "Hips": "Hips",
+  "Spine": "Spine",
+  "Chest": "Chest",
+  "UpperChest": "UpperChest",
+  "Neck": "Neck",
+  "Head": "Head",
+  "Jaw": "Jaw",
+  "LeftShoulder": "LeftShoulder",
+  "LeftUpperArm": "LeftUpperArm",
+  "LeftLowerArm": "LeftLowerArm",
+  "LeftHand": "LeftHand",
+  "LeftUpperLeg": "LeftUpperLeg",
+  "LeftLowerLeg": "LeftLowerLeg",
+  "LeftFoot": "LeftFoot",
+  "LeftToes": "LeftToes",
+  "RightShoulder": "RightShoulder",
+  "RightUpperArm": "RightUpperArm",
+  "RightLowerArm": "RightLowerArm",
+  "RightHand": "RightHand",
+  "RightUpperLeg": "RightUpperLeg",
+  "RightLowerLeg": "RightLowerLeg",
+  "RightFoot": "RightFoot",
+  "RightToes": "RightToes"
+ },
+ "extraBones": [
+  "Root",
+  "BowNock",
+  "Arrow"
+ ],
+ "materials": [
+  {
+   "name": "Undead_Bone",
+   "hex": "#ddd3b6",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Socket",
+   "hex": "#1b1a1e",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Eye",
+   "hex": "#72ff7e",
+   "emission": 3.0
+  },
+  {
+   "name": "Undead_BoneDark",
+   "hex": "#a59b80",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Iron",
+   "hex": "#8e939e",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Rust",
+   "hex": "#8a5a3c",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_IronDark",
+   "hex": "#4c4f59",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_LeatherDark",
+   "hex": "#4f301c",
+   "emission": 0.0
+  },
+  {
+   "name": "Skel_Tabard",
+   "hex": "#6e2620",
+   "emission": 0.0
+  },
+  {
+   "name": "Skel_TabardDark",
+   "hex": "#4a1a16",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Leather",
+   "hex": "#7a4c2b",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_Wood",
+   "hex": "#865934",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_WoodDark",
+   "hex": "#5b3a22",
+   "emission": 0.0
+  }
+ ],
+ "emissive": [
+  "Undead_Eye"
+ ]
+}

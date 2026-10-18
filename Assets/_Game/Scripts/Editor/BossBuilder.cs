@@ -11,6 +11,9 @@ namespace ElementalBuddies.EditorTools
     // (Models/Bosses), Materialien, Effekt-Umfärbungen (VFX/Prefabs/Bosses), Projektile, Animator-Controller,
     // Boss-Prefabs (Prefabs/Bosses) und Configs (ScriptableObjects/Configs/Bosses).
     // Menü: BuddyTD → Bosse neu bauen. Szene (HUD-Leiste, Wellen, DevTools, Audio): BuddyTD → Bosse in Szene verdrahten.
+    // Seit 2026-10-18 (Fremd-Assets-Ersatz Paket C) auf dem eigenen Grundskelett Skeleton2 (Skeleton2Builder) statt Meshy
+    // „Skeletton.fbx“. Nur die Optik (Skelett, Materialien, Accessoires, Controller) erneuern, ohne Configs/Fähigkeiten auf
+    // die Code-Werte zurückzusetzen: BuddyTD → Bosse: Skelett-Optik neu bauen (RebuildSkeletonVisuals).
     public static class BossBuilder
     {
         private const string ModelDir = "Assets/_Game/Models/Bosses/";
@@ -23,19 +26,19 @@ namespace ElementalBuddies.EditorTools
         private const string VfxMat = "Assets/_Game/VFX/Materials/";
 
         private const string RunnerPrefab = "Assets/_Game/Prefabs/Runner.prefab";
-        private const string KnightPrefab = "Assets/_Game/Prefabs/Knight.prefab";
-        private const string ArcherPrefab = "Assets/_Game/Prefabs/SkeletonArcher.prefab";
-        private const string SkelFbx = "Assets/3D Models/Enemy/Skeletton.fbx";
-        private const string MeshyEnemy = "Assets/3D Models/Enemy/Meshy_Merged_Animations.fbx";
         private const string KnightFbx = "Assets/_Game/Models/Characters/KnightChampion.fbx";
 
         public static readonly Color BoneLordColor = new Color(0.85f, 0.1f, 0.08f);
         public static readonly Color NecroColor = new Color(0.35f, 1f, 0.25f);
         public static readonly Color HunterColor = new Color(0.6f, 0.2f, 1f);
 
-        // Visual-Raum (ungeskaliertes Skeletton.fbx): Augenhöhlen vorn am Schädel
-        private static readonly Vector3 EyeL = new Vector3(-0.072f, 1.50f, 0.215f);
-        private static readonly Vector3 EyeR = new Vector3(0.072f, 1.50f, 0.215f);
+        // Knochenfarbe je Boss (verkohlt, flach statt der früheren Meshy-Textur × Tönung)
+        private static readonly Color BoneLordBone = new Color(0.33f, 0.29f, 0.29f);
+        private static readonly Color NecroBone = new Color(0.3f, 0.32f, 0.29f);
+        private static readonly Color HunterBone = new Color(0.31f, 0.29f, 0.34f);
+        // Gang Skeleton_Walk: 1,0 m/s im Modell, Visual-Maßstab 0,808 × VisualScale → Run-Tempo je m/s (Speed-Parameter)
+        private const float WalkSpeedModel = 1f;
+        private const float VisualBase = 0.808f;
 
         [MenuItem("BuddyTD/Bosse neu bauen")]
         public static void BuildAll()
@@ -52,6 +55,54 @@ namespace ElementalBuddies.EditorTools
             foreach (var n in new[] { "BossBoneLord", "BossNecromancer", "BossDeathHunter" })
                 AssetDatabase.ImportAsset(PrefabDir + n + ".prefab", ImportAssetOptions.ForceUpdate);
             Debug.Log("BossBuilder: Knochenfürst, Nekromant und Totenjäger gebaut (" + PrefabDir + ", " + ConfigDir + ").");
+        }
+
+        // Nur die Optik der drei Stadt-Bosse auf Skeleton2 umstellen (Fremd-Assets-Ersatz Paket C): Skeleton2-Import,
+        // Boss-Controller (BuildControllers, GUIDs bleiben) und Inhalt von „Visual“ (Grundskelett, Boss-Materialien,
+        // Accessoires) in den bestehenden Prefabs. Wurzel (Agent, Collider, EnemyBrain, BossBrain.Abilities, Netz), Aura,
+        // Configs, Effekte und Projektile bleiben unangetastet – BuildAll würde Configs/Fähigkeiten auf die Code-Werte
+        // zurücksetzen und die Prefabs aus dem Runner neu zusammensetzen. Danach Icons (Config.Icon, Boss-Porträt) neu.
+        [MenuItem("BuddyTD/Bosse: Skelett-Optik neu bauen (Skeleton2)")]
+        private static void RebuildSkeletonVisualsMenu() => Debug.Log(RebuildSkeletonVisuals());
+
+        public static string RebuildSkeletonVisuals(bool renderIcons = true)
+        {
+            var sb = new System.Text.StringBuilder("BossBuilder.RebuildSkeletonVisuals:");
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return sb.Append(" nur im Edit-Modus.").ToString();
+            if (!Skeleton2Builder.Import(sb)) return sb.ToString();
+            var ctrl = BuildControllers();
+            RebuildVisual("BossBoneLord", r => DressVisual(r, ctrl[0], "Boss_BoneLord_Bone", BoneLordBone, BoneLordColor, "BoneLord"), DressBoneLord, sb);
+            RebuildVisual("BossNecromancer", r => DressVisual(r, ctrl[1], "Boss_Necro_Bone", NecroBone, NecroColor, "Necro"), DressNecromancer, sb);
+            RebuildVisual("BossDeathHunter", r => DressVisual(r, ctrl[2], "Boss_Hunter_Bone", HunterBone, HunterColor, "Hunter"), DressDeathHunter, sb);
+            var hunter = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(ConfigDir + "BossDeathHunter.asset");
+            if (hunter != null && !Mathf.Approximately(hunter.ProjectileSpawnHeight, HunterArrowHeight))
+            {
+                hunter.ProjectileSpawnHeight = HunterArrowHeight;   // Optik-Feld (ThemeParityTests ignoriert es)
+                EditorUtility.SetDirty(hunter);
+                sb.Append($"\n  BossDeathHunter.ProjectileSpawnHeight = {HunterArrowHeight:0.##} (Sehne beim Loslassen)");
+            }
+            AssetDatabase.SaveAssets();
+            if (renderIcons)
+                foreach (var n in new[] { "BossBoneLord", "BossNecromancer", "BossDeathHunter" }) Skeleton2Builder.RenderIcon("Bosses/" + n, sb);
+            AssetDatabase.SaveAssets();
+            return sb.ToString();
+        }
+
+        private static void RebuildVisual(string name, System.Func<GameObject, Rig> dress, System.Action<Rig> accessories, System.Text.StringBuilder sb)
+        {
+            string path = PrefabDir + name + ".prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null) { sb.Append("\n  " + path + " fehlt (erst „Bosse neu bauen“)"); return; }
+            var root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                var rig = dress(root);
+                accessories(rig);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                var parts = new List<string>();
+                foreach (var mr in rig.Visual.GetComponentsInChildren<MeshRenderer>(true)) parts.Add(mr.name + "@" + mr.transform.parent.name);
+                sb.Append("\n  " + path + ": Skeleton2 + " + string.Join(", ", parts));
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
         }
 
         private static void Folders()
@@ -126,17 +177,27 @@ namespace ElementalBuddies.EditorTools
             return m;
         }
 
-        // Verkohlte Knochen: Skelett-Textur, dunkel getönt
+        // Verkohlte Knochen: Palette-Material Undead_Bone (Skeleton2, flach) dunkel getönt; keine Textur mehr (die frühere
+        // Meshy-Textur wird aus bestehenden Materialien entfernt)
         private static Material BoneMaterial(string name, Color tint)
         {
             string p = ModelMatDir + name + ".mat";
+            var src = Skeleton2Builder.Palette("Undead_Bone");
             var m = AssetDatabase.LoadAssetAtPath<Material>(p);
             if (m == null)
             {
-                m = new Material(AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Models/Materials/Enemy_ArcherBone.mat"));
+                m = src != null ? new Material(src) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 AssetDatabase.CreateAsset(m, p);
             }
+            else if (src != null)
+            {
+                m.shader = src.shader;
+                m.CopyPropertiesFromMaterial(src);
+            }
+            if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", null);
+            if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", null);
             m.SetColor("_BaseColor", tint);
+            if (m.HasProperty("_Color")) m.SetColor("_Color", tint);
             m.SetFloat("_Smoothness", 0.25f);
             EditorUtility.SetDirty(m);
             return m;
@@ -482,51 +543,46 @@ namespace ElementalBuddies.EditorTools
 
         // ---------------- Animator ----------------
 
+        // Gang Skeleton_Walk (eigenes Skelett, Schleife) für alle drei: Tempo je m/s so, dass die Füße nicht rutschen –
+        // bei Config.Speed Knochenfürst 1,5 / (0,808 × 2) = 0,93, Nekromant 1,6 / (0,808 × 1,9) = 1,04, Totenjäger 1,7 / 1,535 = 1,11
+        private static float WalkPerMeter(string config, float fallbackScale)
+        {
+            var c = AssetDatabase.LoadAssetAtPath<EnemyConfigSO>(ConfigDir + config + ".asset");
+            float vs = c != null && c.VisualScale > 0f ? c.VisualScale : fallbackScale;
+            return 1f / (WalkSpeedModel * VisualBase * vs);
+        }
+
         private static AnimatorController[] BuildControllers()
         {
-            var walk = LoopedCopy(Clip(SkelFbx, "Walking"), AnimDir + "Boss_Walking_Loop.anim");
-            var run = Clip(SkelFbx, "Running");
+            var walk = Skeleton2Builder.Clip("Skeleton_Walk");
             // Idle: Elementar-Idle mit Händen seitlich vor dem Körper (Stab/Schwert bleiben sichtbar, StarterAssets-Idle hält sie hinter der Robe)
             var idle = Clip("Assets/_Game/Models/Characters/LightningElemental.fbx", "Lightning_Idle");
-            var archerIdle = Clip(MeshyEnemy, "Archery_Shot");
-            var shot = Clip(MeshyEnemy, "Archery_Shot_3");
+            var archerIdle = Skeleton2Builder.Clip("SkeletonArcher_Aim");
+            var shot = Skeleton2Builder.Clip("SkeletonArcher_Shoot");
 
             // Knochenfürst: schwerer Gang, Hieb, Sprung-Stampfer (Landung bei ~1,5 s = Windup 1,0 + Sprung 0,45), Drehschlag
-            var bone = NewController("BossBoneLordVisual", walk, 0.55f, idle, "Attack", "Slam", "Whirl");
-            // Hieb: eigener Clip BoneLord_Attack (EnemyAttackBuilder, Treffer 0,55 s bei Tempo 1)
-            Action(bone, "Attack", Clip(EnemyAttackBuilder.AnimDir + "BoneLord_Attack.fbx", "BoneLord_Attack"), 1f, EnemyAttackBuilder.BoneLordExit);
+            // Idle Skeleton_Idle (Füße auf dem Boden; Lightning_Idle schwebt ~6 cm × VisualScale; Schwert bleibt sichtbar)
+            var bone = NewController("BossBoneLordVisual", walk, WalkPerMeter("BossBoneLord", 2f), Skeleton2Builder.Clip("Skeleton_Idle"), "Attack", "Slam", "Whirl");
+            // Hieb: eigener Clip Skeleton2_BoneLord_Attack (EnemyAttackBuilder, Treffer 0,55 s bei Tempo 1)
+            Action(bone, "Attack", Skeleton2Builder.Clip("Skeleton2_BoneLord_Attack"), 1f, EnemyAttackBuilder.BoneLordExit);
             Action(bone, "Slam", Clip(KnightFbx, "Knight_Earthquake"), 0.4f, 0.8f);
             Action(bone, "Whirl", Clip(KnightFbx, "Knight_FlameWhirl"), 0.76f, 0.85f);
 
+            // Nekromant behält Lightning_Idle (Skeleton_Idle hält den Stab hinter der Robe, Spitze im Boden); die Füße schweben
+            // dabei ~12 cm, verdeckt größtenteils die Robe.
             // Nekromant: Grund-Zauber (Magma_Cast, Stoß nach vorn bei ~0,4 s) und Fähigkeiten-Zauber (Shadow_Cast, Arme hoch,
             // Niederschlag bei ~0,8 s)
-            var necro = NewController("BossNecromancerVisual", walk, 0.5f, idle, "Attack", "Cast");
+            var necro = NewController("BossNecromancerVisual", walk, WalkPerMeter("BossNecromancer", 1.9f), idle, "Attack", "Cast");
             Action(necro, "Attack", Clip("Assets/_Game/Models/Characters/MagmaElemental.fbx", "Magma_Cast"), 1f, 0.8f);
             Action(necro, "Cast", Clip("Assets/_Game/Models/Characters/ShadowElemental.fbx", "Shadow_Cast"), 1.25f, 0.88f);
 
-            // Totenjäger: wie der Skelett-Bogenschütze; Fähigkeiten-Schuss langsam (Loslassen nach ~1 s)
-            var hunter = NewController("BossDeathHunterVisual", run, 0.33f, archerIdle, "Attack", "Shoot");
-            foreach (var s in hunter.layers[0].stateMachine.states)
-                if (s.state.name == "Idle") s.state.speed = 0f;
+            // Totenjäger: wie der Skelett-Bogenschütze (Ziel-Idle, Schuss mit Loslassen bei 0,35 s = AttackWindup);
+            // Fähigkeiten-Schuss langsam (Tempo 0,35 → Loslassen nach 1,0 s = Windup)
+            var hunter = NewController("BossDeathHunterVisual", walk, WalkPerMeter("BossDeathHunter", 1.9f), archerIdle, "Attack", "Shoot");
             Action(hunter, "Attack", shot, 1f, 0.9f);
-            Action(hunter, "Shoot", shot, 0.36f, 0.95f);
+            Action(hunter, "Shoot", shot, 0.35f, 0.95f);
             foreach (var c in new[] { bone, necro, hunter }) EditorUtility.SetDirty(c);
             return new[] { bone, necro, hunter };
-        }
-
-        private static AnimationClip LoopedCopy(AnimationClip src, string path)
-        {
-            var c = Object.Instantiate(src);
-            c.name = System.IO.Path.GetFileNameWithoutExtension(path);
-            var s = AnimationUtility.GetAnimationClipSettings(c);
-            s.loopTime = true;
-            AnimationUtility.SetAnimationClipSettings(c, s);
-            var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
-            if (existing == null) { AssetDatabase.CreateAsset(c, path); return c; }
-            EditorUtility.CopySerialized(c, existing);
-            Object.DestroyImmediate(c);
-            EditorUtility.SetDirty(existing);
-            return existing;
         }
 
         // Base Layer: Run (Tempo × Speed-Parameter) ↔ Idle über Moving; Aktionen per Any-State-Trigger
@@ -599,7 +655,8 @@ namespace ElementalBuddies.EditorTools
 
         // ---------------- Boss-Prefabs ----------------
 
-        // Rohbau aus dem Runner: Tag/Layer/Agent/Collider/EnemyBrain/HP-Leiste übernommen, Knochen verkohlt, Augen, Aura
+        // Rohbau aus dem Runner: Tag/Layer/Agent/Collider/EnemyBrain/HP-Leiste übernommen, Grundskelett Skeleton2 mit
+        // verkohlten Knochen und Augen in Boss-Farbe (DressVisual), Aura
         private class Rig
         {
             public GameObject Root;
@@ -609,32 +666,14 @@ namespace ElementalBuddies.EditorTools
             public Dictionary<string, Matrix4x4> Bind = new Dictionary<string, Matrix4x4>();
         }
 
-        private static Rig NewRig(string name, AnimatorController ctrl, Material bone, Color theme, string prefix)
+        private static Rig NewRig(string name, AnimatorController ctrl, string boneMat, Color boneTint, Color theme, string prefix)
         {
             var src = AssetDatabase.LoadAssetAtPath<GameObject>(RunnerPrefab);
             var go = (GameObject)PrefabUtility.InstantiatePrefab(src);
             PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
             go.name = name;
             go.transform.position = Vector3.zero;
-            var rig = new Rig { Root = go, Visual = go.transform.Find("Visual") };
-            rig.Body = go.GetComponentInChildren<SkinnedMeshRenderer>();
-            rig.Body.sharedMaterial = bone;
-
-            var anim = rig.Visual.GetComponent<Animator>();
-            anim.runtimeAnimatorController = ctrl;
-            anim.applyRootMotion = false;
-            anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
-
-            // Bind-Pose der Knochen im Visual-Raum (aus den Bindposes des Skinned Mesh)
-            Matrix4x4 smrInVis = rig.Visual.worldToLocalMatrix * rig.Body.transform.localToWorldMatrix;
-            var bp = rig.Body.sharedMesh.bindposes;
-            for (int i = 0; i < rig.Body.bones.Length; i++)
-            {
-                var b = rig.Body.bones[i];
-                if (b == null) continue;
-                rig.Bones[b.name] = b;
-                rig.Bind[b.name] = smrInVis * bp[i].inverse;
-            }
+            var rig = DressVisual(go, ctrl, boneMat, boneTint, theme, prefix);
 
             // Agent: schmaler als die Optik (×2), damit der Boss durch die Gassen kommt
             var agent = go.GetComponent<NavMeshAgent>();
@@ -645,25 +684,58 @@ namespace ElementalBuddies.EditorTools
             var col = go.GetComponent<CapsuleCollider>();
             col.radius = 0.4f;
 
-            // Leuchtende Augen
-            var eyeMat = GlowMaterial(ModelMatDir, prefix + "_Eye", theme, 2.2f);
-            var sphere = Resources.GetBuiltinResource<Mesh>("Sphere.fbx");
-            int k = 0;
-            foreach (var p in new[] { EyeL, EyeR })
-            {
-                var e = Piece(rig, "Head", prefix + "_Eye" + k++, sphere, new[] { eyeMat }, p - BindPos(rig, "Head"), 0.075f);
-                e.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            }
-
             Aura(go.transform, theme);
+            return rig;
+        }
+
+        // „Visual“ (Animator-Wurzel) mit dem Grundskelett Skeleton2 neu befüllen (Skeleton2Builder.ReplaceVisual: Transform und
+        // Animator bleiben), Materialien je Slot: Undead_Bone/BoneDark → Boss-Knochen, Undead_Eye → Boss-Augen (leuchtend in
+        // der Boss-Farbe; früher Augen-Kugeln), Undead_Socket bleibt. Bind-Pose der Knochen für die Accessoires.
+        private static Rig DressVisual(GameObject root, AnimatorController ctrl, string boneMat, Color boneTint, Color theme, string prefix)
+        {
+            var rig = new Rig { Root = root, Visual = root.transform.Find("Visual") };
+            Skeleton2Builder.ReplaceVisual(rig.Visual, Skeleton2Builder.BaseFbx);
+            rig.Body = rig.Visual.GetComponentInChildren<SkinnedMeshRenderer>();
+            var bone = BoneMaterial(boneMat, boneTint);
+            var boneDark = BoneMaterial(boneMat + "Dark", boneTint * 0.75f);
+            var eye = GlowMaterial(ModelMatDir, prefix + "_Eye", theme, 2.2f);
+            var mats = rig.Body.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+            {
+                if (mats[i] == null) continue;
+                if (mats[i].name == "Undead_Bone") mats[i] = bone;
+                else if (mats[i].name == "Undead_BoneDark") mats[i] = boneDark;
+                else if (mats[i].name == "Undead_Eye") mats[i] = eye;
+            }
+            rig.Body.sharedMaterials = mats;
+
+            var anim = rig.Visual.GetComponent<Animator>();
+            anim.runtimeAnimatorController = ctrl;
+            anim.applyRootMotion = false;
+            anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+
+            // Bind-Pose der Knochen im Visual-Raum (aus den Bindposes des Skinned Mesh); Skeleton2-Knochen tragen den
+            // FBX-Maßstab 100 (Piece gleicht ihn aus)
+            Matrix4x4 smrInVis = rig.Visual.worldToLocalMatrix * rig.Body.transform.localToWorldMatrix;
+            var bp = rig.Body.sharedMesh.bindposes;
+            for (int i = 0; i < rig.Body.bones.Length; i++)
+            {
+                var b = rig.Body.bones[i];
+                if (b == null) continue;
+                rig.Bones[b.name] = b;
+                rig.Bind[b.name] = smrInVis * bp[i].inverse;
+            }
             return rig;
         }
 
         private static Vector3 BindPos(Rig rig, string bone) => rig.Bind[bone].GetColumn(3);
 
         // Teil an einen Knochen hängen: Position = Kopf des Knochens in der Bind-Pose + Versatz (Visual-Raum),
-        // Ausrichtung = Visual-Raum (Mesh-Achsen wie der Charakter), Maßstab = Visual (Knochen haben Maßstab 1)
+        // Ausrichtung = Visual-Raum (Mesh-Achsen wie der Charakter), Maßstab im Visual-Raum (Knochen-Maßstab ausgeglichen)
         private static Transform Piece(Rig rig, string bone, string name, Mesh mesh, Material[] mats, Vector3 offset, float scale = 1f, Quaternion? boneLocalRot = null)
+            => Piece(rig, bone, name, mesh, mats, offset, Vector3.one * scale, boneLocalRot);
+
+        private static Transform Piece(Rig rig, string bone, string name, Mesh mesh, Material[] mats, Vector3 offset, Vector3 scale, Quaternion? boneLocalRot = null)
         {
             var b = rig.Bones[bone];
             Matrix4x4 bind = rig.Bind[bone];
@@ -674,33 +746,28 @@ namespace ElementalBuddies.EditorTools
             Vector3 posVis = (Vector3)bind.GetColumn(3) + offset;
             go.transform.localPosition = bind.inverse.MultiplyPoint3x4(posVis);
             go.transform.localRotation = boneLocalRot ?? Quaternion.Inverse(bind.rotation);
-            go.transform.localScale = Vector3.one * scale;
+            go.transform.localScale = scale / Mathf.Max(1e-4f, bind.lossyScale.x);
             return go.transform;
         }
 
-        private static Transform Model(Rig rig, string bone, string fbx, Vector3 offset, float scale = 1f, Quaternion? boneLocalRot = null)
+        private static Transform Model(Rig rig, string bone, string fbx, Vector3 offset, float scale = 1f)
+            => Model(rig, bone, fbx, offset, Vector3.one * scale);
+
+        private static Transform Model(Rig rig, string bone, string fbx, Vector3 offset, Vector3 scale)
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelDir + fbx + ".fbx");
             var mf = model.GetComponentInChildren<MeshFilter>();
             var mr = model.GetComponentInChildren<MeshRenderer>();
-            return Piece(rig, bone, fbx, mf.sharedMesh, mr.sharedMaterials, offset, scale, boneLocalRot);
+            return Piece(rig, bone, fbx, mf.sharedMesh, mr.sharedMaterials, offset, scale);
         }
 
-        // Wie Model, aber mit Ausrichtung im Charakter-Raum (Bind-Pose)
+        // Wie Model, aber mit Ausrichtung im Charakter-Raum (Bind-Pose = T-Pose; Humanoid-Clips drehen die Hand gegenüber
+        // der T-Pose auf jedem Rig gleich → Waffenhaltung unabhängig von den Knochenachsen)
         private static Transform ModelRoot(Rig rig, string bone, string fbx, Vector3 offset, Quaternion rootRotation, float scale)
         {
             var t = Model(rig, bone, fbx, offset, scale);
             t.localRotation = Quaternion.Inverse(rig.Bind[bone].rotation) * rootRotation;
             return t;
-        }
-
-        // Lokale Rotation eines Teils am Knochen eines bestehenden Prefabs (Waffenhaltung übernehmen)
-        private static Quaternion HeldRotation(string prefabPath, string child)
-        {
-            var p = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            foreach (var t in p.GetComponentsInChildren<Transform>(true))
-                if (t.name == child) return t.localRotation;
-            return Quaternion.identity;
         }
 
         // Dezente Boden-Aura (Schleife, wenige Partikel): pulsierender Ring + aufsteigende Funken in der Boss-Farbe
@@ -804,12 +871,8 @@ namespace ElementalBuddies.EditorTools
             // Einzelhiebe (2026-10-12): Trefferframe der Attack-Animation (BoneLord_Attack 0,55 s, Tempo 1), 20 DPS = 32 je Hieb
             c.AttackWindup = EnemyAttackBuilder.BoneLordWindup; c.MeleeHitSound = true; c.MeleeHitSfx = SfxId.EnemyChop;
 
-            var rig = NewRig("BossBoneLord", ctrl, BoneMaterial("Boss_BoneLord_Bone", new Color(0.33f, 0.29f, 0.29f)), BoneLordColor, "BoneLord");
-            Model(rig, "Head", "Boss_Knight_Helm", Vector3.zero);
-            Model(rig, "LeftArm", "Boss_Knight_Pauldron_L", Vector3.zero);
-            Model(rig, "RightArm", "Boss_Knight_Pauldron_R", Vector3.zero);
-            Model(rig, "Hips", "Boss_Knight_Tabard", Vector3.zero);
-            ModelRoot(rig, "RightHand", "Boss_Knight_Greatsword", GreatswordOffset, GreatswordRootRotation, 0.92f);
+            var rig = NewRig("BossBoneLord", ctrl, "Boss_BoneLord_Bone", BoneLordBone, BoneLordColor, "BoneLord");
+            DressBoneLord(rig);
 
             SaveBoss(rig, c, b =>
             {
@@ -824,9 +887,33 @@ namespace ElementalBuddies.EditorTools
             }, 2.6f, 0.2f, 7f);
         }
 
+        private static void DressBoneLord(Rig rig)
+        {
+            Model(rig, "Head", "Boss_Knight_Helm", HeadPieceOffset, HeadPieceScale);
+            Model(rig, "LeftUpperArm", "Boss_Knight_Pauldron_L", PauldronOffset, PauldronScale);
+            Model(rig, "RightUpperArm", "Boss_Knight_Pauldron_R", PauldronOffset, PauldronScale);
+            Model(rig, "Hips", "Boss_Knight_Tabard", HipsPieceOffset, HipsPieceScale);
+            ModelRoot(rig, "RightHand", "Boss_Knight_Greatsword", GreatswordOffset, GreatswordRootRotation, 0.92f);
+        }
+
+        // Accessoires auf Skeleton2 (Versätze im Visual-Raum ab dem Knochenkopf, aus der Meshy-Lage übertragen): Schädel
+        // ~0,6 so breit wie Meshy → Helme/Kapuzen ×0,6 um die Schädelmitte; Torso-/Hüftteile auf die Mitte von UpperChest
+        // bzw. Hüfte verschoben; Schulter-/Armteile auf den schmaleren Knochen-Armen verkleinert
+        public static Vector3 HeadPieceOffset = new Vector3(0f, 0.093f, 0.1f);
+        public static float HeadPieceScale = 0.6f;
+        public static Vector3 ChestPieceOffset = new Vector3(0f, -0.083f, -0.017f);
+        public static float ChestPieceScale = 1f;
+        public static Vector3 QuiverOffset = new Vector3(0f, -0.083f, 0.1f);   // Köcher näher an den schmalen Knochen-Rücken
+        public static Vector3 HipsPieceOffset = new Vector3(0f, 0.078f, -0.054f);
+        public static float HipsPieceScale = 1f;
+        public static Vector3 PauldronOffset = new Vector3(0f, -0.032f, -0.2f);
+        public static float PauldronScale = 0.75f;
+        public static Vector3 BracerOffset = new Vector3(0f, 0.0025f, -0.008f);
+        public static Vector3 BracerScale = new Vector3(0.9f, 0.5f, 0.5f);
+
         // Griff in der Faust; in der T-Pose zeigt die Klinge nach vorn-unten (180° um Z, dann 65° nach vorn gekippt):
         // im Gang schräg vor dem Körper, beim Hieb (Outward Slash) waagerecht nach außen
-        public static Vector3 GreatswordOffset = new Vector3(0.114f, -0.021f, 0.061f);
+        public static Vector3 GreatswordOffset = new Vector3(0.06f, -0.025f, 0.016f);
         public static Quaternion GreatswordRootRotation = Quaternion.Euler(-65f, 0f, 0f) * Quaternion.Euler(0f, 0f, 180f);
 
         // ---------------- Nekromant ----------------
@@ -842,11 +929,8 @@ namespace ElementalBuddies.EditorTools
             c.ProjectileSpawnHeight = NecroOrbHeight;
             c.ProjectilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "NecroOrb.prefab");
 
-            var rig = NewRig("BossNecromancer", ctrl, BoneMaterial("Boss_Necro_Bone", new Color(0.3f, 0.32f, 0.29f)), NecroColor, "Necro");
-            Model(rig, "Head", "Boss_Mage_Hood", Vector3.zero);
-            Model(rig, "Spine", "Boss_Mage_Collar", Vector3.zero);
-            Model(rig, "Hips", "Boss_Mage_Robe", Vector3.zero);
-            Model(rig, "RightHand", "Boss_Mage_Staff", StaffOffset, 1f, StaffHandRotation);
+            var rig = NewRig("BossNecromancer", ctrl, "Boss_Necro_Bone", NecroBone, NecroColor, "Necro");
+            DressNecromancer(rig);
 
             SaveBoss(rig, c, b =>
             {
@@ -864,10 +948,20 @@ namespace ElementalBuddies.EditorTools
             }, 1.5f, 0.6f, 10f);
         }
 
-        // Stab-Rotation im RightHand-Knochenraum: gemittelt über Idle-, Gang- und Zauber-Startposen (Stab dort 12–46° aus
-        // der Senkrechten statt bis 97° bei Charakter-Ausrichtung in der T-Pose). Projektil startet 0,6 m über dem Pivot (~2,5 m, Stabkopf-Höhe).
-        public static Vector3 StaffOffset = new Vector3(0.114f, -0.021f, 0.061f);
-        public static Quaternion StaffHandRotation = new Quaternion(-0.7466f, 0.1273f, 0.6306f, 0.1693f);
+        private static void DressNecromancer(Rig rig)
+        {
+            Model(rig, "Head", "Boss_Mage_Hood", HeadPieceOffset, HeadPieceScale);
+            // Kragen am oberen Brustkorb (UpperChest = Meshy „Spine“; Skeleton2-„Spine“ ist der untere Rücken)
+            Model(rig, "UpperChest", "Boss_Mage_Collar", ChestPieceOffset, ChestPieceScale);
+            Model(rig, "Hips", "Boss_Mage_Robe", HipsPieceOffset, HipsPieceScale);
+            ModelRoot(rig, "RightHand", "Boss_Mage_Staff", StaffOffset, StaffRootRotation, 1f);
+        }
+
+        // Stab-Ausrichtung in der T-Pose (Charakter-Raum): früher im Meshy-RightHand-Knochenraum gemittelt über Idle-, Gang- und
+        // Zauber-Startposen (Stab dort 12–46° aus der Senkrechten), hier in den Charakter-Raum umgerechnet (Meshy-Bind-Rotation
+        // × alte Handrotation). Projektil startet 0,6 m über dem Pivot (~2,5 m, Stabkopf-Höhe).
+        public static Vector3 StaffOffset = new Vector3(0.06f, -0.025f, 0.016f);
+        public static Quaternion StaffRootRotation = new Quaternion(0.0053f, -0.0238f, 0.6266f, 0.7789f);
         public static float NecroOrbHeight = 0.6f;
 
         // ---------------- Totenjäger ----------------
@@ -886,12 +980,8 @@ namespace ElementalBuddies.EditorTools
             c.ProjectileSpawnHeight = HunterArrowHeight;
             c.ProjectilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "HeavyArrow.prefab");
 
-            var rig = NewRig("BossDeathHunter", ctrl, BoneMaterial("Boss_Hunter_Bone", new Color(0.31f, 0.29f, 0.34f)), HunterColor, "Hunter");
-            Model(rig, "Head", "Boss_Archer_Hood", Vector3.zero);
-            Model(rig, "Spine", "Boss_Archer_Quiver", Vector3.zero);
-            Model(rig, "LeftForeArm", "Boss_Archer_Bracer_L", Vector3.zero);
-            Model(rig, "RightForeArm", "Boss_Archer_Bracer_R", Vector3.zero);
-            Model(rig, "LeftHand", "Boss_Archer_Longbow", BowOffset, BowScale, HeldRotation(ArcherPrefab, "Archer_Bow"));
+            var rig = NewRig("BossDeathHunter", ctrl, "Boss_Hunter_Bone", HunterBone, HunterColor, "Hunter");
+            DressDeathHunter(rig);
 
             SaveBoss(rig, c, b =>
             {
@@ -904,13 +994,30 @@ namespace ElementalBuddies.EditorTools
                 rain.ImpactEffectPrefab = fx.RainArea; rain.ScaleEffectBySize = true; rain.EffectLifetime = 2f;
                 b.Abilities.Add(beam);
                 b.Abilities.Add(rain);
-            }, 1.5f, HunterArrowHeight, 12f);
+            }, 1.5f, HunterBeamHeight, 12f);
         }
 
-        public static Vector3 BowOffset = new Vector3(-0.115f, -0.025f, 0.062f);
+        private static void DressDeathHunter(Rig rig)
+        {
+            Model(rig, "Head", "Boss_Archer_Hood", HeadPieceOffset, HeadPieceScale);
+            Model(rig, "UpperChest", "Boss_Archer_Quiver", QuiverOffset, ChestPieceScale);
+            Model(rig, "LeftLowerArm", "Boss_Archer_Bracer_L", BracerOffset, BracerScale);
+            Model(rig, "RightLowerArm", "Boss_Archer_Bracer_R", new Vector3(-BracerOffset.x, BracerOffset.y, BracerOffset.z), BracerScale);
+            ModelRoot(rig, "LeftHand", "Boss_Archer_Longbow", BowOffset, BowRootRotation, BowScale);
+        }
+
+        // Langbogen wie der eingebaute Bogen von Skeleton2_Archer (SkeletonArcher_Aim/Shoot sind darauf abgestimmt): Griff in
+        // der linken Faust, in der T-Pose senkrecht, Sehne nach hinten (−Z); das Langbogen-Mesh hat die Sehne auf −X → −90° um Y
+        public static Vector3 BowOffset = new Vector3(-0.05f, -0.015f, 0.008f);
+        public static Quaternion BowRootRotation = Quaternion.Euler(0f, -90f, 0f);
         public static float BowScale = 0.9f;
-        // Bogengriff beim Schuss ~0,35 m unter dem Pivot (Pivot = Boden + baseOffset × 1,9)
-        public static float HunterArrowHeight = -0.3f;
+        // Pfeil startet an der Sehne: SkeletonArcher_Shoot hebt den Bogen auf Schulterhöhe, BowNock beim Loslassen 1,80 m über
+        // dem Boden = 0,1 m unter dem Pivot (Pivot = Boden + baseOffset × 1,9; Visual y −1,005 seit 2026-10-18, vorher −0,744
+        // → 0,4; Meshy-Schuss: −0,3).
+        // Schattenpfeil-Höhe (BossBrain.BeamHeight) bleibt beim alten Wert – sie wird gegen den Dorf-Boss verglichen
+        // (AbilitiesMatch) und nur bei „Bosse neu bauen“ gesetzt.
+        public static float HunterArrowHeight = -0.1f;
+        public static float HunterBeamHeight = -0.3f;
 
         // ---------------- Szene ----------------
 
@@ -950,7 +1057,7 @@ namespace ElementalBuddies.EditorTools
                 audio.Entries.Add(new GameAudio.SfxEntry
                 {
                     Id = SfxId.BossSpawn,
-                    Clips = new[] { AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Game/Audio/battleshout.wav") },
+                    Clips = new[] { AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Game/Audio/Generated/battleshout2.wav") },
                     Volume = 0.9f,
                     Pitch = new Vector2(0.55f, 0.6f),
                     MinInterval = 1f
