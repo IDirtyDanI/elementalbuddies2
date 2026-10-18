@@ -235,12 +235,12 @@ namespace ElementalBuddies
             {
                 if (enemy == null) continue;
                 if (CombatUtil.HorizontalDistance(origin, enemy.transform.position) > range + CombatUtil.EnemyRadius(enemy)) continue;
-                if (HitFxPrefab != null)
-                    CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up * HitHeight, Quaternion.LookRotation(dir), 1.5f);
+                // Klingen-Treffer (HitVfx-Tabelle, sonst HitFxPrefab) auf allen Rechnern
+                HitVfx.Show(enemy, AbilityId.SwordSlash, dir, finisher ? 1.25f : 1f, HitFxPrefab);
                 if (!Net.IsServer) continue; // Treffer entscheidet der Server, Clients zeigen nur Funken
                 if (finisher && FinisherKnockback > 0f)
                     using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(origin, enemy.transform.position, dir), FinisherKnockback, 0.25f);
-                EnemyBrain.DealPlayerDamage(enemy, damage); // Quelle Spieler (Telemetrie)
+                EnemyBrain.DealPlayerDamage(enemy, damage, AbilityId.SwordSlash, hitFx: false); // Quelle Spieler (Telemetrie)
             }
 
             // Bogen wie die Klinge in Knight2_Slash*: Schlag 1 von rechts oben nach links unten (gegen den Uhrzeigersinn, rechte

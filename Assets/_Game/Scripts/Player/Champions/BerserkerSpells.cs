@@ -88,8 +88,8 @@ namespace ElementalBuddies
             {
                 if (enemy == null) continue;
                 if (BurnDps > 0f && BurnDuration > 0f) BurnEffect.Apply(enemy.gameObject, BurnDps * dm, BurnDuration, BurnVfxPrefab, fromChampion: true);
-                if (kit != null) kit.DealDamage(enemy, TickDamage * dm);
-                else EnemyBrain.DealPlayerDamage(enemy, TickDamage * dm);
+                if (kit != null) kit.DealDamage(enemy, TickDamage * dm, AbilityId.EmberStorm);
+                else EnemyBrain.DealPlayerDamage(enemy, TickDamage * dm, AbilityId.EmberStorm);
                 hits++;
             }
             if (hits > 0 && kit != null) kit.ServerGrantRage(0f);
@@ -175,8 +175,8 @@ namespace ElementalBuddies
                     if (ShatterFxPrefab != null) CombatUtil.SpawnFx(ShatterFxPrefab, enemy.transform.position + Vector3.up, Quaternion.identity, 2f);
                 }
                 if (FreezeDuration > 0f) using (EnemyBrain.PlayerSource()) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
-                if (kit != null) kit.DealDamage(enemy, dmg);
-                else EnemyBrain.DealPlayerDamage(enemy, dmg);
+                if (kit != null) kit.DealDamage(enemy, dmg, AbilityId.IceBreaker);
+                else EnemyBrain.DealPlayerDamage(enemy, dmg, AbilityId.IceBreaker);
                 hits++;
             }
             if (anyShatter) GameAudio.Play(SfxId.FrostShatter, ctx.Origin);
@@ -261,8 +261,8 @@ namespace ElementalBuddies
                 if (enemy == null) continue;
                 if (StunDuration > 0f) using (EnemyBrain.PlayerSource()) enemy.Stun(StunDuration, StunVfxPrefab);
                 if (Knockback > 0f) using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(center, enemy.transform.position, ctx.AimDirection), Knockback, 0.3f);
-                if (kit != null) kit.DealDamage(enemy, Damage * ctx.DamageMultiplier);
-                else EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier);
+                if (kit != null) kit.DealDamage(enemy, Damage * ctx.DamageMultiplier, AbilityId.Landslide);
+                else EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier, AbilityId.Landslide);
                 hits++;
             }
             if (hits > 0 && kit != null) kit.ServerGrantRage(0f);

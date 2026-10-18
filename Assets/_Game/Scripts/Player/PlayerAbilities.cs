@@ -579,12 +579,12 @@ namespace ElementalBuddies
             };
         }
 
-        // Laufrichtung aus der WASD-Eingabe (Welt-XZ), zero ohne Eingabe
+        // Laufrichtung aus der WASD-Eingabe (Welt-XZ, kamerabezogen wie das Laufen), zero ohne Eingabe
         private Vector3 MoveDirectionNow()
         {
             if (_controller == null) return Vector3.zero;
-            Vector2 input = _controller.MoveInput;
-            return input.sqrMagnitude > 0.04f ? new Vector3(input.x, 0f, input.y).normalized : Vector3.zero;
+            Vector3 move = _controller.MoveWorld;
+            return move.sqrMagnitude > 0.04f ? move.normalized : Vector3.zero;
         }
 
         // Height of the floor below/around a point (PlayerController.FloorLayer); fallback if nothing is hit

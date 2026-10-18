@@ -78,6 +78,13 @@ namespace ElementalBuddies
         // Aktuelle Laufeingabe (x = rechts, y = vorne), zero ohne Eingabe / auf fremden Figuren
         public Vector2 MoveInput => IsLocalControl && MoveAction != null && _inputActive ? MoveAction.ReadValue<Vector2>() : Vector2.zero;
 
+        // Laufeingabe als Weltrichtung (XZ, Länge wie MoveInput): kamerabezogen – vorwärts = Blickrichtung der
+        // drehbaren Kamera (CameraFollow.Yaw). Alle Stellen, die WASD als Richtung brauchen (Laufen, Rolle …), nutzen das.
+        public Vector3 MoveWorld => ToWorldDirection(MoveInput);
+
+        // Eingabe (x = rechts, y = vorne aus Kamerasicht) → Weltrichtung bei der aktuellen Kameradrehung
+        public static Vector3 ToWorldDirection(Vector2 input) => CameraOrbitMath.InputToWorld(input, CameraFollow.Yaw);
+
         [Header("Jump Settings")]
         public float JumpForce = 8.0f;
         public float Gravity = -9.81f;
@@ -219,7 +226,8 @@ namespace ElementalBuddies
             if (MoveAction == null || _characterController == null || !_characterController.enabled) return;
 
             Vector2 input = MovementLocked ? Vector2.zero : MoveAction.ReadValue<Vector2>();
-            Vector3 moveInput = new Vector3(input.x, 0, input.y);
+            // Kamerabezogen: W läuft immer „ins Bild hinein“, auch wenn die Kamera um die Figur gedreht ist
+            Vector3 moveInput = ToWorldDirection(input);
 
             float now = Time.time;
             float dt = Time.deltaTime;
@@ -249,7 +257,7 @@ namespace ElementalBuddies
             _playerVelocity.y += Gravity * dt;
             float vyMean = 0.5f * (vyStart + _playerVelocity.y);
 
-            // Apply movement input (Absolute / World Space)
+            // Laufeingabe (Weltrichtung aus Kamerasicht, s. o.)
             Vector3 movement = moveInput * (MoveSpeed * SpeedMultiplier * SlowMultiplier);
             Vector3 delta = movement * dt + Vector3.up * (vyMean * dt);
 

@@ -219,6 +219,13 @@ namespace ElementalBuddies.EditorTools
             yield return new Sfx(SfxId.SummonDrum, 0.75f, 1f, P, "summon_drum");
             yield return new Sfx(SfxId.HexCast, 0.6f, 0.1f, P, "hex_cast");
             yield return new Sfx(SfxId.HexRelease, 0.5f, 0.1f, P, "hex_release");
+            // Arkanball des Magiers (Spieltest 2026-10-18, Paket S): eigene Klänge statt der alten Pfeil-Clips aus dem FunProject
+            // (Pfeilschuss.mp3 / Pfeiltreffer.mp3). Der Magier feuert alle 0,6 s → Abschuss leise mit breiter Tonhöhen-Streuung,
+            // Einschlag etwas präsenter. arcane_loop ist das Flugsummen: ArcaneBallHum am Ball-Prefab (eigenes Clip-Feld,
+            // sonst GameAudio.GetClip(ArcaneBallLoop)); Volume/Pitch dieses Eintrags nutzt nur ein direkter Play-Aufruf.
+            yield return new Sfx(SfxId.ArcaneBallCast, 0.3f, 0.08f, new Vector2(0.93f, 1.07f), "arcane_cast");
+            yield return new Sfx(SfxId.ArcaneBallHit, 0.42f, 0.06f, PWide, "arcane_hit");
+            yield return new Sfx(SfxId.ArcaneBallLoop, 0.35f, 0.1f, PFix, "arcane_loop");
         }
 
         private static void AssignGameAudio(GameAudio ga)

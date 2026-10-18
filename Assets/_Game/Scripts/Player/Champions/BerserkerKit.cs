@@ -244,12 +244,12 @@ namespace ElementalBuddies
             {
                 if (enemy == null) continue;
                 if (CombatUtil.HorizontalDistance(origin, enemy.transform.position) > range + CombatUtil.EnemyRadius(enemy)) continue;
-                if (HitFxPrefab != null)
-                    CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up * HitHeight, Quaternion.LookRotation(dir), 1.5f, finisher ? 1.4f : 1.15f);
+                // Wucht-Treffer (HitVfx-Tabelle, sonst HitFxPrefab) auf allen Rechnern
+                HitVfx.Show(enemy, AbilityId.AxeCleave, dir, finisher ? 1.25f : 1f, HitFxPrefab);
                 if (!Net.IsServer) continue; // Treffer entscheidet der Server
                 if (finisher && FinisherKnockback > 0f)
                     using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(origin, enemy.transform.position, dir), FinisherKnockback, 0.25f);
-                DealDamage(enemy, damage);
+                DealDamage(enemy, damage, AbilityId.AxeCleave, hitFx: false);
                 hits++;
             }
             if (hits > 0) ServerGrantRage(RageForHits(hits, RagePerHit, MaxRageHitsPerSwing));
@@ -320,8 +320,7 @@ namespace ElementalBuddies
                 Vector3 side = Vector3.Cross(Vector3.up, dir);
                 if (Vector3.Dot(enemy.transform.position - origin, side) < 0f) side = -side;
                 if (ChargeKnockback > 0f) using (EnemyBrain.PlayerSource()) enemy.Knockback(side, ChargeKnockback, 0.2f);
-                if (HitFxPrefab != null) CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up * HitHeight, Quaternion.LookRotation(dir), 1.5f);
-                DealDamage(enemy, damage);
+                DealDamage(enemy, damage, AbilityId.BerserkCharge); // Treffer-Effekt über den Server (HitVfx, auch auf Clients)
                 hits++;
             }
             if (hits > 0)
@@ -456,11 +455,12 @@ namespace ElementalBuddies
         // ---------------- Server: Schaden, Lebensraub, Wut ----------------
 
         // Schaden an einem Gegner (nur Server) inkl. Lebensraub. Rückgabe = tatsächlich verursachter Schaden.
-        public float DealDamage(EnemyBrain enemy, float amount)
+        // ability/hitFx: Treffer-Effekt je Fähigkeit (EnemyBrain.DealPlayerDamage)
+        public float DealDamage(EnemyBrain enemy, float amount, AbilityId ability, bool hitFx = true)
         {
             if (!Net.IsServer || enemy == null || amount <= 0f) return 0f;
             float before = enemy.CurrentHP;
-            EnemyBrain.DealPlayerDamage(enemy, amount);
+            EnemyBrain.DealPlayerDamage(enemy, amount, ability, hitFx);
             float dealt = Mathf.Max(0f, before - Mathf.Max(0f, enemy.CurrentHP));
             if (LightFrenzyActive && Stats != null && !Stats.IsDead)
             {

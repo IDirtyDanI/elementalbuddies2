@@ -58,7 +58,7 @@ namespace ElementalBuddies
                     BurnEffect.Apply(enemy.gameObject, BurnDps * ctx.DamageMultiplier, BurnDuration, BurnVfxPrefab, fromChampion: true);
                 if (Knockback > 0f)
                     using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(ctx.Origin, enemy.transform.position, ctx.AimDirection), Knockback, 0.2f);
-                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
+                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier, AbilityId.FlameWhirl); // Quelle Spieler (Telemetrie)
             }
             GameAudio.Play(SfxId.FireWave, ctx.Origin);
         }
@@ -110,7 +110,7 @@ namespace ElementalBuddies
             {
                 if (enemy == null) continue;
                 if (FreezeDuration > 0f) using (EnemyBrain.PlayerSource()) enemy.Freeze(FreezeDuration, FrozenVfxPrefab);
-                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
+                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier, AbilityId.FrostStrike); // Quelle Spieler (Telemetrie)
             }
             GameAudio.Play(SfxId.FrostNova, ctx.Origin);
         }
@@ -192,7 +192,7 @@ namespace ElementalBuddies
                 if (StunDuration > 0f) using (EnemyBrain.PlayerSource()) enemy.Stun(StunDuration, StunVfxPrefab);
                 if (Knockback > 0f)
                     using (EnemyBrain.PlayerSource()) enemy.Knockback(CombatUtil.FlatDirection(center, enemy.transform.position, ctx.AimDirection), Knockback, 0.3f);
-                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
+                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier, AbilityId.Earthquake); // Quelle Spieler (Telemetrie)
             }
             GameAudio.Play(SfxId.StoneWall, center);
         }

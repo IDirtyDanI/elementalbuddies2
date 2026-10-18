@@ -5,7 +5,7 @@ namespace ElementalBuddies
     public class ArcaneBall : MonoBehaviour
     {
         public float Speed = 20f;
-        public float Damage = 35f;
+        public float Damage = 30f;
         public float Lifetime = 5f;
         [Tooltip("Trefferzone reicht so weit unter die Kugel (Meter, unabhängig von der Prefab-Skalierung) – trifft auch kleine Gegner (Schwarm), über die die Kugel sonst hinwegfliegt.")]
         public float VerticalReach = 1.8f;
@@ -13,6 +13,15 @@ namespace ElementalBuddies
         public float MinHitRadius = 0.45f;
         [Tooltip("Kugelgröße durch Händlerkarten (setzt der MageKit); vergrößert Trefferradius und -zone.")]
         public float SizeFactor = 1f;
+        [Tooltip("Arkaner Splitterschaden am Einschlag: Anteil des Treffer-Schadens an allen anderen Gegnern im Splitter-Radius (0,4 = 40 %).")]
+        [Range(0f, 1f)] public float SplashFraction = 0.4f;
+        [Tooltip("Splitter-Radius in Metern um den getroffenen Gegner (wächst mit der Kugelgröße).")]
+        public float SplashRadius = 1.6f;
+        [Tooltip("Optionaler Einschlag-Effekt (nur bei Gegnertreffer): wird am Einschlag gespawnt, nach 2 s zerstört und auf " +
+                 "Splitter-Radius × Kugelgröße skaliert – das Prefab also für 1 m Radius bauen.")]
+        public GameObject ImpactVfx;
+        [Tooltip("Kurzer Blitz am Abschusspunkt beim Wirken (MageKit.CastArcaneBall, alle Rechner) – wächst mit der Kugelgröße.")]
+        public GameObject MuzzleVfx;
 
         private SphereCollider _sphere;
         private bool _hit;
@@ -54,12 +63,38 @@ namespace ElementalBuddies
             if (_hit) return;
             _hit = true;
             var damageable = other.GetComponentInParent<IDamageable>(); // Kollider kann am Kind (Visual) hängen
+            Vector3 impact = other.bounds.center; // Splitter um den getroffenen Gegner (die Kugel fliegt evtl. über ihn hinweg)
+            float splashRadius = SplashRadius * Mathf.Max(0.1f, SizeFactor);
             if (damageable != null && Net.IsServer) // Schaden nur auf dem Server, Clients zeigen den Einschlag
             {
-                EnemyBrain.DealPlayerDamage(damageable, Damage); // Quelle Spieler (Telemetrie)
+                // Quelle Spieler (Telemetrie); den Treffer-Effekt zeigt der Einschlag (ImpactVfx) auf allen Rechnern selbst
+                EnemyBrain.DealPlayerDamage(damageable, Damage, AbilityId.ArcaneBall, hitFx: false);
+                DealSplash(impact, splashRadius, other.GetComponentInParent<EnemyBrain>());
             }
+            SpawnImpactVfx(impact, splashRadius);
             GameAudio.Play(SfxId.ArcaneBallHit, transform.position);
             Destroy(gameObject);
+        }
+
+        // Splitterschaden (nur Server): Anteil des Treffer-Schadens an allen anderen Gegnern im Radius
+        private void DealSplash(Vector3 center, float radius, EnemyBrain primary)
+        {
+            float splash = Damage * SplashFraction;
+            if (splash <= 0f || radius <= 0f) return;
+            foreach (var enemy in CombatUtil.FindEnemies(center, radius))
+            {
+                if (enemy == null || enemy == primary) continue;
+                EnemyBrain.DealPlayerDamage(enemy, splash, AbilityId.ArcaneBall); // Splitter: kleiner Arkan-Treffer am Gegner
+            }
+        }
+
+        // Einschlag-Effekt auf allen Rechnern (rein optisch)
+        private void SpawnImpactVfx(Vector3 position, float radius)
+        {
+            if (ImpactVfx == null) return;
+            var vfx = Instantiate(ImpactVfx, position, Quaternion.identity);
+            vfx.transform.localScale = ImpactVfx.transform.localScale * radius;
+            Destroy(vfx, 2f);
         }
 
         void OnTriggerEnter(Collider other)

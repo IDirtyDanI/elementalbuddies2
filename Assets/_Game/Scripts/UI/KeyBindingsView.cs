@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace ElementalBuddies
 {
     // Seite „Tastaturbelegung“ (Hauptmenü und Pause-Menü), komplett zur Laufzeit gebaut – ein Neuaufbau der Szenen
-    // (MainMenuBuilder) verliert nichts. Liste gruppiert (Bewegung, Kampf, Zauber, Buddies, Sonstiges, Fest belegt);
+    // (MainMenuBuilder) verliert nichts. Liste gruppiert (Bewegung, Kamera, Kampf, Zauber, Buddies, Sonstiges, Fest belegt);
     // je Zeile: Name, Tasten-Knopf (klicken → „Taste drücken …“, Esc bricht ab) und „Standard“. Unten „Alle
     // zurücksetzen“ und eine Meldungszeile (Tausch bei Konflikt usw.). Logik und Speicherung: KeyBindings.
     public class KeyBindingsView : MonoBehaviour
@@ -134,6 +134,7 @@ namespace ElementalBuddies
             switch (g)
             {
                 case KeyBindings.Group.Bewegung: return "Bewegung";
+                case KeyBindings.Group.Kamera: return "Kamera";
                 case KeyBindings.Group.Kampf: return "Kampf";
                 case KeyBindings.Group.Zauber: return "Element-Fähigkeiten";
                 case KeyBindings.Group.Buddies: return "Buddies bauen";

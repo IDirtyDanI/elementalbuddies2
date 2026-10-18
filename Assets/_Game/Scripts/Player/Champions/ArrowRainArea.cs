@@ -68,7 +68,7 @@ namespace ElementalBuddies
                 if (enemy == null) continue;
                 if (_spell.BurnDps > 0f && _spell.BurnDuration > 0f)
                     BurnEffect.Apply(enemy.gameObject, _spell.BurnDps * _dm, _spell.BurnDuration, _spell.BurnVfxPrefab, fromChampion: true);
-                EnemyBrain.DealPlayerDamage(enemy, _spell.DamagePerWave * _dm); // Quelle Spieler (Telemetrie)
+                EnemyBrain.DealPlayerDamage(enemy, _spell.DamagePerWave * _dm, AbilityId.FireArrowRain); // Quelle Spieler (Telemetrie)
             }
             if (_wavesDone == 1 || _wavesDone % 2 == 0) GameAudio.Play(SfxId.FireWave, c);
         }

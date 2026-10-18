@@ -168,7 +168,7 @@ namespace ElementalBuddies
                 SpawnBolt(to, next.transform.position + Vector3.up * 0.9f);
                 if (Net.IsServer) next.TakeDamage(_damage * _chainFactor * (next.IsWet ? _wetMult : 1f));
             }
-            GameAudio.Play(SfxId.ArcaneBallHit, origin);
+            GameAudio.Play(SfxId.LightShot, origin); // Blitz-Knistern (Arkan-Einschlag gehört seit 2026-10-18 dem Magier)
         }
 
         private void SpawnBolt(Vector3 from, Vector3 to)

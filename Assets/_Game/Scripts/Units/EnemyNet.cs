@@ -190,6 +190,19 @@ namespace ElementalBuddies
             if (_brain != null) _brain.PlayWardImmune();
         }
 
+        // Treffer-Effekt einer Champion-Fähigkeit (Spieltest 2026-10-18, Paket V): der Server hat den Effekt schon budgetiert
+        // (HitVfx), daher wenige, kleine Nachrichten. Zuverlässig, damit ein tödlicher Treffer vor KilledRpc/Despawn ankommt.
+        public void ServerAbilityHit(byte ability)
+        {
+            if (HasRemotes) AbilityHitRpc(ability);
+        }
+
+        [Rpc(SendTo.NotServer)]
+        private void AbilityHitRpc(byte ability)
+        {
+            if (_brain != null) _brain.PlayRemoteAbilityHit((AbilityId)ability);
+        }
+
         // Optik-Ereignis einer Champion-Bedrohung (Beschwörungs-Riss, Bann-Telegraph …) – ThreatBrain.PlayFx
         public void ServerThreatFx(byte id, Vector3 position)
         {

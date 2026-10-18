@@ -159,6 +159,10 @@ namespace ElementalBuddies
             if (building && ElementalBuddy.ActiveCount > 0 && _waves != null && _waves.UpcomingWaveNumber == 1)
                 Show("startwave", "Bereit? Starte die <b>Welle</b> unten rechts. Die Vorschau darüber zeigt, was kommt – und je früher du startest, desto mehr Bonus-Splitter.",
                     () => _waves.IsWaveActive);
+            // Drehbare Kamera (CameraFollow): ab der zweiten Bauphase, damit Bau-/Wellen-Tipps Vorrang haben
+            if (building && ElementalBuddy.ActiveCount > 0 && _waves != null && _waves.UpcomingWaveNumber >= 2)
+                Show("camera", $"Tipp: Mit <b>{KeyBindings.Short(BindId.CameraLeft)}</b>/<b>{KeyBindings.Short(BindId.CameraRight)}</b> (gedrückt halten) drehst du die <b>Kamera</b> um deine Figur – so baust du auch hinter Gebäuden. <b>{KeyBindings.Short(BindId.CameraReset)}</b> stellt die Ansicht zurück.",
+                    () => Mathf.Abs(CameraFollow.OrbitYaw) > 20f);
             if (ShardPickup.All.Count > 0)
                 Show("shards", "<b>Seelensplitter!</b> Lauf nah heran, dann fliegen sie zu dir. Damit baust du Buddies und wertest sie auf.");
             if (building && CanAffordUpgrade())

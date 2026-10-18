@@ -105,7 +105,10 @@ namespace ElementalBuddies
         SummonCall,
         SummonDrum,
         HexCast,
-        HexRelease
+        HexRelease,
+        // Arkanball-Flugsummen (Spieltest 2026-10-18): kein One-Shot – ArcaneBallHum holt sich den Clip über GameAudio.GetClip,
+        // falls im Ball-Prefab keiner eingetragen ist (Zuweisung über GameFeelSetup wie alle anderen Einträge)
+        ArcaneBallLoop
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.
@@ -273,6 +276,10 @@ namespace ElementalBuddies
         // Hat der Eintrag Clips? (für Fallback-Sounds)
         public static bool Has(SfxId id) =>
             Instance != null && Instance._map.TryGetValue(id, out var e) && e.Clips != null && e.Clips.Length > 0;
+
+        // Erster Clip eines Eintrags (für eigene Schleifen-Quellen wie ArcaneBallHum), sonst null
+        public static AudioClip GetClip(SfxId id) =>
+            Instance != null && Instance._map.TryGetValue(id, out var e) && e.Clips != null && e.Clips.Length > 0 ? e.Clips[0] : null;
 
         // Ersatzton für neue Einträge ohne Clip (Champion-Bedrohungen; P5 verdrahtet die eigenen Klänge)
         public static SfxId Fallback(SfxId id)

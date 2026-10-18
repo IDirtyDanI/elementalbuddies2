@@ -331,6 +331,11 @@ namespace ElementalBuddies.EditorTools
                 foreach (var c in go.GetComponents<Collider>()) Object.DestroyImmediate(c);
                 foreach (var v in go.GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true)) Object.DestroyImmediate(v.gameObject);
                 go.transform.localScale = Vector3.one;
+                // Arkan-Optik des Magiers (ArcaneVfxBuilder, Spieltest 2026-10-18) gehört nicht zum Orb: entfernen und die
+                // frühere Kugel (Feuerball-Shader + Punktlicht) nachbauen, die unten grün umgefärbt wird
+                var arcane = go.transform.Find("ArcaneFx");
+                if (arcane != null) Object.DestroyImmediate(arcane.gameObject);
+                if (go.transform.Find("Visual") == null) AddLegacyOrbVisual(go.transform);
 
                 var vis = go.transform.Find("Visual");
                 vis.localScale = Vector3.one * 0.17f;
@@ -380,6 +385,22 @@ namespace ElementalBuddies.EditorTools
             {
                 Object.DestroyImmediate(go);
             }
+        }
+
+        // Frühere Arkanball-Kugel für den Necro-Orb: Kugel-Mesh mit FireBallPlayerMat (Shader Fireball_Unlit_Player) + Punktlicht
+        private static void AddLegacyOrbVisual(Transform parent)
+        {
+            var vis = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Object.DestroyImmediate(vis.GetComponent<Collider>());
+            vis.name = "Visual";
+            vis.transform.SetParent(parent, false);
+            var mr = vis.GetComponent<MeshRenderer>();
+            mr.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/shader/FireBallPlayerMat.mat");
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var lg = new GameObject("Point Light");
+            lg.transform.SetParent(vis.transform, false);
+            var l = lg.AddComponent<Light>();
+            l.type = LightType.Point;
         }
 
         // Größerer, violetter Pfeil (Kopie von EnemyArrow)
@@ -877,7 +898,7 @@ namespace ElementalBuddies.EditorTools
                 var beam = Ability("Schattenpfeil", BossAbilityKind.Beam, 12f, 1f, "Shoot", 18f, 60f, SfxId.ArcaneBallCast);
                 beam.Length = 20f; beam.Width = 1.4f; beam.PlayerSlow = 0.5f; beam.PlayerSlowDuration = 2f;
                 beam.BeamPrefab = fx.Beam; beam.ImpactEffectPrefab = null;
-                var rain = Ability("Pfeilhagel", BossAbilityKind.Rain, 9f, 1f, "Shoot", 16f, 10f, SfxId.ArcaneBallHit);
+                var rain = Ability("Pfeilhagel", BossAbilityKind.Rain, 9f, 1f, "Shoot", 16f, 10f, SfxId.BowHit); // eigener Arkan-Sound gehört dem Magier (2026-10-18)
                 rain.Radius = 3.5f; rain.MaxCastRange = 16f; rain.Pulses = 5; rain.PulseDuration = 1.25f; rain.ArrowsPerPulse = 4;
                 rain.FallingArrowPrefab = fx.RainArrow; rain.PulseEffectPrefab = fx.RainImpact;
                 rain.ImpactEffectPrefab = fx.RainArea; rain.ScaleEffectBySize = true; rain.EffectLifetime = 2f;

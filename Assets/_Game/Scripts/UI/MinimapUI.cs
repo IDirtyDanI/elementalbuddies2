@@ -58,6 +58,9 @@ namespace ElementalBuddies
         public float FlyerSize = 11f;
         public float BuddySize = 9f;
         public float LocalPlayerSize = 26f;
+        [Tooltip("Blickkegel der drehbaren Spielkamera am eigenen Marker (Durchmesser, Canvas-Einheiten; 0 = aus).")]
+        public float ViewConeSize = 70f;
+        public Color ViewConeColor = new Color(1f, 0.95f, 0.75f, 0.28f);
         public float MatePlayerSize = 21f;
         public float NexusSize = 30f;
         public float ShrineSize = 16f;
@@ -94,8 +97,8 @@ namespace ElementalBuddies
             public readonly List<Image> Pool = new List<Image>();
             public int Used;
         }
-        private Layer _portals, _shrines, _merchants, _nexus, _buddies, _enemies, _bosses, _mates, _localHalo, _local;
-        private Sprite _dot, _ring, _diamond, _square, _stall, _arrow, _nexusIcon, _triangle;
+        private Layer _portals, _shrines, _merchants, _nexus, _buddies, _enemies, _bosses, _mates, _view, _localHalo, _local;
+        private Sprite _dot, _ring, _diamond, _square, _stall, _arrow, _nexusIcon, _triangle, _cone;
 
         // Für TeamHUD/ToastUI/OffscreenIndicatorUI
         public RectTransform Rect => _root;
@@ -167,6 +170,7 @@ namespace ElementalBuddies
             _square = MakeShapeSprite("mm_square", 64, SdSquare);
             _stall = MakeShapeSprite("mm_stall", 64, SdStall);
             _triangle = MakeShapeSprite("mm_triangle", 64, SdTriangle);
+            _cone = Own(MakeSprite(BuildConeTexture(128, 40f), "mm_view"));
             var offscreen = FindFirstObjectByType<OffscreenIndicatorUI>(FindObjectsInactive.Include);
             _arrow = offscreen != null && offscreen.ArrowImage != null ? offscreen.ArrowImage.sprite : null;
             if (_arrow == null) _arrow = MakeShapeSprite("mm_arrow", 64, SdArrow);
@@ -203,6 +207,7 @@ namespace ElementalBuddies
             _enemies = NewLayer("Enemies", _dot);
             _bosses = NewLayer("Bosses", _dot);
             _mates = NewLayer("Mates", _arrow);
+            _view = NewLayer("View", _cone);
             _localHalo = NewLayer("LocalHalo", _dot);
             _local = NewLayer("Local", _arrow);
 
@@ -311,7 +316,7 @@ namespace ElementalBuddies
 
         private void UpdatePlayers()
         {
-            Begin(_mates); Begin(_local); Begin(_localHalo);
+            Begin(_mates); Begin(_view); Begin(_local); Begin(_localHalo);
             foreach (var a in PlayerAvatar.All)
             {
                 if (a == null || !a.isActiveAndEnabled) continue;
@@ -321,6 +326,8 @@ namespace ElementalBuddies
                 if (local)
                 {
                     float pulse = 1f + 0.12f * Mathf.Sin(Time.unscaledTime * 4f);
+                    // Karte bleibt genordet; der Kegel zeigt, wohin die (drehbare) Kamera gerade schaut
+                    if (ViewConeSize > 0f) PlaceViewCone(Next(_view), a.transform.position);
                     Place(Next(_localHalo), a.transform.position, LocalPlayerSize * 1.25f * pulse, new Color(1f, 0.95f, 0.75f, alive ? 0.35f : 0.15f));
                     Place(Next(_local), a.transform.position, LocalPlayerSize, alive ? Color.white : new Color(0.7f, 0.7f, 0.7f, 0.7f), rot);
                 }
@@ -333,7 +340,7 @@ namespace ElementalBuddies
                     Place(Next(_mates), a.transform.position, MatePlayerSize, c, rot);
                 }
             }
-            End(_mates); End(_local); End(_localHalo);
+            End(_mates); End(_view); End(_local); End(_localHalo);
         }
 
         private void UpdateStatics()
@@ -462,6 +469,19 @@ namespace ElementalBuddies
             rt.sizeDelta = new Vector2(size, size);
             rt.localEulerAngles = new Vector3(0f, 0f, rotation);
             img.color = color;
+        }
+
+        // Blickkegel: Spitze (Bildmitte des Sprites) auf dem eigenen Marker – gleiche Randbegrenzung wie der Marker,
+        // damit der Kegel am Kartenrand nicht von der Figur wegrutscht
+        private void PlaceViewCone(Image img, Vector3 world)
+        {
+            Vector2 p = MinimapMath.WorldToMap(world, WorldCenter, WorldRadius, _mapRadius);
+            p = MinimapMath.ClampToCircle(p, _clampRadius - LocalPlayerSize * 0.5f, out _);
+            var rt = img.rectTransform;
+            rt.anchoredPosition = p;
+            rt.sizeDelta = new Vector2(ViewConeSize, ViewConeSize);
+            rt.localEulerAngles = new Vector3(0f, 0f, MinimapMath.HeadingToRotation(CameraOrbitMath.FlatForward(CameraFollow.Yaw)));
+            img.color = ViewConeColor;
         }
 
         // ---------------- Hintergrund-Karte ----------------
@@ -615,8 +635,8 @@ namespace ElementalBuddies
                 {
                     float u = (x + 0.5f) / size * 2f - 1f, v = (y + 0.5f) / size * 2f - 1f;
                     float d = sd(u, v);
-                    float alpha = 1f - Mathf.SmoothStep(-aa, aa, d);
-                    float fill = 1f - Mathf.SmoothStep(-outline - aa, -outline + aa, d);
+                    float alpha = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(-aa, aa, d)); // SmoothStep(from, to, t) ist keine Kantenfunktion
+                    float fill = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(-outline - aa, -outline + aa, d));
                     Color c = Color.Lerp(dark, Color.white, fill);
                     c.a = alpha;
                     px[y * size + x] = c;
@@ -655,6 +675,34 @@ namespace ElementalBuddies
             float head = Mathf.Max(-(y - 0.05f), (y - 0.95f + 1.0f * Mathf.Abs(x)) * 0.7f);
             float shaft = SdBox(x, y + 0.45f, 0.32f, 0.52f, 0.04f);
             return Mathf.Min(head, shaft);
+        }
+
+        // Blickkegel nach oben mit Spitze in der Bildmitte (weiß, wird getönt): halber Öffnungswinkel halfAngle,
+        // nach außen weich auslaufend
+        public static Texture2D BuildConeTexture(int size, float halfAngle)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color32[size * size];
+            float edge = 4f; // weiche Seitenkante (Grad)
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (x + 0.5f) / size * 2f - 1f, v = (y + 0.5f) / size * 2f - 1f;
+                    float r = Mathf.Sqrt(u * u + v * v);
+                    float a = 0f;
+                    if (r > 1e-4f && r < 1f)
+                    {
+                        float ang = Mathf.Abs(Mathf.Atan2(u, v)) * Mathf.Rad2Deg; // 0 = oben
+                        // Mathf.SmoothStep(from, to, t) interpoliert from→to – Kante daher über InverseLerp
+                        float side = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(halfAngle - edge, halfAngle + edge, ang));
+                        float radial = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1f, r));
+                        a = side * radial;
+                    }
+                    px[y * size + x] = new Color(1f, 1f, 1f, a);
+                }
+            tex.SetPixels32(px);
+            tex.Apply(false, false);
+            return tex;
         }
 
         // Harte Kreismaske (weiß)

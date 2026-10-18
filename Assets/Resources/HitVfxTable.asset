@@ -1,0 +1,138 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25f267c51ab7a490ab8dac6973ba589f, type: 3}
+  m_Name: HitVfxTable
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.HitVfxTableSO
+  Entries:
+  - Ability: 0
+    Family: 0
+    Prefab: {fileID: 8465168705611723924, guid: 64a543ef7bb8240f5be4501d2a25ed36, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 0.9
+    MinInterval: 0.2
+    Height: 0.4
+  - Ability: 2
+    Family: 4
+    Prefab: {fileID: 4345662562018505558, guid: 7695a2dfcf70041f999f693dd3d78af7, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1.1
+    MinInterval: 0.2
+    Height: 0.4
+  - Ability: 3
+    Family: 5
+    Prefab: {fileID: 7416438975514231846, guid: a7a7c7833e3a94305b3b1b6ec637e81f, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1.1
+    MinInterval: 0.2
+    Height: 0.4
+  - Ability: 6
+    Family: 1
+    Prefab: {fileID: 7185075998252568022, guid: 52047422d49374b62ac0749a9e82570d, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1
+    MinInterval: 0.2
+    Height: 0.4
+  - Ability: 8
+    Family: 4
+    Prefab: {fileID: 4345662562018505558, guid: 7695a2dfcf70041f999f693dd3d78af7, type: 3}
+    Tint: {r: 1, g: 0.78, b: 0.6, a: 1}
+    Scale: 1.05
+    MinInterval: 0.2
+    Height: 0.4
+  - Ability: 9
+    Family: 5
+    Prefab: {fileID: 7416438975514231846, guid: a7a7c7833e3a94305b3b1b6ec637e81f, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1.2
+    MinInterval: 0.2
+    Height: 0.4
+  - Ability: 10
+    Family: 6
+    Prefab: {fileID: 2996724410052644434, guid: faac72499515b44069645c8c1d467898, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1.1
+    MinInterval: 0.2
+    Height: 0.25
+  - Ability: 12
+    Family: 3
+    Prefab: {fileID: 4465282307458734737, guid: f9ea9b00205614e19890275e6927e2c7, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1
+    MinInterval: 0.2
+    Height: 0.45
+  - Ability: 14
+    Family: 4
+    Prefab: {fileID: 4345662562018505558, guid: 7695a2dfcf70041f999f693dd3d78af7, type: 3}
+    Tint: {r: 1, g: 0.85, b: 0.7, a: 1}
+    Scale: 0.8
+    MinInterval: 0.45
+    Height: 0.4
+  - Ability: 15
+    Family: 5
+    Prefab: {fileID: 7416438975514231846, guid: a7a7c7833e3a94305b3b1b6ec637e81f, type: 3}
+    Tint: {r: 0.85, g: 0.95, b: 1, a: 1}
+    Scale: 0.95
+    MinInterval: 0.2
+    Height: 0.45
+  - Ability: 16
+    Family: 8
+    Prefab: {fileID: 6736380420710096889, guid: 69156c252a6f24ac580b4342764120ac, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1.1
+    MinInterval: 0.2
+    Height: 0.25
+  - Ability: 17
+    Family: 7
+    Prefab: {fileID: 8187371153482777920, guid: 8a84efff0ae4a469d80c713c5bcd77a8, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1.1
+    MinInterval: 0.2
+    Height: 0.45
+  - Ability: 18
+    Family: 2
+    Prefab: {fileID: 2494086153433172569, guid: 3c4a1fa88ef8449d19866a0bae8e1f81, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1
+    MinInterval: 0.2
+    Height: 0.4
+  - Ability: 19
+    Family: 2
+    Prefab: {fileID: 2494086153433172569, guid: 3c4a1fa88ef8449d19866a0bae8e1f81, type: 3}
+    Tint: {r: 1, g: 0.85, b: 0.7, a: 1}
+    Scale: 1.2
+    MinInterval: 0.2
+    Height: 0.4
+  - Ability: 20
+    Family: 4
+    Prefab: {fileID: 4345662562018505558, guid: 7695a2dfcf70041f999f693dd3d78af7, type: 3}
+    Tint: {r: 1, g: 0.7, b: 0.5, a: 1}
+    Scale: 0.85
+    MinInterval: 0.6
+    Height: 0.4
+  - Ability: 21
+    Family: 5
+    Prefab: {fileID: 7416438975514231846, guid: a7a7c7833e3a94305b3b1b6ec637e81f, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1.2
+    MinInterval: 0.2
+    Height: 0.4
+  - Ability: 22
+    Family: 6
+    Prefab: {fileID: 2996724410052644434, guid: faac72499515b44069645c8c1d467898, type: 3}
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    Scale: 1.25
+    MinInterval: 0.2
+    Height: 0.25
+  MaxPerTrigger: 8
+  Burst: 14
+  PerSecond: 30
+  Lifetime: 1.2

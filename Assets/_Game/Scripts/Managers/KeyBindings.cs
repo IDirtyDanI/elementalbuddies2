@@ -10,6 +10,7 @@ namespace ElementalBuddies
     public enum BindId
     {
         MoveUp, MoveDown, MoveLeft, MoveRight, Jump,
+        CameraLeft, CameraRight, CameraReset,
         Primary, Secondary,
         SpellFire, SpellIce, SpellEarth, SpellLight,
         Build1, Build2, Build3, Build4,
@@ -28,7 +29,7 @@ namespace ElementalBuddies
         public const string ResourcePath = "Input/PlayerInputs";
         public const string MapName = "Player";
 
-        public enum Group { Bewegung, Kampf, Zauber, Buddies, Sonstiges }
+        public enum Group { Bewegung, Kamera, Kampf, Zauber, Buddies, Sonstiges }
 
         public class Entry
         {
@@ -48,6 +49,11 @@ namespace ElementalBuddies
             new Entry { Id = BindId.MoveLeft, Group = Group.Bewegung, Label = "Links", Action = "Move", Part = "left" },
             new Entry { Id = BindId.MoveRight, Group = Group.Bewegung, Label = "Rechts", Action = "Move", Part = "right" },
             new Entry { Id = BindId.Jump, Group = Group.Bewegung, Label = "Springen", Action = "Jump" },
+            // Kamera um die Figur drehen (CameraFollow): gedrückt halten = stufenlos, Zurücksetzen = Standardansicht.
+            // Standard Q/E/Z – Z liegt als <Keyboard>/y im Asset (Tastenposition; auf QWERTZ beschriftet mit „Z“).
+            new Entry { Id = BindId.CameraLeft, Group = Group.Kamera, Label = "Kamera nach links drehen", Action = "CameraLeft" },
+            new Entry { Id = BindId.CameraRight, Group = Group.Kamera, Label = "Kamera nach rechts drehen", Action = "CameraRight" },
+            new Entry { Id = BindId.CameraReset, Group = Group.Kamera, Label = "Kamera zurücksetzen", Action = "CameraReset" },
             new Entry { Id = BindId.Primary, Group = Group.Kampf, Label = "Grundangriff", Action = "Skill6", AllowMainMouse = true },
             new Entry { Id = BindId.Secondary, Group = Group.Kampf, Label = "Mobilität / Verteidigung", Action = "SkillE", AllowMainMouse = true },
             new Entry { Id = BindId.SpellFire, Group = Group.Zauber, Label = "Feuer-Fähigkeit", Action = "SpellFire", AllowMainMouse = true },

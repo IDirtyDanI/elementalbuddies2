@@ -16175,7 +16175,7 @@ MonoBehaviour:
     ScaleEffectBySize: 1
     ArcFxPrefab: {fileID: 0}
     BeamPrefab: {fileID: 0}
-    ImpactSfx: 1
+    ImpactSfx: 18
     PlaySfx: 1
   GlobalCooldown: 1.5
   CheckInterval: 0.25

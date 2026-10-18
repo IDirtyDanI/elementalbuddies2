@@ -28,6 +28,8 @@ namespace ElementalBuddies
 
         // Zusatzwirkung pro getroffenem Gegner (vor dem Schaden), z. B. Einfrieren
         public System.Action<EnemyBrain> OnHitEnemy;
+        // Fähigkeit dieses Pfeils (Treffer-Effekt je Fähigkeit, HitVfx): Pfeilschuss oder Frostpfeil
+        [System.NonSerialized] public AbilityId Ability = AbilityId.ArrowShot;
 
         public float Travelled { get; private set; }
         public int HitCount { get; private set; }
@@ -98,11 +100,12 @@ namespace ElementalBuddies
         private void HitEnemy(EnemyBrain enemy, Vector3 point)
         {
             HitCount++;
-            if (HitFxPrefab != null) CombatUtil.SpawnFx(HitFxPrefab, point, Quaternion.LookRotation(-transform.forward), 1.5f);
+            // Treffer-Effekt der Fähigkeit am Gegner (HitVfx-Tabelle, sonst HitFxPrefab) – auf allen Rechnern
+            HitVfx.Show(enemy, Ability, transform.forward, 1f, HitFxPrefab);
             if (HitSfx != null) HitSfx.Play(point);
             if (!Net.IsServer) return; // Clients: nur Optik (Funken, Laut, Pfeil bleibt stecken)
             if (OnHitEnemy != null) using (EnemyBrain.PlayerSource()) OnHitEnemy(enemy);
-            if (enemy != null) EnemyBrain.DealPlayerDamage(enemy, Damage); // Quelle Spieler (Telemetrie)
+            if (enemy != null) EnemyBrain.DealPlayerDamage(enemy, Damage, Ability, hitFx: false); // Quelle Spieler (Telemetrie)
         }
 
         private void End()

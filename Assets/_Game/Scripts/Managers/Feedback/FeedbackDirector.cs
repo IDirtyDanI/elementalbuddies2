@@ -13,6 +13,7 @@ namespace ElementalBuddies
         [Header("VFX (eigene Partikel, GameFeelSetup)")]
         public GameObject EnemyDeathVfx;
         public GameObject BossDeathVfx;
+        [Tooltip("Ersatz-Treffer-Effekt, falls Resources/HitVfxTable fehlt (Treffer-Effekte je Fähigkeit: HitVfx).")]
         public GameObject HitSparkVfx;
         [Tooltip("Splitterfrost-Karte: Eis zerspringt (Sprint 3).")]
         public GameObject FrostShatterVfx;
@@ -49,7 +50,7 @@ namespace ElementalBuddies
         private readonly Queue<float> _kills = new Queue<float>();
         private int _streakTier;
         private float _nextStreak;
-        private float _deathBudget, _sparkBudget;
+        private float _deathBudget;
         private float _lastHp = -1f, _nextHeartbeat;
         private float _lastNexusHp = -1f, _nextNexusAlarm;
         private bool _gameOver;
@@ -79,6 +80,8 @@ namespace ElementalBuddies
             _fc.transform.SetParent(transform, false);
 
             EnemyBrain.OnLocalHit += HandleHit;
+            EnemyBrain.OnAbilityHit += HandleAbilityHit;
+            HitVfx.Fallback = HitSparkVfx;
             EnemyBrain.OnEnemyKilled += HandleKilled;
             EnemyBrain.OnEliteSpawned += HandleEliteSpawned;
             EnemyBrain.OnWardImmune += HandleWardImmune;
@@ -104,6 +107,7 @@ namespace ElementalBuddies
         void OnDestroy()
         {
             EnemyBrain.OnLocalHit -= HandleHit;
+            EnemyBrain.OnAbilityHit -= HandleAbilityHit;
             EnemyBrain.OnEnemyKilled -= HandleKilled;
             EnemyBrain.OnEliteSpawned -= HandleEliteSpawned;
             EnemyBrain.OnWardImmune -= HandleWardImmune;
@@ -178,11 +182,7 @@ namespace ElementalBuddies
                     _fc.ShowNumber(head, amount, heavy ? HeavyColor : ChampionColor, heavy ? HeavySize : ChampionSize, heavy ? 1f : 0.8f);
                 HitFlash.Flash(e.gameObject, 0.8f, heavy ? 0.1f : 0.07f);
                 PlayChampionImpact(e.transform.position, lethal);
-                if (HitSparkVfx != null && _sparkBudget >= 1f)
-                {
-                    _sparkBudget -= 1f;
-                    Spawn(HitSparkVfx, Vector3.Lerp(e.transform.position, head, 0.55f), 1.2f);
-                }
+                // Treffer-Effekt je Fähigkeit: HandleAbilityHit bzw. die Kits selbst (HitVfx); DoT-Ticks nur Aufblitzen
                 if (heavy)
                 {
                     TimeWarp.HitStop(lethal ? 0.06f : 0.04f);
@@ -207,6 +207,14 @@ namespace ElementalBuddies
                     HitFlash.Flash(e.gameObject, 0.35f, 0.06f);
                 }
             }
+        }
+
+        // Treffer einer Champion-Fähigkeit (Server: aus DealPlayerDamage; Clients: per EnemyNet-RPC) → Effekt der Fähigkeit am
+        // Gegner. Der Server schickt nur Effekte weiter, die sein Budget durchgelassen hat.
+        private void HandleAbilityHit(EnemyBrain e, AbilityId ability)
+        {
+            if (e == null) return;
+            if (HitVfx.Show(e, ability) && Net.IsServer) e.ServerSendAbilityHit(ability);
         }
 
         private void PlayChampionImpact(Vector3 pos, bool lethal)
@@ -324,7 +332,6 @@ namespace ElementalBuddies
             float dt = Time.unscaledDeltaTime;
             TickWipeBanner();
             _deathBudget = Mathf.Min(12f, _deathBudget + DeathVfxPerSecond * dt);
-            _sparkBudget = Mathf.Min(6f, _sparkBudget + 20f * dt);
 
             // Turm-Schadenszahlen ausgeben
             if (_pending.Count > 0)

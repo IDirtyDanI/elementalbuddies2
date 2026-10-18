@@ -59,7 +59,7 @@ namespace ElementalBuddies
 
                 if (BurnDps > 0f && BurnDuration > 0f)
                     BurnEffect.Apply(enemy.gameObject, BurnDps * ctx.DamageMultiplier, BurnDuration, BurnVfxPrefab, fromChampion: true);
-                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
+                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier, AbilityId.FireWave); // Quelle Spieler (Telemetrie)
             }
         }
     }

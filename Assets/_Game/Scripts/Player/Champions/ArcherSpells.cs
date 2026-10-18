@@ -119,6 +119,7 @@ namespace ElementalBuddies
             var arrow = ArcherKit.LaunchArrow(ArrowPrefab, pos, ctx.AimDirection, Speed, Damage * ctx.DamageMultiplier, Range, true);
             if (arrow != null)
             {
+                arrow.Ability = AbilityId.FrostArrow;
                 float freeze = FreezeDuration;
                 GameObject vfx = FrozenVfxPrefab;
                 arrow.OnHitEnemy = e => { if (freeze > 0f && Net.IsServer) e.Freeze(freeze, vfx); };
@@ -261,14 +262,14 @@ namespace ElementalBuddies
             foreach (var enemy in CombatUtil.FindEnemiesOnLine(ctx.Origin, dir, length, Width * 0.5f))
             {
                 if (enemy == null) continue;
-                if (HitFxPrefab != null) CombatUtil.SpawnFx(HitFxPrefab, enemy.transform.position + Vector3.up, Quaternion.LookRotation(-dir), 1.5f);
+                HitVfx.Show(enemy, AbilityId.LightArrow, dir, 1f, HitFxPrefab); // Licht-Treffer auf allen Rechnern
                 if (!Net.IsServer) continue; // Blenden + Schaden nur auf dem Server
                 if (BlindDuration > 0f)
                 {
                     using (EnemyBrain.PlayerSource()) enemy.ApplySlow(BlindSlow, BlindDuration);
                     BlindEffect.Apply(enemy.gameObject, BlindDuration, BlindVfxPrefab);
                 }
-                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier); // Quelle Spieler (Telemetrie)
+                EnemyBrain.DealPlayerDamage(enemy, Damage * ctx.DamageMultiplier, AbilityId.LightArrow, hitFx: false); // Quelle Spieler (Telemetrie)
             }
 
             BeamFx.Spawn(BeamPrefab, from, from + dir * length);

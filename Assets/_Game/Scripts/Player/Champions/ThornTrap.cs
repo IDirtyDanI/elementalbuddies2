@@ -87,7 +87,7 @@ namespace ElementalBuddies
                     agent.speed = 0f;
                     agent.velocity = Vector3.zero; // sofort stehen bleiben statt auszurollen
                 }
-                EnemyBrain.DealPlayerDamage(enemy, _spell.Damage * _dm); // Quelle Spieler (Telemetrie)
+                EnemyBrain.DealPlayerDamage(enemy, _spell.Damage * _dm, AbilityId.ThornTrap); // Quelle Spieler (Telemetrie)
             }
 
             if (ArmedIndicator != null) ArmedIndicator.SetActive(false);

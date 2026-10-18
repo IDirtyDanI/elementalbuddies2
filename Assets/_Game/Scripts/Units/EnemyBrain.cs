@@ -262,6 +262,25 @@ namespace ElementalBuddies
             try { target.TakeDamage(amount); }
             finally { _playerSourceDepth--; }
         }
+
+        // Champion-Treffer mit bekannter Fähigkeit (Spieltest 2026-10-18, Paket V): wie oben, zusätzlich meldet TakeTrueDamage
+        // den Treffer über OnAbilityHit (Treffer-Effekt je Fähigkeit, FeedbackDirector/HitVfx). hitFx = false, wenn das Kit den
+        // Effekt schon selbst auf allen Rechnern zeigt (Schwert, Axt, Pfeile, Lichtpfeil, Arkanball-Einschlag).
+        private static int _hitAbility = -1;
+        private static bool _hitAbilityFx;
+        public static void DealPlayerDamage(IDamageable target, float amount, AbilityId ability, bool hitFx = true)
+        {
+            if (target == null || !Net.IsServer) return;
+            int savedAbility = _hitAbility;
+            bool savedFx = _hitAbilityFx;
+            _hitAbility = (int)ability;
+            _hitAbilityFx = hitFx;
+            try { DealPlayerDamage(target, amount); }
+            finally { _hitAbility = savedAbility; _hitAbilityFx = savedFx; }
+        }
+        // Treffer-Effekt einer Fähigkeit auf JEDEM Rechner (Server: aus DealPlayerDamage, nur tatsächlicher Schaden, nicht am
+        // Bannschild; Clients: per EnemyNet-RPC, vom Server schon budgetiert). Ziel, Fähigkeit. Nur Optik.
+        public static event System.Action<EnemyBrain, AbilityId> OnAbilityHit;
         // Champion-Quelle für Kontrolleffekte (Verlangsamen, Einfrieren, Betäuben, Rückstoß, Spott), die nicht über
         // DealPlayerDamage laufen: using (EnemyBrain.PlayerSource()) enemy.Freeze(...). Bannschild-Träger lassen nur
         // Champion-Kontrolle zu; Buddy-Kontrolle (Eis, Kristall, Wasser, Luft, Super-Buddies) prallt ab.
@@ -424,6 +443,9 @@ namespace ElementalBuddies
             OnReachedNexus = null;
             OnDamageDealt = null;
             OnLocalHit = null;
+            OnAbilityHit = null;
+            _hitAbility = -1;
+            _hitAbilityFx = false;
             DamageSource = null;
             OnEliteSpawned = null;
             OnWardImmune = null;
@@ -598,6 +620,19 @@ namespace ElementalBuddies
             if (max > 0f) _maxHP = max;
             // Nur echte Treffer melden (nicht die Erst-Synchronisation, bei der sich auch das Max-Leben setzt)
             if (current < before && before > 0f && Mathf.Approximately(beforeMax, _maxHP) && OnLocalHit != null) OnLocalHit(this, before - current, false, current <= 0f);
+        }
+
+        // Server: Treffer-Effekt einer Fähigkeit an die Clients (FeedbackDirector, nur wenn er lokal erschienen ist)
+        public void ServerSendAbilityHit(AbilityId ability)
+        {
+            if (_net != null && Net.IsServer) _net.ServerAbilityHit((byte)ability);
+        }
+
+        // Client: Treffer-Effekt vom Server (EnemyNet) → lokal wie auf dem Server melden
+        public void PlayRemoteAbilityHit(AbilityId ability)
+        {
+            if (!IsRemote || _isDead) return;
+            OnAbilityHit?.Invoke(this, ability);
         }
 
         // Client: Server meldet den Tod (vor dem Despawn) → Ereignisse lokal feuern (HUD, Erfolge, Boss-Leiste)
@@ -1539,6 +1574,10 @@ namespace ElementalBuddies
             if (amount > 0f && OnDamageDealt != null) OnDamageDealt(this, dealt, _playerSourceDepth > 0);
             _currentHP -= amount;
             if (amount > 0f && OnLocalHit != null) OnLocalHit(this, dealt, _playerSourceDepth > 0, _currentHP <= 0f);
+            // Fähigkeits-Treffer (vor ServerKilled, damit das RPC die Clients vor dem Tod erreicht); Folgeschaden ohne
+            // Champion-Quelle (NonPlayerSource) und DoT-Ticks tragen keine Fähigkeit
+            if (amount > 0f && _hitAbility >= 0 && _hitAbilityFx && _playerSourceDepth > 0 && OnAbilityHit != null)
+                OnAbilityHit(this, (AbilityId)_hitAbility);
             if (_currentHP <= 0)
             {
                 // Guard: several hits in one frame must not report the death twice (bounty / wave count)
