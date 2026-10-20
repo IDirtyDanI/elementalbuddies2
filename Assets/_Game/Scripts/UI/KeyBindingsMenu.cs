@@ -19,6 +19,8 @@ namespace ElementalBuddies
         public static void Attach(MainMenuUI menu)
         {
             if (menu == null || !Application.isPlaying) return;
+            // Touch-Geräte (Paket U): keine Tastatur – kein Knopf, keine Belegungs-Seite
+            if (MobilePlatform.TouchMode) { _menu = menu; _panel = null; return; }
             if (_panel != null && _menu == menu) return;
             _menu = menu;
             _panel = null;

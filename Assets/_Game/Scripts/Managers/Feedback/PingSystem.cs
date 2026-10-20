@@ -8,6 +8,7 @@ using UnityEngine.UI;
 namespace ElementalBuddies
 {
     // Ping-System (Plan „Fesselung“ G1): Aktion „Ping“ (Standard G oder mittlere Maustaste, belegbar über KeyBindings) setzt eine Welt-Markierung an der Maus.
+    // Touch-Modus: langes Drücken (≥ 0,5 s) in der Welt-Zone, ausgelöst vom InteractionManager (TryPingAtScreen).
     // Kontext aus der Umgebung: Gegner in der Nähe → „Gefahr!“, Schrein/Händler → „Hierher!“, sonst „Hier bauen“.
     // Im Koop geht der Ping über NetGame an alle (mit Spielernamen). Liegt auf dem Managers-Objekt (FeedbackDirector).
     // Pings außerhalb des Bildes zeigt eine Randmarke in Ping-Farbe. Linien-Material: Resources/PingLine.mat (im Build sicher dabei).
@@ -134,20 +135,32 @@ namespace ElementalBuddies
             if (_pingAction == null) _pingAction = KeyBindings.Action("Ping");
             // Aktion „Ping“ (Standard G + Mausrad-Klick, belegbar); aktiv, solange die eigene Figur Eingaben hat
             bool pressed = _pingAction != null && _pingAction.WasPressedThisFrame();
-            if (!pressed || Time.unscaledTime < _nextLocal) return;
-            if (PauseManager.IsPaused || InteractionManager.LocalInputBlocked) return;
-            if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
+            if (!pressed) return;
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+            PingAtScreen(mouse.position.ReadValue());
+        }
+
+        // Touch-Modus (Mobil, Paket B): langes Drücken in der Welt-Zone (InteractionManager prüft Welt-Zone/UI/Bau-Geist).
+        // true = Ping gesendet
+        public bool TryPingAtScreen(Vector2 screenPos) => PingAtScreen(screenPos);
+
+        // Gemeinsamer Teil Maus/Touch: Sperren, Abklingzeit, Boden-Raycast, Anfrage über NetGame
+        private bool PingAtScreen(Vector2 screenPos)
+        {
+            if (Time.unscaledTime < _nextLocal) return false;
+            if (PauseManager.IsPaused || InteractionManager.LocalInputBlocked) return false;
+            if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return false;
             if (_cam == null) _cam = Camera.main;
-            if (_cam == null) return;
+            if (_cam == null) return false;
 
             var im = InteractionManager.Instance;
             int mask = im != null && im.FloorLayer.value != 0 ? im.FloorLayer.value : Physics.DefaultRaycastLayers;
-            Ray ray = _cam.ScreenPointToRay(mouse.position.ReadValue());
-            if (!Physics.Raycast(ray, out RaycastHit hit, 200f, mask, QueryTriggerInteraction.Ignore)) return;
+            Ray ray = _cam.ScreenPointToRay(screenPos);
+            if (!Physics.Raycast(ray, out RaycastHit hit, 200f, mask, QueryTriggerInteraction.Ignore)) return false;
 
             _nextLocal = Time.unscaledTime + Cooldown;
             NetGame.RequestPing(hit.point, (byte)ContextAt(hit.point));
+            return true;
         }
 
         // Kontext: Gegner in 4 m → Gefahr; Schrein/Händler in 5 m → Hierher; sonst Hier bauen

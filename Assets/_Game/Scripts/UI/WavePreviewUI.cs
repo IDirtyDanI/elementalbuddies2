@@ -45,7 +45,7 @@ namespace ElementalBuddies
             var obj = FindFirstObjectByType<ObjectiveUI>(FindObjectsInactive.Include);
             _objective = obj;
             var canvas = hud.GetComponentInParent<Canvas>();
-            if (canvas != null) _topBar = canvas.rootCanvas.transform.Find("TopBar") as RectTransform;
+            if (canvas != null) _topBar = SafeAreaFitter.FindInCanvas(canvas.rootCanvas.transform, "TopBar") as RectTransform;
             if (obj != null)
                 foreach (var img in obj.GetComponentsInChildren<Image>(true))
                     if (img.sprite != null && img.sprite.name.Contains("parchment")) { parchment = img.sprite; break; }
@@ -53,11 +53,24 @@ namespace ElementalBuddies
             var go = new GameObject("WavePreview", typeof(RectTransform));
             _root = go.GetComponent<RectTransform>();
             _root.SetParent(anchor.parent, false);
-            _root.anchorMin = _root.anchorMax = new Vector2(1f, 0f);
-            _root.pivot = new Vector2(1f, 0f);
-            _root.anchoredPosition = anchor.anchoredPosition + new Vector2(0f, anchor.sizeDelta.y + 14f);
+            _anchor = anchor;
+            if (MobilePlatform.TouchMode)
+            {
+                // Touch: Knopf sitzt oben rechts (MobileUiHud) – Vorschau hängt darunter, nur bei langem Drücken
+                _root.anchorMin = _root.anchorMax = new Vector2(1f, 1f);
+                _root.pivot = new Vector2(1f, 1f);
+                _root.anchoredPosition = anchor.anchoredPosition - new Vector2(0f, anchor.sizeDelta.y + 14f);
+            }
+            else
+            {
+                _root.anchorMin = _root.anchorMax = new Vector2(1f, 0f);
+                _root.pivot = new Vector2(1f, 0f);
+                _root.anchoredPosition = anchor.anchoredPosition + new Vector2(0f, anchor.sizeDelta.y + 14f);
+            }
             _root.sizeDelta = new Vector2(500f, 200f);
-            _root.SetSiblingIndex(anchor.GetSiblingIndex());
+            // Touch: über den Ziel-Panels (sie liegt beim Halten darüber); PC: hinter dem Knopf
+            if (MobilePlatform.TouchMode) _root.SetAsLastSibling();
+            else _root.SetSiblingIndex(anchor.GetSiblingIndex());
 
             var bg = go.AddComponent<Image>();
             bg.sprite = parchment;
@@ -89,10 +102,38 @@ namespace ElementalBuddies
             var gm = GameManager.Instance;
             bool show = wm != null && !wm.IsWaveActive && (gm == null || !gm.IsGameOver);
             if (show && (wm.UpcomingWaveNumber != _shownWave || MerchantCurses.Version != _shownCurses)) Rebuild(wm);
+            bool touch = MobilePlatform.TouchMode;
+            if (touch) show = show && TouchPeek; // Touch: nur solange „Welle starten“ gedrückt gehalten wird
             if (show != _visible) _visible = show;
             float target = _visible ? 1f : 0f;
-            _group.alpha = Mathf.MoveTowards(_group.alpha, target, Time.unscaledDeltaTime * 4f);
-            if (_group.alpha > 0f) FitHeight();
+            _group.alpha = Mathf.MoveTowards(_group.alpha, target, Time.unscaledDeltaTime * (touch ? 10f : 4f));
+            if (_group.alpha > 0f)
+            {
+                if (touch) FitTouch();
+                else FitHeight();
+            }
+        }
+
+        // Touch (MobileUiHud): langes Drücken auf „Welle starten“ zeigt die Vorschau, Loslassen blendet sie aus
+        public bool TouchPeek { get; set; }
+
+        private RectTransform _anchor;
+
+        // Touch: unter dem Knopf, bei Bedarf verkleinert, damit sie über dem unteren Rand des sicheren Bereichs endet
+        private void FitTouch()
+        {
+            var parent = _root.parent as RectTransform;
+            if (parent == null) return;
+            if (_anchor != null)
+            {
+                var pos = _anchor.anchoredPosition - new Vector2(0f, _anchor.rect.height + 14f);
+                if ((_root.anchoredPosition - pos).sqrMagnitude > 0.01f) _root.anchoredPosition = pos;
+            }
+            float top = parent.rect.yMax + _root.anchoredPosition.y; // lokale Oberkante (Pivot oben)
+            float limit = parent.rect.yMin + TopGap;
+            float h = _root.rect.height;
+            float scale = h > 1f ? Mathf.Clamp((top - limit) / h, MinScale, 1f) : 1f;
+            if (Mathf.Abs(_root.localScale.x - scale) > 0.001f) _root.localScale = new Vector3(scale, scale, 1f);
         }
 
         // Viele Zeilen (Ereignis + Elite-Liste + Fluch + Morgengrauen, umgebrochen) machen das Panel hoch. Es wächst vom

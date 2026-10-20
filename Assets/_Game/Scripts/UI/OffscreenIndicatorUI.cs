@@ -116,7 +116,7 @@ namespace ElementalBuddies
             if (ArrowImage == null && Arrow != null) ArrowImage = Arrow.GetComponent<Image>();
             if (TopHud == null && _canvas != null)
             {
-                var t = _canvas.transform.Find("TopBar");
+                var t = SafeAreaFitter.FindInCanvas(_canvas.transform, "TopBar"); // auch im SafeArea-Bereich (Touch)
                 if (t != null) TopHud = t as RectTransform;
             }
             // Früher lag der Pfeil unter dem Meldungs-Banner (Geschwister-Reihenfolge); mit eigenem Canvas liegt er

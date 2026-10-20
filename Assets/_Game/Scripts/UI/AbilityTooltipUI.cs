@@ -7,6 +7,8 @@ namespace ElementalBuddies
     // Hover-Tooltip (Pergament) für die Slots der AbilityBar: Name, Taste, Mana, Abklingzeit und Beschreibung.
     // Werte kommen live vom aktiven ChampionKit (inkl. Schadens-Upgrades). Hover-Erkennung per Rect-Test,
     // daher brauchen die Slots keine Raycast-Targets. Script auf ein immer aktives Objekt legen.
+    // Touch (Paket U): langes Drücken (≥ 0,4 s, MobileUiMath.LongPressSeconds) auf einen sichtbaren Slot zeigt den Tooltip,
+    // Loslassen schließt ihn. Eigene Touch-Knöpfe können ihn über ShowFor/HideExternal anzeigen.
     public class AbilityTooltipUI : MonoBehaviour
     {
         public AbilityBarUI Bar;
@@ -40,11 +42,41 @@ namespace ElementalBuddies
             }
         }
 
+        public static AbilityTooltipUI Instance { get; private set; }
+        void Awake() => Instance = this;
+        void OnDestroy() { if (Instance == this) Instance = null; }
+
+        // Von außen (Touch-Fähigkeitsknöpfe): Tooltip für eine Fähigkeit über anchor zeigen, bis HideExternal
+        private bool _external;
+        private AbilityId _externalId;
+        private RectTransform _externalAnchor;
+
+        public void ShowFor(AbilityId id, RectTransform anchor)
+        {
+            _external = anchor != null;
+            _externalId = id;
+            _externalAnchor = anchor;
+        }
+
+        public void HideExternal()
+        {
+            _external = false;
+            _externalAnchor = null;
+        }
+
         void Update()
         {
-            if (Panel == null || Bar == null) return;
+            if (Panel == null || _group == null) return;
+            if (_external && _externalAnchor != null && _externalAnchor.gameObject.activeInHierarchy)
+            {
+                Fill(_externalId);
+                Place(_externalAnchor);
+                _group.alpha = Mathf.MoveTowards(_group.alpha, 1f, FadeSpeed * Time.unscaledDeltaTime);
+                return;
+            }
+            if (Bar == null) { _group.alpha = Mathf.MoveTowards(_group.alpha, 0f, FadeSpeed * Time.unscaledDeltaTime); return; }
 
-            AbilityBarUI.Slot slot = FindHoveredSlot();
+            AbilityBarUI.Slot slot = MobilePlatform.TouchMode ? FindHeldSlot() : FindHoveredSlot();
             if (slot != _hovered)
             {
                 _hovered = slot;
@@ -55,7 +87,7 @@ namespace ElementalBuddies
             if (_hovered != null)
             {
                 _hoverTime += Time.unscaledDeltaTime;
-                show = _hoverTime >= ShowDelay;
+                show = MobilePlatform.TouchMode || _hoverTime >= ShowDelay; // Touch: Haltezeit schon erreicht
                 if (show)
                 {
                     Fill(_hovered.Ability);
@@ -73,6 +105,22 @@ namespace ElementalBuddies
             if (mouse == null) return null;
             Vector2 pos = mouse.position.ReadValue();
             Camera cam = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay ? _canvas.worldCamera : null;
+            foreach (var s in Bar.Slots)
+                if (s.Root != null && s.Root.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(s.Root, pos, cam))
+                    return s;
+            return null;
+        }
+
+        // Touch: Slot, auf dem ein Finger lange (≥ 0,4 s) liegt
+        private AbilityBarUI.Slot FindHeldSlot()
+        {
+            Camera cam = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay ? _canvas.worldCamera : null;
+            if (!MobileUi.TryGetHeldPointer(p => SlotAt(p, cam) != null, MobileUiMath.LongPressSeconds, out var pos)) return null;
+            return SlotAt(pos, cam);
+        }
+
+        private AbilityBarUI.Slot SlotAt(Vector2 pos, Camera cam)
+        {
             foreach (var s in Bar.Slots)
                 if (s.Root != null && s.Root.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(s.Root, pos, cam))
                     return s;
@@ -111,7 +159,7 @@ namespace ElementalBuddies
             if (TitleText != null) TitleText.text = kit.GetName(id);
             if (MetaText != null)
                 MetaText.text = $"{AbilitySlots.KeyName(slot)}   •   {kit.GetCostLine(id)}";
-            if (BodyText != null) BodyText.text = Describe(id, a);
+            if (BodyText != null) BodyText.text = MobileUi.TouchText(Describe(id, a)); // Touch: „Zielpunkt“ statt „Mauszeiger“
 
             if (LockedText != null)
             {

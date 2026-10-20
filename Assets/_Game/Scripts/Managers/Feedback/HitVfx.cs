@@ -39,6 +39,16 @@ namespace ElementalBuddies
             _loaded = false;
             _budget = null;
             Fallback = null;
+            BudgetScale = 1f;
+        }
+
+        // Anteil des Budgets (1 = PC). MobileQuality senkt ihn im Touch-Modus (Mobil-Grafik, 2026-10-20).
+        public static float BudgetScale { get; private set; } = 1f;
+
+        public static void SetBudgetScale(float scale)
+        {
+            BudgetScale = Mathf.Clamp(scale, 0.1f, 1f);
+            _budget = null; // beim nächsten Effekt mit neuem Anteil anlegen
         }
 
         public static HitVfxTableSO Table
@@ -68,7 +78,12 @@ namespace ElementalBuddies
             if (prefab == null) return false;
 
             if (_budget == null)
-                _budget = table != null ? new HitVfxBudget(table.MaxPerTrigger, table.Burst, table.PerSecond) : new HitVfxBudget();
+            {
+                float bs = BudgetScale;
+                _budget = table != null
+                    ? new HitVfxBudget(Mathf.Max(1, Mathf.RoundToInt(table.MaxPerTrigger * bs)), table.Burst * bs, table.PerSecond * bs)
+                    : new HitVfxBudget();
+            }
             float minInterval = entry != null ? entry.MinInterval : 0.2f;
             if (!_budget.TryShow(enemy.GetInstanceID(), (int)id, minInterval, Time.unscaledTime, Time.frameCount)) return false;
 

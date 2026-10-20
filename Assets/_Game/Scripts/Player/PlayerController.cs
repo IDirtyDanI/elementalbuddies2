@@ -76,7 +76,40 @@ namespace ElementalBuddies
         public bool IsLocalControl => _avatar == null || _avatar.IsLocalControl;
 
         // Aktuelle Laufeingabe (x = rechts, y = vorne), zero ohne Eingabe / auf fremden Figuren
-        public Vector2 MoveInput => IsLocalControl && MoveAction != null && _inputActive ? MoveAction.ReadValue<Vector2>() : Vector2.zero;
+        public Vector2 MoveInput => IsLocalControl && MoveAction != null && _inputActive ? ReadMoveInput() : Vector2.zero;
+
+        // Mobil (MobilePlatform.TouchMode, beim Start gemerkt): Laufen/Zielen/Springen zusätzlich aus TouchControls.
+        // Auf dem PC false – dann bleibt alles exakt wie vorher (Maus-Raycast, nur Input-Actions).
+        private bool _touch;
+        private int _touchAimFrame = -1;
+        [Tooltip("Mobil: Drehgeschwindigkeit in Laufrichtung, solange nicht gezielt wird (Grad/s).")]
+        public float TouchTurnSpeed = 900f;
+
+        private TouchControls TouchSource
+        {
+            get
+            {
+                if (!_touch) return null;
+                var tc = TouchControls.Instance;
+                return tc != null && tc.IsBoundTo(this) ? tc : null;
+            }
+        }
+
+        // Input-Action (Tastatur) + im Touch-Modus der virtuelle Stick, zusammen höchstens Länge 1
+        private Vector2 ReadMoveInput()
+        {
+            Vector2 v = MoveAction.ReadValue<Vector2>();
+            if (_touch)
+            {
+                var tc = TouchSource;
+                if (tc != null)
+                {
+                    v += tc.Move;
+                    if (v.sqrMagnitude > 1f) v.Normalize();
+                }
+            }
+            return v;
+        }
 
         // Laufeingabe als Weltrichtung (XZ, Länge wie MoveInput): kamerabezogen – vorwärts = Blickrichtung der
         // drehbaren Kamera (CameraFollow.Yaw). Alle Stellen, die WASD als Richtung brauchen (Laufen, Rolle …), nutzen das.
@@ -111,6 +144,7 @@ namespace ElementalBuddies
             _avatar = GetComponent<PlayerAvatar>();
             _stats = GetComponent<PlayerStats>();
             _mainCamera = Camera.main;
+            _touch = MobilePlatform.TouchMode;
             // Absicherung: ohne gesetzte Boden-Ebene träfe der Maus-Raycast nichts (Zielen tot)
             if (FloorLayer.value == 0) FloorLayer = LayerMask.GetMask("Floor");
 
@@ -157,6 +191,12 @@ namespace ElementalBuddies
             _inputActive = on;
             if (on) inputAsset.Enable();
             else inputAsset.Disable();
+            // Mobil: Touch-Steuerung an die eigene Figur binden (legt sie beim ersten Mal an)
+            if (_touch)
+            {
+                if (on) TouchControls.Bind(this);
+                else TouchControls.Unbind(this);
+            }
         }
 
         void Update()
@@ -169,7 +209,8 @@ namespace ElementalBuddies
             if (PauseManager.IsPaused) return;
 
             HandleMovement();
-            if (!RotationLocked) HandleRotation();
+            if (_touch) ApplyTouchAim();
+            else if (!RotationLocked) HandleRotation();
             else UpdateAimPoint();
             GuardFallingThroughMap();
         }
@@ -225,7 +266,7 @@ namespace ElementalBuddies
         {
             if (MoveAction == null || _characterController == null || !_characterController.enabled) return;
 
-            Vector2 input = MovementLocked ? Vector2.zero : MoveAction.ReadValue<Vector2>();
+            Vector2 input = MovementLocked ? Vector2.zero : ReadMoveInput();
             // Kamerabezogen: W läuft immer „ins Bild hinein“, auch wenn die Kamera um die Figur gedreht ist
             Vector3 moveInput = ToWorldDirection(input);
 
@@ -242,7 +283,7 @@ namespace ElementalBuddies
 
             // Sprung: Tastendruck puffern (JumpBufferTime), kurz nach Verlassen des Bodens noch erlaubt (CoyoteTime)
             if (MovementLocked) _jumpPressedTime = float.NegativeInfinity;
-            else if (JumpAction != null && JumpAction.WasPressedThisFrame()) _jumpPressedTime = now;
+            else if ((JumpAction != null && JumpAction.WasPressedThisFrame()) || TouchJumpPressed()) _jumpPressedTime = now;
 
             if (!MovementLocked && now - _jumpPressedTime <= JumpBufferTime && now - _lastGroundedTime <= CoyoteTime)
             {
@@ -321,6 +362,56 @@ namespace ElementalBuddies
             _pushRemaining = distance;
             _pushTime = 0f;
             _pushDuration = Mathf.Max(0.02f, duration);
+        }
+
+        // Mobil: Sprung-Knopf (gleicher Weg wie die Sprung-Taste, inkl. Puffer/Coyote-Time)
+        private bool TouchJumpPressed()
+        {
+            if (!_touch) return false;
+            var tc = TouchSource;
+            return tc != null && tc.JumpPressed;
+        }
+
+        // Mobil: Ziel-Quelle statt Maus-Raycast. Setzt AimPoint/HasAimPoint und dreht die Figur (Angriffs-Stick,
+        // Zieh-Zielen, Auto-Ziel; sonst in Laufrichtung). Einmal pro Frame – PlayerAbilities ruft es vor dem Wirken auf,
+        // damit ein Antippen im selben Frame schon in die neue Richtung geht. RotationLocked: nur den Zielpunkt setzen.
+        public void ApplyTouchAim()
+        {
+            if (!_touch || _touchAimFrame == Time.frameCount) return;
+            var tc = TouchSource;
+            if (tc == null) return;
+            _touchAimFrame = Time.frameCount;
+
+            TouchAim aim = tc.CurrentAim;
+            Vector3 pos = transform.position;
+            Vector3 dir;
+            switch (aim.Mode)
+            {
+                case TouchAimMode.Point:
+                    _aimPoint = aim.Point;
+                    _hasAimPoint = true;
+                    dir = aim.Point - pos;
+                    break;
+                case TouchAimMode.Direction:
+                    dir = aim.Direction;
+                    _aimPoint = pos + dir * Mathf.Max(0.5f, aim.Distance);
+                    _hasAimPoint = aim.HasPoint;
+                    break;
+                case TouchAimMode.FaceMove:
+                    _hasAimPoint = false;
+                    if (!RotationLocked && !MovementLocked)
+                    {
+                        Vector3 move = MoveWorld;
+                        if (move.sqrMagnitude > 0.01f)
+                            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(move.normalized), TouchTurnSpeed * Time.deltaTime);
+                    }
+                    return;
+                default:
+                    _hasAimPoint = false;
+                    return;
+            }
+            dir.y = 0f;
+            if (!RotationLocked && dir.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
         }
 
         // Nur den Mauspunkt aktualisieren (ohne Drehung), z. B. während einer Rolle

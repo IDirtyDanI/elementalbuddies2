@@ -42,6 +42,7 @@ namespace ElementalBuddies
 
         [Header("Layout (Canvas-Einheiten)")]
         public float Size = 280f;          // Außendurchmesser inkl. Rahmen
+        public const float PhoneSize = 236f; // Touch-Telefon (MobilePlatform.IsPhone)
         public float RingWidth = 15f;      // Holzrahmen
         public float LeftMargin = 24f;
         public float TopGap = 12f;         // Abstand zur Unterkante der TopBar
@@ -123,8 +124,11 @@ namespace ElementalBuddies
             }
             if (canvas == null) return null;
             var go = new GameObject("Minimap", typeof(RectTransform));
-            go.transform.SetParent(canvas.transform, false);
+            // Touch: im sicheren Bereich (SafeAreaFitter), sonst direkt im Canvas
+            go.transform.SetParent(SafeAreaFitter.ContentOf(canvas.transform), false);
             var mm = go.AddComponent<MinimapUI>();
+            // Telefon: etwas kleiner – die Karte ragt sonst weit in die Zone des Bewegungs-Sticks (links unten)
+            if (MobilePlatform.IsPhone) mm.Size = PhoneSize;
             var map = MapContext.Current; // Kartenausschnitt der Map (Stadt: Mitte 0/0, Radius 68)
             mm.WorldCenter = map.MinimapCenter;
             mm.WorldRadius = map.MinimapRadius;
@@ -149,7 +153,7 @@ namespace ElementalBuddies
         private void Build(Canvas canvas, TMP_FontAsset font)
         {
             _root = (RectTransform)transform;
-            var top = canvas.transform.Find("TopBar");
+            var top = SafeAreaFitter.FindInCanvas(canvas.transform, "TopBar");
             _topBar = top as RectTransform;
             // Direkt hinter der TopBar einsortieren: später kommende Panels (Karten, Pause, Game Over) liegen darüber
             if (top != null) _root.SetSiblingIndex(top.GetSiblingIndex() + 1);

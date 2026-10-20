@@ -257,7 +257,30 @@ namespace ElementalBuddies
             InitMaps();
             Select(start, true);
             MainMenuMeta.Attach(this); // Nächstes Ziel, Belagerungsstufe, Kodex (Plan Fesselung E3/E4/E6)
-            KeyBindingsMenu.Attach(this); // Einstellungen → Tastaturbelegung
+            KeyBindingsMenu.Attach(this); // Einstellungen → Tastaturbelegung (Touch: entfällt)
+            if (Application.isPlaying && MobilePlatform.TouchMode) ApplyTouch();
+        }
+
+        // Touch (Paket U): alles ist ohnehin per Knopf bedienbar (Champion-Karten, Schwierigkeit, Map-Kacheln, Zurück-Knöpfe,
+        // Kodex-Reiter). Hier nur die Tasten-Hinweise ausblenden und den Vollbild-Schalter (gibt es mobil nicht) entfernen.
+        private bool _touchApplied;
+        private void ApplyTouch()
+        {
+            if (_touchApplied) return;
+            _touchApplied = true;
+            var hint = MobileUi.FindDeep(transform, "KeyHint"); // „←/→ oder 1–4 … Q/E … Enter … Esc“
+            if (hint != null) hint.gameObject.SetActive(false);
+            // Erfolge-Seite (und ihre Kopie, der Kodex): „… · Q/E: Stufe“
+            foreach (var t in GetComponentsInChildren<TextMeshProUGUI>(true))
+                if (t.text != null && t.text.Contains("Q/E")) t.text = t.text.Replace(" · Q/E: Stufe", "").Replace("  ·  Q/E: Stufe", "");
+            if (FullscreenToggle != null && FullscreenToggle.transform.parent != null)
+                FullscreenToggle.transform.parent.gameObject.SetActive(false);
+            if (JoinCodeInput != null)
+            {
+                // Bildschirmtastatur: Raumcode = Großbuchstaben/Ziffern, keine Autokorrektur
+                JoinCodeInput.keyboardType = TouchScreenKeyboardType.ASCIICapable;
+                JoinCodeInput.shouldHideMobileInput = false;
+            }
         }
 
         void OnEnable()
@@ -443,7 +466,7 @@ namespace ElementalBuddies
             {
                 if (DetailName != null) DetailName.text = def.DisplayName;
                 if (DetailTagline != null) DetailTagline.text = def.Tagline;
-                if (DetailDescription != null) DetailDescription.text = def.Description;
+                if (DetailDescription != null) DetailDescription.text = MobileUi.TouchText(def.Description);
                 if (DetailAccent != null) DetailAccent.color = def.AccentColor;
                 FillAbilities(def);
             }
@@ -500,7 +523,9 @@ namespace ElementalBuddies
                 // Asset-Kürzel („LMB“, „R“ …) = Standard-Taste des Slots → aktuelle Belegung anzeigen
                 if (key != null)
                 {
-                    key.text = AbilitySlots.TryParseDefaultKey(ab.Key, out var slot) ? AbilitySlots.ShortKey(slot) : ab.Key;
+                    bool known = AbilitySlots.TryParseDefaultKey(ab.Key, out var slot);
+                    key.text = !known ? ab.Key
+                        : MobilePlatform.TouchMode ? KeyBindings.TouchShort(KeyBindings.OfSlot(slot)) : AbilitySlots.ShortKey(slot);
                     if (!key.enableAutoSizing)
                     {
                         key.fontSizeMax = key.fontSize;
@@ -518,7 +543,7 @@ namespace ElementalBuddies
                     title.text = t;
                 }
                 var desc = FindChild<TextMeshProUGUI>(row.transform, "Desc");
-                if (desc != null) desc.text = ab.Description;
+                if (desc != null) desc.text = MobileUi.TouchText(ab.Description); // Touch: „Zielpunkt“ statt „Mauszeiger“
             }
         }
 
@@ -1737,7 +1762,7 @@ namespace ElementalBuddies
                     LobbyDifficultyText.enableAutoSizing = true;
                 }
                 LobbyDifficultyText.text = "Schwierigkeit: <b>" + d.DisplayName + "</b>  ·  Karte: <b>" + roomMap.DisplayName + "</b>" +
-                    (isHost ? "  <size=80%>(Q/E · M)</size>" : "  <size=80%>– wählt der Host</size>");
+                    (isHost ? (MobilePlatform.TouchMode ? "" : "  <size=80%>(Q/E · M)</size>") : "  <size=80%>– wählt der Host</size>");
             }
 
             // Status
@@ -1753,7 +1778,8 @@ namespace ElementalBuddies
                     else s = "Alle bereit – starte das Spiel!";
                 }
                 else if (IsLocked(local.ChampionClass)) s = "Dein Champion ist auf dieser Stufe gesperrt – wähle einen anderen.";
-                else s = local.Ready.Value ? "Bereit – warte auf den Host …" : "Wähle deinen Champion und klicke auf „Bereit“.";
+                else s = local.Ready.Value ? "Bereit – warte auf den Host …"
+                    : MobilePlatform.TouchMode ? "Wähle deinen Champion und tippe auf „Bereit“." : "Wähle deinen Champion und klicke auf „Bereit“.";
                 LobbyStatus.text = s;
             }
 

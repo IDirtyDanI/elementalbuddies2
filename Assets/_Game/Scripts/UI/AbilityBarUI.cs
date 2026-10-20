@@ -83,8 +83,18 @@ namespace ElementalBuddies
 
         private PlayerAbilities _bound;
 
+        // Mobil: die Leiste weicht den Fähigkeits-Knöpfen (TouchControlsView, gleiche Daten aus PlayerAbilities).
+        // Auf dem PC false – die Leiste bleibt unverändert.
+        private bool _hiddenForTouch;
+
         void Start()
         {
+            if (MobilePlatform.TouchMode)
+            {
+                _hiddenForTouch = true;
+                gameObject.SetActive(false);
+                return;
+            }
             foreach (var s in Slots)
             {
                 if (s.Root != null) s.BaseScale = s.Root.localScale;
@@ -209,6 +219,11 @@ namespace ElementalBuddies
 
         void Update()
         {
+            if (_hiddenForTouch)
+            {
+                gameObject.SetActive(false); // falls jemand die Leiste wieder einschaltet
+                return;
+            }
             if (_bound == null || (PlayerAvatar.Local != null && PlayerAvatar.Local.Abilities != _bound)) TryBind();
             if (_bound == null) return;
 

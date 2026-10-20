@@ -398,15 +398,72 @@ namespace ElementalBuddies
 
         // ---------------- Anzeige ----------------
 
+        // Plaketten (Fähigkeiten-/Bau-Leiste): immer die Taste – Touch-Oberflächen nehmen TouchShort
         public static string Short(BindId id) => ShortName(EffectivePath(id));
-        public static string Name(BindId id) => Name(EffectivePath(id));
+        // Touch-Modus (Paket U): statt der Taste der Touch-Bedienweg („Feuer-Knopf“, „Angriffs-Stick“)
+        public static string Name(BindId id) => MobilePlatform.TouchMode ? TouchName(id) : Name(EffectivePath(id));
 
-        // Für Fließtext: „Taste Q“, „Leertaste“, „Linke Maustaste“, „nicht belegt“
-        public static string Long(BindId id) => LongName(EffectivePath(id));
+        // Für Fließtext: „Taste Q“, „Leertaste“, „Linke Maustaste“, „nicht belegt“ (Touch: TouchName)
+        public static string Long(BindId id) => MobilePlatform.TouchMode ? TouchName(id) : LongName(EffectivePath(id));
 
-        // Bewegungstasten zusammengefasst: „WASD“ bzw. „Pfeil hoch/…“
+        // ---------------- Touch-Bezeichnungen (Mobil-Version) ----------------
+
+        // Ausgeschrieben für Fließtext und Tooltips
+        public static string TouchName(BindId id)
+        {
+            switch (id)
+            {
+                case BindId.MoveUp:
+                case BindId.MoveDown:
+                case BindId.MoveLeft:
+                case BindId.MoveRight: return "linker Stick";
+                case BindId.Jump: return "Sprung-Knopf";
+                case BindId.CameraLeft:
+                case BindId.CameraRight: return "Zwei-Finger-Drehen";
+                case BindId.CameraReset: return "Kamera zurücksetzen";
+                case BindId.Primary: return "Angriffs-Stick";
+                case BindId.Secondary: return "Spezial-Knopf";
+                case BindId.SpellFire: return "Feuer-Knopf";
+                case BindId.SpellIce: return "Eis-Knopf";
+                case BindId.SpellEarth: return "Erd-Knopf";
+                case BindId.SpellLight: return "Licht-Knopf";
+                case BindId.Build1:
+                case BindId.Build2:
+                case BindId.Build3:
+                case BindId.Build4: return "Bau-Leiste";
+                default: return "Ping-Knopf";
+            }
+        }
+
+        // Kurz für Plaketten/Klammern (Hauptmenü-Fähigkeitenliste, Pause-Übersicht)
+        public static string TouchShort(BindId id)
+        {
+            switch (id)
+            {
+                case BindId.Primary: return "Angriff";
+                case BindId.Secondary: return "Spezial";
+                case BindId.SpellFire: return "Feuer";
+                case BindId.SpellIce: return "Eis";
+                case BindId.SpellEarth: return "Erde";
+                case BindId.SpellLight: return "Licht";
+                case BindId.Jump: return "Sprung";
+                case BindId.Build1: return "1";
+                case BindId.Build2: return "2";
+                case BindId.Build3: return "3";
+                case BindId.Build4: return "4";
+                case BindId.Ping:
+                case BindId.PingAlt: return "Ping";
+                default: return "Stick";
+            }
+        }
+
+        // Kurzbeschriftung je nach Modus (Touch: TouchShort, sonst Short)
+        public static string ShortLabel(BindId id) => MobilePlatform.TouchMode ? TouchShort(id) : Short(id);
+
+        // Bewegungstasten zusammengefasst: „WASD“ bzw. „Pfeil hoch/…“ (Touch: „linker Stick“)
         public static string MoveKeys()
         {
+            if (MobilePlatform.TouchMode) return TouchName(BindId.MoveUp);
             string u = Short(BindId.MoveUp), l = Short(BindId.MoveLeft), d = Short(BindId.MoveDown), r = Short(BindId.MoveRight);
             if (u.Length == 1 && l.Length == 1 && d.Length == 1 && r.Length == 1) return u + l + d + r;
             return u + "/" + l + "/" + d + "/" + r;

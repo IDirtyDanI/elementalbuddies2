@@ -96,6 +96,7 @@ namespace ElementalBuddies
             _avatar = GetComponent<PlayerAvatar>();
             _mana = GetComponent<PlayerMana>();
             if (_mana == null) _mana = gameObject.AddComponent<PlayerMana>();
+            _touch = MobilePlatform.TouchMode;
 
             // Offline (ohne Netz-Avatar) ist diese Figur sofort die lokale; sonst setzt PlayerAvatar das beim Spawn
             if (_avatar == null || !Net.IsRunning) Instance = this;
@@ -249,6 +250,13 @@ namespace ElementalBuddies
                 return;
             }
 
+            // Mobil: Touch-Knöpfe/Angriffs-Stick (TouchControls) zusätzlich zu den Tasten
+            if (_touch && TouchControls.Instance != null && TouchControls.Instance.IsBoundTo(_controller))
+            {
+                HandleTouchSkills(TouchControls.Instance);
+                return;
+            }
+
             // Standard: Grundangriff = linke, Mobilität = rechte Maustaste, Zauber R/F/C/V – frei belegbar (KeyBindings)
             HandleSlot(AbilitySlot.Primary, _controller.Skill6Action, ClickConsumed(_controller.Skill6Action));
             HandleSlot(AbilitySlot.Secondary, _controller.SkillEAction, ClickConsumed(_controller.SkillEAction));
@@ -302,6 +310,62 @@ namespace ElementalBuddies
                 // Gehaltener Grundangriff: erneut auslösen, sobald bereit (still, kein Locked-Toast)
                 if (IsAvailable(id)) TryCast(id);
             }
+        }
+
+        // ---------------- Touch (Mobil) ----------------
+
+        // Im Touch-Modus beim Start gemerkt; auf dem PC false → HandleSkills läuft exakt wie vorher
+        private bool _touch;
+
+        private void HandleTouchSkills(TouchControls tc)
+        {
+            // Erst zielen (Auto-Ziel / Zieh-Ziel / Stick), damit ein Antippen im selben Frame in die neue Richtung wirkt
+            _controller.ApplyTouchAim();
+            HandleTouchSlot(tc, AbilitySlot.Primary, _controller.Skill6Action);
+            HandleTouchSlot(tc, AbilitySlot.Secondary, _controller.SkillEAction);
+            HandleTouchSlot(tc, AbilitySlot.Fire, _controller.SpellFireAction);
+            HandleTouchSlot(tc, AbilitySlot.Ice, _controller.SpellIceAction);
+            HandleTouchSlot(tc, AbilitySlot.Earth, _controller.SpellEarthAction);
+            HandleTouchSlot(tc, AbilitySlot.Light, _controller.SpellLightAction);
+        }
+
+        // Wie HandleSlot, aber Druck/Halten aus Knopf ODER Taste. Maustasten-Belegungen zählen im Touch-Modus nicht
+        // (im Editor erzeugt die Touch-Simulation aus der Maus schon Touches – sonst löste ein Klick doppelt aus).
+        private void HandleTouchSlot(TouchControls tc, AbilitySlot slot, InputAction action)
+        {
+            bool keyUsable = action != null && !UsesMouseButton(action);
+            bool pressed = tc.SlotPressed(slot) || (keyUsable && action.WasPressedThisFrame());
+            bool held = tc.SlotHeld(slot) || (keyUsable && action.IsPressed());
+            AbilityId id = ActiveKit.GetAbility(slot);
+            int s = (int)slot;
+
+            if (ActiveKit.IsHoldAbility(id))
+            {
+                if (_holding[s] && !held)
+                {
+                    _holding[s] = false;
+                    ReleaseHold(id);
+                }
+                else if (!_holding[s] && pressed)
+                {
+                    if (TryCast(id)) _holding[s] = true;
+                }
+                if (_holding[s] && !ActiveKit.IsActive(id)) _holding[s] = false;
+                return;
+            }
+
+            if (pressed) TryCast(id);
+            else if (slot == AbilitySlot.Primary && ActiveKit.AutoRepeatPrimary && held)
+            {
+                if (IsAvailable(id)) TryCast(id);
+            }
+        }
+
+        private static bool UsesMouseButton(InputAction action)
+        {
+            var mouse = Mouse.current;
+            if (mouse == null) return false;
+            return KeyBindings.Uses(action, mouse.leftButton) || KeyBindings.Uses(action, mouse.rightButton) || KeyBindings.Uses(action, mouse.middleButton);
         }
 
         // Gehaltener Grundangriff auf der linken Maustaste: pausieren, solange der Zeiger über UI/Buddy/Ghost ist

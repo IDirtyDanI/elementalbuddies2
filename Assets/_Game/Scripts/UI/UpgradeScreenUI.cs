@@ -299,11 +299,33 @@ namespace ElementalBuddies
             if (_liftTargets.Count == 0 || RerollButton == null) return;
             float h = ((RectTransform)Panel.transform).rect.height;
             float buttonBottom = RerollPos.y - ((RectTransform)RerollButton.transform).sizeDelta.y * 0.5f;
-            float lift = Mathf.Clamp(-h * 0.5f + BottomReserve - buttonBottom, 0f, MaxLift);
+            float maxLift = MaxLift;
+            if (MobilePlatform.TouchMode)
+            {
+                // Touch: Hintergrund reicht über den Bildschirm hinaus (SafeAreaFitter) → mit der Höhe des sicheren
+                // Bereichs rechnen und den Inhalt oben nicht aus dem Bild schieben
+                float ppu = Mathf.Max(0.0001f, Mathf.Abs(Panel.transform.lossyScale.y));
+                h = MobilePlatform.SafeArea.height / ppu;
+                maxLift = Mathf.Min(maxLift, Mathf.Max(0f, h * 0.5f - 12f - LiftContentTop()));
+            }
+            float lift = Mathf.Clamp(-h * 0.5f + BottomReserve - buttonBottom, 0f, maxLift);
             if (Mathf.Abs(lift - _lift) < 0.5f) return;
             _lift = lift;
             for (int i = 0; i < _liftTargets.Count; i++)
                 if (_liftTargets[i] != null) _liftTargets[i].anchoredPosition = _liftBase[i] + new Vector2(0f, lift);
+        }
+
+        // Oberkante des angehobenen Inhalts ohne Anhebung (lokal im Panel, Mitte = 0)
+        private float LiftContentTop()
+        {
+            float top = 0f;
+            for (int i = 0; i < _liftTargets.Count; i++)
+            {
+                var rt = _liftTargets[i];
+                if (rt == null || !rt.gameObject.activeSelf) continue;
+                top = Mathf.Max(top, _liftBase[i].y + rt.rect.height * (1f - rt.pivot.y));
+            }
+            return top;
         }
 
         void Update()

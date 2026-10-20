@@ -44,6 +44,8 @@ namespace ElementalBuddies
         private float _yaw, _targetYaw, _yawVelocity;
         private bool _resetting;
         private InputAction _rotateLeftAction, _rotateRightAction, _rotateResetAction;
+        // Mobil (MobilePlatform.TouchMode, beim Start gemerkt): Zwei-Finger-Drehen/-Doppeltipp aus TouchControls
+        private bool _touch;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => _instance = null;
@@ -75,6 +77,7 @@ namespace ElementalBuddies
         void Awake()
         {
             _instance = this;
+            _touch = MobilePlatform.TouchMode;
             _followPos = transform.position - Offset;
             _baseRotation = transform.rotation;
         }
@@ -152,6 +155,7 @@ namespace ElementalBuddies
                     _resetting = true;
                     _targetYaw = CameraOrbitMath.ResetTarget(_yaw);
                 }
+                if (_touch) ApplyTouchYaw();
             }
 
             float smooth = Mathf.Max(0.01f, _resetting ? ResetSmoothTime : RotateSmoothTime);
@@ -169,6 +173,24 @@ namespace ElementalBuddies
                 float shift = CameraOrbitMath.ResetTarget(_yaw);
                 _yaw -= shift;
                 _targetYaw -= shift;
+            }
+        }
+
+        // Zwei-Finger-Drehen verschiebt das Ziel (gleiche Glättung wie die Tasten), Zwei-Finger-Doppeltipp setzt zurück
+        private void ApplyTouchYaw()
+        {
+            var tc = TouchControls.Instance;
+            if (tc == null) return;
+            float delta = tc.CameraYawDelta;
+            if (delta != 0f)
+            {
+                _resetting = false;
+                _targetYaw += delta;
+            }
+            if (tc.CameraResetPressed)
+            {
+                _resetting = true;
+                _targetYaw = CameraOrbitMath.ResetTarget(_yaw);
             }
         }
 

@@ -85,7 +85,9 @@ namespace ElementalBuddies
             _tags.offsetMin = _tags.offsetMax = Vector2.zero;
 
             _canvas = NewOverlayCanvas("TeamHUD", ListSortingOrder);
-            _list = NewRect("TeamList", _canvas.transform);
+            // Touch: Liste im sicheren Bereich (Notch/Dynamic Island links) – wie der HUD-Canvas (SafeAreaFitter)
+            if (MobilePlatform.TouchMode) SafeAreaFitter.Attach(_canvas, true, true);
+            _list = NewRect("TeamList", SafeAreaFitter.ContentOf(_canvas.transform));
             _list.anchorMin = _list.anchorMax = new Vector2(0f, 1f);
             _list.pivot = new Vector2(0f, 1f);
             _list.anchoredPosition = ListOrigin;

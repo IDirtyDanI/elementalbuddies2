@@ -6,7 +6,8 @@ namespace ElementalBuddies
 {
     // Lokale Bau-/Auswahl-Eingabe (Ghost, Vorschau, Validierungsanzeige bleiben lokal). Bauen/Aufwerten/Verkaufen gehen als
     // Anfrage an den Server (NetGame.Request*); der Server prüft erneut und führt aus (ServerBuild/ServerSell).
-    public class InteractionManager : MonoBehaviour
+    // Touch-Modus (MobilePlatform.TouchMode): Eingabe per Finger in Mobile/TouchBuildInteraction.cs (partial).
+    public partial class InteractionManager : MonoBehaviour
     {
         public static InteractionManager Instance { get; private set; }
 
@@ -83,6 +84,7 @@ namespace ElementalBuddies
         void OnDestroy()
         {
             if (SelectedBuddy != null) SelectedBuddy.OnLevelChanged -= RefreshSelectedRange;
+            if (MobilePlatform.TouchMode) CancelTouchGesture();
         }
 
         void Update()
@@ -94,7 +96,15 @@ namespace ElementalBuddies
             if (_selectedUnitConfig != null && !CanBuildNow) Deselect();
 
             // Pause-Menü offen -> keine Eingaben (ESC übernimmt der PauseManager)
-            if (PauseManager.IsPaused) return;
+            if (PauseManager.IsPaused)
+            {
+                if (MobilePlatform.TouchMode)
+                {
+                    CancelTouchGesture();
+                    HideTouchOverlay();
+                }
+                return;
+            }
 
             // Ausgewählter Buddy zerstört (Verkauf, Tod) oder Game Over -> abwählen
             if (_hasBuddySelection && (SelectedBuddy == null || IsGameOver)) DeselectBuddy();
@@ -129,6 +139,19 @@ namespace ElementalBuddies
 
         private void HandleInput()
         {
+            // Touch: Finger statt Maus, keine Bau-Hotkeys; ESC (Android: Zurück-Taste) wie am PC
+            if (MobilePlatform.TouchMode)
+            {
+                if (LocalInputBlocked)
+                {
+                    CancelTouchGesture();
+                    return;
+                }
+                HandleTouchInput();
+                HandleEscape();
+                return;
+            }
+
             if (inputAsset == null || _buildActions == null) return;
             if (LocalInputBlocked) return; // Kartenfenster offen: keine Bau-/Auswahl-Eingaben
 
@@ -163,7 +186,12 @@ namespace ElementalBuddies
                 Deselect();
             }
 
-            // ESC: erst Platzieren abbrechen, dann Buddy abwählen; sonst öffnet der PauseManager das Pause-Menü
+            HandleEscape();
+        }
+
+        // ESC: erst Platzieren abbrechen, dann Buddy abwählen; sonst öffnet der PauseManager das Pause-Menü
+        private void HandleEscape()
+        {
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if (_currentGhost != null)
@@ -363,11 +391,13 @@ namespace ElementalBuddies
             else
             {
                 // Debug.Log($"Selected Unit: {config.name}");
+                bool switchedType = _selectedUnitConfig != null; // Touch: Geist bleibt beim Wechsel des Typs stehen
                 DeselectBuddy(); // Bauen beginnt -> Buddy-Auswahl aufheben
                 ClearSelection();
                 _selectedUnitConfig = config;
                 _selectedIndex = index;
                 CreateGhost();
+                if (MobilePlatform.TouchMode) PlaceTouchGhostInitial(switchedType); // Touch: Geist an gültigen Platz vor der Figur
                 OnSelectionChanged?.Invoke();
             }
         }
@@ -409,13 +439,30 @@ namespace ElementalBuddies
 
         private void UpdateGhost()
         {
-            if (_currentGhost == null) return;
+            if (_currentGhost == null)
+            {
+                if (MobilePlatform.TouchMode) HideTouchOverlay();
+                return;
+            }
+            // Touch: Geist gerade abgebrochen/gebaut (Destroy wirkt erst am Frame-Ende)
+            if (MobilePlatform.TouchMode && _selectedUnitConfig == null)
+            {
+                HideTouchOverlay();
+                return;
+            }
 
             UpdateGhostRange();
 
             // Safe check if Main Camera is lost
             if (_mainCamera == null) _mainCamera = Camera.main;
             if (_mainCamera == null) return;
+
+            // Touch: Geist steht an _touchGhostPos (Finger/✓✗ in TouchBuildInteraction), keine Maus-Verfolgung
+            if (MobilePlatform.TouchMode)
+            {
+                UpdateTouchGhost();
+                return;
+            }
 
             Vector2 mousePos = Mouse.current.position.ReadValue();
             Ray ray = _mainCamera.ScreenPointToRay(mousePos);

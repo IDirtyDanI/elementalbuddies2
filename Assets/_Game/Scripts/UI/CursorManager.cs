@@ -31,7 +31,8 @@ namespace ElementalBuddies
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
-            if (Instance != null) return;
+            // Touch-Geräte haben keinen Mauszeiger (Paket U): kein eigener Cursor, keine Abfragen pro Bild
+            if (Instance != null || MobilePlatform.TouchMode) return;
             var go = new GameObject("CursorManager");
             DontDestroyOnLoad(go);
             go.AddComponent<CursorManager>();

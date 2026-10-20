@@ -101,7 +101,7 @@ namespace ElementalBuddies
                 if (label != null)
                 {
                     if (_menuLabelText == null) _menuLabelText = label.text;
-                    label.text = "Raum wird für alle geschlossen – nochmal klicken";
+                    label.text = MobilePlatform.TouchMode ? "Raum wird für alle geschlossen – nochmal tippen" : "Raum wird für alle geschlossen – nochmal klicken";
                     label.enableAutoSizing = true;
                 }
                 return;
@@ -184,8 +184,21 @@ namespace ElementalBuddies
                 });
             }
             BuildFeelRows();
-            BuildKeyBindings();
+            if (MobilePlatform.TouchMode) ApplyTouchSettings();
+            else BuildKeyBindings(); // Touch-Geräte haben keine Tastatur → keine Belegungs-Seite
             SyncSettings();
+        }
+
+        // Touch (Paket U): Vollbild-Schalter gibt es auf Mobilgeräten nicht (die geklonten Zeilen bleiben); iOS-Apps
+        // beenden sich nicht selbst → „Beenden“ ausblenden. Esc (Android: Zurück-Taste) und der Pause-Knopf öffnen das Menü.
+        private void ApplyTouchSettings()
+        {
+            if (FullscreenToggle != null && FullscreenToggle.transform.parent != null)
+            {
+                FullscreenToggle.transform.parent.gameObject.SetActive(false);
+                CompactRows();
+            }
+            if (Application.platform == RuntimePlatform.IPhonePlayer && QuitButton != null) QuitButton.gameObject.SetActive(false);
         }
 
         // ---------------- Tastaturbelegung (Unterseite der Einstellungen, zur Laufzeit gebaut) ----------------
@@ -838,11 +851,11 @@ namespace ElementalBuddies
                 var slot = (AbilitySlot)i;
                 AbilityId id = abilities.GetAbility(slot);
                 bool unlocked = abilities.IsUnlocked(id);
-                sb.Append("<b>").Append(kit.GetName(id)).Append("</b> <size=85%>(").Append(AbilitySlots.ShortKey(slot)).Append(") · ")
+                sb.Append("<b>").Append(kit.GetName(id)).Append("</b> <size=85%>(").Append(MobilePlatform.TouchMode ? KeyBindings.TouchShort(KeyBindings.OfSlot(slot)) : AbilitySlots.ShortKey(slot)).Append(") · ")
                   .Append(kit.GetCostLine(id)).Append("</size>");
                 if (!unlocked) sb.Append(" <size=85%><color=#8a2a12>– gesperrt (").Append(ElementInfo.ShrineName(AbilitySlots.ElementOf(slot))).Append(")</color></size>");
                 sb.Append('\n');
-                sb.Append("<size=85%>").Append(kit.Describe(id, abilities.GetDamageMultiplier(id))).Append("</size>").Append('\n');
+                sb.Append("<size=85%>").Append(MobileUi.TouchText(kit.Describe(id, abilities.GetDamageMultiplier(id)))).Append("</size>").Append('\n');
             }
         }
 

@@ -43,6 +43,9 @@ namespace ElementalBuddies
 
         void Start()
         {
+            // Touch: sicherer Bereich, Pause-Knopf, „Welle starten“ nach oben rechts (vor der Wellenvorschau, die sich am
+            // Knopf ausrichtet). Auf dem PC ohne Wirkung.
+            if (MobilePlatform.TouchMode) MobileUiHud.Attach(this);
             if (GetComponent<WavePreviewUI>() == null) WavePreviewUI.Create(this); // Wellenvorschau (Plan Fesselung C1)
             if (EconomyManager.Instance != null)
             {

@@ -9,6 +9,9 @@ namespace ElementalBuddies
 {
     // Info-Panel für den ausgewählten Buddy: Stufe, Werte, Aufwerten (nur zwischen den Wellen) und Verkaufen.
     // Script auf ein immer aktives Objekt (z. B. Canvas) oder direkt aufs Panel legen (Panel muss beim Start aktiv sein).
+    // Touch-Modus (Mobil, Paket B): Panel oben mittig unter der TopBar (nicht über den Sticks links/rechts unten), im
+    // sicheren Bereich; Knöpfe (Aufwerten, Verkaufen, ✗, Fusions-Optionen) mit Trefferflächen ≥ 48 dp; die Fusions-Box
+    // endet über der Bau-Leiste.
     public class BuddyInfoPanelUI : MonoBehaviour
     {
         public GameObject Panel;
@@ -124,6 +127,7 @@ namespace ElementalBuddies
             if (FusionOptionTemplate != null) FusionOptionTemplate.gameObject.SetActive(false);
 
             _panelRect = Panel != null ? Panel.transform as RectTransform : null;
+            if (MobilePlatform.TouchMode) SetupTouchLayout();
             if (_panelRect != null) _panelBaseY = _panelRect.anchoredPosition.y;
             SetupStatsArea();
             if (BottomHud == null) BottomHud = FindInCanvas("AbilityBar");
@@ -261,8 +265,113 @@ namespace ElementalBuddies
             }
             // Super-Elementare: keine weitere Fusion; 2er-Fusionen können zum Super-Elementar verschmelzen
             RefreshFusionSection(super != null);
+            if (MobilePlatform.TouchMode) UpdateTouchLayout();
             FitStatsArea();
             LayoutFusionArea();
+        }
+
+        // ---------------- Touch-Modus ----------------
+
+        [Header("Touch-Modus")]
+        [Tooltip("Abstand des Panels zum Rand des sicheren Bereichs bzw. zur TopBar im Touch-Modus (Canvas-Einheiten).")]
+        public float TouchTopMargin = 12f;
+
+        // Einmalig vor dem Merken der Ausgangsmaße: Panel oben mittig verankern (Oberkante fest, wächst nach unten),
+        // Aufwerten/Verkaufen so hoch wie 48 dp, Fusions-Box bis über die Bau-Leiste, ✗ anlegen, falls im Prefab keiner ist
+        private void SetupTouchLayout()
+        {
+            if (_panelRect == null) return;
+            _panelRect.anchorMin = _panelRect.anchorMax = new Vector2(0.5f, 1f);
+            _panelRect.pivot = new Vector2(0.5f, 1f);
+            _panelRect.anchoredPosition = new Vector2(0f, TouchPanelTopY());
+
+            // Button-Reihe (unten verankert, Verkaufen unter Aufwerten): Höhen ≥ 48 dp, Abstände bleiben
+            float min = MobilePlatform.DpToPixels(MobilePlatform.MinTouchTargetDp) / TouchBuildUi.CanvasScale(_panelRect);
+            var sell = SellButton != null ? (RectTransform)SellButton.transform : null;
+            var up = UpgradeButton != null ? (RectTransform)UpgradeButton.transform : null;
+            if (sell != null && up != null && sell.anchorMax.y < 0.001f && up.anchorMax.y < 0.001f
+                && up.anchoredPosition.y > sell.anchoredPosition.y)
+            {
+                float gap = up.anchoredPosition.y - (sell.anchoredPosition.y + sell.rect.height * (1f - sell.pivot.y)) - up.rect.height * up.pivot.y;
+                if (sell.rect.height < min) sell.sizeDelta = new Vector2(sell.sizeDelta.x, sell.sizeDelta.y + (min - sell.rect.height));
+                if (up.rect.height < min) up.sizeDelta = new Vector2(up.sizeDelta.x, up.sizeDelta.y + (min - up.rect.height));
+                float upY = sell.anchoredPosition.y + sell.rect.height * (1f - sell.pivot.y) + Mathf.Max(0f, gap) + up.rect.height * up.pivot.y;
+                up.anchoredPosition = new Vector2(up.anchoredPosition.x, upY);
+            }
+
+            var buildBar = FindInCanvas("BuildBar");
+            if (buildBar != null) BottomHud = buildBar; // Fähigkeitenleiste gibt es auf Touch so nicht; unten liegt die Bau-Leiste
+
+            if (CloseButton == null) CloseButton = CreateTouchCloseButton();
+        }
+
+        // Laufend (Refresh): Lage unter TopBar/Notch nachführen (UI-Skalierung, Safe Area), Trefferflächen anpassen
+        private void UpdateTouchLayout()
+        {
+            if (_panelRect == null) return;
+            float y = TouchPanelTopY();
+            if (!Mathf.Approximately(_panelBaseY, y))
+            {
+                _panelRect.anchoredPosition = new Vector2(_panelRect.anchoredPosition.x, _panelRect.anchoredPosition.y + (y - _panelBaseY));
+                _panelBaseY = y;
+            }
+            float dp = MobilePlatform.MinTouchTargetDp;
+            if (UpgradeButton != null) TouchBuildUi.EnsureHitPad((RectTransform)UpgradeButton.transform, dp);
+            if (SellButton != null) TouchBuildUi.EnsureHitPad((RectTransform)SellButton.transform, dp);
+            if (CloseButton != null) TouchBuildUi.EnsureHitPad((RectTransform)CloseButton.transform, dp);
+            foreach (var e in _optionEntries)
+                if (e.Button != null) TouchBuildUi.EnsureHitPad((RectTransform)e.Button.transform, dp);
+        }
+
+        // Oberkante des Panels (anchoredPosition.y, Anker oben mittig): unter der TopBar und unter dem sicheren Bereich
+        private float TouchPanelTopY()
+        {
+            var parent = _panelRect.parent as RectTransform;
+            if (parent == null) return -TouchTopMargin;
+            float top = parent.rect.yMax;
+            float limit = top - TouchTopMargin;
+            var topHud = TopHud != null ? TopHud : FindInCanvas("TopBar");
+            if (topHud != null && topHud.gameObject.activeInHierarchy)
+            {
+                topHud.GetWorldCorners(_corners);
+                limit = Mathf.Min(limit, parent.InverseTransformPoint(_corners[0]).y - TouchTopMargin);
+            }
+            // Notch/Dynamic Island oben: Abstand vom Bildschirmrand in Canvas-Einheiten
+            float scale = TouchBuildUi.CanvasScale(_panelRect);
+            float insetTop = (Screen.height - MobilePlatform.SafeArea.yMax) / scale;
+            limit = Mathf.Min(limit, top - insetTop - TouchTopMargin);
+            return limit - top;
+        }
+
+        // ✗-Knopf oben rechts am Panel (nur, wenn das Prefab keinen hat)
+        private Button CreateTouchCloseButton()
+        {
+            var go = new GameObject("TouchCloseButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(_panelRect, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(-30f, -30f);
+            rt.sizeDelta = new Vector2(44f, 44f);
+            var img = go.GetComponent<Image>();
+            img.sprite = TouchBuildUi.DiscSprite;
+            img.color = TouchBuildOverlay.CancelColor;
+            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+            var irt = (RectTransform)icon.transform;
+            irt.SetParent(rt, false);
+            irt.anchorMin = new Vector2(0.2f, 0.2f);
+            irt.anchorMax = new Vector2(0.8f, 0.8f);
+            irt.offsetMin = irt.offsetMax = Vector2.zero;
+            var iconImg = icon.GetComponent<Image>();
+            iconImg.sprite = TouchBuildUi.CrossSprite;
+            iconImg.raycastTarget = false;
+            var button = go.GetComponent<Button>();
+            button.targetGraphic = img;
+            button.onClick.AddListener(() =>
+            {
+                if (InteractionManager.Instance != null) InteractionManager.Instance.DeselectBuddy();
+            });
+            return button;
         }
 
         // Schloss-Icon links im Text (AchievementDatabase.LockIcon); Text rückt per Margin nach rechts

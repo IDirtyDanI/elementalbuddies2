@@ -118,9 +118,13 @@ namespace ElementalBuddies
             HideNow();
         }
 
-        // Texte mit Tasten nennen die aktuelle Belegung (KeyBindings), Standard 1–4 bzw. WASD/LMB/RMB/R/F/C/V
-        private static string BuildText =>
-            $"Bau <b>Buddies</b> mit {BuildKeys()} (oder unten anklicken) und klick auf den Boden. Sie verteidigen " + MapContext.Current.SettlementNoun + " für dich – platzieren geht nur zwischen den Wellen.";
+        // Texte mit Tasten nennen die aktuelle Belegung (KeyBindings), Standard 1–4 bzw. WASD/LMB/RMB/R/F/C/V.
+        // Touch-Modus (Paket U): eigene Formulierungen ohne Tasten (Sticks, Knöpfe, Tippen).
+        private static bool Touch => MobilePlatform.TouchMode;
+
+        private static string BuildText => Touch
+            ? "Bau <b>Buddies</b>: Tipp unten auf eine Karte der Bau-Leiste, schieb den Geist an die gewünschte Stelle und bestätige mit dem Haken. Sie verteidigen " + MapContext.Current.SettlementNoun + " für dich – platzieren geht nur zwischen den Wellen."
+            : $"Bau <b>Buddies</b> mit {BuildKeys()} (oder unten anklicken) und klick auf den Boden. Sie verteidigen " + MapContext.Current.SettlementNoun + " für dich – platzieren geht nur zwischen den Wellen.";
 
         private static string BuildKeys()
         {
@@ -132,6 +136,8 @@ namespace ElementalBuddies
 
         private static string MoveText()
         {
+            if (Touch)
+                return "Willkommen! Bewege dich mit dem <b>linken Stick</b>, greif mit dem <b>Angriffs-Stick</b> rechts an – kurz antippen trifft den nächsten Gegner. Deine Fähigkeiten liegen auf den Knöpfen daneben; lange drücken zeigt, was sie tun.";
             string spells = $"{KeyBindings.Name(BindId.SpellFire)}, {KeyBindings.Name(BindId.SpellIce)}, {KeyBindings.Name(BindId.SpellEarth)} und {KeyBindings.Name(BindId.SpellLight)}";
             return $"Willkommen! Bewege dich mit <b>{KeyBindings.MoveKeys()}</b>, greif mit <b>{Click(BindId.Primary)}</b> an. Deine Fähigkeiten liegen auf {Click(BindId.Secondary)}, {spells}.";
         }
@@ -157,16 +163,20 @@ namespace ElementalBuddies
             if (since > 4f && building && ElementalBuddy.ActiveCount == 0)
                 Show("build", BuildText, () => ElementalBuddy.ActiveCount > 0);
             if (building && ElementalBuddy.ActiveCount > 0 && _waves != null && _waves.UpcomingWaveNumber == 1)
-                Show("startwave", "Bereit? Starte die <b>Welle</b> unten rechts. Die Vorschau darüber zeigt, was kommt – und je früher du startest, desto mehr Bonus-Splitter.",
+                Show("startwave", Touch
+                        ? "Bereit? Starte die <b>Welle</b> mit dem Knopf oben rechts. Halte ihn gedrückt, um zu sehen, was kommt – und je früher du startest, desto mehr Bonus-Splitter."
+                        : "Bereit? Starte die <b>Welle</b> unten rechts. Die Vorschau darüber zeigt, was kommt – und je früher du startest, desto mehr Bonus-Splitter.",
                     () => _waves.IsWaveActive);
             // Drehbare Kamera (CameraFollow): ab der zweiten Bauphase, damit Bau-/Wellen-Tipps Vorrang haben
             if (building && ElementalBuddy.ActiveCount > 0 && _waves != null && _waves.UpcomingWaveNumber >= 2)
-                Show("camera", $"Tipp: Mit <b>{KeyBindings.Short(BindId.CameraLeft)}</b>/<b>{KeyBindings.Short(BindId.CameraRight)}</b> (gedrückt halten) drehst du die <b>Kamera</b> um deine Figur – so baust du auch hinter Gebäuden. <b>{KeyBindings.Short(BindId.CameraReset)}</b> stellt die Ansicht zurück.",
+                Show("camera", Touch
+                        ? "Tipp: Dreh die <b>Kamera</b> mit zwei Fingern um deine Figur – so baust du auch hinter Gebäuden."
+                        : $"Tipp: Mit <b>{KeyBindings.Short(BindId.CameraLeft)}</b>/<b>{KeyBindings.Short(BindId.CameraRight)}</b> (gedrückt halten) drehst du die <b>Kamera</b> um deine Figur – so baust du auch hinter Gebäuden. <b>{KeyBindings.Short(BindId.CameraReset)}</b> stellt die Ansicht zurück.",
                     () => Mathf.Abs(CameraFollow.OrbitYaw) > 20f);
             if (ShardPickup.All.Count > 0)
                 Show("shards", "<b>Seelensplitter!</b> Lauf nah heran, dann fliegen sie zu dir. Damit baust du Buddies und wertest sie auf.");
             if (building && CanAffordUpgrade())
-                Show("upgrade", "Klick einen Buddy an, um ihn <b>aufzuwerten</b> – oft besser als noch ein neuer. Aufwerten geht nur zwischen den Wellen.",
+                Show("upgrade", (Touch ? "Tipp" : "Klick") + " einen Buddy an, um ihn <b>aufzuwerten</b> – oft besser als noch ein neuer. Aufwerten geht nur zwischen den Wellen.",
                     () => InteractionManager.Instance != null && InteractionManager.Instance.SelectedBuddy != null);
             if (building && FusionPossible())
                 Show("fusion", "Zwei Buddies verschiedener Elemente auf <b>Stufe 2</b> nebeneinander können <b>verschmelzen</b>. Wähl einen aus und sieh dir die Fusions-Box an.");
@@ -223,7 +233,9 @@ namespace ElementalBuddies
             {
                 float target = _showing ? 1f : 0f;
                 _group.alpha = Mathf.MoveTowards(_group.alpha, target, Time.unscaledDeltaTime * 4f);
-                _group.blocksRaycasts = _showing;
+                // Touch: Tipp liegt über der Stick-Zone – keine Finger abfangen (verschwindet nach ShowSeconds bzw. erledigt)
+                _group.blocksRaycasts = _showing && !Touch;
+                if (Touch && _group.alpha > 0f) PlaceTouch();
                 float pop = _showing ? Mathf.Lerp(1.06f, 1f, Mathf.Clamp01((now - _shownAt) / 0.25f)) : 1f;
                 _bubble.localScale = Vector3.one * pop;
             }
@@ -251,6 +263,41 @@ namespace ElementalBuddies
             _nextAllowed = Time.unscaledTime + Gap;
         }
 
+        // Touch: links oben unter der Minimap (bzw. der Top-Bar), im sicheren Bereich – unten links liegt der Bewegungs-Stick
+        private static readonly Vector3[] _corners = new Vector3[4];
+        private RectTransform _topBar;
+        private float _nextTopBarLookup;
+
+        private void PlaceTouch()
+        {
+            var parent = _bubble.parent as RectTransform;
+            if (parent == null) return;
+            float topPx = Screen.height;
+            var mm = MinimapUI.Instance;
+            RectTransform above = mm != null && mm.IsShown ? mm.Rect : null;
+            if (above == null)
+            {
+                if (_topBar == null && Time.unscaledTime >= _nextTopBarLookup)
+                {
+                    _nextTopBarLookup = Time.unscaledTime + 1f;
+                    var hud = FindFirstObjectByType<HUDManager>();
+                    var canvas = hud != null ? hud.GetComponentInParent<Canvas>() : null;
+                    _topBar = canvas != null ? SafeAreaFitter.FindInCanvas(canvas.rootCanvas.transform, "TopBar") as RectTransform : null;
+                }
+                above = _topBar;
+            }
+            if (above != null && above.gameObject.activeInHierarchy)
+            {
+                above.GetWorldCorners(_corners); // Overlay: Bildschirmpixel
+                topPx = _corners[0].y - MobilePlatform.DpToPixels(8f);
+            }
+            float leftPx = MobilePlatform.SafeArea.xMin + MobilePlatform.DpToPixels(12f);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, new Vector2(leftPx, topPx), null, out var local);
+            var r = parent.rect;
+            var pos = new Vector2(local.x - r.xMin, local.y - r.yMax);
+            if ((_bubble.anchoredPosition - pos).sqrMagnitude > 0.25f) _bubble.anchoredPosition = pos;
+        }
+
         private void Build()
         {
             var canvasGo = new GameObject("HintCanvas", typeof(RectTransform));
@@ -276,9 +323,9 @@ namespace ElementalBuddies
             var go = new GameObject("HintBubble", typeof(RectTransform));
             _bubble = (RectTransform)go.transform;
             _bubble.SetParent(canvasGo.transform, false);
-            _bubble.anchorMin = _bubble.anchorMax = new Vector2(0f, 0f);
-            _bubble.pivot = new Vector2(0f, 0f);
-            _bubble.anchoredPosition = new Vector2(24f, 150f);
+            _bubble.anchorMin = _bubble.anchorMax = Touch ? new Vector2(0f, 1f) : new Vector2(0f, 0f);
+            _bubble.pivot = Touch ? new Vector2(0f, 1f) : new Vector2(0f, 0f);
+            _bubble.anchoredPosition = Touch ? new Vector2(24f, -400f) : new Vector2(24f, 150f);
             _bubble.sizeDelta = new Vector2(560f, 140f);
             var bg = go.AddComponent<Image>();
             bg.sprite = parchment;
