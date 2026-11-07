@@ -81,10 +81,73 @@ namespace ElementalBuddies
             _startTime = Time.time;
         }
 
+        // ---------------- Weiterspielen per Werbevideo (Mobil, Einzelspiel, 1× pro Spiel – RewardedAds/AdRules) ----------------
+
+        // Angebot offen: Spiel steht, „Video: Weiterspielen“ oder „Aufgeben“ (GameOverUI)
+        public bool IsContinueOffered { get; private set; }
+        // Lauf wurde per Video fortgesetzt (Nutzer-Entscheidung 2026-11-02: Rekorde zählen, der Lauf wird markiert)
+        public bool Continued { get; private set; }
+        public event System.Action OnContinueOffered;
+        public event System.Action OnContinueAccepted;
+        private string _pendingReason;
+
+        // Server: Nexus bei 0 LP. Ist ein Werbevideo möglich, erst fragen – sonst (PC, Koop, Deckel) sofort Game Over.
+        public void NexusFell(string reason)
+        {
+            if (!Net.IsServer || IsGameOver || IsContinueOffered) return;
+            // ohne Anzeige (GameOverUI) kein Angebot – sonst stünde das Spiel ohne „Aufgeben“
+            if (!RewardedAds.CanOffer(AdReward.Continue) || OnContinueOffered == null)
+            {
+                TriggerGameOver(reason);
+                return;
+            }
+            _pendingReason = reason;
+            IsContinueOffered = true;
+            if (Net.CanPauseTime) Time.timeScale = 0f; // Angebot nur im Einzelspiel (CanOffer)
+            OnContinueOffered?.Invoke();
+            if (IsContinueOffered && Net.CanPauseTime) Time.timeScale = 0f; // Anzeige kann ein Morgengrauen-Panel geschlossen haben
+        }
+
+        // „Aufgeben“ bzw. Video nicht verfügbar → normales Game Over
+        public void DeclineContinue()
+        {
+            if (!IsContinueOffered) return;
+            IsContinueOffered = false;
+            TriggerGameOver(_pendingReason);
+        }
+
+        // Video bis zum Ende geschaut: Nexus mit halbem Leben zurück, Gegner rund um den Nexus entfernt, weiter geht's.
+        // false = kein Angebot mehr offen (z. B. inzwischen aufgegeben) → RewardedAds zählt das Video nicht.
+        public bool AcceptContinue()
+        {
+            if (!IsContinueOffered) return false;
+            IsContinueOffered = false;
+            Continued = true;
+            var nexus = Nexus.Instance;
+            if (nexus != null) nexus.Revive(AdRules.ContinueNexusHp, AdRules.ContinueGraceSeconds);
+            if (Net.CanPauseTime) Time.timeScale = 1f;
+            Debug.Log("Game State: Weiterspielen per Video – Nexus wiederhergestellt");
+            OnContinueAccepted?.Invoke();
+            // Zuletzt freiräumen: der letzte Gegner kann die Welle beenden (Kartenwahl/Morgengrauen pausieren dann selbst)
+            if (nexus != null)
+            {
+                Vector3 c = nexus.transform.position;
+                float r2 = AdRules.ContinueClearRadius * AdRules.ContinueClearRadius;
+                foreach (var e in FindObjectsByType<EnemyBrain>(FindObjectsSortMode.None))
+                {
+                    if (e == null || e.IsBoss) continue;
+                    Vector3 d = e.transform.position - c;
+                    d.y = 0f;
+                    if (d.sqrMagnitude <= r2) e.ServerBanish();
+                }
+            }
+            return true;
+        }
+
         // Server: alle Champions gefallen → Game Over
         void Update()
         {
-            if (!Net.IsServer || IsGameOver) return;
+            if (!Net.IsServer || IsGameOver || IsContinueOffered) return;
             bool allDead = PlayerAvatar.All.Count > 0 && !PlayerAvatar.AnyAlive() && Time.time - _startTime > 1f;
             if (!allDead) { _allDeadSince = -1f; _wipeHandled = false; return; }
             if (_allDeadSince < 0f) _allDeadSince = Time.time;

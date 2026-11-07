@@ -105,6 +105,8 @@ namespace ElementalBuddies
         public override ChampionClass Class => ChampionClass.Berserker;
         public override ResourceProfile Resource => Rage;
         public override float MaxHealthBonus => HealthBonus;
+        // Pausen-Übersicht (2026-11-04, wie Schwertkämpfer): Extra-Leben sichtbar machen
+        public override string DescribePassive() => $"Zäh: +{Hi(HealthBonus)} LP. Wut statt Mana – Treffer laden sie auf.";
 
         // ---------------- Effektive Werte (inkl. Händlerkarten) ----------------
 

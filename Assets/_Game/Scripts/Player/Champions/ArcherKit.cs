@@ -14,7 +14,12 @@ namespace ElementalBuddies
 
         [Header("Pfeilschuss (LMB)")]
         public GameObject ArrowPrefab;
-        public float ArrowDamage = 22f;
+        // 2026-11-04 Balancing: 22 → 26, sonst bliebe der Einzelziel-Schaden (Bosse) trotz Durchschlag weit unter dem Magier
+        public float ArrowDamage = 26f;
+        // 2026-11-04 Balancing: Grund-Durchschlag, damit der Pfeil Gegnerlinien bestraft (vorher nur per Händlerkarte).
+        // Kein voller Durchschlag: die Karte „+1 Durchschlag“ bleibt sinnvoll und der Frostpfeil behält seine Besonderheit.
+        [Tooltip("Grund-Durchschlag: so viele Gegner durchschlägt der Pfeil, bevor er stecken bleibt (2 = trifft bis zu 3). Händlerkarten kommen dazu.")]
+        public int ArrowBasePierce = 2;
         public float ArrowSpeed = 34f;
         public float ArrowRange = 24f;
         public float ArrowCooldown = 0.6f;
@@ -58,7 +63,8 @@ namespace ElementalBuddies
         public float ArrowRangeEff => Mod(AbilityId.ArrowShot, AbilityStat.Range, ArrowRange);
         // Feuerrate: kürzere Abklingzeit zwischen zwei Schüssen
         public float ArrowCooldownEff => ArrowCooldown / ModFactor(AbilityId.ArrowShot, AbilityStat.Speed);
-        public int ArrowPierceEff => Owner != null ? Mathf.Max(0, Mathf.RoundToInt(Owner.Mods.Sum(AbilityId.ArrowShot, AbilityStat.Pierce))) : 0;
+        // Grund-Durchschlag + Händlerkarten (Anzahl zusätzlich durchschlagener Gegner, ArrowProjectile.ExtraPierce)
+        public int ArrowPierceEff => Mathf.Max(0, ArrowBasePierce + (Owner != null ? Mathf.RoundToInt(Owner.Mods.Sum(AbilityId.ArrowShot, AbilityStat.Pierce)) : 0));
         public int RollChargesEff => Mathf.Max(1, Owner != null ? Owner.Mods.ApplyInt(AbilityId.Roll, AbilityStat.Charges, RollCharges) : RollCharges);
 
         public override AbilityId GetAbility(AbilitySlot slot)
@@ -324,7 +330,7 @@ namespace ElementalBuddies
                 case AbilityId.ArrowShot:
                 {
                     int pierce = ArrowPierceEff;
-                    string hit = pierce > 0 ? $"am ersten getroffenen Gegner und durchschlägt bis zu {Hi(pierce)} weitere" : "am ersten getroffenen Gegner";
+                    string hit = pierce > 0 ? $"und durchschlägt {Hi(pierce)} Gegner – trifft also bis zu {Hi(pierce + 1)} hintereinander" : "am ersten getroffenen Gegner";
                     return $"Schneller Pfeil in Blickrichtung (bis {Hi(ArrowRangeEff)} m). Er verursacht {Hi(ArrowDamage * dm)} Schaden {hit}. Gedrückt halten schießt weiter.";
                 }
                 case AbilityId.Roll:

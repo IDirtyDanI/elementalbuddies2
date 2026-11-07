@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811417d07595845e49d48e75c3c8703e, type: 3}
+  m_Name: berserker_emberwarrior
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShopItemSO
+  Id: berserker_emberwarrior
+  Class: 3
+  Slot: 1
+  Tier: 2
+  DisplayName: Glutkrieger
+  Description: "Schwarzes Leder, gl\xFChende Zeichen und ein Stachelpanzer."
+  Price: 800
+  Icon: {fileID: 21300000, guid: 7d551ee341974437c89e6f3f2dd77958, type: 3}
+  NetIndex: 2
+  RightHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  LeftHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Back:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Materials:
+  - SourceMaterial: Hero2_Fur
+    Replacement: {fileID: 2100000, guid: 303589909a748492aa280016bb9ad5aa, type: 2}
+  - SourceMaterial: Berserker2_FurLight
+    Replacement: {fileID: 2100000, guid: c8438934f2d5d46d4913c62cc026c2d0, type: 2}
+  - SourceMaterial: Berserker2_FurDark
+    Replacement: {fileID: 2100000, guid: 7f7d18a664b914c169673e1f6c4b11a5, type: 2}
+  - SourceMaterial: Hero2_WarPaint
+    Replacement: {fileID: 2100000, guid: d0e2bbd8725a645ecb45d07daa78bfea, type: 2}
+  - SourceMaterial: Berserker2_Ochre
+    Replacement: {fileID: 2100000, guid: 798acfb9793634576b83bfbe25ba588e, type: 2}
+  - SourceMaterial: Berserker2_Red
+    Replacement: {fileID: 2100000, guid: f4faa2421f2c84dcc9a5820aa2bd1971, type: 2}
+  - SourceMaterial: Berserker2_RedDark
+    Replacement: {fileID: 2100000, guid: d1668289c53c94e4dbe570b724c2c6f6, type: 2}
+  - SourceMaterial: Berserker2_Leather
+    Replacement: {fileID: 2100000, guid: 578e5f73dfcab416b91e7b4505707565, type: 2}
+  - SourceMaterial: Berserker2_LeatherDark
+    Replacement: {fileID: 2100000, guid: 2c3edc5a3722a4d3db1db56f5e85d2dd, type: 2}
+  - SourceMaterial: Berserker2_Trousers
+    Replacement: {fileID: 2100000, guid: b1cf8cbe564304990bfc6c965a6f6459, type: 2}
+  - SourceMaterial: Berserker2_Sole
+    Replacement: {fileID: 2100000, guid: 2a8d6b4adaa134bd4b5cd294804fe349, type: 2}
+  - SourceMaterial: Berserker2_Wrap
+    Replacement: {fileID: 2100000, guid: b086540b1f6c94457bd7400b6190c7aa, type: 2}
+  - SourceMaterial: Berserker2_Iron
+    Replacement: {fileID: 2100000, guid: 886e901068af3402eba5e690ad48b15d, type: 2}
+  - SourceMaterial: Berserker2_IronDark
+    Replacement: {fileID: 2100000, guid: 1b3127996f24148ccbbc19da730b2168, type: 2}
+  - SourceMaterial: Berserker2_Bronze
+    Replacement: {fileID: 2100000, guid: 508c50aa2ca69453685dd24e7db08bde, type: 2}
+  - SourceMaterial: Berserker2_Hair
+    Replacement: {fileID: 2100000, guid: fb109364c19cd445886868a98ff6ab7f, type: 2}
+  - SourceMaterial: Berserker2_HairDark
+    Replacement: {fileID: 2100000, guid: 3f4101aeffcd04702ba423cb624dd5cf, type: 2}
+  - SourceMaterial: Hero2_Horn
+    Replacement: {fileID: 2100000, guid: 26315cc00c3fc4fffa49c9538d0df0cb, type: 2}
+  - SourceMaterial: Berserker2_HornTip
+    Replacement: {fileID: 2100000, guid: 984539103eb734dae8d8920eb79414c2, type: 2}
+  AddOns:
+  - Prefab: {fileID: 974220300797478809, guid: ad38c6a704227435aac0bae625383ea4, type: 3}
+    Bone: 12
+    LocalPosition: {x: 0.0043, y: 0.3332, z: 0.1529}
+    LocalEuler: {x: 1.5140808, y: 89.79843, z: 82.40517}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Mirror: 0

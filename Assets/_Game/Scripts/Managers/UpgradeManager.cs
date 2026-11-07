@@ -6,7 +6,7 @@ namespace ElementalBuddies
     // Upgrade-Draft am Wellenende – pro Spieler, seit 2026-10-16 als „Kartenladen“:
     //   Server (WaveManager.EndWave → PresentUpgrades) zieht für JEDEN Spieler eigene Karten (eigene Pick-Zählung/MaxPicks)
     //   und schickt den Zustand gezielt an dessen Rechner (NetGame.SendUpgradeOffer). Die erste Karte ist gratis, weitere
-    //   kosten Seelensplitter (60, 90, 120 … je Kartenwahl), Neu würfeln ersetzt die nicht gekauften Karten (Gratis-Neuwürfe,
+    //   kosten Seelensplitter (60, 90, 120 … je Kartenwahl), Neu würfeln ersetzt alle Karten, auch gekaufte (Gratis-Neuwürfe,
     //   sonst 25, 40, 55 …). Bezahlt wird aus dem eigenen Anteil = Teamkasse beim Wellenende ÷ Spielerzahl (DraftLedger).
     //   Der Client (UpgradeScreenUI) fragt an (BuyCard/RequestReroll/SkipDraft/FinishDraft → NetGame.RequestSelectUpgrade),
     //   der Server prüft/zieht, bucht erst dann ab und lässt die Karte auf ALLEN Rechnern anwenden (BroadcastApplyUpgrade →
@@ -23,6 +23,8 @@ namespace ElementalBuddies
         public const int CardsPerDraft = 3;
         // Steuercodes für ServerSelect (statt Slot): Überspringen, Neu würfeln, Fertig
         public const int SkipCode = -1, RerollCode = -2, DoneCode = -3;
+        // Belohnung eines freiwilligen Werbevideos (RewardedAds, nur Einzelspiel): sofort neu würfeln (#531) bzw. +1 Buddy-Platz
+        public const int AdRerollCode = -4, AdSlotCode = -5;
 
         [Header("Kartenladen nach der Welle (2026-10-16)")]
         [Tooltip("Erste Karte jeder Kartenwahl gratis, jede weitere kostet Seelensplitter: Basis + Schritt · (n−1) " +
@@ -348,8 +350,7 @@ namespace ElementalBuddies
             switch (action)
             {
                 case RerollCode:
-                    // Neu würfeln: alle nicht gekauften Karten ersetzen (sind alle gekauft: drei neue). Zuerst
-                    // Gratis-Neuwürfe, danach Splitter aus dem eigenen Anteil. Erst ziehen, dann abbuchen.
+                    // Neu würfeln: alle Karten ersetzen, auch gekaufte. Zuerst Gratis-Neuwürfe, danach Splitter aus dem eigenen Anteil. Erst ziehen, dann abbuchen.
                     ServerReroll(clientId, st);
                     SendOffer(clientId, st);
                     return;
@@ -364,6 +365,20 @@ namespace ElementalBuddies
                     CloseDraft(clientId, st);
                     if (EconomyManager.Instance != null) EconomyManager.Instance.EarnShards(SkipShards(CompletedWave));
                     if (MerchantManager.Instance != null) MerchantManager.Instance.ServerOnDraftFinished(clientId);
+                    return;
+                case AdRerollCode:
+                    // Werbevideo geschaut (Deckel/Einzelspiel prüft RewardedAds beim Anbieten): Gratis-Neuwurf gutschreiben und
+                    // sofort einlösen (#531, Tester 2026-11-04: nur gutschreiben wirkte, als wäre nichts passiert)
+                    if (!Net.IsMultiplayer)
+                    {
+                        st.Ledger.FreeRerolls++;
+                        ServerReroll(clientId, st);
+                    }
+                    SendOffer(clientId, st);
+                    return;
+                case AdSlotCode:
+                    if (!Net.IsMultiplayer && BuddySlotManager.Instance != null) BuddySlotManager.Instance.AddSlot(1);
+                    SendOffer(clientId, st);
                     return;
                 case DoneCode:
                     CloseDraft(clientId, st);
@@ -410,11 +425,8 @@ namespace ElementalBuddies
 
         private void ServerReroll(ulong clientId, DraftState st)
         {
-            // zu ersetzende Slots: alle offenen; sind alle gekauft, alle
-            var slots = new List<int>();
-            for (int i = 0; i < st.Offer.Count; i++) if (!st.Bought[i]) slots.Add(i);
-            if (slots.Count == 0) for (int i = 0; i < st.Offer.Count; i++) slots.Add(i);
-            if (slots.Count == 0) for (int i = 0; i < CardsPerDraft; i++) slots.Add(i);
+            // zu ersetzende Slots: immer alle, auch gekaufte (OfferRerollRules, 2026-11-02) – neu belegt sind sie wieder kaufbar
+            var slots = OfferRerollRules.SlotsToReroll(st.Offer.Count, CardsPerDraft);
 
             var avoid = new List<UpgradeDefinitionSO>();
             foreach (int i in slots) if (i < st.Offer.Count) avoid.Add(GetUpgrade(st.Offer[i]));
@@ -659,6 +671,16 @@ namespace ElementalBuddies
             if (!CanAffordReroll) { RaiseRejected(-1, DraftDenial.Share); return; }
             IsRequestPending = true;
             NetGame.RequestSelectUpgrade(_localSerial, RerollCode);
+        }
+
+        // Nach einem geschauten Werbevideo (RewardedAds): Belohnung beim Server abholen, Kartenwahl bleibt offen
+        public bool RequestAdReward(AdReward reward)
+        {
+            if (!IsChoosing || reward == AdReward.Continue) return false;
+            IsRequestPending = true;
+            NetGame.RequestSelectUpgrade(_localSerial, reward == AdReward.Reroll ? AdRerollCode : AdSlotCode);
+            ToastUI.Show(reward == AdReward.Reroll ? "Neue Karten!" : "+1 Buddy-Platz");
+            return true;
         }
 
         // Von der UI: Kartenwahl überspringen (Splitter statt Karte) – nur solange keine Karte genommen wurde

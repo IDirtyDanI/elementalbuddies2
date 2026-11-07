@@ -305,6 +305,8 @@ MonoBehaviour:
   - Id: 11
     Name: Lichtschwur
     Icon: {fileID: 21300000, guid: 6e5c8fda4cfa74155a3af1c06a338522, type: 3}
+  HealthBonus: 50
+  ArmorReduction: 0.2
   SlashDamage: 20
   FinisherDamage: 36
   SlashRange: 2.6
@@ -446,7 +448,8 @@ MonoBehaviour:
   ProjectileSpawn: {fileID: 6589535145993591570}
   MuzzleOffset: {x: 0.15, y: 1.25, z: 0.7}
   ArrowPrefab: {fileID: 1033713222915454162, guid: 8dd8e89f4971d4bccb6e596847201962, type: 3}
-  ArrowDamage: 22
+  ArrowDamage: 26
+  ArrowBasePierce: 2
   ArrowSpeed: 34
   ArrowRange: 24
   ArrowCooldown: 0.6

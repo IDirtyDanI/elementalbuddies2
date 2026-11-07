@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811417d07595845e49d48e75c3c8703e, type: 3}
+  m_Name: mage_flamestaff
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShopItemSO
+  Id: mage_flamestaff
+  Class: 0
+  Slot: 0
+  Tier: 2
+  DisplayName: Flammenstab
+  Description: Auf seiner Spitze brennt eine Kugel, die nie erlischt.
+  Price: 800
+  Icon: {fileID: 21300000, guid: d9d2ebc6da09a49b0b52fa60125b8b16, type: 3}
+  NetIndex: 2
+  RightHand:
+    Prefab: {fileID: 6657312675683359849, guid: d970fa19ffe7540c28089c22ea0a1354, type: 3}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  LeftHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Back:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Materials: []
+  AddOns: []

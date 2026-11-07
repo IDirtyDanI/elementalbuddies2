@@ -34,7 +34,7 @@ namespace ElementalBuddies
             "tower_dmg,player_dmg,boss_name,boss_hp,boss_ttk_s,boss_reached_nexus," +
             "card_offered,card_picked,merchant_bought,p_estimate,game_over_reason," +
             "draft_rerolls_free,draft_rerolls_paid,draft_reroll_shards," +
-            "draft_cards,draft_cards_paid,draft_card_shards,draft_share";
+            "draft_cards,draft_cards_paid,draft_card_shards,draft_share,continued";
 
         // Datensatz einer Welle (+ folgende Bauphase)
         private class Row
@@ -454,7 +454,9 @@ namespace ElementalBuddies
                 r.BossTtk >= 0f ? F(r.BossTtk, 1) : "", r.BossSpawnTime >= 0f ? (r.BossReachedNexus ? "1" : "0") : "",
                 Q(r.Offered), Q(r.Picked), Q(r.MerchantBought), F(p, 3), Q(gameOverReason),
                 I(r.RerollsFree), I(r.RerollsPaid), I(r.RerollShards),
-                I(r.DraftCards), I(r.DraftCardsPaid), I(r.DraftCardShards), I(r.DraftShare)
+                I(r.DraftCards), I(r.DraftCardsPaid), I(r.DraftCardShards), I(r.DraftShare),
+                // Lauf per Werbevideo fortgesetzt (Mobil, GameManager.AcceptContinue)
+                GameManager.Instance != null && GameManager.Instance.Continued ? "1" : "0"
             };
             try { File.AppendAllText(FilePath, string.Join(",", c) + "\n", Encoding.UTF8); }
             catch (System.Exception e) { Debug.LogWarning("RunTelemetry: Zeile nicht geschrieben – " + e.Message); }

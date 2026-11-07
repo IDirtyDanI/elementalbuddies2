@@ -24,7 +24,8 @@ MonoBehaviour:
   Abilities:
   - Key: LMB
     Name: Pfeilschuss
-    Description: "Schneller Pfeil mit gro\xDFer Reichweite."
+    Description: "Schneller Pfeil mit gro\xDFer Reichweite, durchschl\xE4gt bis
+      zu 3 Gegner."
     Icon: {fileID: 21300000, guid: 4d7977475c61343bba779425c9f1e2d1, type: 3}
     Element: -1
   - Key: RMB

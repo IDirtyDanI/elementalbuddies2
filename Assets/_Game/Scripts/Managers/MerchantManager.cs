@@ -11,7 +11,7 @@ namespace ElementalBuddies
     //   Einzelspiel: sofort bei der Einnahme (Pause per Time.timeScale wie bisher).
     //   Koop: am Wellenende, vor dem Upgrade-Draft (keine globale Pause).
     // Jede Karte einmal kaufbar, die erste pro Besuch gratis, weitere kosten Gold (60, 90, 120 …). Neu würfeln ersetzt
-    // alle nicht gekauften Karten (25, 40, 55 …). „Fertig" schließt; danach folgt ggf. der wartende Draft.
+    // alle Karten, auch gekaufte (25, 40, 55 …). „Fertig" schließt; danach folgt ggf. der wartende Draft.
     // Netz: Server hält den Laden pro Spieler, schickt ihn per NetGame.SendShopState an den Spieler; gekaufte Karten
     // wendet NetGame.BroadcastApplyMerchantCard auf allen Rechnern auf die Figur des Käufers an.
     public class MerchantManager : MonoBehaviour
@@ -82,7 +82,7 @@ namespace ElementalBuddies
         public int NextCardPrice => CardPrice(Purchases);
         public int RerollPrice => GoldRules.RerollPrice(Rerolls, RerollBaseCost, RerollCostStep);
         public bool IsBought(int slot) => slot >= 0 && slot < _bought.Count && _bought[slot];
-        public bool CanReroll => IsChoosing && HasRerollableSlot();
+        public bool CanReroll => IsChoosing && _offer.Count > 0;
         // Gold des lokalen Spielers
         public static float LocalGold => NetPlayer.Local != null ? NetPlayer.Local.Gold.Value : 0f;
 
@@ -460,13 +460,20 @@ namespace ElementalBuddies
             SendShop(clientId, st);
         }
 
-        // Alle nicht gekauften Karten neu ziehen. Gekaufte Karten dürfen wieder erscheinen (mehrfach kaufen = stapeln);
-        // unter den offenen Slots keine Doppelten, bisher sichtbare offene Karten möglichst vermeiden.
+        // Alle Karten neu ziehen – auch gekaufte Plätze (OfferRerollRules, 2026-11-02); neu belegte Plätze sind wieder
+        // kaufbar, die Preisstaffel des Besuchs läuft weiter. Gekaufte Karten dürfen wieder erscheinen (mehrfach kaufen
+        // = stapeln); keine Doppelten, bisher sichtbare Karten möglichst vermeiden.
         public void ServerReroll(ulong clientId, int visit)
         {
             if (!Net.IsServer || IsGameOver) return;
             if (!_shops.TryGetValue(clientId, out var st) || !st.Open || st.Visit != visit) return;
-            if (!st.Bought.Contains(false)) return;
+            if (st.Offer.Count == 0) return;
+
+            // erst ziehen, dann bezahlen (nichts zu ziehen → kein Gold weg)
+            var pool = PoolFor((MerchantKind)st.Kind, ClassOf(clientId));
+            var slots = OfferRerollRules.SlotsToReroll(st.Offer.Count, CardsOffered);
+            var fresh = OfferRerollRules.DrawFresh(st.Offer, pool, slots.Count, n => Random.Range(0, n));
+            if (fresh.Count == 0) return;
 
             int price = GoldRules.RerollPrice(st.Rerolls, RerollBaseCost, RerollCostStep);
             if (price > 0)
@@ -480,28 +487,14 @@ namespace ElementalBuddies
             }
             st.Rerolls++;
 
-            var pool = PoolFor((MerchantKind)st.Kind, ClassOf(clientId));
-            int open = 0;
-            for (int i = 0; i < st.Offer.Count; i++) if (!st.Bought[i]) open++;
-            var fresh = new List<int>(pool);
-            for (int i = 0; i < st.Offer.Count; i++)
-                if (!st.Bought[i]) fresh.Remove(st.Offer[i]);
-            if (fresh.Count >= open) pool = fresh;
-
-            for (int i = st.Offer.Count - 1; i >= 0; i--)
+            st.Offer.Clear();
+            st.Bought.Clear();
+            st.Curse.Clear();
+            foreach (int card in fresh)
             {
-                if (st.Bought[i]) continue;
-                if (pool.Count == 0)
-                {
-                    st.Offer.RemoveAt(i);
-                    st.Bought.RemoveAt(i);
-                    st.Curse.RemoveAt(i);
-                    continue;
-                }
-                int idx = Random.Range(0, pool.Count);
-                st.Offer[i] = pool[idx];
-                st.Curse[i] = 0;
-                pool.RemoveAt(idx);
+                st.Offer.Add(card);
+                st.Bought.Add(false);
+                st.Curse.Add(0);
             }
             RollCurse(st, clientId);
             SendShop(clientId, st);
@@ -690,18 +683,11 @@ namespace ElementalBuddies
             return true;
         }
 
-        private bool HasRerollableSlot()
-        {
-            for (int i = 0; i < _offer.Count; i++)
-                if (!_bought[i]) return true;
-            return false;
-        }
-
-        // Alle nicht gekauften Karten neu ziehen lassen (Anfrage an den Server)
+        // Alle Karten neu ziehen lassen, auch gekaufte Plätze (Anfrage an den Server)
         public bool Reroll()
         {
             if (!IsChoosing || PauseManager.IsPaused || IsGameOver || OfferMerchant == null) return false;
-            if (!HasRerollableSlot()) return false;
+            if (_offer.Count == 0) return false;
 
             int price = RerollPrice;
             if (price > 0 && LocalGold + 0.001f < price)

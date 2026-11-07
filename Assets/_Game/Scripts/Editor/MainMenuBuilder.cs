@@ -127,7 +127,8 @@ namespace ElementalBuddies.EditorTools
                 d.DisplayName = "Schwertkämpfer";
                 d.Tagline = "Unerschütterlicher Schild der Stadt";
                 d.Description = "Ein gepanzerter Ritter, der sich mitten ins Getümmel wirft. Mit Schwert und Schild hält er " +
-                                "die Gegnerwellen auf, zieht ihren Zorn auf sich und schützt so Nexus und Buddies.";
+                                "die Gegnerwellen auf, zieht ihren Zorn auf sich und schützt so Nexus und Buddies. " +
+                                "Mehr Leben und seine Rüstung machen ihn besonders robust."; // 2026-11-04: +50 LP, Rüstung 20 %
                 d.PreviewPrefab = knight;
                 d.AccentColor = new Color(0.36f, 0.55f, 0.78f);
                 d.Abilities = new List<ChampionDefinitionSO.AbilityInfo>
@@ -151,7 +152,7 @@ namespace ElementalBuddies.EditorTools
                 d.AccentColor = new Color(0.3f, 0.62f, 0.32f);
                 d.Abilities = new List<ChampionDefinitionSO.AbilityInfo>
                 {
-                    Ab("LMB", "Pfeilschuss", "Schneller Pfeil mit großer Reichweite.", arcane, -1),
+                    Ab("LMB", "Pfeilschuss", "Schneller Pfeil mit großer Reichweite, durchschlägt bis zu 3 Gegner.", arcane, -1), // 2026-11-04: Grund-Durchschlag 2
                     Ab("RMB", "Rolle", "Hechtrolle (~4 m), kurz unverwundbar. 2 Aufladungen.", blink, -1),
                     Ab("R", "Feuerpfeil-Regen", "Brennende Pfeile regnen auf das Zielgebiet und setzen Gegner in Brand.", fire, 0),
                     Ab("F", "Frostpfeil", "Durchschlagender Pfeil, der alle getroffenen Gegner einfriert.", ice, 1),

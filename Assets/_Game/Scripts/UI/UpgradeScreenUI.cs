@@ -8,7 +8,7 @@ namespace ElementalBuddies
     // Kartenwahl am Wellenende, seit 2026-10-16 als „Kartenladen“ (wie der Händler-Laden): Karten decken sich
     // nacheinander auf, die erste ist gratis, weitere kosten Seelensplitter (Preisschild unter der Karte, „Gekauft“-Stempel).
     // Kopf: Untertitel mit Preisregel und Splitter-Plakette (Solo: Kasse, Koop: eigener Rest-Anteil). Unten „Neu würfeln“
-    // (Gratis-Neuwürfe zuerst, dann 25, 40, 55 …; ersetzt die nicht gekauften Karten) und „Überspringen (+N)“, solange
+    // (Gratis-Neuwürfe zuerst, dann 25, 40, 55 …; ersetzt alle Karten, auch gekaufte) und „Überspringen (+N)“, solange
     // keine Karte genommen wurde – danach an derselben Stelle „Fertig“.
     // Knöpfe, Untertitel und Plakette werden aus dem Händlerladen geklont (gleicher Stil), falls nicht verdrahtet –
     // Canvas.prefab bleibt unverändert, ein Neubau des Canvas behält damit das Layout.
@@ -34,6 +34,9 @@ namespace ElementalBuddies
         [Header("Layout (Panel-Koordinaten, Referenz 1920×1080)")]
         public Vector2 RerollPos = new Vector2(-200f, -330f);
         public Vector2 SkipPos = new Vector2(200f, -330f);
+        [Tooltip("Mobil: freiwillige Werbevideos (RewardedAds) links/rechts neben Neu würfeln/Überspringen.")]
+        public Vector2 AdRerollPos = new Vector2(-560f, -330f);
+        public Vector2 AdSlotPos = new Vector2(560f, -330f);
         public Vector2 SubtitlePos = new Vector2(0f, 222f);
         public Vector2 ShardCounterPos = new Vector2(640f, 300f);
         [Tooltip("Platz unten für Bauleiste + „Buddies“-Reiter (Panel-Einheiten). Bei flachen Formaten (21:9) rückt der " +
@@ -42,6 +45,8 @@ namespace ElementalBuddies
         public float MaxLift = 120f;
 
         private TMP_Text _rerollText, _skipText, _rerollHint, _shareCaption;
+        private Button _adRerollButton, _adSlotButton;
+        private TMP_Text _adRerollText;
         private Image _rerollIcon;
         private string _lastRerollLabel;
         private readonly List<UpgradeCardUI> _cards = new List<UpgradeCardUI>();
@@ -112,6 +117,7 @@ namespace ElementalBuddies
                 SkipButton.onClick.AddListener(() => { if (UpgradeManager.Instance != null) UpgradeManager.Instance.SkipDraft(); });
                 _skipText = SkipButton.GetComponentInChildren<TMP_Text>(true);
             }
+            BuildAdButtons();
             CollectLiftTargets();
             if (DoneButton != null)
             {
@@ -121,6 +127,48 @@ namespace ElementalBuddies
                 if (t != null) t.text = "Fertig";
                 DoneButton.gameObject.SetActive(false);
             }
+        }
+
+        // Mobil: „Video: Neu würfeln“ / „Video: +1 Buddy-Platz“ (nur mit Werbe-Anbieter; sichtbar, solange AdRules es erlaubt)
+        private void BuildAdButtons()
+        {
+            if (!RewardedAds.Enabled || RerollButton == null) return;
+            _adRerollButton = CloneButton(RerollButton, "AdRerollButton", AdRerollPos);
+            _adRerollButton.onClick.AddListener(() => { if (RewardedAds.OfferReroll()) GameAudio.Play(SfxId.UiClick); });
+            _adRerollText = PrepareAdLabel(_adRerollButton);
+            _adSlotButton = CloneButton(RerollButton, "AdSlotButton", AdSlotPos);
+            _adSlotButton.onClick.AddListener(() => { if (RewardedAds.OfferBuddySlot()) GameAudio.Play(SfxId.UiClick); });
+            var slotText = PrepareAdLabel(_adSlotButton);
+            if (slotText != null) slotText.text = "Video: +1 Buddy-Platz";
+            _adRerollButton.gameObject.SetActive(false);
+            _adSlotButton.gameObject.SetActive(false);
+        }
+
+        private static TMP_Text PrepareAdLabel(Button b)
+        {
+            // geklonte Zusätze des Würfel-Knopfs (Symbol, Hinweiszeile) entfernen, nur der Haupttext bleibt
+            var texts = b.GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 1; i < texts.Length; i++) Destroy(texts[i].gameObject);
+            foreach (var img in b.GetComponentsInChildren<Image>(true))
+                if (img.gameObject != b.gameObject) Destroy(img.gameObject);
+            var t = texts.Length > 0 ? texts[0] : null;
+            if (t == null) return null;
+            t.margin = Vector4.zero;
+            t.enableAutoSizing = true;
+            t.fontSizeMin = 14f;
+            return t;
+        }
+
+        private void RefreshAdButtons(UpgradeManager um)
+        {
+            if (_adRerollButton == null) return;
+            bool reroll = RewardedAds.CanOffer(AdReward.Reroll);
+            if (_adRerollButton.gameObject.activeSelf != reroll) _adRerollButton.gameObject.SetActive(reroll);
+            if (reroll && _adRerollText != null) _adRerollText.text = $"Video: Neu würfeln (noch {RewardedAds.Remaining(AdReward.Reroll)})";
+            _adRerollButton.interactable = !um.IsRequestPending;
+            bool slot = RewardedAds.CanOffer(AdReward.BuddySlot);
+            if (_adSlotButton.gameObject.activeSelf != slot) _adSlotButton.gameObject.SetActive(slot);
+            _adSlotButton.interactable = !um.IsRequestPending;
         }
 
         // Kopie eines Händler-Elements (Untertitel bzw. Splitter-Plakette) ins Kartenwahl-Panel; liefert den ersten Text
@@ -334,6 +382,7 @@ namespace ElementalBuddies
             if (um == null || Panel == null || !Panel.activeSelf) return;
             ApplyLift();
             if (RerollButton != null) RefreshReroll(um);
+            RefreshAdButtons(um);
             bool canSkip = um.CanSkip;
             if (SkipButton != null)
             {

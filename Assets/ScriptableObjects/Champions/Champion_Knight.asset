@@ -17,7 +17,8 @@ MonoBehaviour:
   Tagline: "Unersch\xFCtterlicher Schild der Stadt"
   Description: "Ein gepanzerter Ritter, der sich mitten ins Get\xFCmmel wirft. Mit
     Schwert und Schild h\xE4lt er die Gegnerwellen auf, zieht ihren Zorn auf sich
-    und sch\xFCtzt so Nexus und Buddies."
+    und sch\xFCtzt so Nexus und Buddies. Mehr Leben und seine R\xFCstung machen
+    ihn besonders robust."
   Portrait: {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
   PreviewPrefab: {fileID: 7358540100662749788, guid: 451f42a9a6dbc4b1fa9567504e51d3d3, type: 3}
   AccentColor: {r: 0.36, g: 0.55, b: 0.78, a: 1}

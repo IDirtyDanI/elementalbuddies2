@@ -55,6 +55,13 @@ namespace ElementalBuddies
             Apply(false, Time.deltaTime);
         }
 
+        // Waffe getauscht (ChampionVisual.SetWeaponOverrides): Griffpunkt „Grip2“ an der neuen Waffe neu suchen
+        public void RefreshWeapon()
+        {
+            _grip = null;
+            _gripWeapon = null;
+        }
+
         // immediate = true: Gewicht ohne Überblendung (Editor-Sampling, Clipping-Prüfung)
         public void Apply(bool immediate, float dt = 0f)
         {

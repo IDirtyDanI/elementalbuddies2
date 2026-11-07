@@ -13,6 +13,7 @@ namespace ElementalBuddies
         [Header("Stats")]
         public float MaxHP = 500f;
         [HideInInspector] public bool Invulnerable; // Dev-Modus
+        private float _graceUntil = -1f; // Schutzzeit nach Revive (Weiterspielen per Video)
         public float CurrentHP { get; private set; }
 
         [Header("UI (optional)")]
@@ -49,7 +50,7 @@ namespace ElementalBuddies
 
         public void TakeDamage(float amount)
         {
-            if (!Net.IsServer || _isDestroyed || Invulnerable) return;
+            if (!Net.IsServer || _isDestroyed || Invulnerable || Time.time < _graceUntil) return;
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver) return;
 
             CurrentHP -= amount;
@@ -64,10 +65,23 @@ namespace ElementalBuddies
                 _isDestroyed = true;
                 Debug.Log("Nexus destroyed!");
                 OnDestroyed?.Invoke();
-                if (GameManager.Instance != null) GameManager.Instance.TriggerGameOver("Der Nexus wurde zerstört");
+                // Mobil: ggf. erst „Weiterspielen per Video?“ (GameManager.NexusFell), sonst sofort Game Over
+                if (GameManager.Instance != null) GameManager.Instance.NexusFell("Der Nexus wurde zerstört");
             }
         }
 
+        // Server: Nexus nach „Weiterspielen“ (Werbevideo, GameManager.AcceptContinue) mit einem Anteil der Max-LP
+        // wiederherstellen, kurze Schutzzeit gegen sofortigen erneuten Fall
+        public void Revive(float hpFraction, float graceSeconds)
+        {
+            if (!Net.IsServer || !_isDestroyed) return;
+            _isDestroyed = false;
+            CurrentHP = Mathf.Max(1f, MaxHP * Mathf.Clamp01(hpFraction));
+            _graceUntil = Time.time + graceSeconds;
+            SyncNet();
+            OnHealthChanged?.Invoke();
+            UpdateSlider();
+        }
         // Server: Lebensopfer für eine Wiederbelebung (GameManager, Team-Ausfall) – zerstört den Nexus nie
         public void Sacrifice(float amount)
         {
@@ -110,6 +124,7 @@ namespace ElementalBuddies
                 _isDestroyed = true;
                 OnDestroyed?.Invoke();
             }
+            else if (CurrentHP > 0f) _isDestroyed = false; // Revive auf dem Server
         }
 
         // Closest point on the Nexus surface (collider) to a given position. Falls back to the pivot.

@@ -222,7 +222,11 @@ namespace ElementalBuddies
             if (np == null)
             {
                 // Ohne NetPlayer (sollte nicht vorkommen): Besitzer nimmt die Menü-Wahl
-                if (IsOwner && Abilities != null && _championSource == null) Abilities.ApplyNetworkChampion(GameSession.SelectedChampion);
+                if (IsOwner && Abilities != null && _championSource == null)
+                {
+                    Abilities.ApplyLoadout(ShopInventory.LocalLoadout);
+                    Abilities.ApplyNetworkChampion(GameSession.SelectedChampion);
+                }
                 return;
             }
             if (_championSource != np)
@@ -231,6 +235,7 @@ namespace ElementalBuddies
                 _championSource = np;
                 np.Avatar = this;
                 np.Champion.OnValueChanged += OnChampionValueChanged;
+                np.Loadout.OnValueChanged += OnLoadoutValueChanged;
             }
             ApplyChampion();
         }
@@ -245,11 +250,21 @@ namespace ElementalBuddies
 
         private void UnbindChampion()
         {
-            if (_championSource != null) _championSource.Champion.OnValueChanged -= OnChampionValueChanged;
+            if (_championSource != null)
+            {
+                _championSource.Champion.OnValueChanged -= OnChampionValueChanged;
+                _championSource.Loadout.OnValueChanged -= OnLoadoutValueChanged;
+            }
             _championSource = null;
         }
 
         private void OnChampionValueChanged(int oldValue, int newValue) => ApplyChampion();
+
+        // Skin-Ausrüstung des Besitzers (Shop) – alle Rechner zeigen sie
+        private void OnLoadoutValueChanged(int oldValue, int newValue)
+        {
+            if (Abilities != null && _championSource != null) Abilities.ApplyLoadout(newValue);
+        }
 
         private void ApplyChampion()
         {
@@ -262,6 +277,7 @@ namespace ElementalBuddies
                 _championSource.RequestChampion(ChampionClass.Mage);
                 cls = ChampionClass.Mage;
             }
+            Abilities.ApplyLoadout(_championSource.Loadout.Value); // vor dem Klassenwechsel: neues Visual bekommt gleich die richtige Ausrüstung
             Abilities.ApplyNetworkChampion(cls);
             if (IsDowned) Abilities.SetDownedVisual(true);
         }

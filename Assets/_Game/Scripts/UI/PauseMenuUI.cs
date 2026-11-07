@@ -199,6 +199,68 @@ namespace ElementalBuddies
                 CompactRows();
             }
             if (Application.platform == RuntimePlatform.IPhonePlayer && QuitButton != null) QuitButton.gameObject.SetActive(false);
+            BuildGraphicsRow();
+            // Freiwillige Werbung: Einwilligung in personalisierte Werbung ändern (oben rechts, wo am PC „Tastaturbelegung“ sitzt)
+            var template = OverviewButton != null ? OverviewButton : ResumeButton;
+            if (RewardedAds.Enabled && SettingsPage != null && template != null)
+            {
+                var privacy = MakePageButton(template, (RectTransform)SettingsPage.transform, "AdPrivacyButton", "Datenschutz (Werbung)", new Vector2(320f, 50f));
+                var prt = (RectTransform)privacy.transform;
+                prt.anchorMin = prt.anchorMax = prt.pivot = new Vector2(1f, 1f);
+                prt.anchoredPosition = new Vector2(0f, 2f);
+                privacy.onClick.AddListener(() => AdConsent.Ask());
+            }
+        }
+
+        // Grafik-Stufe (Tester-Feedback 2026-11-03: Pixel 10 Pro als „Schnell“ erkannt, Boden schwammig). Regler 0–2 wie
+        // „Schadenszahlen“; der Hinweis unten nennt Grafikchip und erkannte Stufe (Foto genügt fürs Nachtragen neuer Geräte).
+        private void BuildGraphicsRow()
+        {
+            var mq = MobileQuality.Instance;
+            if (mq == null || SfxSlider == null || SfxSlider.transform.parent == null) return;
+            _gfxSlider = CloneSliderRow(SfxSlider, "GraphicsRow", "Grafik", out _gfxValue);
+            if (_gfxSlider != null)
+            {
+                _gfxSlider.minValue = 0f;
+                _gfxSlider.maxValue = 2f;
+                _gfxSlider.wholeNumbers = true;
+                if (_gfxValue != null)
+                {
+                    // „Auto (Schnell)“ ist breiter als „100 %“: einzeilig, notfalls kleiner
+                    _gfxValue.textWrappingMode = TextWrappingModes.NoWrap;
+                    _gfxValue.fontSizeMax = _gfxValue.fontSize;
+                    _gfxValue.fontSizeMin = Mathf.Max(10f, _gfxValue.fontSize * 0.7f);
+                    _gfxValue.enableAutoSizing = true;
+                }
+                _gfxSlider.onValueChanged.AddListener(v =>
+                {
+                    var q = MobileQuality.Instance;
+                    if (q == null) return;
+                    var before = q.Tier;
+                    q.SetChoice((MobileQualityRules.Choice)Mathf.RoundToInt(v));
+                    SyncGraphics(q.Tier != before);
+                });
+                CompactRows();
+            }
+            if (SettingsPage != null)
+            {
+                var hint = SettingsPage.transform.Find("Hint");
+                _settingsHint = hint != null ? hint.GetComponent<TextMeshProUGUI>() : null;
+                if (_settingsHint != null) _settingsHintBase = _settingsHint.text;
+            }
+        }
+
+        private void SyncGraphics(bool changedNow)
+        {
+            var mq = MobileQuality.Instance;
+            if (mq == null) return;
+            if (_gfxSlider != null) _gfxSlider.SetValueWithoutNotify((int)mq.Choice);
+            if (_gfxValue != null) _gfxValue.text = MobileQualityRules.ChoiceLabel(mq.Choice, mq.DetectedTier);
+            if (_settingsHint == null) return;
+            string chip = "Grafikchip: " + SystemInfo.graphicsDeviceName + " (erkannt: " + MobileQualityRules.TierLabel(mq.DetectedTier) + ")";
+            _settingsHint.text = changedNow
+                ? "Boden und Gras ändern sich ab der nächsten Karte. " + chip
+                : _settingsHintBase + " " + chip;
         }
 
         // ---------------- Tastaturbelegung (Unterseite der Einstellungen, zur Laufzeit gebaut) ----------------
@@ -335,6 +397,10 @@ namespace ElementalBuddies
 
         private Slider _shakeSlider, _numbersSlider;
         private TextMeshProUGUI _shakeValue, _numbersValue;
+        // Touch: Grafik Auto/Schnell/Schön (MobileQuality) und Hinweis mit Grafikchip
+        private Slider _gfxSlider;
+        private TextMeshProUGUI _gfxValue, _settingsHint;
+        private string _settingsHintBase;
         private Toggle _hitStopToggle, _flashToggle, _hintsToggle, _minimapToggle;
         private Button _hintReset;
 
@@ -471,6 +537,7 @@ namespace ElementalBuddies
             if (_hintsToggle != null) _hintsToggle.SetIsOnWithoutNotify(HintManager.Enabled);
             if (_minimapToggle != null) _minimapToggle.SetIsOnWithoutNotify(MinimapUI.Enabled);
             HintResetButton.ResetLabel(_hintReset);
+            SyncGraphics(false);
         }
 
         private static void SyncSlider(Slider slider, TextMeshProUGUI label, float v)
@@ -846,6 +913,9 @@ namespace ElementalBuddies
             var kit = abilities.ActiveKit;
             string name = !string.IsNullOrEmpty(kit.DisplayName) ? kit.DisplayName : ChampionName(kit.Class);
             sb.Append(HeaderOpen).Append("Champion: ").Append(name).Append(HeaderClose).Append('\n');
+            // 2026-11-04: passive Werte (z. B. Schwertkämpfer +50 LP, Rüstung 20 %) – stehen an keiner Fähigkeit
+            string passive = kit.DescribePassive();
+            if (!string.IsNullOrEmpty(passive)) sb.Append("<size=85%>").Append(passive).Append("</size>").Append('\n');
             for (int i = 0; i < AbilitySlots.Count; i++)
             {
                 var slot = (AbilitySlot)i;

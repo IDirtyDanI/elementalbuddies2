@@ -65,12 +65,62 @@ namespace ElementalBuddies
             if (Animator == null) Animator = GetComponentInChildren<Animator>(true);
             if (Animator == null || !Animator.isHuman) return;
             _attached = true;
-            RightHandInstance = Spawn(RightHandWeapon, Animator.GetBoneTransform(HumanBodyBones.RightHand), "Weapon_R");
-            LeftHandInstance = Spawn(LeftHandWeapon, Animator.GetBoneTransform(HumanBodyBones.LeftHand), "Weapon_L");
+            SpawnWeapons();
+        }
+
+        public bool IsAttached => _attached;
+
+        // ---------------- Waffen-Skins (ChampionSkin) ----------------
+        // Ersatz-Attachments je Sockel (null = Standard aus dem Inspector). Die Standard-Attachments selbst bleiben
+        // unverändert – zurück zum Standard ergibt exakt den Originalzustand.
+        private Attachment _rightOverride, _leftOverride, _backOverride;
+
+        public Attachment EffectiveRightHand => _rightOverride ?? RightHandWeapon;
+        public Attachment EffectiveLeftHand => _leftOverride ?? LeftHandWeapon;
+        public Attachment EffectiveBack => _backOverride ?? BackItem;
+
+        // Waffen tauschen (null = Standard). Vor dem ersten Attach wird nur gemerkt; sonst sofort neu angehängt.
+        public void SetWeaponOverrides(Attachment rightHand, Attachment leftHand, Attachment back)
+        {
+            _rightOverride = rightHand;
+            _leftOverride = leftHand;
+            _backOverride = back;
+            if (!_attached) return;
+            DestroyInstance(RightHandInstance);
+            DestroyInstance(LeftHandInstance);
+            DestroyInstance(BackInstance);
+            RightHandInstance = LeftHandInstance = BackInstance = null;
+            SpawnWeapons();
+            // Waffen-IK neu verbinden (Zweihand-Griff sucht „Grip2“ an der neuen Waffe)
+            foreach (var g in GetComponents<ChampionTwoHandGrip>()) g.RefreshWeapon();
+            foreach (var h in GetComponents<ChampionWeaponHold>()) h.RefreshWeapon();
+        }
+
+        private void SpawnWeapons()
+        {
+            RightHandInstance = Spawn(EffectiveRightHand, Animator.GetBoneTransform(HumanBodyBones.RightHand), "Weapon_R");
+            LeftHandInstance = Spawn(EffectiveLeftHand, Animator.GetBoneTransform(HumanBodyBones.LeftHand), "Weapon_L");
+            BackInstance = Spawn(EffectiveBack, ChestBone(), "BackItem");
+        }
+
+        // Knochen für Rücken-Items (UpperChest → Chest → Spine)
+        public Transform ChestBone()
+        {
+            if (Animator == null) return null;
             Transform chest = Animator.GetBoneTransform(HumanBodyBones.UpperChest);
             if (chest == null) chest = Animator.GetBoneTransform(HumanBodyBones.Chest);
             if (chest == null) chest = Animator.GetBoneTransform(HumanBodyBones.Spine);
-            BackInstance = Spawn(BackItem, chest, "BackItem");
+            return chest;
+        }
+
+        // Alte Waffe sofort unsichtbar und aus der Hierarchie lösen (Destroy wirkt erst am Frame-Ende)
+        private static void DestroyInstance(Transform t)
+        {
+            if (t == null) return;
+            t.gameObject.SetActive(false);
+            t.SetParent(null, false);
+            if (Application.isPlaying) Destroy(t.gameObject);
+            else DestroyImmediate(t.gameObject);
         }
 
         // ---------------- Rumpf-Ausgleich ----------------

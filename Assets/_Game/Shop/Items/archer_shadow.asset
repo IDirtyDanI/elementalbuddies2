@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811417d07595845e49d48e75c3c8703e, type: 3}
+  m_Name: archer_shadow
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShopItemSO
+  Id: archer_shadow
+  Class: 2
+  Slot: 1
+  Tier: 2
+  DisplayName: "Schattenj\xE4ger"
+  Description: "Violett gl\xFChende S\xE4ume und ein Umhang aus Schatten."
+  Price: 800
+  Icon: {fileID: 21300000, guid: 6602203b41cd74583a0bb1d9823aa2a0, type: 3}
+  NetIndex: 2
+  RightHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  LeftHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Back:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Materials:
+  - SourceMaterial: Archer2_Green
+    Replacement: {fileID: 2100000, guid: 952eb03e375564aec8eb3dab8a33a68e, type: 2}
+  - SourceMaterial: Archer2_GreenDark
+    Replacement: {fileID: 2100000, guid: 81abe160202ab475aad95835416c3e0a, type: 2}
+  - SourceMaterial: Archer2_Pants
+    Replacement: {fileID: 2100000, guid: 1251b1fb1e9dd4ff5b43152dce88efc2, type: 2}
+  - SourceMaterial: Archer2_Linen
+    Replacement: {fileID: 2100000, guid: 44e7c9c6db0a342cb8ad91cd3bb086fa, type: 2}
+  - SourceMaterial: Archer2_Leather
+    Replacement: {fileID: 2100000, guid: 9124bbd5e6a55423f8358921d3eb26f6, type: 2}
+  - SourceMaterial: Archer2_LeatherDark
+    Replacement: {fileID: 2100000, guid: 374bf3d3f17164dabad55ca08582f337, type: 2}
+  - SourceMaterial: Archer2_LeatherRim
+    Replacement: {fileID: 2100000, guid: d8c5b94d5d82b4ae48d8e08b7885bf2d, type: 2}
+  - SourceMaterial: Archer2_Buckle
+    Replacement: {fileID: 2100000, guid: e922256582a8342da9241136303556b4, type: 2}
+  - SourceMaterial: Archer2_Hair
+    Replacement: {fileID: 2100000, guid: 4b1d90fe2ab54436abdf2be0dd53ead3, type: 2}
+  AddOns:
+  - Prefab: {fileID: 7361990565579192648, guid: 82af2a0b9837b426ea6b102c246daf0c, type: 3}
+    Bone: 54
+    LocalPosition: {x: 0, y: 0.175, z: 0.002}
+    LocalEuler: {x: 1.96, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Mirror: 0

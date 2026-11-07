@@ -162,6 +162,11 @@ namespace ElementalBuddies
         protected string CostColor => Resource != null ? "<color=#" + ColorUtility.ToHtmlStringRGB(Resource.Color) + ">" : ManaColor;
         // Zusätzliche Max-LP dieses Champions (PlayerAbilities rechnet sie beim Wechsel auf PlayerStats.MaxHP an)
         public virtual float MaxHealthBonus => 0f;
+        // 2026-11-04: Rüstung = Anteil jedes eingehenden Treffers, der wegfällt (0.2 = 20 %). PlayerAbilities.ModifyIncomingDamage
+        // wendet sie per ArmorRules VOR ModifyIncomingDamage des Kits an, damit z. B. der Schildblock nur den Rest bezahlt.
+        public virtual float Armor => 0f;
+        // Passive Eigenschaften des Champions für die Pausen-Übersicht (leer = keine Zeile), z. B. Schwertkämpfer-Rüstung
+        public virtual string DescribePassive() => "";
 
         // Eingehenden Schaden verändern (Block, Schadensreduktion). Rückgabe = verbleibender Schaden.
         public virtual float ModifyIncomingDamage(float amount, Vector3 sourcePosition, bool hasSource) => amount;

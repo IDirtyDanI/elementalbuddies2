@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811417d07595845e49d48e75c3c8703e, type: 3}
+  m_Name: archer_autumn
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShopItemSO
+  Id: archer_autumn
+  Class: 2
+  Slot: 1
+  Tier: 1
+  DisplayName: "Herbstj\xE4ger"
+  Description: Rostrot und Senfgelb wie das Laub im Oktober.
+  Price: 200
+  Icon: {fileID: 21300000, guid: e2dbbf1487030469eaccb314e9f1e2c7, type: 3}
+  NetIndex: 1
+  RightHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  LeftHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Back:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Materials:
+  - SourceMaterial: Archer2_Green
+    Replacement: {fileID: 2100000, guid: 00693e907e0b54be49b17c4fdb9a7e2e, type: 2}
+  - SourceMaterial: Archer2_GreenDark
+    Replacement: {fileID: 2100000, guid: 90cf4befcd8cb409d8653b9ee3c6bf65, type: 2}
+  - SourceMaterial: Archer2_Pants
+    Replacement: {fileID: 2100000, guid: 841e5a0c253cc4d119c9c7a5b6d3746e, type: 2}
+  - SourceMaterial: Archer2_Linen
+    Replacement: {fileID: 2100000, guid: b0b21e657eb954588926d037bb92c210, type: 2}
+  - SourceMaterial: Archer2_Leather
+    Replacement: {fileID: 2100000, guid: d75c123f6ab6b40af8ac4b64ec5fbe33, type: 2}
+  - SourceMaterial: Archer2_LeatherDark
+    Replacement: {fileID: 2100000, guid: ee6e7e525f1ff43879f9df296fa29e35, type: 2}
+  - SourceMaterial: Archer2_LeatherRim
+    Replacement: {fileID: 2100000, guid: dd92593863b2d4f83a969a32c45bdbfc, type: 2}
+  - SourceMaterial: Archer2_Buckle
+    Replacement: {fileID: 2100000, guid: e92f5ab6f785b40d380bc5a1b38114f8, type: 2}
+  AddOns: []

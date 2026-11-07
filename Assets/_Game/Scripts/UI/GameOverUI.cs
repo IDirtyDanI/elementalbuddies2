@@ -37,6 +37,8 @@ namespace ElementalBuddies
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.OnGameOver += ShowGameOver;
+                GameManager.Instance.OnContinueOffered += ShowContinueOffer;
+                GameManager.Instance.OnContinueAccepted += HideContinueOffer;
             }
             if (WaveManager.Instance != null)
             {
@@ -94,6 +96,8 @@ namespace ElementalBuddies
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.OnGameOver -= ShowGameOver;
+                GameManager.Instance.OnContinueOffered -= ShowContinueOffer;
+                GameManager.Instance.OnContinueAccepted -= HideContinueOffer;
             }
             if (WaveManager.Instance != null)
             {
@@ -175,9 +179,90 @@ namespace ElementalBuddies
         private TextMeshProUGUI _restartLabel;
         private string _restartText;
 
+        // ---------------- Weiterspielen per Werbevideo (Mobil, Einzelspiel): gleiches Panel, vor dem Game Over ----------------
+
+        private bool _continueMode;
+
+        private void ShowContinueOffer()
+        {
+            // ohne „Aufgeben“-Knopf kein Angebot (das Spiel stünde sonst)
+            if (Panel == null || RestartButton == null || MainMenuButton == null)
+            {
+                if (GameManager.Instance != null) GameManager.Instance.DeclineContinue();
+                return;
+            }
+            if (_dawnMode) HideDawn();
+            _continueMode = true;
+            Panel.SetActive(true);
+            if (ReasonText != null)
+            {
+                if (_reasonDefault == null) _reasonDefault = ReasonText.text;
+                ReasonText.text = "<color=#7a1f12><b>Der Nexus fällt!</b></color>";
+            }
+            if (WaveText != null) WaveText.text = "Ein kurzes Video ansehen und mit halbem Nexus weiterkämpfen?";
+            if (BestText != null) BestText.text = "Einmal pro Spiel · der Lauf zählt, wird aber als „mit Fortsetzung“ markiert.";
+            if (AchievementsText != null) AchievementsText.gameObject.SetActive(false);
+            if (_recapText != null) _recapText.transform.parent.gameObject.SetActive(false);
+
+            if (RestartButton != null)
+            {
+                RestartButton.onClick.RemoveAllListeners();
+                RestartButton.onClick.AddListener(() =>
+                {
+                    if (!RewardedAds.OfferContinue()) RefreshContinueButton();
+                });
+                if (_restartLabel != null) _restartLabel.text = "Video: Weiterspielen";
+            }
+            if (MainMenuButton != null)
+            {
+                MainMenuButton.onClick.RemoveAllListeners();
+                MainMenuButton.onClick.AddListener(() => { if (GameManager.Instance != null) GameManager.Instance.DeclineContinue(); });
+                var l = MainMenuButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (l != null) { if (_menuLabelDefault == null) _menuLabelDefault = l.text; l.text = "Aufgeben"; }
+            }
+            RefreshContinueButton();
+        }
+
+        // Video gerade nicht verfügbar → Knopf aus (kein Druck, „Aufgeben“ bleibt)
+        private void RefreshContinueButton()
+        {
+            if (_continueMode && RestartButton != null) RestartButton.interactable = RewardedAds.CanOffer(AdReward.Continue);
+        }
+
+        private void HideContinueOffer()
+        {
+            if (!_continueMode) return;
+            _continueMode = false;
+            if (Panel != null && (GameManager.Instance == null || !GameManager.Instance.IsGameOver)) Panel.SetActive(false);
+            if (ReasonText != null && _reasonDefault != null) ReasonText.text = _reasonDefault;
+            if (RestartButton != null)
+            {
+                RestartButton.interactable = true;
+                RestartButton.onClick.RemoveAllListeners();
+                RestartButton.onClick.AddListener(() =>
+                {
+                    if (Net.IsServer && GameManager.Instance != null) GameManager.Instance.Restart();
+                });
+                if (_restartLabel != null) _restartLabel.text = _restartText;
+            }
+            SetupMainMenuButton();
+            if (MainMenuButton != null && _menuLabelDefault != null)
+            {
+                var l = MainMenuButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (l != null) l.text = _menuLabelDefault;
+            }
+        }
+
+        void Update()
+        {
+            if (_continueMode) RefreshContinueButton();
+        }
+
         private void ShowGameOver(string reason)
         {
             if (_dawnMode) HideDawn();
+            if (_continueMode) HideContinueOffer();
+            if (_recapText != null) _recapText.transform.parent.gameObject.SetActive(true);
             if (Panel != null) Panel.SetActive(true);
 
             // Clients: Neustart entscheidet der Host
@@ -199,9 +284,13 @@ namespace ElementalBuddies
             var diff = WaveManager.Instance != null ? WaveManager.Instance.Difficulty : null;
             if (WaveText != null) WaveText.text = diff != null ? $"Welle erreicht: {wave} ({diff.DisplayName})" : $"Welle erreicht: {wave}";
             if (BestText != null)
+            {
                 BestText.text = wave > _bestAtStart && _bestAtStart > 0
                     ? $"<color=#2e6b2e><b>Neuer Rekord!</b></color>  (vorher Welle {_bestAtStart})"
                     : $"Beste Welle: {best}";
+                // Lauf per Werbevideo fortgesetzt (zählt, wird aber markiert – Nutzer-Entscheidung 2026-11-02)
+                if (GameManager.Instance != null && GameManager.Instance.Continued) BestText.text += "  · mit Fortsetzung";
+            }
             ShowEarnedAchievements();
             ShowRecap(wave);
         }
@@ -235,6 +324,7 @@ namespace ElementalBuddies
                 if (rs.BossesKilled.Count > 0) sb.Append($"   ·   <b>Bosse</b> {rs.BossesKilled.Count}");
                 if (rs.EliteKills > 0) sb.Append($"   ·   <b>Eliten</b> {rs.EliteKills}");
                 if (GameManager.Instance != null && GameManager.Instance.TeamWipes > 0) sb.Append($"   ·   <b>Wiederbelebt</b> {GameManager.Instance.TeamWipes}×");
+                if (GameManager.Instance != null && GameManager.Instance.Continued) sb.Append("   ·   <b>Fortgesetzt</b> per Video");
                 sb.Append('\n');
 
                 float total = rs.ChampionDamage + rs.TowerDamage;

@@ -121,6 +121,7 @@ namespace ElementalBuddies
 
         private void HookManager(NetworkManager nm)
         {
+            NetDriverTuning.Install(); // robustere Relay-Verbindung (kein DTLS-Neuaufbau nach 2 s Funkstille)
             nm.NetworkConfig.ConnectionApproval = true;
             nm.ConnectionApprovalCallback = ApproveConnection;
             nm.OnClientConnectedCallback -= HandleClientConnected;
@@ -166,7 +167,8 @@ namespace ElementalBuddies
             // Eigene Verbindung verloren (Client) → zurück ins Menü
             if (!nm.IsServer && clientId == nm.LocalClientId)
             {
-                string reason = string.IsNullOrEmpty(nm.DisconnectReason) ? "Verbindung zum Host verloren." : nm.DisconnectReason;
+                string reason = MobileScreenAwake.PauseExplainsLoss ? ScreenAwakeRules.PauseLossMessage
+                    : string.IsNullOrEmpty(nm.DisconnectReason) ? "Verbindung zum Host verloren." : nm.DisconnectReason;
                 _ = HandleLostConnection(reason);
                 return;
             }
@@ -198,6 +200,8 @@ namespace ElementalBuddies
             if (_shuttingDown || _handlingLoss || IsQuitting || IsBusy) return;
             string reason = _pendingReason;
             _pendingReason = null;
+            // Mobil: App war gerade lange im Hintergrund (Bildschirm aus, App gewechselt) → das ist der eigentliche Grund
+            if (MobileScreenAwake.PauseExplainsLoss) reason = ScreenAwakeRules.PauseLossMessage;
             if (string.IsNullOrEmpty(reason))
             {
                 var nm = NetworkManager.Singleton;

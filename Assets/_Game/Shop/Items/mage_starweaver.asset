@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811417d07595845e49d48e75c3c8703e, type: 3}
+  m_Name: mage_starweaver
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShopItemSO
+  Id: mage_starweaver
+  Class: 0
+  Slot: 1
+  Tier: 2
+  DisplayName: Sternenweber
+  Description: Nachtblaue Robe und eine schwebende Sternenkrone.
+  Price: 800
+  Icon: {fileID: 21300000, guid: 72cc49b5d9f434b3d819e22783b66033, type: 3}
+  NetIndex: 2
+  RightHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  LeftHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Back:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Materials:
+  - SourceMaterial: Mage2_Robe
+    Replacement: {fileID: 2100000, guid: e3b70d040523a4c71a835fbcf99eefd4, type: 2}
+  - SourceMaterial: Mage2_Hat
+    Replacement: {fileID: 2100000, guid: 90d1dec83332c4b20beeba4554389110, type: 2}
+  - SourceMaterial: Mage2_RobeInner
+    Replacement: {fileID: 2100000, guid: 538a14be6bab74126a0cbf0c8c1676ff, type: 2}
+  - SourceMaterial: Mage2_Violet
+    Replacement: {fileID: 2100000, guid: ca4e9b7ddeae648e3b4a39bef22ec948, type: 2}
+  - SourceMaterial: Mage2_Gold
+    Replacement: {fileID: 2100000, guid: d2bb10ec91303458caa06310daac6d26, type: 2}
+  - SourceMaterial: Mage2_Crystal
+    Replacement: {fileID: 2100000, guid: f9be8c8963c204881b1547d294080b67, type: 2}
+  - SourceMaterial: Mage2_Belt
+    Replacement: {fileID: 2100000, guid: ec0f5fa4a4624480a9834aff726d00de, type: 2}
+  - SourceMaterial: Mage2_Shoe
+    Replacement: {fileID: 2100000, guid: b8211aa445b0247cf9ced65dce2adb60, type: 2}
+  AddOns:
+  - Prefab: {fileID: 5506059733119889000, guid: f933da1ca90a94e48aa01a517283f89b, type: 3}
+    Bone: 10
+    LocalPosition: {x: 0, y: 0.615, z: -0.1}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Mirror: 0

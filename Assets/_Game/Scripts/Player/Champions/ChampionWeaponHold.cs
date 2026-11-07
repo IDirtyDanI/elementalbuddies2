@@ -120,6 +120,12 @@ namespace ElementalBuddies
             Apply(false, Time.deltaTime);
         }
 
+        // Waffe getauscht (ChampionVisual.SetWeaponOverrides): Tragehaltung neu einsetzen statt vom alten Ziel zu gleiten
+        public void RefreshWeapon()
+        {
+            _hasTarget = false;
+        }
+
         // immediate = true: Gewicht ohne Überblendung (Editor-Sampling, Clipping-Prüfung)
         public void Apply(bool immediate, float dt = 0f)
         {

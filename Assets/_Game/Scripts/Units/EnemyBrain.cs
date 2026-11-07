@@ -1600,6 +1600,20 @@ namespace ElementalBuddies
             else SyncHealth();
         }
 
+        // Server: Gegner ohne Belohnung entfernen (Weiterspielen per Video räumt den Nexus frei): Todeseffekt und
+        // Wellenzähler (OnEnemyDeath) wie beim Tod, aber kein OnEnemyKilled → keine Beute, kein Kill, keine Statistik
+        public void ServerBanish()
+        {
+            if (!Net.IsServer || _isDead) return;
+            _isDead = true;
+            _currentHP = 0f;
+            _activeBosses.Remove(this);
+            _swingPending = false;
+            PlayDeathVisual();
+            OnEnemyDeath?.Invoke();
+            Despawn();
+        }
+
         // Server: Gegner entfernen (im Netz Despawn, sonst Destroy)
         private void Despawn()
         {

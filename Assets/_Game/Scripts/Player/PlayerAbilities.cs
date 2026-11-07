@@ -116,6 +116,7 @@ namespace ElementalBuddies
 
         void OnDestroy()
         {
+            ShopInventory.Changed -= HandleShopChanged;
             if (_instance == this) Instance = null;
             if (_stats != null && _stats.DamageModifier == (Func<float, Vector3, bool, float>)ModifyIncomingDamage) _stats.DamageModifier = null;
         }
@@ -129,6 +130,10 @@ namespace ElementalBuddies
             _kits.Clear();
             GetComponents(_kits);
             if (_stats != null) _stats.DamageModifier = ModifyIncomingDamage;
+            // Skin-Ausrüstung: offline die lokale (ShopInventory); im Netz setzt PlayerAvatar die des Besitzers (ApplyLoadout)
+            if (!(_avatar != null && Net.IsRunning)) _loadout = ShopInventory.LocalLoadout;
+            ShopInventory.Changed -= HandleShopChanged;
+            ShopInventory.Changed += HandleShopChanged;
             // Vorläufige Wahl; im Netz legt PlayerAvatar nach dem Spawn den Champion des Besitzers fest (ApplyNetworkChampion)
             var cls = ForceChampion ? ForcedChampion : GameSession.SelectedChampion;
             bool networked = _avatar != null && Net.IsRunning;
@@ -203,6 +208,7 @@ namespace ElementalBuddies
                 if (v.gameObject.activeSelf != on) v.gameObject.SetActive(on);
                 if (match && ActiveVisual == null) ActiveVisual = v;
             }
+            ApplySkin();
 
             // Ressource (Mana/Wut) und Lebens-Bonus des Champions
             if (Mana != null) Mana.ApplyProfile(kit.Resource);
@@ -217,6 +223,35 @@ namespace ElementalBuddies
         }
 
         private float _appliedHealthBonus;
+
+        // ---------------- Skins (Shop) ----------------
+
+        private int _loadout;
+        private bool _netLoadout; // Ausrüstung kommt vom Netz (PlayerAvatar) statt aus dem lokalen ShopInventory
+
+        // Gepackte Skin-Ausrüstung dieser Figur (ShopRules)
+        public int Loadout => _loadout;
+
+        // Ausrüstung setzen (PlayerAvatar: NetPlayer.Loadout des Besitzers) und aufs aktive Modell anwenden
+        public void ApplyLoadout(int loadout)
+        {
+            _netLoadout = true;
+            _loadout = loadout;
+            ApplySkin();
+        }
+
+        private void ApplySkin()
+        {
+            if (ActiveVisual != null) ChampionSkin.ApplyTo(ActiveVisual.gameObject, ActiveVisual.Class, _loadout);
+        }
+
+        // Offline-Figur: Shop-Änderung sofort zeigen (im Netz läuft das über NetPlayer.Loadout)
+        private void HandleShopChanged()
+        {
+            if (_netLoadout || (_avatar != null && Net.IsRunning)) return;
+            _loadout = ShopInventory.LocalLoadout;
+            ApplySkin();
+        }
 
         // Ausgefallene Figur (PlayerAvatar): Modell aus-/einblenden, laufende Fähigkeiten beenden
         private bool _downedVisual;
@@ -663,9 +698,13 @@ namespace ElementalBuddies
 
         // ---------------- Schaden (Block etc.) ----------------
 
+        // Läuft auf dem Server (PlayerStats.ApplyDamage → DamageModifier). 2026-11-04: Rüstung des Champions zuerst, dann die
+        // Kit-Logik (Block, Lichtschwur, Ansturm) – so kostet der Schildblock nur Mana für den Schaden nach Rüstung.
         private float ModifyIncomingDamage(float amount, Vector3 sourcePosition, bool hasSource)
         {
-            return ActiveKit != null && ActiveKit.isActiveAndEnabled ? ActiveKit.ModifyIncomingDamage(amount, sourcePosition, hasSource) : amount;
+            if (ActiveKit == null || !ActiveKit.isActiveAndEnabled) return amount;
+            amount = ArmorRules.Reduce(amount, ActiveKit.Armor);
+            return ActiveKit.ModifyIncomingDamage(amount, sourcePosition, hasSource);
         }
     }
 }

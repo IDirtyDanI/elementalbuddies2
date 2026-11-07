@@ -35,18 +35,41 @@ namespace ElementalBuddies.Tests
         [Test]
         public void Fallback_ErstRenderScaleDann30fps()
         {
-            float s = 0.7f;
+            float s = 0.8f;
             int fps = 60;
             MobileQualityRules.Fallback(ref s, ref fps);
-            Assert.AreEqual(0.65f, s, Eps);
+            Assert.AreEqual(0.75f, s, Eps);
             Assert.AreEqual(60, fps);
             MobileQualityRules.Fallback(ref s, ref fps);
-            Assert.AreEqual(MobileQualityRules.MinRenderScale, s, Eps);
+            Assert.AreEqual(MobileQualityRules.FallbackMinRenderScale, s, Eps);
             MobileQualityRules.Fallback(ref s, ref fps);
             Assert.AreEqual(30, fps);
             MobileQualityRules.Fallback(ref s, ref fps);
             Assert.AreEqual(30, fps);
-            Assert.AreEqual(MobileQualityRules.MinRenderScale, s, Eps);
+            Assert.AreEqual(MobileQualityRules.FallbackMinRenderScale, s, Eps);
+        }
+
+        [Test]
+        public void Fallback_nicht_unter_0_7_und_Geraetewert_darunter_bleibt()
+        {
+            Assert.GreaterOrEqual(MobileQualityRules.FallbackMinRenderScale, 0.7f - Eps);
+            float s = 0.675f; // Android mit sehr hoher Auflösung startet schon darunter
+            int fps = 30;
+            MobileQualityRules.Fallback(ref s, ref fps);
+            Assert.AreEqual(0.675f, s, Eps);
+        }
+
+        [Test]
+        public void Rueckfall_wird_am_Wellenende_zurueckgenommen()
+        {
+            // Welle endet, Scale war abgesenkt → zurück
+            Assert.IsTrue(MobileQualityRules.ShouldRestore(true, false, 0.7f, 0.8f, 30, 30));
+            // Ziel-Bildrate abgesenkt (High: 60 → 30) → zurück
+            Assert.IsTrue(MobileQualityRules.ShouldRestore(true, false, 0.85f, 0.85f, 30, 60));
+            // Welle läuft noch / keine Welle beendet / nichts abgesenkt → nichts tun
+            Assert.IsFalse(MobileQualityRules.ShouldRestore(true, true, 0.7f, 0.8f, 30, 30));
+            Assert.IsFalse(MobileQualityRules.ShouldRestore(false, false, 0.7f, 0.8f, 30, 30));
+            Assert.IsFalse(MobileQualityRules.ShouldRestore(true, false, 0.8f, 0.8f, 30, 30));
         }
 
         [Test]
@@ -56,6 +79,86 @@ namespace ElementalBuddies.Tests
             Assert.LessOrEqual(MobileQualityRules.VfxBudgetScale(MobileQualityRules.Tier.High), 1f);
             Assert.Less(MobileQualityRules.FireLights(MobileQualityRules.Tier.Low), 6);
             Assert.Less(MobileQualityRules.DetailDensityScale(MobileQualityRules.Tier.Low), 1f);
+        }
+
+        [Test]
+        public void Low_ohne_Gegner_Schatten_und_Post_mit_wenig_Lichtern()
+        {
+            Assert.IsFalse(MobileQualityRules.EnemyShadows(MobileQualityRules.Tier.Low));
+            Assert.IsFalse(MobileQualityRules.PostProcessing(MobileQualityRules.Tier.Low));
+            Assert.AreEqual(2, MobileQualityRules.MaxAdditionalLightsPerObject(MobileQualityRules.Tier.Low));
+            Assert.Less(MobileQualityRules.DetailDistance(MobileQualityRules.Tier.Low), MobileQualityRules.DetailDistance(MobileQualityRules.Tier.High));
+        }
+
+        [Test]
+        public void High_behaelt_Schatten_und_Post()
+        {
+            Assert.IsTrue(MobileQualityRules.EnemyShadows(MobileQualityRules.Tier.High));
+            Assert.IsTrue(MobileQualityRules.PostProcessing(MobileQualityRules.Tier.High));
+            Assert.AreEqual(4, MobileQualityRules.MaxAdditionalLightsPerObject(MobileQualityRules.Tier.High));
+        }
+
+        [Test]
+        public void Low_fest_30_fps_High_60()
+        {
+            Assert.AreEqual(30, MobileQualityRules.TargetFps(MobileQualityRules.Tier.Low));
+            Assert.AreEqual(60, MobileQualityRules.TargetFps(MobileQualityRules.Tier.High));
+        }
+
+        [Test]
+        public void Mobil_Gras_nur_auf_Low()
+        {
+            Assert.IsTrue(MobileQualityRules.MobileGrass(MobileQualityRules.Tier.Low));
+            Assert.IsFalse(MobileQualityRules.MobileGrass(MobileQualityRules.Tier.High));
+            Assert.AreEqual(1f, MobileQualityRules.GrassInstanceShare(MobileQualityRules.Tier.High));
+        }
+
+        [Test]
+        public void Gras_Ausduennen_trifft_den_Anteil()
+        {
+            long before = 0, after = 0;
+            for (int y = 0; y < 200; y++)
+                for (int x = 0; x < 200; x++)
+                {
+                    int v = (x + y) % 5;
+                    before += v;
+                    after += MobileQualityRules.ThinGrassCount(v, 0.4f, x, y, 1);
+                }
+            Assert.AreEqual(0.4, after / (double)before, 0.02);
+            Assert.AreEqual(3, MobileQualityRules.ThinGrassCount(3, 1f, 0, 0, 0));
+            Assert.AreEqual(0, MobileQualityRules.ThinGrassCount(3, 0f, 0, 0, 0));
+            Assert.AreEqual(MobileQualityRules.ThinGrassCount(4, 0.4f, 7, 9, 2), MobileQualityRules.ThinGrassCount(4, 0.4f, 7, 9, 2));
+        }
+
+        [Test]
+        public void Low_kuerzere_Schatten_als_High()
+        {
+            Assert.Less(MobileQualityRules.ShadowDistance(MobileQualityRules.Tier.Low), MobileQualityRules.ShadowDistance(MobileQualityRules.Tier.High));
+            Assert.Greater(MobileQualityRules.ShadowDistance(MobileQualityRules.Tier.Low), 15f); // Spieler + nahe Gebäude behalten Schatten
+        }
+
+        [Test]
+        public void Classify_Pixel10_PowerVrDxt_High_alte_PowerVR_Low()
+        {
+            // Google Pixel 10 Pro (Tensor G5): Tester-Feedback 2026-11-03, Boden schwammig auf Low
+            Assert.AreEqual(MobileQualityRules.Tier.High, MobileQualityRules.Classify(false, "PowerVR D-Series DXT-48-1536", 16000));
+            Assert.AreEqual(MobileQualityRules.Tier.High, MobileQualityRules.Classify(false, "Imagination PowerVR DXT-48-1536 MC1", 12000));
+            // Einstiegsgeräte mit PowerVR bleiben Low
+            Assert.AreEqual(MobileQualityRules.Tier.Low, MobileQualityRules.Classify(false, "PowerVR Rogue GE8320", 3000));
+            Assert.AreEqual(MobileQualityRules.Tier.Low, MobileQualityRules.Classify(false, "PowerVR B-Series BXM-8-256", 6000));
+        }
+
+        [Test]
+        public void Grafik_Einstellung_ueberschreibt_Erkennung()
+        {
+            var low = MobileQualityRules.Tier.Low;
+            var high = MobileQualityRules.Tier.High;
+            Assert.AreEqual(low, MobileQualityRules.Resolve(MobileQualityRules.Choice.Auto, low));
+            Assert.AreEqual(high, MobileQualityRules.Resolve(MobileQualityRules.Choice.Auto, high));
+            Assert.AreEqual(low, MobileQualityRules.Resolve(MobileQualityRules.Choice.Fast, high));
+            Assert.AreEqual(high, MobileQualityRules.Resolve(MobileQualityRules.Choice.Pretty, low));
+            Assert.AreEqual("Auto (Schnell)", MobileQualityRules.ChoiceLabel(MobileQualityRules.Choice.Auto, low));
+            Assert.AreEqual("Schön", MobileQualityRules.ChoiceLabel(MobileQualityRules.Choice.Pretty, low));
         }
     }
 }

@@ -7,6 +7,14 @@ namespace ElementalBuddies
     // Flammenwirbel / Frostschlag / Erdbeben / Lichtschwur (R/F/C/V)
     public class KnightKit : ChampionKit
     {
+        // 2026-11-04 Balancing: Der Schwertkämpfer war als Frontkämpfer kaum zäher als die anderen (nur Block gegen Mana).
+        // +50 LP und 20 % Rüstung → effektiv 150 / 0,8 = 187,5 LP gegen jeden Treffer (Berserker: 125 + Lebensraub).
+        [Header("Robustheit")]
+        [Tooltip("Zusätzliche Max-LP des Schwertkämpfers (PlayerAbilities rechnet sie beim Champion-Wechsel an).")]
+        public float HealthBonus = 50f;
+        [Tooltip("Rüstung: Anteil jedes eingehenden Treffers, der wegfällt (0.2 = 20 %). Wirkt vor dem Schildblock, höchstens ArmorRules.MaxArmor.")]
+        [Range(0f, 0.75f)] public float ArmorReduction = 0.2f;
+
         [Header("Schwerthieb (LMB, 3er-Kombo)")]
         public float SlashDamage = 20f;
         [Tooltip("Dritter Schlag der Kombo.")]
@@ -86,6 +94,8 @@ namespace ElementalBuddies
         private Coroutine _leap;
 
         public override ChampionClass Class => ChampionClass.Knight;
+        public override float MaxHealthBonus => HealthBonus;
+        public override float Armor => ArmorReduction;
 
         // ---------------- Effektive Werte (inkl. Händlerkarten) ----------------
 
@@ -458,6 +468,12 @@ namespace ElementalBuddies
 
         // ---------------- Texte ----------------
 
+        public override string DescribePassive()
+        {
+            float armor = ArmorRules.Clamp(ArmorReduction) * 100f;
+            return $"Robust: +{Hi(HealthBonus)} LP und Rüstung {Hi(armor)} % – jeder Treffer macht {Hi(armor)} % weniger Schaden (wirkt vor dem Schildblock).";
+        }
+
         public override string GetName(AbilityId id)
         {
             foreach (var a in Abilities)
@@ -509,7 +525,7 @@ namespace ElementalBuddies
                 case AbilityId.SwordSlash:
                     return $"Schwungvoller Hieb im {Hi(SlashArcEff)}°-Bogen vor dir ({Hi(SlashRangeEff)} m), trifft alle Gegner darin. 3er-Kombo: zwei Hiebe mit {Hi(SlashDamage * dm)} Schaden, der dritte mit {Hi(FinisherDamage * dm)} Schaden und {Hi(FinisherKnockback)} m Rückstoß. Gedrückt halten schlägt weiter.";
                 case AbilityId.ShieldBlock:
-                    return $"Halten: Du hebst den Schild und blockst {Hi(BlockReduction * 100f)} % des Schadens von vorne ({Hi(BlockAngleEff)}°). Jeder geblockte Lebenspunkt kostet {Hi(ManaPerBlockedDamageEff)} Mana – ist das Mana leer, bricht der Block ({Hi(BlockBreakCooldownEff)} s Sperre). Beim Blocken läufst du mit {Hi(BlockMoveMultiplierEff * 100f)} % Tempo und kannst nicht zuschlagen.";
+                    return $"Halten: Du hebst den Schild und blockst {Hi(BlockReduction * 100f)} % des Schadens von vorne ({Hi(BlockAngleEff)}°). Jeder geblockte Lebenspunkt (nach Rüstung) kostet {Hi(ManaPerBlockedDamageEff)} Mana – ist das Mana leer, bricht der Block ({Hi(BlockBreakCooldownEff)} s Sperre). Beim Blocken läufst du mit {Hi(BlockMoveMultiplierEff * 100f)} % Tempo und kannst nicht zuschlagen.";
                 case AbilityId.FlameWhirl:
                 {
                     var s = Modded(FlameWhirl, id);

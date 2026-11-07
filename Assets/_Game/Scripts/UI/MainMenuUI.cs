@@ -258,6 +258,7 @@ namespace ElementalBuddies
             Select(start, true);
             MainMenuMeta.Attach(this); // Nächstes Ziel, Belagerungsstufe, Kodex (Plan Fesselung E3/E4/E6)
             KeyBindingsMenu.Attach(this); // Einstellungen → Tastaturbelegung (Touch: entfällt)
+            ShopUI.Attach(this); // Knopf „Shop“ + Shop-Seite (Skins), zur Laufzeit gebaut
             if (Application.isPlaying && MobilePlatform.TouchMode) ApplyTouch();
         }
 
@@ -315,6 +316,7 @@ namespace ElementalBuddies
         {
             UpdateNetwork();
             if (_loading) return;
+            if (ShopUI.IsOpen) return; // Shop-Seite offen: eigene Tasten (Esc, Reiter), Menü-Tasten pausieren
             HandleGamepad();
 
             var kb = Keyboard.current;

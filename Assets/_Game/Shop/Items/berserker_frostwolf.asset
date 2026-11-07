@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811417d07595845e49d48e75c3c8703e, type: 3}
+  m_Name: berserker_frostwolf
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShopItemSO
+  Id: berserker_frostwolf
+  Class: 3
+  Slot: 1
+  Tier: 1
+  DisplayName: Frostwolf
+  Description: "Wei\xDFes Wolfsfell und eisblaue Kriegsbemalung aus dem Norden."
+  Price: 200
+  Icon: {fileID: 21300000, guid: 197d043ddfccd41e0a7f2737d2a2e53d, type: 3}
+  NetIndex: 1
+  RightHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  LeftHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Back:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Materials:
+  - SourceMaterial: Hero2_Fur
+    Replacement: {fileID: 2100000, guid: 8825dd2e75d4445b6b08cf49241f356b, type: 2}
+  - SourceMaterial: Berserker2_FurLight
+    Replacement: {fileID: 2100000, guid: 4ffc9eb71fb81419d88ecec268bb90a3, type: 2}
+  - SourceMaterial: Berserker2_FurDark
+    Replacement: {fileID: 2100000, guid: f967a9fa3acb046bba88d283c5fb3aa1, type: 2}
+  - SourceMaterial: Hero2_WarPaint
+    Replacement: {fileID: 2100000, guid: 62119629134f74a6a81d3e8e175cfbe5, type: 2}
+  - SourceMaterial: Berserker2_Red
+    Replacement: {fileID: 2100000, guid: 38daa6c1365ef4131bf47410d718f9ea, type: 2}
+  - SourceMaterial: Berserker2_RedDark
+    Replacement: {fileID: 2100000, guid: 829aad8325d3044ac837594ca62d73e1, type: 2}
+  - SourceMaterial: Berserker2_Iron
+    Replacement: {fileID: 2100000, guid: 310abb0c48cc64b66acbc2170c6e4d8e, type: 2}
+  - SourceMaterial: Berserker2_IronDark
+    Replacement: {fileID: 2100000, guid: 4d65ca37e860c443c84f96a78fb956c1, type: 2}
+  - SourceMaterial: Berserker2_Bronze
+    Replacement: {fileID: 2100000, guid: dfd012fbe5948494084a5d27bcc461e9, type: 2}
+  - SourceMaterial: Berserker2_Hair
+    Replacement: {fileID: 2100000, guid: b038e9f76af9f41a78ec10082fac25a9, type: 2}
+  - SourceMaterial: Berserker2_HairDark
+    Replacement: {fileID: 2100000, guid: 161dc6c1902d644309ef4ab9229e0657, type: 2}
+  - SourceMaterial: Berserker2_Leather
+    Replacement: {fileID: 2100000, guid: a0bde2c8cdb9e427094e5d55802831d7, type: 2}
+  - SourceMaterial: Berserker2_LeatherDark
+    Replacement: {fileID: 2100000, guid: 700ba0ecf0c674fa9b6bad39ec3ac387, type: 2}
+  - SourceMaterial: Berserker2_Trousers
+    Replacement: {fileID: 2100000, guid: 43a60fea9b68848b68c112a82f3f71b0, type: 2}
+  - SourceMaterial: Berserker2_Ochre
+    Replacement: {fileID: 2100000, guid: 1166f89759c0348a69a7a7424263d04b, type: 2}
+  - SourceMaterial: Berserker2_Wrap
+    Replacement: {fileID: 2100000, guid: bb2115ff8d28a4de1890fa558aebd6bc, type: 2}
+  - SourceMaterial: Berserker2_HornTip
+    Replacement: {fileID: 2100000, guid: 7563dc25665ae4879a051e6a2944cdce, type: 2}
+  AddOns: []

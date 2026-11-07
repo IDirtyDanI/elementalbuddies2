@@ -7,7 +7,8 @@ using UnityEngine;
 namespace ElementalBuddies
 {
     // Netcode-Spielerobjekt (PlayerPrefab des NetworkManagers). Existiert ab dem Verbinden – schon in der Lobby –
-    // und überlebt Szenenwechsel. Hält Lobby-Daten (Name, Champion, Bereit) und die persönliche Händlerwährung (Gold).
+    // und überlebt Szenenwechsel. Hält Lobby-Daten (Name, Champion, Bereit, Skin-Ausrüstung) und die persönliche
+    // Händlerwährung (Gold).
     // Die Spielfigur selbst ist ein eigenes Objekt (PlayerAvatar), das der Server in der Spielszene spawnt.
     public class NetPlayer : NetworkBehaviour
     {
@@ -16,7 +17,7 @@ namespace ElementalBuddies
 
         public static event Action<NetPlayer> OnPlayerJoined;
         public static event Action<NetPlayer> OnPlayerLeft;
-        public static event Action OnLobbyChanged; // Name/Champion/Bereit eines Spielers geändert
+        public static event Action OnLobbyChanged; // Name/Champion/Bereit/Ausrüstung eines Spielers geändert
 
         public readonly NetworkVariable<FixedString64Bytes> PlayerName = new NetworkVariable<FixedString64Bytes>(
             default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -24,6 +25,9 @@ namespace ElementalBuddies
             0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         public readonly NetworkVariable<bool> Ready = new NetworkVariable<bool>(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Skin-Ausrüstung aller Klassen (gepackt, ShopRules; 0 = Standard). Der Besitzer sendet ShopInventory.LocalLoadout.
+        public readonly NetworkVariable<int> Loadout = new NetworkVariable<int>(
+            0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         // Persönliche Händlerwährung. Nur der Server schreibt (AddGold / TrySpendGold).
         public readonly NetworkVariable<float> Gold = new NetworkVariable<float>(
@@ -56,12 +60,15 @@ namespace ElementalBuddies
             if (IsOwner)
             {
                 Local = this;
-                SubmitLobbyDataRpc(new FixedString64Bytes(LocalPlayerName), (int)GameSession.SelectedChampion);
+                SubmitLobbyDataRpc(new FixedString64Bytes(LocalPlayerName), (int)GameSession.SelectedChampion, ShopInventory.LocalLoadout);
+                ShopInventory.Changed -= HandleShopChanged;
+                ShopInventory.Changed += HandleShopChanged;
             }
 
             PlayerName.OnValueChanged += OnLobbyValueChanged;
             Champion.OnValueChanged += OnLobbyValueChanged;
             Ready.OnValueChanged += OnLobbyValueChanged;
+            Loadout.OnValueChanged += OnLobbyValueChanged;
             Gold.OnValueChanged += HandleGoldChanged;
 
             OnPlayerJoined?.Invoke(this);
@@ -73,7 +80,9 @@ namespace ElementalBuddies
             PlayerName.OnValueChanged -= OnLobbyValueChanged;
             Champion.OnValueChanged -= OnLobbyValueChanged;
             Ready.OnValueChanged -= OnLobbyValueChanged;
+            Loadout.OnValueChanged -= OnLobbyValueChanged;
             Gold.OnValueChanged -= HandleGoldChanged;
+            ShopInventory.Changed -= HandleShopChanged;
 
             All.Remove(this);
             if (Local == this) Local = null;
@@ -83,6 +92,7 @@ namespace ElementalBuddies
 
         public override void OnDestroy()
         {
+            ShopInventory.Changed -= HandleShopChanged;
             All.Remove(this);
             if (Local == this) Local = null;
             base.OnDestroy();
@@ -94,12 +104,13 @@ namespace ElementalBuddies
         // ---------------- Lobby ----------------
 
         [Rpc(SendTo.Server)]
-        private void SubmitLobbyDataRpc(FixedString64Bytes playerName, int champion)
+        private void SubmitLobbyDataRpc(FixedString64Bytes playerName, int champion, int loadout)
         {
             string n = playerName.ToString().Trim();
             if (string.IsNullOrEmpty(n)) n = "Spieler " + (Slot + 1);
             PlayerName.Value = new FixedString64Bytes(n);
             Champion.Value = (int)GameSession.ClampChampion(champion);
+            Loadout.Value = loadout;
         }
 
         // Champion-Wahl in der Lobby (vom Besitzer aufgerufen)
@@ -110,6 +121,19 @@ namespace ElementalBuddies
 
         [Rpc(SendTo.Server)]
         private void SetChampionRpc(int champion) => Champion.Value = (int)GameSession.ClampChampion(champion);
+
+        // Skin-Ausrüstung (gepackt, ShopRules) – vom Besitzer; jeder int ist gültig (je 4 Bit NetIndex 0..15)
+        public void RequestLoadout(int loadout)
+        {
+            if (IsOwner && IsSpawned) SetLoadoutRpc(loadout);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void SetLoadoutRpc(int loadout) => Loadout.Value = loadout;
+
+        // Besitzer: Shop-Ausrüstung geändert → an alle
+        // (immer senden – ein Vergleich mit Loadout.Value verschluckt schnelles Hin und Zurück, solange das RPC unterwegs ist)
+        private void HandleShopChanged() => RequestLoadout(ShopInventory.LocalLoadout);
 
         public void RequestReady(bool ready)
         {

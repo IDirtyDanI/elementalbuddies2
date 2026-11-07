@@ -18,6 +18,9 @@ namespace ElementalBuddies
             public ParticleSystem Motes;
             [HideInInspector] public GameObject Instance;
             [HideInInspector] public float Turn;
+            [HideInInspector] public bool Locked;
+            [HideInInspector] public float LockBrightness;
+            [HideInInspector] public bool Trying; // Anprobe aktiv (PreviewSkin) – Shop-Änderungen überschreiben sie nicht
         }
 
         public Pedestal[] Pedestals = new Pedestal[0];
@@ -60,6 +63,17 @@ namespace ElementalBuddies
             CacheBase();
         }
 
+        void OnEnable()
+        {
+            ShopInventory.Changed -= HandleShopChanged;
+            ShopInventory.Changed += HandleShopChanged;
+        }
+
+        void OnDisable()
+        {
+            ShopInventory.Changed -= HandleShopChanged;
+        }
+
         private void CacheBase()
         {
             if (_baseCached) return;
@@ -83,6 +97,7 @@ namespace ElementalBuddies
                 if (def == null || def.PreviewPrefab == null) continue;
 
                 p.Turn = 0f;
+                p.Trying = false;
                 p.Instance = Instantiate(def.PreviewPrefab, p.Anchor.position, Quaternion.identity, p.Anchor);
                 p.Instance.name = def.PreviewPrefab.name;
                 PrepareAnimators(p.Instance);
@@ -96,7 +111,51 @@ namespace ElementalBuddies
                 // Spotlicht warmweiß, leicht in der Akzentfarbe getönt
                 if (p.Spot != null) p.Spot.color = Color.Lerp(new Color(1f, 0.9f, 0.75f), def.AccentColor, 0.3f);
             }
+            ApplyEquippedSkins();
         }
+
+        // ---------------- Skins (Shop) ----------------
+
+        // Ausgerüstete Skins (ShopInventory) auf alle Vorschauen ohne laufende Anprobe
+        public void ApplyEquippedSkins()
+        {
+            if (!Application.isPlaying) return;
+            foreach (var p in Pedestals)
+                if (p != null && p.Instance != null && !p.Trying) ApplySkin(p, ShopInventory.GetEquipped(p.Class, ShopSlot.Weapon), ShopInventory.GetEquipped(p.Class, ShopSlot.Armor));
+        }
+
+        // Anprobe: Items live auf der Vorschau der Klasse zeigen (null = Standard für diesen Slot)
+        public void PreviewSkin(ChampionClass cls, ShopItemSO weapon, ShopItemSO armor)
+        {
+            if (!Application.isPlaying) return;
+            foreach (var p in Pedestals)
+            {
+                if (p == null || p.Class != cls || p.Instance == null) continue;
+                p.Trying = true;
+                ApplySkin(p, weapon, armor);
+            }
+        }
+
+        // Anprobe beenden: zurück zur ausgerüsteten Ausrüstung
+        public void ResetPreview(ChampionClass cls)
+        {
+            if (!Application.isPlaying) return;
+            foreach (var p in Pedestals)
+            {
+                if (p == null || p.Class != cls || p.Instance == null) continue;
+                p.Trying = false;
+                ApplySkin(p, ShopInventory.GetEquipped(cls, ShopSlot.Weapon), ShopInventory.GetEquipped(cls, ShopSlot.Armor));
+            }
+        }
+
+        private void ApplySkin(Pedestal p, ShopItemSO weapon, ShopItemSO armor)
+        {
+            ChampionSkin.ApplyTo(p.Instance, p.Class, weapon, armor);
+            // Abdunkelung gesperrter Champions hängt an den Materialien → nach dem Tausch neu setzen
+            if (p.Locked) SetLocked(p.Class, true, p.LockBrightness);
+        }
+
+        private void HandleShopChanged() => ApplyEquippedSkins();
 
         // Animator auf Idle stellen (Parameter nur setzen, wenn vorhanden – Controller der neuen Modelle können abweichen)
         private static void PrepareAnimators(GameObject root)
@@ -174,6 +233,8 @@ namespace ElementalBuddies
             foreach (var p in Pedestals)
             {
                 if (p == null || p.Class != c || p.Instance == null) continue;
+                p.Locked = locked;
+                p.LockBrightness = brightness;
                 var block = new MaterialPropertyBlock();
                 foreach (var r in p.Instance.GetComponentsInChildren<Renderer>(true))
                 {
