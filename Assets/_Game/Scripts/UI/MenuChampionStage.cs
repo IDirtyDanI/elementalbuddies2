@@ -2,9 +2,13 @@ using UnityEngine;
 
 namespace ElementalBuddies
 {
-    // 3D-Bühne im Hauptmenü: drei Sockel auf einer Drehscheibe (Karussell) mit den Champion-Vorschauen
-    // (ChampionDefinitionSO.PreviewPrefab). Der gewählte Champion dreht nach vorne, bekommt Spotlicht und Funken
-    // und pendelt langsam hin und her; die Kamera schwebt sanft.
+    // 3D-Bühne im Hauptmenü: Sockel auf einer Drehscheibe (Karussell) mit den Champion-Vorschauen
+    // (ChampionDefinitionSO.PreviewPrefab). Der gewählte Champion bekommt Spotlicht und Funken und pendelt langsam hin
+    // und her; die Kamera schwebt sanft.
+    // Seit 2026-11-09 (Auswahl-Karte mit Pfeilen) im Play Mode „Einzelfigur“: Alle Sockel stehen zur Laufzeit am
+    // vorderen Platz der Drehscheibe, vergrößert (SingleScale), und nur der gewählte ist aktiv. Beim Wechsel schiebt sich
+    // die alte Figur in Blätterrichtung hinaus (dreht weg, wird kleiner) und die neue von der anderen Seite herein
+    // (SwapDuration). Die Szene bleibt unverändert; im Edit-Modus (Vorschau-Renders des Builders) gilt das Karussell.
     public class MenuChampionStage : MonoBehaviour
     {
         [System.Serializable]
@@ -21,6 +25,12 @@ namespace ElementalBuddies
             [HideInInspector] public bool Locked;
             [HideInInspector] public float LockBrightness;
             [HideInInspector] public bool Trying; // Anprobe aktiv (PreviewSkin) – Shop-Änderungen überschreiben sie nicht
+            // Einzelfigur: Wechsel-Animation (0 = keine, +1 = schiebt herein, −1 = schiebt hinaus)
+            [HideInInspector] public int Swap;
+            [HideInInspector] public int SwapDir;
+            [HideInInspector] public float SwapT;
+            [HideInInspector] public float SwapYaw;
+            [HideInInspector] public Vector3 BaseScale = Vector3.one;
         }
 
         public Pedestal[] Pedestals = new Pedestal[0];
@@ -47,6 +57,20 @@ namespace ElementalBuddies
         public float SpotIntensityIdle = 3f;
         public float SpotFade = 3f;
 
+        [Header("Einzelfigur (Auswahl-Karte, 2026-11-09)")]
+        [Tooltip("Play Mode: nur der gewählte Champion steht (vergrößert) vorne auf der Bühne, Wechsel mit Schiebe-Animation.")]
+        public bool SingleFigure = true;
+        [Tooltip("Vergrößerung des Sockels samt Figur im Einzelfigur-Modus.")]
+        public float SingleScale = 1.2f;
+        [Tooltip("Dauer des Wechsels (s).")]
+        public float SwapDuration = 0.35f;
+        [Tooltip("So weit (m, quer zur Kamera) schiebt sich die Figur hinaus bzw. kommt herein.")]
+        public float SwapDistance = 2.4f;
+        [Tooltip("Drehung (Grad) der Figur am Rand des Wechsels.")]
+        public float SwapTurn = 70f;
+        [Tooltip("Größe der Figur am Rand des Wechsels (1 = unverändert).")]
+        public float SwapShrink = 0.6f;
+
         private Vector3 _camBasePos;
         private Vector3 _lookBase;
         private bool _baseCached;
@@ -54,8 +78,12 @@ namespace ElementalBuddies
         private float _carouselYaw;
         private float _carouselTarget;
         private float _time;
+        private bool _singleLaidOut;
 
         public int SelectedIndex { get { return _selected; } }
+
+        // Einzelfigur-Modus aktiv (nur im Play Mode, damit der Builder im Edit-Modus das Karussell rendert)
+        public bool Single => SingleFigure && Application.isPlaying && Carousel != null && Pedestals.Length > 0;
 
         void Awake()
         {
@@ -88,6 +116,7 @@ namespace ElementalBuddies
         {
             CacheBase();
             EnsurePedestals(defs);
+            if (Single) LayoutSingle();
             foreach (var p in Pedestals)
             {
                 if (p == null || p.Anchor == null) continue;
@@ -101,6 +130,9 @@ namespace ElementalBuddies
                 p.Trying = false;
                 p.Instance = Instantiate(def.PreviewPrefab, p.Anchor.position, Quaternion.identity, p.Anchor);
                 p.Instance.name = def.PreviewPrefab.name;
+                p.BaseScale = p.Instance.transform.localScale;
+                p.Swap = 0;
+                p.SwapYaw = 0f;
                 PrepareAnimators(p.Instance);
                 FaceCamera(p);
 
@@ -158,6 +190,41 @@ namespace ElementalBuddies
             Pedestals = ordered.ToArray();
         }
 
+        // Einzelfigur: alle Sockel an den vorderen Platz der Drehscheibe (zur Kamera hin), vergrößert; sichtbar ist nur der
+        // gewählte (Focus). Der Platz ist derselbe, an dem vorher der gewählte Sockel stand (ShopUI.FrontPoint gilt weiter).
+        private void LayoutSingle()
+        {
+            if (_singleLaidOut || Carousel == null) return;
+            _singleLaidOut = true;
+            Vector3 first = Vector3.zero;
+            float radius = 0f;
+            foreach (var p in Pedestals)
+            {
+                var ped = p != null && p.Anchor != null ? p.Anchor.parent : null;
+                if (ped == null || ped.parent != Carousel) continue;
+                Vector3 lp = ped.localPosition;
+                if (radius <= 0f) first = lp;
+                radius = Mathf.Max(radius, new Vector2(lp.x, lp.z).magnitude);
+            }
+            if (radius < 0.01f) radius = 1.45f;
+            Vector3 toCam = Cam != null ? _camBasePos - Carousel.position : Vector3.back;
+            toCam.y = 0f;
+            if (toCam.sqrMagnitude < 0.0001f) toCam = Vector3.back;
+            Vector3 dir = Carousel.InverseTransformDirection(toCam.normalized);
+            dir.y = 0f;
+            dir.Normalize();
+            float a = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
+            foreach (var p in Pedestals)
+            {
+                var ped = p != null && p.Anchor != null ? p.Anchor.parent : null;
+                if (ped == null || ped.parent != Carousel) continue;
+                ped.localPosition = dir * radius + Vector3.up * first.y;
+                ped.localRotation = Quaternion.Euler(0f, a + 180f, 0f); // wie EnsurePedestals: Sockel schaut zur Mitte
+                ped.localScale = Vector3.one * SingleScale;
+                ped.gameObject.SetActive(false); // Focus schaltet den gewählten ein
+            }
+        }
+
         private static Pedestal FindPedestal(System.Collections.Generic.List<Pedestal> list, ChampionClass c)
         {
             foreach (var p in list) if (p != null && p.Class == c) return p;
@@ -210,11 +277,13 @@ namespace ElementalBuddies
         // Animator auf Idle stellen (Parameter nur setzen, wenn vorhanden – Controller der neuen Modelle können abweichen)
         private static void PrepareAnimators(GameObject root)
         {
-            foreach (var anim in root.GetComponentsInChildren<Animator>())
+            foreach (var anim in root.GetComponentsInChildren<Animator>(true))
             {
                 anim.applyRootMotion = false;
+                anim.keepAnimatorStateOnDisable = true; // Einzelfigur: Sockel werden aus- und eingeschaltet
                 anim.updateMode = AnimatorUpdateMode.UnscaledTime;
-                if (anim.runtimeAnimatorController == null || !Application.isPlaying) continue;
+                // Parameter nur an aktiven Animatoren setzen (Einzelfigur: Sockel inaktiv → beim Einschalten erneut)
+                if (anim.runtimeAnimatorController == null || !Application.isPlaying || !anim.isActiveAndEnabled) continue;
                 foreach (var prm in anim.parameters)
                 {
                     if (prm.name == "Grounded" && prm.type == AnimatorControllerParameterType.Bool) anim.SetBool("Grounded", true);
@@ -237,15 +306,20 @@ namespace ElementalBuddies
         }
 
         // Champion hervorheben. instant = ohne Überblendung (Start, Edit-Vorschau).
-        public void Focus(ChampionClass c, bool instant)
+        public void Focus(ChampionClass c, bool instant) => Focus(c, instant, 0);
+
+        // dir = Blätterrichtung für die Wechsel-Animation (+1 nächste, −1 vorige, 0 = kürzerer Weg)
+        public void Focus(ChampionClass c, bool instant, int dir)
         {
             CacheBase();
+            int prev = _selected;
             _selected = -1;
             for (int i = 0; i < Pedestals.Length; i++)
                 if (Pedestals[i] != null && Pedestals[i].Class == c) _selected = i;
 
+            if (Single) FocusSingle(prev, instant, dir);
             // Drehscheibe so drehen, dass der gewählte Sockel zur Kamera zeigt
-            if (Carousel != null && _selected >= 0 && Pedestals[_selected].Anchor != null)
+            else if (Carousel != null && _selected >= 0 && Pedestals[_selected].Anchor != null)
             {
                 Vector3 local = Carousel.InverseTransformPoint(Pedestals[_selected].Anchor.position);
                 float pedAngle = Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg;
@@ -275,6 +349,125 @@ namespace ElementalBuddies
                 }
             }
             if (instant) ApplyCamera();
+        }
+
+        // ---------------- Einzelfigur ----------------
+
+        private void FocusSingle(int prev, bool instant, int dir)
+        {
+            LayoutSingle();
+            bool animate = !instant && prev >= 0 && prev < Pedestals.Length && prev != _selected && _selected >= 0
+                           && SwapDuration > 0.01f && Pedestals[prev] != null && Pedestals[prev].Instance != null
+                           && Pedestals[prev].Anchor != null && Pedestals[prev].Anchor.parent.gameObject.activeSelf;
+            if (prev == _selected && _selected >= 0)
+            {
+                SetPedestalActive(Pedestals[_selected], true); // gleiche Wahl (Lobby, Shop schließen): nichts animieren
+                return;
+            }
+            if (dir == 0) dir = ChampionCarouselRules.Direction(prev, _selected, Pedestals.Length);
+            if (dir == 0) dir = 1;
+            for (int i = 0; i < Pedestals.Length; i++)
+            {
+                var p = Pedestals[i];
+                if (p == null) continue;
+                if (i == _selected)
+                {
+                    SetPedestalActive(p, true);
+                    SetBaseVisible(p, true);
+                    p.Swap = animate ? 1 : 0;
+                    p.SwapDir = dir;
+                    p.SwapT = 0f;
+                }
+                else if (animate && i == prev)
+                {
+                    // Sockel bleibt (der neue steht an derselben Stelle), nur die Figur schiebt sich hinaus
+                    SetBaseVisible(p, false);
+                    p.Swap = -1;
+                    p.SwapDir = dir;
+                    p.SwapT = 0f;
+                }
+                else
+                {
+                    p.Swap = 0;
+                    SetPedestalActive(p, false);
+                }
+                ApplySwapPose(p);
+            }
+        }
+
+        private void SetPedestalActive(Pedestal p, bool on)
+        {
+            var ped = p != null && p.Anchor != null ? p.Anchor.parent : null;
+            if (ped == null) return;
+            if (!on)
+            {
+                p.Swap = 0;
+                p.SwapYaw = 0f;
+                ResetFigure(p);
+                SetBaseVisible(p, true);
+            }
+            if (ped.gameObject.activeSelf == on) return;
+            ped.gameObject.SetActive(on);
+            if (on && p.Instance != null) PrepareAnimators(p.Instance);
+        }
+
+        // Steinsockel (alles außer Figur und Funken) ein-/ausblenden – zwei gleiche Sockel am selben Platz würden flackern
+        private static void SetBaseVisible(Pedestal p, bool on)
+        {
+            var ped = p != null && p.Anchor != null ? p.Anchor.parent : null;
+            if (ped == null) return;
+            foreach (var r in ped.GetComponentsInChildren<Renderer>(true))
+            {
+                if (r is ParticleSystemRenderer) continue;
+                if (p.Instance != null && r.transform.IsChildOf(p.Instance.transform)) continue;
+                r.enabled = on;
+            }
+        }
+
+        private static void ResetFigure(Pedestal p)
+        {
+            if (p.Instance == null || p.Anchor == null) return;
+            p.Instance.transform.position = p.Anchor.position;
+            p.Instance.transform.localScale = p.BaseScale;
+        }
+
+        // Figur während des Wechsels: seitlich versetzt (quer zur Kamera), gedreht und verkleinert
+        private void ApplySwapPose(Pedestal p)
+        {
+            if (p == null || p.Instance == null || p.Anchor == null) return;
+            if (p.Swap == 0)
+            {
+                p.SwapYaw = 0f;
+                ResetFigure(p);
+                return;
+            }
+            // Neue Figur: von der Seite der Blätterrichtung (+1 = von rechts) zur Mitte; alte: zur anderen Seite hinaus
+            float e = ChampionCarouselRules.EaseOut(p.SwapT);
+            float away = p.Swap > 0 ? 1f - e : e;          // 0 = in der Mitte, 1 = am Rand
+            float side = p.Swap > 0 ? p.SwapDir : -p.SwapDir;
+            Vector3 right = Cam != null ? Cam.transform.right : Vector3.right;
+            right.y = 0f;
+            if (right.sqrMagnitude < 0.0001f) right = Vector3.right;
+            right.Normalize();
+            p.Instance.transform.position = p.Anchor.position + right * (side * SwapDistance * away * SingleScale);
+            p.Instance.transform.localScale = p.BaseScale * Mathf.Lerp(1f, SwapShrink, away);
+            p.SwapYaw = side * SwapTurn * away;
+        }
+
+        private void UpdateSwaps(float dt)
+        {
+            for (int i = 0; i < Pedestals.Length; i++)
+            {
+                var p = Pedestals[i];
+                if (p == null || p.Swap == 0) continue;
+                p.SwapT += dt / Mathf.Max(0.01f, SwapDuration);
+                if (p.SwapT >= 1f)
+                {
+                    if (p.Swap < 0) SetPedestalActive(p, false); // alte Figur ist draußen
+                    p.Swap = 0;
+                }
+                ApplySwapPose(p);
+            }
         }
 
         // Gesperrte Champions abgedunkelt zeigen (MaterialPropertyBlock auf _BaseColor/_Color, Materialien bleiben unverändert)
@@ -333,7 +526,7 @@ namespace ElementalBuddies
             Vector3 dir = camPos - p.Instance.transform.position;
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.0001f) return;
-            p.Instance.transform.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up) * Quaternion.Euler(0f, p.Turn, 0f);
+            p.Instance.transform.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up) * Quaternion.Euler(0f, p.Turn + p.SwapYaw, 0f);
         }
 
         void Update()
@@ -341,8 +534,9 @@ namespace ElementalBuddies
             float dt = Time.unscaledDeltaTime;
             _time += dt;
 
-            if (Carousel != null)
+            if (Carousel != null && !Single)
                 SetCarousel(Mathf.LerpAngle(_carouselYaw, _carouselTarget, 1f - Mathf.Exp(-CarouselSmooth * dt)));
+            if (Single) UpdateSwaps(dt);
 
             for (int i = 0; i < Pedestals.Length; i++)
             {

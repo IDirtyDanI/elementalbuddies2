@@ -206,6 +206,9 @@ namespace ElementalBuddies.EditorTools
             yield return new Sfx(SfxId.TideWave, 0.6f, 0.3f, P, "tide_wave");
             yield return new Sfx(SfxId.StoneSkin, 0.45f, 1f, P, "stone_skin");
             yield return new Sfx(SfxId.AncestorHowl, 0.6f, 1f, new Vector2(0.97f, 1.03f), "ancestor_howl");
+            // Intro-Cutscene beim Start von Welle 1 (2026-11-09): einmalig, 2D, feste Tonhöhe; Pegel wie die anderen Stinger
+            yield return new Sfx(SfxId.IntroHorn, 0.8f, 2f, PFix, "intro_horn");
+            yield return new Sfx(SfxId.PortalSurge, 0.75f, 1f, PFix, "portal_surge");
             // Walddorf (2026-10-16, Etappe 3): Pegel wie die Untoten-Gegenstücke (Kategorie in synth_sfx.py), Zuordnung über
             // EnemyConfigSO (MeleeHitSfx/AttackSfx/DeathSfx/SpawnSfx, ForestAudioSetup) und Theme_Forest.BossSpawnSfx
             yield return new Sfx(SfxId.OrkGrunt, 0.42f, 0.05f, P, "ork_grunt");              // wie EnemyChop
@@ -246,8 +249,11 @@ namespace ElementalBuddies.EditorTools
             yield return new Sfx(SfxId.Fusion, 0.6f, 0.2f, new Vector2(1.35f, 1.45f), "explosion2");
             yield return new Sfx(SfxId.FrostNova, 0.8f, 0.1f, new Vector2(0.75f, 0.8f), "ice_shot2");
             yield return new Sfx(SfxId.HolyCircle, 0.6f, 0.1f, new Vector2(1.35f, 1.45f), "ice_shot2");
-            yield return new Sfx(SfxId.PlayerHurt, 0.55f, 0.7f, P, "player_hurt2");
-            yield return new Sfx(SfxId.ShrineCaptured, 0.7f, 1f, PFix, "battleshout2");
+            // 2026-11-09: neuer Treffer-Laut (Körpertreffer + Ausatmen, 3 Varianten) statt player_hurt2 (Nutzerwunsch)
+            yield return new Sfx(SfxId.PlayerHurt, 0.5f, 0.7f, P, "player_hurt3_a", "player_hurt3_b", "player_hurt3_c");
+            // 2026-11-09: Schrein und Erfolg mit eigenen Klängen statt battleshout2 (Nutzerwunsch: klar unterscheidbar)
+            yield return new Sfx(SfxId.ShrineCaptured, 0.7f, 1f, PFix, "shrine_capture");
+            yield return new Sfx(SfxId.AchievementUnlocked, 0.7f, 0.5f, PFix, "achievement_unlock");
             yield return new Sfx(SfxId.BossSpawn, 0.9f, 1f, new Vector2(0.55f, 0.6f), "battleshout2");
         }
 

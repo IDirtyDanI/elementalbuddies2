@@ -473,13 +473,15 @@ MonoBehaviour:
     MinInterval: 0.06
   - Id: 8
     Clips:
-    - {fileID: 8300000, guid: 64dcfeac1f6fe43a0a171c99429505b5, type: 3}
-    Volume: 0.55
+    - {fileID: 8300000, guid: d7a0523afb4b94c35a13004af15f9cfb, type: 3}
+    - {fileID: 8300000, guid: f4ad172faae67401ba07e222fe6005da, type: 3}
+    - {fileID: 8300000, guid: bf767ca4622cf4e1c863d8b3e917f3ef, type: 3}
+    Volume: 0.5
     Pitch: {x: 0.95, y: 1.05}
     MinInterval: 0.7
   - Id: 9
     Clips:
-    - {fileID: 8300000, guid: 0154d131c9f8c451cbb9f5be5c844792, type: 3}
+    - {fileID: 8300000, guid: e3edfa2fcc41f4d9b830280a647209d0, type: 3}
     Volume: 0.7
     Pitch: {x: 1, y: 1}
     MinInterval: 1
@@ -1026,6 +1028,24 @@ MonoBehaviour:
     Volume: 0.6
     Pitch: {x: 0.97, y: 1.03}
     MinInterval: 1
+  - Id: 100
+    Clips:
+    - {fileID: 8300000, guid: 439c386f50312454291e4ef2c5e09ecc, type: 3}
+    Volume: 0.8
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 101
+    Clips:
+    - {fileID: 8300000, guid: cd01847308417497ca738cd025716eab, type: 3}
+    Volume: 0.75
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 102
+    Clips:
+    - {fileID: 8300000, guid: f51dbac9e999a4296837a38b395e83fb, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.5
   MusicClip: {fileID: 0}
   MusicVolume: 0.2
   MusicFadeIn: 2
@@ -1314,7 +1334,7 @@ MonoBehaviour:
   ScanInterval: 0.5
   ShowToast: 1
   UsePopup: 1
-  Sound: 9
+  Sound: 102
 --- !u!114 &3144153159232174494
 MonoBehaviour:
   m_ObjectHideFlags: 0

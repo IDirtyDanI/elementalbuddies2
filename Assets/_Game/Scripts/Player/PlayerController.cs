@@ -209,6 +209,8 @@ namespace ElementalBuddies
             if (PauseManager.IsPaused) return;
 
             HandleMovement();
+            // Intro-Film: keine Eingabe (Schwerkraft/Bodenkontakt laufen in HandleMovement weiter)
+            if (IntroCutscene.IsPlaying) { GuardFallingThroughMap(); return; }
             if (_touch) ApplyTouchAim();
             else if (!RotationLocked) HandleRotation();
             else UpdateAimPoint();
@@ -270,7 +272,8 @@ namespace ElementalBuddies
         {
             if (MoveAction == null || _characterController == null || !_characterController.enabled) return;
 
-            Vector2 input = MovementLocked ? Vector2.zero : ReadMoveInput();
+            bool inputLocked = MovementLocked || IntroCutscene.IsPlaying; // Intro-Film: stehen bleiben, aber weiter fallen
+            Vector2 input = inputLocked ? Vector2.zero : ReadMoveInput();
             // Kamerabezogen: W läuft immer „ins Bild hinein“, auch wenn die Kamera um die Figur gedreht ist
             Vector3 moveInput = ToWorldDirection(input);
 
@@ -286,10 +289,10 @@ namespace ElementalBuddies
             }
 
             // Sprung: Tastendruck puffern (JumpBufferTime), kurz nach Verlassen des Bodens noch erlaubt (CoyoteTime)
-            if (MovementLocked) _jumpPressedTime = float.NegativeInfinity;
+            if (inputLocked) _jumpPressedTime = float.NegativeInfinity;
             else if ((JumpAction != null && JumpAction.WasPressedThisFrame()) || TouchJumpPressed()) _jumpPressedTime = now;
 
-            if (!MovementLocked && now - _jumpPressedTime <= JumpBufferTime && now - _lastGroundedTime <= CoyoteTime)
+            if (!inputLocked && now - _jumpPressedTime <= JumpBufferTime && now - _lastGroundedTime <= CoyoteTime)
             {
                 _playerVelocity.y = JumpForce;
                 _jumpPressedTime = float.NegativeInfinity;

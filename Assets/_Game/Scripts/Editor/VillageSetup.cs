@@ -436,7 +436,10 @@ namespace ElementalBuddies.EditorTools
                 l.diffuseTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(defs[i].tex);
                 if (l.diffuseTexture == null) Debug.LogWarning("VillageSetup: Textur fehlt " + defs[i].tex);
                 l.tileSize = new Vector2(defs[i].tile, defs[i].tile);
-                l.smoothness = 0f;
+                // 2026-11-09: Glätte fest statt aus dem Textur-Alpha – die Texturen haben Alpha 1, das ergab
+                // spiegelnden Boden (Sonnen-Glanzfleck). Pflaster mit einem Hauch Glanz, Natur matt.
+                l.smoothnessSource = TerrainLayerSmoothnessSource.Constant;
+                l.smoothness = defs[i].name == "Walddorf_Pflaster" ? 0.05f : 0f;
                 l.metallic = 0f;
                 EditorUtility.SetDirty(l);
                 layers[i] = l;

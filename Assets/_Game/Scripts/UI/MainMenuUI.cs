@@ -11,7 +11,8 @@ using TMPro;
 
 namespace ElementalBuddies
 {
-    // Hauptmenü (Szene MainMenu): Champion-Karten, Detail-Panel mit Fähigkeiten, 3D-Vorschau (MenuChampionStage),
+    // Hauptmenü (Szene MainMenu): Champion-Auswahl (seit 2026-11-09 eine Karte mit Pfeilen, MenuChampionCarousel; die
+    // Kartenliste der Szene wird zur Laufzeit ausgeblendet), Detail-Panel mit Fähigkeiten, 3D-Vorschau (MenuChampionStage),
     // Spielen / Einstellungen / Erfolge / Beenden. Die Hierarchie baut der Editor-Builder (BuddyTD/Hauptmenü/Szene bauen).
     // Gesperrte Champions (Progression.IsChampionUnlocked) sind ansehbar, aber nicht spielbar. Sperren und Erfolge-Seite
     // beziehen sich auf die gewählte Schwierigkeitsstufe (Erfolge gelten pro Stufe, siehe Progression).
@@ -196,6 +197,13 @@ namespace ElementalBuddies
 
         public ChampionClass Selected { get { return _selected; } }
 
+        // Champion-Auswahl als Karte mit Pfeilen (MenuChampionCarousel, zur Laufzeit; ersetzt die Kartenliste)
+        private MenuChampionCarousel _carousel;
+        public MenuChampionCarousel Carousel => _carousel;
+        // Farben der Kartenschrift (vor dem Ausgrauen gesperrter Champions gemerkt)
+        public Color CardNameColor { get { CacheColors(); return _nameColor; } }
+        public Color CardTaglineColor { get { CacheColors(); return _taglineColor; } }
+
         void Start()
         {
             Init();
@@ -256,6 +264,7 @@ namespace ElementalBuddies
             if (IsLocked(start)) start = ChampionClass.Mage;
             RefreshDifficulty();
             InitMaps();
+            if (_carousel == null) _carousel = MenuChampionCarousel.Attach(this); // Karte mit Pfeilen statt Liste
             Select(start, true);
             MainMenuMeta.Attach(this); // Nächstes Ziel, Belagerungsstufe, Kodex (Plan Fesselung E3/E4/E6)
             KeyBindingsMenu.Attach(this); // Einstellungen → Tastaturbelegung (Touch: entfällt)
@@ -338,14 +347,7 @@ namespace ElementalBuddies
                     if (kb.eKey.wasPressedThisFrame) { SelectDifficulty(DifficultyIndex() + 1); return; }
                     if (kb.mKey.wasPressedThisFrame) { CycleMap(kb.shiftKey.isPressed ? -1 : 1); return; }
                 }
-                int li = IndexOf(_selected);
-                if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) Select(ClassAt(li - 1), false);
-                else if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) Select(ClassAt(li + 1), false);
-                else if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) Select(ClassAt(0), false);
-                else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) Select(ClassAt(1), false);
-                else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) Select(ClassAt(2), false);
-                else if (kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame) Select(ClassAt(3), false);
-                else if (kb.digit5Key.wasPressedThisFrame || kb.numpad5Key.wasPressedThisFrame) Select(ClassAt(4), false);
+                HandleChampionKeys(kb);
                 return;
             }
 
@@ -379,16 +381,41 @@ namespace ElementalBuddies
             // Map per Tastatur: M nächste, Umschalt+M vorige (M liegt auf QWERTZ und QWERTY gleich)
             if (kb.mKey.wasPressedThisFrame) { CycleMap(kb.shiftKey.isPressed ? -1 : 1); return; }
 
-            // Champion per Tastatur wechseln: ←/→, A/D oder 1–5
-            int idx = IndexOf(_selected);
-            if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) Select(ClassAt(idx - 1), false);
-            else if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) Select(ClassAt(idx + 1), false);
-            else if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) Select(ClassAt(0), false);
-            else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) Select(ClassAt(1), false);
-            else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) Select(ClassAt(2), false);
-            else if (kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame) Select(ClassAt(3), false);
-            else if (kb.digit5Key.wasPressedThisFrame || kb.numpad5Key.wasPressedThisFrame) Select(ClassAt(4), false);
+            HandleChampionKeys(kb);
         }
+
+        // Champion per Tastatur blättern: ←/→ oder A/D, endlos (die Zifferntasten entfallen seit der Auswahl-Karte).
+        // Nur ohne Text-Eingabe (Raumcode, Name); Overlays haben in Update schon vorher zurückgegeben.
+        private void HandleChampionKeys(Keyboard kb)
+        {
+            if (TextInputFocused()) return;
+            if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) Step(-1);
+            else if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) Step(1);
+        }
+
+        private static bool TextInputFocused()
+        {
+            var es = EventSystem.current;
+            var go = es != null ? es.currentSelectedGameObject : null;
+            var input = go != null ? go.GetComponent<TMP_InputField>() : null;
+            return input != null && input.isFocused;
+        }
+
+        // Blättern um delta (±1) mit Umlauf; Bühne animiert in derselben Richtung
+        public void Step(int delta)
+        {
+            if (Champions.Length == 0 || delta == 0) return;
+            int next = ChampionCarouselRules.Step(IndexOf(_selected), delta, Champions.Length);
+            if (Application.isPlaying) GameAudio.Play(SfxId.UiClick);
+            Select(ClassAt(next), false, delta > 0 ? 1 : -1);
+        }
+
+        // Hauptbildschirm bzw. Lobby ohne Overlay, Text-Eingabe oder Spielstart: Champion darf gewechselt werden
+        // (MenuChampionCarousel: Wischen)
+        public bool CanBrowseChampions =>
+            _initialized && !_loading && !ShopUI.IsOpen && _view != NetView.Join && !KeyBindingsMenu.IsOpen
+            && !MainMenuMeta.IsCodexOpen && (SettingsPanel == null || !SettingsPanel.activeSelf)
+            && (AchievementsPanel == null || !AchievementsPanel.activeSelf) && !TextInputFocused();
 
         // Alle Bedienelemente müssen Raycasts empfangen (Absicherung, falls die Szene ohne Raycast-Ziele gebaut wurde)
         private void EnsureClickable()
@@ -597,7 +624,10 @@ namespace ElementalBuddies
         }
 
         // Champion wählen: Karte hervorheben, Details füllen, 3D-Vorschau fokussieren (Wahl wird erst mit "Spielen" gespeichert)
-        public void Select(ChampionClass c, bool instant)
+        public void Select(ChampionClass c, bool instant) => Select(c, instant, 0);
+
+        // dir = Blätterrichtung für die Wechsel-Animation der Bühne (0 = kürzerer Weg)
+        public void Select(ChampionClass c, bool instant, int dir)
         {
             _selected = c;
             var def = Def(c);
@@ -620,7 +650,7 @@ namespace ElementalBuddies
                 FillAbilities(def);
             }
 
-            if (Stage != null) Stage.Focus(c, instant);
+            if (Stage != null) Stage.Focus(c, instant, dir);
             RefreshLocks();
 
             // Lobby: Wahl sofort an den Server melden (gesperrte Champions sind nur ansehbar)
@@ -714,6 +744,9 @@ namespace ElementalBuddies
         private static string LockGoal(ChampionClass c, bool withRank = true) =>
             Progression.GoalText(Progression.ChampionUnlock(c), MenuRank, withRank);
 
+        // Kurzform für die Auswahl-Karte („Erreiche Welle 20“)
+        public static string LockGoalShort(ChampionClass c) => LockGoal(c, false);
+
         private Color _nameColor = Color.white;
 
         private void CacheColors()
@@ -801,6 +834,7 @@ namespace ElementalBuddies
             // Sperr-Hinweis und Stufen-Beschreibung teilen sich die Zeile über "Spielen"
             if (DifficultyDescription != null) DifficultyDescription.gameObject.SetActive(!(blocked && PlayLockHint != null));
             RefreshMaps();
+            if (_carousel != null) _carousel.Refresh();
         }
 
         // ---------------- Map (Walddorf, Paket C-Menü) ----------------
@@ -1061,8 +1095,8 @@ namespace ElementalBuddies
             if (SettingsPanel != null && SettingsPanel.activeSelf) return;
             if (AchievementsPanel != null && AchievementsPanel.activeSelf) return;
             // Steuerkreuz links/rechts: Champion wechseln (auch als Lobby-Gast; Hoch/Runter bleibt der Knopf-Navigation)
-            if (gp.dpad.left.wasPressedThisFrame) { Select(ClassAt(IndexOf(_selected) - 1), false); return; }
-            if (gp.dpad.right.wasPressedThisFrame) { Select(ClassAt(IndexOf(_selected) + 1), false); return; }
+            if (gp.dpad.left.wasPressedThisFrame) { Step(-1); return; }
+            if (gp.dpad.right.wasPressedThisFrame) { Step(1); return; }
             if (_view == NetView.Lobby && Net.IsClientOnly) return;
             if (gp.leftShoulder.wasPressedThisFrame) SelectDifficulty(DifficultyIndex() - 1);
             else if (gp.rightShoulder.wasPressedThisFrame) SelectDifficulty(DifficultyIndex() + 1);
@@ -2010,7 +2044,11 @@ namespace ElementalBuddies
         public void ShowSettings(bool show)
         {
             if (SettingsPanel != null) SettingsPanel.SetActive(show);
-            if (show) SyncSettings();
+            if (show)
+            {
+                CompactSettingsRows();
+                SyncSettings();
+            }
             if (!Application.isPlaying || EventSystem.current == null) return;
             if (show && MasterSlider != null) EventSystem.current.SetSelectedGameObject(MasterSlider.gameObject);
             else if (!show && SettingsButton != null) EventSystem.current.SetSelectedGameObject(SettingsButton.gameObject);
@@ -2057,11 +2095,51 @@ namespace ElementalBuddies
                     _hintsToggle.onValueChanged.AddListener(v => HintManager.Enabled = v);
                 }
                 _hintReset = HintResetButton.Attach(copy.transform, SettingsBackButton);
+
+                // Schalter „Intro-Film zeigen“ (Film zum Start von Welle 1, IntroCutscene) als weitere Kopie
+                var introRow = Instantiate(row.gameObject, row.parent);
+                introRow.name = "IntroRow";
+                _introToggle = introRow.GetComponentInChildren<Toggle>(true);
+                var introLabel = introRow.transform.Find("Label");
+                var introTmp = introLabel != null ? introLabel.GetComponent<TextMeshProUGUI>() : null;
+                if (introTmp != null) introTmp.text = "Intro-Film zeigen";
+                if (_introToggle != null)
+                {
+                    _introToggle.onValueChanged.RemoveAllListeners();
+                    _introToggle.onValueChanged.AddListener(v => IntroCutscene.Enabled = v);
+                }
                 // Fünf statt vier Zeilen: Abstand verkleinern, damit alles im festen Zeilenbereich bleibt
                 var layout = row.parent.GetComponent<VerticalLayoutGroup>();
                 if (layout != null) layout.spacing = Mathf.Min(layout.spacing, 10f);
             }
             SyncSettings();
+        }
+
+        // Mehr als fünf sichtbare Zeilen (PC: Vollbild + Tipps + Intro-Film) passen mit 64er-Zeilen nicht in den festen
+        // Zeilenbereich – sie liefen sonst in den Hinweis darunter. Dann Zeilen und Abstände verkleinern (wie
+        // PauseMenuUI.CompactRows). Touch (ohne Vollbild-Zeile) bleibt bei fünf Zeilen unverändert.
+        private void CompactSettingsRows()
+        {
+            var rows = FullscreenToggle != null ? FullscreenToggle.transform.parent.parent as RectTransform : null;
+            var layout = rows != null ? rows.GetComponent<VerticalLayoutGroup>() : null;
+            if (layout == null) return;
+            int count = 0;
+            foreach (RectTransform c in rows) if (c.gameObject.activeSelf) count++;
+            if (count <= 5) return;
+            float avail = rows.rect.height;
+            const float spacing = 6f;
+            const int pad = 4;
+            float rowH = Mathf.Floor((avail - 2 * pad - (count - 1) * spacing) / count);
+            layout.spacing = spacing;
+            layout.padding = new RectOffset(layout.padding.left, layout.padding.right, pad, pad);
+            foreach (RectTransform c in rows)
+            {
+                if (!c.gameObject.activeSelf) continue;
+                float h = Mathf.Min(c.sizeDelta.y, rowH);
+                c.sizeDelta = new Vector2(c.sizeDelta.x, h);
+                var le = c.GetComponent<LayoutElement>();
+                if (le != null) { le.preferredHeight = h; le.minHeight = Mathf.Min(le.minHeight, h); }
+            }
         }
 
         private static void SavePref(string key, float v)
@@ -2092,10 +2170,11 @@ namespace ElementalBuddies
             SyncSlider(SfxSlider, SfxValue, ga != null ? ga.SfxVolume : PlayerPrefs.GetFloat(GameAudio.PrefSfx, 1f));
             if (FullscreenToggle != null) FullscreenToggle.SetIsOnWithoutNotify(Screen.fullScreen);
             if (_hintsToggle != null) _hintsToggle.SetIsOnWithoutNotify(HintManager.Enabled);
+            if (_introToggle != null) _introToggle.SetIsOnWithoutNotify(IntroCutscene.Enabled);
             HintResetButton.ResetLabel(_hintReset);
         }
 
-        private Toggle _hintsToggle;
+        private Toggle _hintsToggle, _introToggle;
         private Button _hintReset;
 
         private static void SyncSlider(Slider slider, TextMeshProUGUI label, float v)

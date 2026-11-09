@@ -401,7 +401,7 @@ namespace ElementalBuddies
         private Slider _gfxSlider;
         private TextMeshProUGUI _gfxValue, _settingsHint;
         private string _settingsHintBase;
-        private Toggle _hitStopToggle, _flashToggle, _hintsToggle, _minimapToggle;
+        private Toggle _hitStopToggle, _flashToggle, _hintsToggle, _minimapToggle, _introToggle;
         private Button _hintReset;
 
         private void BuildFeelRows()
@@ -439,6 +439,8 @@ namespace ElementalBuddies
                 }
                 _minimapToggle = CloneToggleRow(FullscreenToggle, "MinimapRow", "Minikarte anzeigen");
                 if (_minimapToggle != null) _minimapToggle.onValueChanged.AddListener(v => MinimapUI.Enabled = v);
+                _introToggle = CloneToggleRow(FullscreenToggle, "IntroRow", "Intro-Film zeigen");
+                if (_introToggle != null) _introToggle.onValueChanged.AddListener(v => IntroCutscene.Enabled = v);
             }
             CompactRows();
         }
@@ -536,6 +538,7 @@ namespace ElementalBuddies
             if (_flashToggle != null) _flashToggle.SetIsOnWithoutNotify(GameFeel.Flash);
             if (_hintsToggle != null) _hintsToggle.SetIsOnWithoutNotify(HintManager.Enabled);
             if (_minimapToggle != null) _minimapToggle.SetIsOnWithoutNotify(MinimapUI.Enabled);
+            if (_introToggle != null) _introToggle.SetIsOnWithoutNotify(IntroCutscene.Enabled);
             HintResetButton.ResetLabel(_hintReset);
             SyncGraphics(false);
         }

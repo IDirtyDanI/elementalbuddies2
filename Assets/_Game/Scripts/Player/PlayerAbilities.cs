@@ -284,7 +284,7 @@ namespace ElementalBuddies
         private void HandleSkills()
         {
             if (ActiveKit == null) return;
-            if (!CanCastNow() || (_stats != null && _stats.IsDead))
+            if (!CanCastNow() || (_stats != null && _stats.IsDead) || IntroCutscene.IsPlaying)
             {
                 ReleaseAllHolds();
                 return;

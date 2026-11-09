@@ -114,6 +114,7 @@ namespace ElementalBuddies
             float fade = _gameOver ? GameOverFade : CrossfadeTime;
             float gain = _audio != null ? _audio.MusicGain : 0.2f;
             if (Time.unscaledTime < _duckUntil) gain *= 0.2f;
+            gain *= IntroCutscene.MusicGain; // Intro-Film: Musik leiser (Kriegshorn)
             for (int i = 0; i < _src.Length; i++)
             {
                 var s = _src[i];

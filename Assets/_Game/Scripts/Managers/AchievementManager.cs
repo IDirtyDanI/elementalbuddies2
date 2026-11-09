@@ -19,7 +19,7 @@ namespace ElementalBuddies
         public bool ShowToast = true;
         [Tooltip("Erfolgs-Popup (Resources/AchievementPopup) statt Toast; fehlt das Prefab, wird der Toast genutzt.")]
         public bool UsePopup = true;
-        public SfxId Sound = SfxId.ShrineCaptured;
+        public SfxId Sound = SfxId.AchievementUnlocked;
 
         // Neuer Erfolg in diesem Spiel (nach dem Speichern), z. B. für die Liste im Game-Over-Panel
         public event System.Action<AchievementDefinition> OnAchievementEarned;
@@ -218,7 +218,7 @@ namespace ElementalBuddies
             OnAchievementEarned?.Invoke(a);
             if (!ShowToast || a == null) return;
             if (!UsePopup || !AchievementPopupUI.Show(a)) ToastUI.Show(ToastText(a), a.Icon);
-            GameAudio.Play(GameAudio.Has(Sound) ? Sound : SfxId.Fusion, PlayerAbilities.Instance != null ? PlayerAbilities.Instance.transform.position : Vector3.zero);
+            GameAudio.Play(GameAudio.Has(Sound) ? Sound : GameAudio.Has(SfxId.ShrineCaptured) ? SfxId.ShrineCaptured : SfxId.Fusion, PlayerAbilities.Instance != null ? PlayerAbilities.Instance.transform.position : Vector3.zero);
         }
 
         // "Erfolg (Normal): Zwillingskraft – 2er-Fusionen ab dem nächsten Spiel auf Normal und Leicht"

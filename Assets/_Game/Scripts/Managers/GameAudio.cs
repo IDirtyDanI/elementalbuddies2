@@ -118,7 +118,12 @@ namespace ElementalBuddies
         WarDrum,
         TideWave,
         StoneSkin,
-        AncestorHowl
+        AncestorHowl,
+        // Intro-Cutscene beim Start von Welle 1 (2026-11-09): Kriegshorn, Portal flammt auf (art-src/audio, intro_horn/portal_surge)
+        IntroHorn,
+        PortalSurge,
+        // Erfolg freigeschaltet (2026-11-09): eigener Glockenspiel-Klang statt ShrineCaptured (achievement_unlock)
+        AchievementUnlocked
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.
@@ -311,6 +316,10 @@ namespace ElementalBuddies
                 case SfxId.TideWave: return SfxId.FrostNova;
                 case SfxId.StoneSkin: return SfxId.StoneWall;
                 case SfxId.AncestorHowl: return SfxId.WolfHowl;
+                // Intro-Cutscene: Ersatz, falls der Clip (noch) nicht zugewiesen ist
+                case SfxId.IntroHorn: return SfxId.WaveStart;
+                case SfxId.PortalSurge: return SfxId.EliteSpawn;
+                case SfxId.AchievementUnlocked: return SfxId.ShrineCaptured;
                 default: return id;
             }
         }

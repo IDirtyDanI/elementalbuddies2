@@ -28,7 +28,8 @@ namespace ElementalBuddies
             }
             _next.Clear();
             Vector3 from = transform.position;
-            Vector3 to = Target.position + Vector3.up * 1.0f;
+            // Intro-Film: ausblenden, was den gefilmten Punkt verdeckt (z. B. die Dorflinde über dem Nexus)
+            Vector3 to = IntroCutscene.TryGetFocus(out Vector3 focus) ? focus : Target.position + Vector3.up * 1.0f;
             Vector3 dir = to - from;
             float dist = dir.magnitude;
             // Trigger nur zählen, wenn der FadeOccluder sie ausdrücklich als Sicht-Volumen nutzt (z. B. Baumkronen)

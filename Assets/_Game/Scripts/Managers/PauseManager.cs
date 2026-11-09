@@ -40,6 +40,7 @@ namespace ElementalBuddies
             if (Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame) return;
             if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
             if (RewardedAds.IsShowing) return; // Video läuft (Zurück-Taste)
+            if (IntroCutscene.ConsumesEscape) return; // Esc überspringt den Intro-Film, öffnet nicht zusätzlich das Menü
             if (InteractionManager.Instance != null && InteractionManager.Instance.EscapeConsumedThisFrame) return;
             // Esc bricht gerade das Neubelegen einer Taste ab bzw. schließt nur die Tastaturbelegung
             if (KeyBindings.InputConsumed) return;

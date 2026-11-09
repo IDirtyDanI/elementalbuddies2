@@ -48,7 +48,35 @@ namespace ElementalBuddies
         private bool _touch;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => _instance = null;
+        private static void ResetStatics()
+        {
+            _instance = null;
+            Suspended = false;
+        }
+
+        // Kamera-Regie (Intro-Film, IntroCutscene): solange gesetzt, schreibt CameraFollow die Kamera nicht. Die Figur
+        // wird weiter (ungeglättet) verfolgt, damit GamePose() die Lage liefert, auf die der Film zurückgleitet –
+        // danach geht es ohne Sprung weiter. Kein Wackeln, keine Dreh-Eingabe.
+        public static bool Suspended { get; set; }
+
+        // Die Kamera, die CameraFollow führt (null ohne Spielkamera)
+        public static Transform CameraTransform => _instance != null ? _instance.transform : null;
+
+        // Ziel-Lage der Spielkamera (über der eigenen Figur, aktueller Drehwinkel, ohne Wackeln). false ohne Figur.
+        public static bool TryGetGamePose(out Vector3 position, out Quaternion rotation)
+        {
+            position = default;
+            rotation = default;
+            if (_instance == null || _instance.Target == null) return false;
+            var c = _instance;
+            Quaternion yawRotation = CameraOrbitMath.YawRotation(c._yaw);
+            Vector3 pivot = c._snapped ? c._followPos : c.Target.position;
+            position = pivot + yawRotation * c.Offset;
+            rotation = c.LookAtTarget
+                ? Quaternion.LookRotation(c.Target.position - position, Vector3.up)
+                : yawRotation * c._baseRotation;
+            return true;
+        }
 
         // Horizontale Blickrichtung der Spielkamera als Welt-Gierwinkel (Grad, 0 = Blick nach +Z). Grundlage für
         // kamerabezogenes Laufen (PlayerController.MoveWorld); ohne CameraFollow 0 (= frühere feste Ansicht).
@@ -61,7 +89,7 @@ namespace ElementalBuddies
         // Wackeln auslösen (0..1, addiert sich, gedeckelt). Stärke = Trauma² × Spieler-Einstellung.
         public static void AddTrauma(float amount)
         {
-            if (_instance == null || amount <= 0f) return;
+            if (_instance == null || amount <= 0f || Suspended) return;
             _instance._trauma = Mathf.Min(1f, _instance._trauma + amount);
         }
 
@@ -104,6 +132,15 @@ namespace ElementalBuddies
                     var player = GameObject.FindGameObjectWithTag("Player");
                     if (player != null) Target = player.transform;
                 }
+                return;
+            }
+
+            // Intro-Film führt die Kamera: Drehpunkt direkt auf der Figur halten (Ziel der Rückblende), nichts schreiben
+            if (Suspended)
+            {
+                _snapped = true;
+                _followPos = Target.position;
+                _trauma = 0f;
                 return;
             }
 

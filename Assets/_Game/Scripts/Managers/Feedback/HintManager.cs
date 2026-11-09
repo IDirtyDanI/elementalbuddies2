@@ -217,7 +217,12 @@ namespace ElementalBuddies
                 if (Enabled) Poll();
             }
 
-            if (_showing)
+            // Intro-Film: kein neuer Tipp, ein angezeigter wartet (seine Zeit läuft erst danach weiter)
+            if (IntroCutscene.IsPlaying)
+            {
+                if (_showing) _shownAt += Time.unscaledDeltaTime;
+            }
+            else if (_showing)
             {
                 bool done = _current.Done != null && SafeDone(_current.Done);
                 if (done || now - _shownAt > ShowSeconds) HideNow();
