@@ -34,7 +34,15 @@ namespace ElementalBuddies
         EmberStorm,     // R - Glutsturm
         IceBreaker,     // F - Eisbrecher
         Landslide,      // C - Bergsturz
-        LightFrenzy     // V - Lichtrausch
+        LightFrenzy,    // V - Lichtrausch
+
+        // Schamane (Klasse 4, Support)
+        SpiritBolt,      // LMB - Geisterblitz (Kettensprung)
+        WindStep,        // RMB - Windschritt (Sprint + Lauftempo-Buff)
+        WarTotem,        // R - Kriegstotem (Feuerrate/Angriffstempo)
+        HealingTide,     // F - Heilende Woge
+        StoneskinTotem,  // C - Steinhaut-Totem (Schild/Schadensreduktion)
+        AncestralSpirit  // V - Ahnengeist (Heilung über Zeit)
     }
 
     // Fähigkeits-Slots, gleich für alle Champions (Tasten belegbar, KeyBindings). Reihenfolge = alte AbilityBar-Reihenfolge (serialisiert).

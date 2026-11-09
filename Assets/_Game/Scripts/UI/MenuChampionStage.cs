@@ -87,6 +87,7 @@ namespace ElementalBuddies
         public void SpawnPreviews(ChampionDefinitionSO[] defs)
         {
             CacheBase();
+            EnsurePedestals(defs);
             foreach (var p in Pedestals)
             {
                 if (p == null || p.Anchor == null) continue;
@@ -112,6 +113,55 @@ namespace ElementalBuddies
                 if (p.Spot != null) p.Spot.color = Color.Lerp(new Color(1f, 0.9f, 0.75f), def.AccentColor, 0.3f);
             }
             ApplyEquippedSkins();
+        }
+
+        // Fehlende Sockel (z. B. Schamane, 2026-11-09) zur Laufzeit als Kopie des letzten Sockels anlegen und alle Sockel
+        // gleichmäßig auf der Drehscheibe verteilen (5 Sockel: 72°-Schritte, Reihenfolge = defs). Szene bleibt unverändert.
+        private void EnsurePedestals(ChampionDefinitionSO[] defs)
+        {
+            if (!Application.isPlaying || defs == null || Carousel == null || Pedestals.Length == 0) return;
+            var template = Pedestals[Pedestals.Length - 1];
+            if (template == null || template.Anchor == null) return;
+            var list = new System.Collections.Generic.List<Pedestal>(Pedestals);
+            foreach (var d in defs)
+            {
+                if (d == null || FindPedestal(list, d.Class) != null) continue;
+                var src = template.Anchor.parent;
+                var go = Instantiate(src.gameObject, src.parent);
+                go.name = "Pedestal_" + d.Class;
+                var p = new Pedestal { Class = d.Class };
+                p.Anchor = go.transform.Find(template.Anchor.name);
+                if (template.Spot != null) { var t = go.transform.Find(template.Spot.name); if (t != null) p.Spot = t.GetComponent<Light>(); }
+                if (template.Motes != null) { var t = go.transform.Find(template.Motes.name); if (t != null) p.Motes = t.GetComponent<ParticleSystem>(); }
+                // Vorschau der Vorlage nicht mitkopieren
+                if (p.Anchor != null) for (int i = p.Anchor.childCount - 1; i >= 0; i--) Destroy(p.Anchor.GetChild(i).gameObject);
+                list.Add(p);
+            }
+            if (list.Count == Pedestals.Length) return;
+
+            // Reihenfolge wie defs, Winkel 180° = vorne, im Uhrzeigersinn (wie MainMenuBuilder)
+            var ordered = new System.Collections.Generic.List<Pedestal>();
+            foreach (var d in defs) { var p = d != null ? FindPedestal(list, d.Class) : null; if (p != null && !ordered.Contains(p)) ordered.Add(p); }
+            foreach (var p in list) if (!ordered.Contains(p)) ordered.Add(p);
+            Vector3 first = template.Anchor.parent.localPosition;
+            float radius = new Vector2(first.x, first.z).magnitude;
+            if (radius < 0.01f) radius = 1.45f;
+            float step = 360f / ordered.Count;
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                var ped = ordered[i].Anchor != null ? ordered[i].Anchor.parent : null;
+                if (ped == null) continue;
+                float a = 180f + i * step;
+                ped.localPosition = new Vector3(Mathf.Sin(a * Mathf.Deg2Rad), 0f, Mathf.Cos(a * Mathf.Deg2Rad)) * radius + Vector3.up * first.y;
+                ped.localRotation = Quaternion.Euler(0f, a + 180f, 0f);
+            }
+            Pedestals = ordered.ToArray();
+        }
+
+        private static Pedestal FindPedestal(System.Collections.Generic.List<Pedestal> list, ChampionClass c)
+        {
+            foreach (var p in list) if (p != null && p.Class == c) return p;
+            return null;
         }
 
         // ---------------- Skins (Shop) ----------------

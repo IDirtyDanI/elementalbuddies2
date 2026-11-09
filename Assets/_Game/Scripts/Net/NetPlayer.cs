@@ -26,8 +26,8 @@ namespace ElementalBuddies
         public readonly NetworkVariable<bool> Ready = new NetworkVariable<bool>(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         // Skin-Ausrüstung aller Klassen (gepackt, ShopRules; 0 = Standard). Der Besitzer sendet ShopInventory.LocalLoadout.
-        public readonly NetworkVariable<int> Loadout = new NetworkVariable<int>(
-            0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        public readonly NetworkVariable<long> Loadout = new NetworkVariable<long>(
+            0L, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         // Persönliche Händlerwährung. Nur der Server schreibt (AddGold / TrySpendGold).
         public readonly NetworkVariable<float> Gold = new NetworkVariable<float>(
@@ -104,7 +104,7 @@ namespace ElementalBuddies
         // ---------------- Lobby ----------------
 
         [Rpc(SendTo.Server)]
-        private void SubmitLobbyDataRpc(FixedString64Bytes playerName, int champion, int loadout)
+        private void SubmitLobbyDataRpc(FixedString64Bytes playerName, int champion, long loadout)
         {
             string n = playerName.ToString().Trim();
             if (string.IsNullOrEmpty(n)) n = "Spieler " + (Slot + 1);
@@ -123,13 +123,13 @@ namespace ElementalBuddies
         private void SetChampionRpc(int champion) => Champion.Value = (int)GameSession.ClampChampion(champion);
 
         // Skin-Ausrüstung (gepackt, ShopRules) – vom Besitzer; jeder int ist gültig (je 4 Bit NetIndex 0..15)
-        public void RequestLoadout(int loadout)
+        public void RequestLoadout(long loadout)
         {
             if (IsOwner && IsSpawned) SetLoadoutRpc(loadout);
         }
 
         [Rpc(SendTo.Server)]
-        private void SetLoadoutRpc(int loadout) => Loadout.Value = loadout;
+        private void SetLoadoutRpc(long loadout) => Loadout.Value = loadout;
 
         // Besitzer: Shop-Ausrüstung geändert → an alle
         // (immer senden – ein Vergleich mit Loadout.Value verschluckt schnelles Hin und Zurück, solange das RPC unterwegs ist)

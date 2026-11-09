@@ -261,7 +261,7 @@ namespace ElementalBuddies
         private void OnChampionValueChanged(int oldValue, int newValue) => ApplyChampion();
 
         // Skin-Ausrüstung des Besitzers (Shop) – alle Rechner zeigen sie
-        private void OnLoadoutValueChanged(int oldValue, int newValue)
+        private void OnLoadoutValueChanged(long oldValue, long newValue)
         {
             if (Abilities != null && _championSource != null) Abilities.ApplyLoadout(newValue);
         }
@@ -432,6 +432,18 @@ namespace ElementalBuddies
         private void KnockbackRpc(Vector3 direction, float distance, float duration)
         {
             if (Controller != null) Controller.ApplyKnockback(direction, distance, duration);
+        }
+
+        // Server → Besitzer: Unterstützungs-Buff (Schamane: Angriffs-/Lauftempo, Schadensreduktion als Anzeige)
+        public void SendBuffToOwner(SupportBuffKind kind, float value, float duration)
+        {
+            if (IsSpawned && IsServer && !IsOwner) BuffRpc((int)kind, value, duration);
+        }
+
+        [Rpc(SendTo.Owner, InvokePermission = RpcInvokePermission.Server)]
+        private void BuffRpc(int kind, float value, float duration)
+        {
+            if (Abilities != null) Abilities.ApplyBuffFromServer((SupportBuffKind)kind, value, duration);
         }
 
         // ---------------- Fähigkeiten ----------------

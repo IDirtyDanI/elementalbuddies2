@@ -465,7 +465,7 @@ namespace ElementalBuddies
 
         public static UnlockId ChampionUnlock(ChampionClass c) =>
             c == ChampionClass.Knight ? UnlockId.ChampionKnight : c == ChampionClass.Archer ? UnlockId.ChampionArcher
-            : c == ChampionClass.Berserker ? UnlockId.ChampionBerserker : UnlockId.None;
+            : c == ChampionClass.Berserker ? UnlockId.ChampionBerserker : c == ChampionClass.Shaman ? UnlockId.ChampionShaman : UnlockId.None;
 
         // Hauptmenü: persistenter Stand der Stufe (rank <= 0 → gewählte Stufe); sessionSnapshot = true für die Spielszene
         public static bool IsChampionUnlocked(ChampionClass c, bool sessionSnapshot = false, int rank = 0) =>

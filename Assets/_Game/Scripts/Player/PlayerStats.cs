@@ -148,6 +148,7 @@ namespace ElementalBuddies
                 case ChampionClass.Knight: return "Der Schwertkämpfer ist gefallen";
                 case ChampionClass.Archer: return "Der Bogenschütze ist gefallen";
                 case ChampionClass.Berserker: return "Der Berserker ist gefallen";
+                case ChampionClass.Shaman: return "Der Schamane ist gefallen";
                 default: return "Der Zauberer ist gefallen";
             }
         }

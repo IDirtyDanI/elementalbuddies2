@@ -246,6 +246,10 @@ namespace ElementalBuddies
 
             float floorY = _hasSafePos ? _lastSafePos.y : 0f;
             if (transform.position.y > floorY - FallRecoverDepth) return;
+            // #527: Boden unter der Figur → normaler Sturz (z. B. vom Dach), landen lassen statt aufs Dach zurückzusetzen
+            bool groundBelow = Physics.Raycast(transform.position + Vector3.up * 0.5f, Vector3.down, 500f,
+                Physics.DefaultRaycastLayers & ~(1 << gameObject.layer), QueryTriggerInteraction.Ignore);
+            if (!FallRecoveryRules.ShouldRecover(transform.position.y, floorY, FallRecoverDepth, groundBelow)) return;
 
             Vector3 target = _hasSafePos ? _lastSafePos : transform.position;
             if (!_hasSafePos && UnityEngine.AI.NavMesh.SamplePosition(new Vector3(target.x, 0f, target.z), out var hit, 50f, UnityEngine.AI.NavMesh.AllAreas))

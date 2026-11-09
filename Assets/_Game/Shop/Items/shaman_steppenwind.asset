@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811417d07595845e49d48e75c3c8703e, type: 3}
+  m_Name: shaman_steppenwind
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShopItemSO
+  Id: shaman_steppenwind
+  Class: 4
+  Slot: 1
+  Tier: 1
+  DisplayName: Steppenwind
+  Description: Sandfarbener Umhang und rostrote Zeichen aus der weiten Steppe.
+  Price: 200
+  Icon: {fileID: 21300000, guid: 67cc9f8b873734583a60a9e44415bf84, type: 3}
+  NetIndex: 1
+  RightHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  LeftHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Back:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Materials:
+  - SourceMaterial: Hero2_ShamanCloth
+    Replacement: {fileID: 2100000, guid: f9be717f10354410998768ed97d69061, type: 2}
+  - SourceMaterial: Shaman2_ClothDark
+    Replacement: {fileID: 2100000, guid: 1503235df79874631a474cdc8f5a30f4, type: 2}
+  - SourceMaterial: Hero2_ShamanPaint
+    Replacement: {fileID: 2100000, guid: e17fd3ad567e646658a2d2a3974dbc74, type: 2}
+  - SourceMaterial: Hero2_Fur
+    Replacement: {fileID: 2100000, guid: ddd413c80c8ee47ce87f9c67c944d56a, type: 2}
+  - SourceMaterial: Shaman2_FurDark
+    Replacement: {fileID: 2100000, guid: c1279ab67aa3a4b28b5961c0b3408823, type: 2}
+  - SourceMaterial: Shaman2_Leather
+    Replacement: {fileID: 2100000, guid: beab9cc86652a448ea53cdaad6dc7ed3, type: 2}
+  - SourceMaterial: Shaman2_LeatherDark
+    Replacement: {fileID: 2100000, guid: 41001339627ab42d5bbd7ffc1dfceda4, type: 2}
+  - SourceMaterial: Shaman2_Wrap
+    Replacement: {fileID: 2100000, guid: 4383133d1e1534d3088def0c7d7e7c0b, type: 2}
+  - SourceMaterial: Shaman2_WrapDark
+    Replacement: {fileID: 2100000, guid: f23f1a0e4586c49d08a922c6112ab193, type: 2}
+  - SourceMaterial: Shaman2_Trousers
+    Replacement: {fileID: 2100000, guid: fa4feb669daf24f019ddc25d87fffec1, type: 2}
+  - SourceMaterial: Shaman2_Hide
+    Replacement: {fileID: 2100000, guid: b9cd5db623507417da97a80fea52c81d, type: 2}
+  - SourceMaterial: Hero2_Feather
+    Replacement: {fileID: 2100000, guid: c2e95f5bbace04a58ab9dfd86f876929, type: 2}
+  - SourceMaterial: Shaman2_FeatherDark
+    Replacement: {fileID: 2100000, guid: 8f56642948c5d437ab74414ae20100c8, type: 2}
+  AddOns: []

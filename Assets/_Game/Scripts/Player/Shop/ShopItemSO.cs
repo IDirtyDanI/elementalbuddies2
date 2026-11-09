@@ -10,7 +10,7 @@ namespace ElementalBuddies
 
     // Ein kosmetisches Item im Skin-Shop (Waffe oder Rüstung einer Champion-Klasse). Angewendet von ChampionSkin.
     // Effekte (Partikel, Licht …) stecken als Kinder in den Waffen-/Zusatzteil-Prefabs.
-    // Netz: Items werden über (Klasse, Slot, NetIndex 1..15) im Loadout-int übertragen (ShopRules), 0 = Standard.
+    // Netz: Items werden über (Klasse, Slot, NetIndex 1..15) im Loadout-long übertragen (ShopRules), 0 = Standard.
     [CreateAssetMenu(fileName = "ShopItem", menuName = "BuddyTD/Shop Item")]
     public class ShopItemSO : ScriptableObject
     {

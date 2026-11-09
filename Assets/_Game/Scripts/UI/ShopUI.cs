@@ -17,7 +17,7 @@ namespace ElementalBuddies
     //    (MenuChampionStage.PreviewSkin, die andere Kategorie bleibt wie ausgerüstet).
     //  - Pro Klasse + Slot gibt es immer eine Standard-Karte (aus dem Katalog oder synthetisch → ShopInventory.Unequip).
     //  - Ohne Katalog (Resources/ShopCatalog fehlt) nur Standard-Karten und ein Hinweis.
-    // Bedienung: Esc / Android-Zurück / Gamepad B schließt, Q/E, ←/→, A/D, 1–4 bzw. LB/RB wechseln den Reiter.
+    // Bedienung: Esc / Android-Zurück / Gamepad B schließt, Q/E, ←/→, A/D, 1–5 bzw. LB/RB wechseln den Reiter.
     // Touch: größere Knöpfe, Trefferflächen ≥ 48 dp (MobileUiTouchTargets), sicherer Bereich (SafeAreaFitter), Liste scrollt.
     public class ShopUI : MonoBehaviour
     {
@@ -280,6 +280,7 @@ namespace ElementalBuddies
                 else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) StepTab(1);
                 else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) StepTab(2);
                 else if (kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame) StepTab(3);
+                else if (kb.digit5Key.wasPressedThisFrame || kb.numpad5Key.wasPressedThisFrame) StepTab(4);
             }
             var gp = Gamepad.current;
             if (gp != null)
@@ -474,7 +475,7 @@ namespace ElementalBuddies
             tabsRt.anchoredPosition = new Vector2(0f, _touch ? -108f : -100f);
             tabsRt.sizeDelta = new Vector2(-2f * Pad, TabH + 8f);
             var hl = tabsRt.gameObject.AddComponent<HorizontalLayoutGroup>();
-            hl.spacing = 12f;
+            hl.spacing = _menu.Champions != null && _menu.Champions.Length > 4 ? 8f : 12f; // 5 Reiter: etwas enger
             hl.childControlWidth = hl.childControlHeight = true;
             hl.childForceExpandWidth = true;
             hl.childForceExpandHeight = false;

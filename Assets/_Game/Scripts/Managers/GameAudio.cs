@@ -108,7 +108,17 @@ namespace ElementalBuddies
         HexRelease,
         // Arkanball-Flugsummen (Spieltest 2026-10-18): kein One-Shot – ArcaneBallHum holt sich den Clip über GameAudio.GetClip,
         // falls im Ball-Prefab keiner eingetragen ist (Zuweisung über GameFeelSetup wie alle anderen Einträge)
-        ArcaneBallLoop
+        ArcaneBallLoop,
+        // Schamane (2026-11-09): Geisterblitz, Kettensprung, Windschritt, Totem setzen, Kriegstrommel-Puls, Heilende Woge,
+        // Steinhaut, Ahnengeist. Ohne Clip spielen die Kits per PlayOr einen vorhandenen Ersatz (GameAudio.Fallback)
+        SpiritBolt,
+        SpiritZap,
+        WindStep,
+        TotemPlant,
+        WarDrum,
+        TideWave,
+        StoneSkin,
+        AncestorHowl
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.
@@ -292,6 +302,15 @@ namespace ElementalBuddies
                 case SfxId.SummonDrum: return SfxId.HeavyImpact;
                 case SfxId.HexCast: return SfxId.Curse;
                 case SfxId.HexRelease: return SfxId.LightHeal;
+                // Schamane: Ersatz, bis GameFeelSetup die eigenen Clips zuweist
+                case SfxId.SpiritBolt: return SfxId.ArcaneBallCast;
+                case SfxId.SpiritZap: return SfxId.ArcaneBallHit;
+                case SfxId.WindStep: return SfxId.DodgeRoll;
+                case SfxId.TotemPlant: return SfxId.HeavyImpact;
+                case SfxId.WarDrum: return SfxId.SummonDrum;
+                case SfxId.TideWave: return SfxId.FrostNova;
+                case SfxId.StoneSkin: return SfxId.StoneWall;
+                case SfxId.AncestorHowl: return SfxId.WolfHowl;
                 default: return id;
             }
         }

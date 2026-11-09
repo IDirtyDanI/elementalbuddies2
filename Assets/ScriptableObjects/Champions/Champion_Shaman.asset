@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38f39af1130d840989f14c0c0a5b0604, type: 3}
+  m_Name: Champion_Shaman
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ChampionDefinitionSO
+  Class: 4
+  DisplayName: Schamane
+  Tagline: Rufer der Ahnengeister
+  Description: "Ein Waldschamane, der Totems in den Boden rammt und die Geister der
+    Ahnen ruft. Er teilt nicht den meisten Schaden aus \u2013 er macht Buddies und
+    Mitspieler st\xE4rker, sch\xFCtzt sie und heilt ihre Wunden."
+  Portrait: {fileID: 21300000, guid: c71087c0f35034a0a8b60649593018e6, type: 3}
+  PreviewPrefab: {fileID: 6584477566703735, guid: a9b09ecc2f0c64b4e81e7e8ea640ba76, type: 3}
+  AccentColor: {r: 0.165, g: 0.616, b: 0.561, a: 1}
+  Abilities:
+  - Key: LMB
+    Name: Geisterblitz
+    Description: "Geschoss, das beim Treffer auf bis zu 2 weitere Gegner \xFCberspringt.
+      Halten feuert weiter."
+    Icon: {fileID: 21300000, guid: ceecf91e790be42c986063a87d1d61cf, type: 3}
+    Element: -1
+  - Key: RMB
+    Name: Windschritt
+    Description: "Sprint 5 m, danach laufen du und Mitspieler in der N\xE4he 3 s
+      lang 30 % schneller."
+    Icon: {fileID: 21300000, guid: 419dc4cae1fc545cd9ec7e0d890d18ba, type: 3}
+    Element: -1
+  - Key: R
+    Name: Kriegstotem
+    Description: 'Totem am Mauszeiger: Buddies feuern 25 % schneller, Spieler greifen
+      schneller an.'
+    Icon: {fileID: 21300000, guid: 14507d2019bdc46408c5f1d3ab833733, type: 3}
+    Element: 0
+  - Key: F
+    Name: Heilende Woge
+    Description: "Wasserwelle nach vorne: verletzt und verlangsamt Gegner, heilt
+      dich und Verb\xFCndete."
+    Icon: {fileID: 21300000, guid: df8cf1ce04a8d45378989cfb9e3a37be, type: 3}
+    Element: 1
+  - Key: C
+    Name: Steinhaut-Totem
+    Description: "Totem st\xF6\xDFt Gegner zur\xFCck, schirmt Buddies ab und senkt
+      den Schaden an Spielern."
+    Icon: {fileID: 21300000, guid: 467276b7fcc4e445a9061f23b4ff2787, type: 3}
+    Element: 2
+  - Key: V
+    Name: Ahnengeist
+    Description: Ein Geisterwolf begleitet dich, heilt Spieler, Buddies und Nexus
+      und blendet Gegner.
+    Icon: {fileID: 21300000, guid: ac49ba092f8a848f483c7c9c86367000, type: 3}
+    Element: 3

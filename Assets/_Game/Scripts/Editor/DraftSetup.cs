@@ -183,7 +183,8 @@ namespace ElementalBuddies.EditorTools
                 V(ChampionClass.Mage, null, "Dein Blink reicht 20 % weiter.", null),
                 V(ChampionClass.Archer, null, "Deine Rolle reicht 20 % weiter.", null),
                 V(ChampionClass.Knight, "Eiserner Wille", "Dein Schildblock hält länger: Pro Mana wehrst du 20 % mehr Schaden ab.", "card_ausweichkunst_knight"),
-                V(ChampionClass.Berserker, "Sturmlauf", "Ansturm und Bergsturz-Sprung reichen 20 % weiter.", "card_ausweichkunst_berserker"));
+                V(ChampionClass.Berserker, "Sturmlauf", "Ansturm und Bergsturz-Sprung reichen 20 % weiter.", "card_ausweichkunst_berserker"),
+                V(ChampionClass.Shaman, null, "Dein Windschritt reicht 20 % weiter.", null));
             AssetDatabase.SaveAssets();
 
             // Wut-Symbol im Ressourcen-Profil des Berserkers (Player.prefab)

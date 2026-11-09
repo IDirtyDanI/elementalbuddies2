@@ -538,8 +538,29 @@ namespace ElementalBuddies
             _timedDamageBonus = Mathf.Max(_timedDamageBonus, bonus);
             _timedDamageUntil = Mathf.Max(_timedDamageUntil, Time.time + duration);
         }
-        // inkl. Feuerrate-Aura eines Luft-Buddys in der Nähe
-        public float EffectiveFireRate => GetFireRateAtLevel(_level) * AirBuddy.GetFireRateMultiplier(this);
+        // inkl. Feuerrate-Aura eines Luft-Buddys in der Nähe und zeitlicher Feuerrate-Buffs (Schamane)
+        public float EffectiveFireRate => GetFireRateAtLevel(_level) * AirBuddy.GetFireRateMultiplier(this) * TimedFireRateMultiplier;
+
+        // Zeitlich begrenzte Feuerrate-Buffs (Schamane), getrennt nach Quelle: gleiche Quelle stapelt nicht (stärkster gilt,
+        // Dauer erneuern – SupportBuffRules), verschiedene Quellen multiplizieren sich (Kriegstotem × Geistverbindung).
+        public const int FireRateSourceTotem = 0;     // Kriegstotem
+        public const int FireRateSourceSpiritLink = 1; // Passiv „Geistverbindung“
+        private readonly SupportBuff[] _fireRateBuffs = new SupportBuff[2];
+        public float TimedFireRateMultiplier
+        {
+            get
+            {
+                float m = 1f, now = Time.time;
+                for (int i = 0; i < _fireRateBuffs.Length; i++) m *= 1f + SupportBuffRules.Current(_fireRateBuffs[i], now);
+                return m;
+            }
+        }
+        public void AddTimedFireRateBuff(float bonus, float duration, int source = FireRateSourceTotem)
+        {
+            if (_isDead) return;
+            source = Mathf.Clamp(source, 0, _fireRateBuffs.Length - 1);
+            _fireRateBuffs[source] = SupportBuffRules.Apply(_fireRateBuffs[source], Mathf.Min(bonus, SupportBuffRules.MaxSpeedBonus), duration, Time.time);
+        }
         public float EffectiveRange => GetRangeAtLevel(_level);
 
         // Nur Server (Clients: InteractionManager.UpgradeSelected -> NetGame.RequestUpgrade).

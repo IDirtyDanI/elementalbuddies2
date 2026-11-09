@@ -15,13 +15,15 @@ namespace ElementalBuddies
         public const string ResourcePath = "HitVfxTable";
 
         // Alle Fähigkeiten, die Gegnern Schaden zufügen (je eine Tabellenzeile Pflicht, HitVfxTableTests).
-        // Nicht dabei: Blink, Schildblock, Rolle, Steinwall, Heiliger Kreis, Lichtschwur, Lichtrausch (kein eigener Schaden).
+        // Nicht dabei: Blink, Schildblock, Rolle, Steinwall, Heiliger Kreis, Lichtschwur, Lichtrausch, Windschritt, Kriegstotem,
+        // Ahnengeist (kein eigener Schaden).
         public static readonly AbilityId[] DamagingAbilities =
         {
             AbilityId.ArcaneBall, AbilityId.FireWave, AbilityId.FrostNova,
             AbilityId.SwordSlash, AbilityId.FlameWhirl, AbilityId.FrostStrike, AbilityId.Earthquake,
             AbilityId.ArrowShot, AbilityId.FireArrowRain, AbilityId.FrostArrow, AbilityId.ThornTrap, AbilityId.LightArrow,
-            AbilityId.AxeCleave, AbilityId.BerserkCharge, AbilityId.EmberStorm, AbilityId.IceBreaker, AbilityId.Landslide
+            AbilityId.AxeCleave, AbilityId.BerserkCharge, AbilityId.EmberStorm, AbilityId.IceBreaker, AbilityId.Landslide,
+            AbilityId.SpiritBolt, AbilityId.HealingTide, AbilityId.StoneskinTotem
         };
 
         // Fallback, falls die Tabelle fehlt (FeedbackDirector setzt den alten HitSpark)

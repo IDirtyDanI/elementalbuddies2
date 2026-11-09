@@ -8,7 +8,8 @@ namespace ElementalBuddies
         Mage,   // Magier: Arkanball / Blink
         Knight, // Schwertkämpfer: Schwerthieb / Schildblock
         Archer, // Bogenschütze: Pfeilschuss / Rolle
-        Berserker // Berserker: Axthieb / Ansturm (Wut statt Mana)
+        Berserker, // Berserker: Axthieb / Ansturm (Wut statt Mana)
+        Shaman     // Schamane (Support): Geisterblitz / Windschritt, Totems, Heilung, Buffs
     }
 
     // Überträgt die Champion-Wahl vom Hauptmenü in die Spielszene (statisch + PlayerPrefs als Vorbelegung).

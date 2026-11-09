@@ -18,6 +18,7 @@ namespace ElementalBuddies
         TriFusion,   // alle 4 Super-Elementare
         SiegeLevels, // Belagerungsstufen (nach dem ersten Morgengrauen)
         ChampionBerserker, // Berserker (Erfolg „Blutdurst“, Welle 15)
+        ChampionShaman,    // Schamane (Erfolg „Geisterrufer“, Welle 20)
     }
 
     // Bedingungs-Arten; Parameter stehen in AchievementDefinition (Threshold, Level, Element)

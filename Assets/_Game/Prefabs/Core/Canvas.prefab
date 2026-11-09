@@ -7389,6 +7389,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 3156110d189374ba6b55abdecad3a31c, type: 3}
   - {fileID: 21300000, guid: 21a989a888e3f462691b04f407000f2d, type: 3}
   - {fileID: 21300000, guid: e2dd2762c0c06406b8f7e1a5feacec6a, type: 3}
+  - {fileID: 21300000, guid: c71087c0f35034a0a8b60649593018e6, type: 3}
   ManaIcon: {fileID: 0}
   WaveTextMaxWidth: 380
   WaveTextRightInset: 40
@@ -7481,6 +7482,7 @@ MonoBehaviour:
   ScrollTrackColor: {r: 0.24, g: 0.15, b: 0.08, a: 0.15}
   ScrollHandleColor: {r: 0.45, g: 0.29, b: 0.14, a: 0.85}
   StatsButtonGap: 12
+  TouchTopMargin: 12
 --- !u!114 &4881837736079340727
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11053,6 +11055,8 @@ MonoBehaviour:
   CostTooExpensive: {r: 0.62, g: 0.12, b: 0.1, a: 1}
   FadeSpeed: 4
   HiddenDrop: 40
+  TouchMinPriceDp: 13
+  TouchSafeMarginDp: 6
 --- !u!1 &3561486675088291952
 GameObject:
   m_ObjectHideFlags: 0
@@ -15968,9 +15972,17 @@ MonoBehaviour:
   TopHud: {fileID: 0}
   TopHudPadding: 46
   MinimapPadding: 40
+  PanelPadding: 40
+  MinArrowSpacing: 80
+  MaxArrows: 8
   PortalHighlightDuration: 6
   PortalColor: {r: 0.75, g: 0.35, b: 1, a: 1}
+  BossColor: {r: 0.9, g: 0.12, b: 0.15, a: 1}
   TintWithElement: 1
+  PingDuration: 0.6
+  PingCooldown: 3
+  PingSoundCooldown: 8
+  PingSound: 1
 --- !u!1 &5343078736230451374
 GameObject:
   m_ObjectHideFlags: 0
@@ -17977,9 +17989,20 @@ MonoBehaviour:
   CardPrefab: {fileID: 1971434496766266994, guid: 995c217f2103d35469c20323ad2bb46f, type: 3}
   RerollButton: {fileID: 0}
   SkipButton: {fileID: 0}
+  DoneButton: {fileID: 0}
+  SubtitleText: {fileID: 0}
+  ShardsText: {fileID: 0}
   ShardIcon: {fileID: 0}
   ShardPriceColor: {r: 0.851, g: 0.722, b: 1, a: 1}
   UnaffordableColor: {r: 0.78, g: 0.15, b: 0.12, a: 1}
+  RerollPos: {x: -200, y: -330}
+  SkipPos: {x: 200, y: -330}
+  AdRerollPos: {x: -560, y: -330}
+  AdSlotPos: {x: 560, y: -330}
+  SubtitlePos: {x: 0, y: 222}
+  ShardCounterPos: {x: 640, y: 300}
+  BottomReserve: 300
+  MaxLift: 120
 --- !u!1 &6120760288958558718
 GameObject:
   m_ObjectHideFlags: 0

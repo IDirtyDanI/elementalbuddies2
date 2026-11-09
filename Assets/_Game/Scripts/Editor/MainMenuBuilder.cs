@@ -206,6 +206,68 @@ namespace ElementalBuddies.EditorTools
             EditorUtility.SetDirty(def);
         }
 
+        // Schamane (2026-11-09): Champion_Shaman.asset + Preview_Shaman.prefab; Texte und Icons werden immer aufgefrischt
+        // (Porträt, sobald portrait_champion_shaman existiert). Danach Resources/ChampionRoster.asset mit allen fünf
+        // Definitionen – das Hauptmenü ergänzt fehlende Karten/Sockel zur Laufzeit (die Szene bleibt unverändert).
+        public static void CreateShamanAssets()
+        {
+            EnsureFolder(ChampionDir.TrimEnd('/'));
+            EnsureFolder(PreviewDir.TrimEnd('/'));
+            foreach (var n in new[] { "ability_shaman_spiritbolt", "ability_shaman_windstep", "ability_shaman_wartotem", "ability_shaman_healingtide", "ability_shaman_stoneskin", "ability_shaman_ancestor", "ach_shaman" })
+                PortraitRenderer.EnsureSprite(IconDir + n + ".png", IconDir + "ability_berserker_charge.png");
+            var preview = EnsurePreviewPrefab(ChampionClass.Shaman);
+            WriteChampion(ChampionClass.Shaman, true, "Champion_Shaman", d =>
+            {
+                d.DisplayName = "Schamane";
+                d.Tagline = "Rufer der Ahnengeister";
+                d.Description = "Ein Waldschamane, der Totems in den Boden rammt und die Geister der Ahnen ruft. Er teilt nicht " +
+                                "den meisten Schaden aus – er macht Buddies und Mitspieler stärker, schützt sie und heilt ihre Wunden.";
+                d.PreviewPrefab = preview;
+                d.AccentColor = new Color(0.165f, 0.616f, 0.561f); // Türkis #2a9d8f
+                var portrait = Icon("portrait_champion_shaman");
+                if (portrait != null) d.Portrait = portrait;
+                d.Abilities = new List<ChampionDefinitionSO.AbilityInfo>
+                {
+                    Ab("LMB", "Geisterblitz", "Geschoss, das beim Treffer auf bis zu 2 weitere Gegner überspringt. Halten feuert weiter.", IconOr("ability_shaman_spiritbolt", "ability_arcane"), -1),
+                    Ab("RMB", "Windschritt", "Sprint 5 m, danach laufen du und Mitspieler in der Nähe 3 s lang 30 % schneller.", IconOr("ability_shaman_windstep", "ability_blink"), -1),
+                    Ab("R", "Kriegstotem", "Totem am Mauszeiger: Buddies feuern 25 % schneller, Spieler greifen schneller an.", IconOr("ability_shaman_wartotem", "emblem_fire"), 0),
+                    Ab("F", "Heilende Woge", "Wasserwelle nach vorne: verletzt und verlangsamt Gegner, heilt dich und Verbündete.", IconOr("ability_shaman_healingtide", "emblem_ice"), 1),
+                    Ab("C", "Steinhaut-Totem", "Totem stößt Gegner zurück, schirmt Buddies ab und senkt den Schaden an Spielern.", IconOr("ability_shaman_stoneskin", "emblem_earth"), 2),
+                    Ab("V", "Ahnengeist", "Ein Geisterwolf begleitet dich, heilt Spieler, Buddies und Nexus und blendet Gegner.", IconOr("ability_shaman_ancestor", "emblem_light"), 3),
+                };
+            });
+            WriteRoster();
+            AssetDatabase.SaveAssets();
+        }
+
+        public const string RosterPath = "Assets/Resources/ChampionRoster.asset";
+
+        public static void WriteRoster()
+        {
+            EnsureFolder("Assets/Resources");
+            var roster = AssetDatabase.LoadAssetAtPath<ChampionRosterSO>(RosterPath);
+            bool created = roster == null;
+            if (created) roster = ScriptableObject.CreateInstance<ChampionRosterSO>();
+            var list = new List<ChampionDefinitionSO>();
+            for (int i = 0; i < GameSession.ChampionCount; i++)
+            {
+                var c = (ChampionClass)i;
+                foreach (var g in AssetDatabase.FindAssets("t:ChampionDefinitionSO", new[] { ChampionDir.TrimEnd('/') }))
+                {
+                    var d = AssetDatabase.LoadAssetAtPath<ChampionDefinitionSO>(AssetDatabase.GUIDToAssetPath(g));
+                    if (d != null && d.Class == c) { list.Add(d); break; }
+                }
+            }
+            roster.Champions = list.ToArray();
+            if (created) AssetDatabase.CreateAsset(roster, RosterPath);
+            else EditorUtility.SetDirty(roster);
+        }
+
+        private static Sprite IconOr(string wanted, string fallback)
+        {
+            return Icon(wanted) ?? Icon(fallback);
+        }
+
         // Nur fehlende Champion-Assets anlegen (z. B. Champion_Berserker + Preview_Berserker), vorhandene bleiben unverändert
         [MenuItem("BuddyTD/Hauptmenü/Fehlende Champion-Assets anlegen")]
         public static void CreateMissingChampionAssetsMenu() { CreateChampionAssets(false); }

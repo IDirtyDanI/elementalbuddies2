@@ -133,6 +133,32 @@ namespace ElementalBuddies.EditorTools
             new CardDef(AbilityId.LightFrenzy, AbilityStat.Heal, 25),
             new CardDef(AbilityId.LightFrenzy, AbilityStat.ManaCost, 20),
             new CardDef(AbilityId.LightFrenzy, AbilityStat.Cooldown, 12),
+
+            // ---- Schamane (Konzept §3) ----
+            new CardDef(AbilityId.SpiritBolt, AbilityStat.Damage, 20),
+            new CardDef(AbilityId.SpiritBolt, AbilityStat.Pierce, 1),      // +1 Sprung
+            new CardDef(AbilityId.SpiritBolt, AbilityStat.Cooldown, 15),   // Tempo
+            new CardDef(AbilityId.SpiritBolt, AbilityStat.Range, 20),
+            new CardDef(AbilityId.WindStep, AbilityStat.Range, 20),
+            new CardDef(AbilityId.WindStep, AbilityStat.Cooldown, 20),
+            new CardDef(AbilityId.WindStep, AbilityStat.Duration, 25),     // Tempo-Dauer
+            new CardDef(AbilityId.WindStep, AbilityStat.Charges, 1),
+            new CardDef(AbilityId.WarTotem, AbilityStat.Speed, 20),        // Buff-Stärke
+            new CardDef(AbilityId.WarTotem, AbilityStat.Area, 15),
+            new CardDef(AbilityId.WarTotem, AbilityStat.Duration, 25),
+            new CardDef(AbilityId.WarTotem, AbilityStat.Cooldown, 12),
+            new CardDef(AbilityId.HealingTide, AbilityStat.Heal, 25),
+            new CardDef(AbilityId.HealingTide, AbilityStat.Damage, 20),
+            new CardDef(AbilityId.HealingTide, AbilityStat.Range, 15),
+            new CardDef(AbilityId.HealingTide, AbilityStat.Cooldown, 12),
+            new CardDef(AbilityId.StoneskinTotem, AbilityStat.Heal, 25),   // Schild/Schutz
+            new CardDef(AbilityId.StoneskinTotem, AbilityStat.Area, 15),
+            new CardDef(AbilityId.StoneskinTotem, AbilityStat.Duration, 25),
+            new CardDef(AbilityId.StoneskinTotem, AbilityStat.Cooldown, 12),
+            new CardDef(AbilityId.AncestralSpirit, AbilityStat.Heal, 25),
+            new CardDef(AbilityId.AncestralSpirit, AbilityStat.Duration, 25),
+            new CardDef(AbilityId.AncestralSpirit, AbilityStat.Area, 15),
+            new CardDef(AbilityId.AncestralSpirit, AbilityStat.ManaCost, 20),
         };
 
         [MenuItem("BuddyTD/Händler/Kartenpool neu erzeugen")]
@@ -171,9 +197,15 @@ namespace ElementalBuddies.EditorTools
                 if (def.Stat == AbilityStat.Speed && def.Ability == AbilityId.SwordSlash) label = "Kombo-Tempo";
                 if (def.Stat == AbilityStat.Speed && def.Ability == AbilityId.ArrowShot) label = "Feuerrate";
                 if (def.Stat == AbilityStat.Speed && def.Ability == AbilityId.AxeCleave) label = "Kombo-Tempo";
+                if (def.Stat == AbilityStat.Speed && def.Ability == AbilityId.WarTotem) label = "Buff-Stärke";
                 card.Title = $"{abilityName}: {AbilityMods.StatName(def.Stat)}";
                 // Berserker: „Manakosten“ heißen Wutkosten
                 if (def.Stat == AbilityStat.ManaCost && cls == ChampionClass.Berserker) card.Title = $"{abilityName}: Wutkosten";
+                // Schamane: Karten-Titel nach Konzept §3 (Pierce = Sprung, Cooldown beim Blitz = Tempo, Heal beim Steinhaut = Schutz)
+                if (def.Ability == AbilityId.SpiritBolt && def.Stat == AbilityStat.Pierce) card.Title = $"{abilityName}: Sprung";
+                if (def.Ability == AbilityId.SpiritBolt && def.Stat == AbilityStat.Cooldown) card.Title = $"{abilityName}: Tempo";
+                if (def.Ability == AbilityId.WarTotem && def.Stat == AbilityStat.Speed) card.Title = $"{abilityName}: Buff-Stärke";
+                if (def.Ability == AbilityId.StoneskinTotem && def.Stat == AbilityStat.Heal) card.Title = $"{abilityName}: Schutz";
                 card.Description = $"{label} {AbilityMods.FormatValue(def.Stat, def.Value)}";
                 card.Icon = FindAbilityIcon(kit, def.Ability);
                 card.Badge = LoadBadge(def.Stat);

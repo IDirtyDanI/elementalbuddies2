@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811417d07595845e49d48e75c3c8703e, type: 3}
+  m_Name: shaman_spiritcaller
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShopItemSO
+  Id: shaman_spiritcaller
+  Class: 4
+  Slot: 1
+  Tier: 2
+  DisplayName: Geisterrufer
+  Description: Nachtblau, leuchtende Geisterzeichen und eine Wolfsmaske.
+  Price: 800
+  Icon: {fileID: 21300000, guid: d64dc70f1694c46638cdc62a87c0c88b, type: 3}
+  NetIndex: 2
+  RightHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  LeftHand:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Back:
+    Prefab: {fileID: 0}
+    OverrideTransform: 0
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  Materials:
+  - SourceMaterial: Hero2_ShamanCloth
+    Replacement: {fileID: 2100000, guid: beac18f9414e1416ea23f08a30ce804b, type: 2}
+  - SourceMaterial: Shaman2_ClothDark
+    Replacement: {fileID: 2100000, guid: 8f2b8a92e38dd456dbd79917e8b3c9a3, type: 2}
+  - SourceMaterial: Hero2_ShamanPaint
+    Replacement: {fileID: 2100000, guid: cbdf35580d4f74e1db2b4b6c9c4bffa0, type: 2}
+  - SourceMaterial: Hero2_Fur
+    Replacement: {fileID: 2100000, guid: 5e8b94ad909b244cf8f91f0a10a4c9d5, type: 2}
+  - SourceMaterial: Shaman2_FurDark
+    Replacement: {fileID: 2100000, guid: 7627e1742c9424ed6a85ebb0147f35eb, type: 2}
+  - SourceMaterial: Shaman2_Leather
+    Replacement: {fileID: 2100000, guid: 9efd0fe3de4fb4709a03c850726076bc, type: 2}
+  - SourceMaterial: Shaman2_LeatherDark
+    Replacement: {fileID: 2100000, guid: bd697c63e00b0421a9c7d2ac1b47fcab, type: 2}
+  - SourceMaterial: Shaman2_Wrap
+    Replacement: {fileID: 2100000, guid: 7dc087f1138d94b348eeb381531d4bed, type: 2}
+  - SourceMaterial: Shaman2_WrapDark
+    Replacement: {fileID: 2100000, guid: ae6b6bde1573946ae91882d857d39f17, type: 2}
+  - SourceMaterial: Shaman2_Trousers
+    Replacement: {fileID: 2100000, guid: da2d455e1fd774c4bb3b53448b361aec, type: 2}
+  - SourceMaterial: Shaman2_Hide
+    Replacement: {fileID: 2100000, guid: 91ab564da116a49bcb17572cb3a2977f, type: 2}
+  - SourceMaterial: Shaman2_Wood
+    Replacement: {fileID: 2100000, guid: 8a039206e71554289883fddd92ba5ac0, type: 2}
+  - SourceMaterial: Hero2_Bone
+    Replacement: {fileID: 2100000, guid: 8d320708a912642c9ace364e4d17dd73, type: 2}
+  - SourceMaterial: Hero2_Antler
+    Replacement: {fileID: 2100000, guid: aeadc6d3821c4423f98e2a5703652d8e, type: 2}
+  - SourceMaterial: Hero2_Feather
+    Replacement: {fileID: 2100000, guid: c6c6efcf52b5744d29819b2e821a7d6a, type: 2}
+  - SourceMaterial: Shaman2_FeatherDark
+    Replacement: {fileID: 2100000, guid: 7e2d3c4d327224cf395a043badca7130, type: 2}
+  AddOns:
+  - Prefab: {fileID: 919132149155446097, guid: 7fdc5b5df99374fe596cbba046fd57b0, type: 3}
+    Bone: 10
+    LocalPosition: {x: 0, y: 0.278, z: 0.062}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Mirror: 0
+  - Prefab: {fileID: 114891151305221718, guid: 71709c0deb05d4400bce1724e3b9fa15, type: 3}
+    Bone: 54
+    LocalPosition: {x: 0, y: 0.12, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Mirror: 0

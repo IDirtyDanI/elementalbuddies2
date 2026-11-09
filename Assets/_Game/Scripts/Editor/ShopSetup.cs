@@ -11,7 +11,7 @@ namespace ElementalBuddies.EditorTools
     //   Materials/Skins/  Kopien der Heroes2-Champion-Materialien mit neuen Farben (8 Rüstungs-Sätze)
     //   Fx/               Partikel-Effekte (Shuriken, mobilfreundlich: wenige Partikel, keine Lichter, Add/Alpha-Materialien aus VFX/)
     //   Prefabs/          Waffen/Zusatzteile mit Effekt (Variante des FBX: Ursprung/Achsen/„Grip2“ unverändert, Effekt am FxAnchor)
-    //   Items/            16 ShopItemSO
+    //   Items/            20 ShopItemSO (je Champion 2 Waffen + 2 Rüstungen)
     //   Icons/            256²-Icons (Editor-Render, transparenter Hintergrund)
     // Katalog: Assets/_Game/Resources/ShopCatalog.asset
     public static class ShopSetup
@@ -41,6 +41,13 @@ namespace ElementalBuddies.EditorTools
         public static void RenderIconsMenu()
         {
             Debug.Log(RenderIcons());
+        }
+
+        // Nur Items ohne Icon-Datei (neue Skins) – vorhandene Icons bleiben unangetastet
+        [MenuItem("BuddyTD/Shop/Fehlende Icons rendern")]
+        public static void RenderMissingIconsMenu()
+        {
+            Debug.Log(RenderIcons(true));
         }
 
         // Alles erzeugen; icons = false überspringt das (langsamere) Rendern der Icons
@@ -161,6 +168,28 @@ namespace ElementalBuddies.EditorTools
                 G("Archer2_Buckle", 0.78f, 0.52f, 1f, 1.2f, 0.65f, 0.3f, 1f),
                 T("Archer2_Hair", 0.14f, 0.11f, 0.12f),
             } },
+            // Schamane „Steppenwind“: sandfarbener Umhang, rostrote Bemalung/Säume, helles Fell, sonnengebleichtes Leder
+            { "Steppenwind", new[] {
+                T("Hero2_ShamanCloth", 0.80f, 0.67f, 0.45f), T("Shaman2_ClothDark", 0.56f, 0.24f, 0.13f),
+                T("Hero2_ShamanPaint", 0.74f, 0.25f, 0.11f),
+                T("Hero2_Fur", 0.80f, 0.72f, 0.58f), T("Shaman2_FurDark", 0.50f, 0.40f, 0.28f),
+                T("Shaman2_Leather", 0.56f, 0.36f, 0.20f), T("Shaman2_LeatherDark", 0.36f, 0.22f, 0.13f),
+                T("Shaman2_Wrap", 0.86f, 0.77f, 0.58f), T("Shaman2_WrapDark", 0.64f, 0.42f, 0.25f),
+                T("Shaman2_Trousers", 0.60f, 0.46f, 0.31f), T("Shaman2_Hide", 0.74f, 0.60f, 0.42f),
+                T("Hero2_Feather", 0.76f, 0.34f, 0.16f), T("Shaman2_FeatherDark", 0.44f, 0.19f, 0.10f),
+            } },
+            // Schamane „Geisterrufer“: nachtblauer Umhang, leuchtend cyanfarbene Bemalung, blasse Knochen und Federn
+            { "Geisterrufer", new[] {
+                T("Hero2_ShamanCloth", 0.07f, 0.10f, 0.27f), T("Shaman2_ClothDark", 0.03f, 0.05f, 0.14f),
+                G("Hero2_ShamanPaint", 0.35f, 0.95f, 1f, 2.0f, 0.2f, 0.85f, 1f),
+                T("Hero2_Fur", 0.22f, 0.26f, 0.38f), T("Shaman2_FurDark", 0.11f, 0.13f, 0.21f),
+                T("Shaman2_Leather", 0.15f, 0.17f, 0.28f), T("Shaman2_LeatherDark", 0.07f, 0.08f, 0.15f),
+                T("Shaman2_Wrap", 0.24f, 0.30f, 0.45f), T("Shaman2_WrapDark", 0.12f, 0.15f, 0.27f),
+                T("Shaman2_Trousers", 0.10f, 0.12f, 0.23f), T("Shaman2_Hide", 0.21f, 0.27f, 0.42f),
+                T("Shaman2_Wood", 0.20f, 0.21f, 0.30f),
+                T("Hero2_Bone", 0.82f, 0.90f, 0.96f), T("Hero2_Antler", 0.62f, 0.70f, 0.84f),
+                T("Hero2_Feather", 0.76f, 0.92f, 1f), T("Shaman2_FeatherDark", 0.26f, 0.46f, 0.66f),
+            } },
             // Magier „Erzmagier“: königsblaue Robe und Hut, hellblaue Akzente, Silber statt Gold
             { "Erzmagier", new[] {
                 T("Mage2_Robe", 0.12f, 0.26f, 0.78f), T("Mage2_Hat", 0.14f, 0.29f, 0.82f), T("Mage2_RobeInner", 0.06f, 0.12f, 0.42f),
@@ -200,8 +229,12 @@ namespace ElementalBuddies.EditorTools
                     }
                     else
                     {
+                        // Legacy-_Color (von URP Lit nicht genutzt) behalten: CopyProperties setzt es sonst auf den Wert des
+                        // Originals zurück und jede Erzeugung änderte vorhandene Materialien
+                        Color? keep = RawColor(m, "_Color"); // roh aus der Serialisierung (Get/SetColor runden über den Farbraum)
                         m.shader = src.shader;
                         m.CopyPropertiesFromMaterial(src);
+                        RawColor(m, "_Color", keep);
                     }
                     m.SetColor("_BaseColor", t.Color);
                     m.color = t.Color;
@@ -226,6 +259,27 @@ namespace ElementalBuddies.EditorTools
                 _swaps[kv.Key] = list.ToArray();
             }
             return n;
+        }
+
+        // Farbeigenschaft roh aus m_SavedProperties lesen bzw. (value != null) schreiben
+        private static Color? RawColor(Material m, string name, Color? value = null)
+        {
+            var so = new SerializedObject(m);
+            var arr = so.FindProperty("m_SavedProperties.m_Colors");
+            if (arr == null) return null;
+            for (int i = 0; i < arr.arraySize; i++)
+            {
+                var e = arr.GetArrayElementAtIndex(i);
+                if (e.FindPropertyRelative("first").stringValue != name) continue;
+                var v = e.FindPropertyRelative("second");
+                if (value.HasValue)
+                {
+                    v.colorValue = value.Value;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+                return v.colorValue;
+            }
+            return null;
         }
 
         // ======================================================================================
@@ -476,8 +530,39 @@ namespace ElementalBuddies.EditorTools
                 Speed(d, 0.01f, 0.03f); Gravity(d, 0.02f); Fade(d, Color.white, new Color(0.5f, 0.7f, 1f)); Twinkle(d);
             });
 
+            // Sturmtotem: blaue Blitzfunken um den schwebenden Blitzstein (FxAnchor), schnell und kurzlebig, flackernder Kern
+            fx["Storm"] = SaveFx("Fx_Storm", t =>
+            {
+                var s = Emitter(t, "Sparks", SparkAdd, 16f, new Vector2(0.12f, 0.28f), new Vector2(0.04f, 0.075f), StormWhite, StormBlue, 14);
+                Ball(s, 0.05f, 1f, Vector3.zero);
+                Speed(s, 0.5f, 1.1f); Fade(s, StormWhite, StormBlue, 0.02f, 0.4f); Shrink(s, 1f, 0.1f); Noise(s, 0.8f, 3f);
+                var st = s.main; st.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1.1f);
+                var r = s.GetComponent<ParticleSystemRenderer>(); r.renderMode = ParticleSystemRenderMode.Stretch; r.velocityScale = 0.08f; r.lengthScale = 1.5f;
+                var g = Emitter(t, "Flicker", StarAdd, 10f, new Vector2(0.08f, 0.18f), new Vector2(0.12f, 0.22f), StormBlue, StormWhite, 6);
+                Ball(g, 0.03f, 1f, Vector3.zero);
+                Fade(g, StormWhite, StormBlue, 0.05f, 0.3f); Twinkle(g); Spin(g, 360f);
+                var c = Emitter(t, "Core", SoftAdd, 5f, new Vector2(0.3f, 0.5f), new Vector2(0.2f, 0.28f), new Color(0.35f, 0.6f, 1f, 0.9f), new Color(0.55f, 0.8f, 1f, 0.9f), 4, false);
+                Fade(c, StormBlue, new Color(0.25f, 0.45f, 1f)); Shrink(c, 0.8f, 1.1f);
+            });
+
+            // Geisterrufer: deutlich sichtbare Geisterschwaden (additiv cyan statt dunklem Rauch – der Schattenjäger-Rauch
+            // ging vor dem dunklen Körper unter), steigen um Schultern und Rücken auf (lokal → bleiben an der Figur)
+            fx["SpiritWisps"] = SaveFx("Fx_SpiritWisps", t =>
+            {
+                var w = Emitter(t, "Wisps", SoftAdd, 9f, new Vector2(1.1f, 1.6f), new Vector2(0.16f, 0.26f), new Color(0.3f, 0.9f, 1f, 0.85f), new Color(0.5f, 1f, 0.95f, 0.85f), 14, false);
+                Box(w, new Vector3(0.5f, 0.12f, 0.3f), new Vector3(0f, -0.05f, -0.06f));
+                Speed(w, 0.02f, 0.06f); Gravity(w, -0.06f); Fade(w, SpiritCyan, new Color(0.2f, 0.5f, 1f), 0.2f, 0.55f); Shrink(w, 0.5f, 1.3f); Noise(w, 0.18f, 0.9f);
+                var m = Emitter(t, "Motes", SparkAdd, 6f, new Vector2(0.8f, 1.3f), new Vector2(0.035f, 0.06f), Color.white, SpiritCyan, 10, false);
+                Box(m, new Vector3(0.55f, 0.2f, 0.32f), new Vector3(0f, 0f, -0.04f));
+                Speed(m, 0.03f, 0.1f); Gravity(m, -0.08f); Fade(m, Color.white, SpiritCyan, 0.1f, 0.5f); Twinkle(m); Noise(m, 0.25f);
+            });
+
             return fx;
         }
+
+        private static readonly Color StormBlue = new Color(0.35f, 0.62f, 1f);
+        private static readonly Color StormWhite = new Color(0.85f, 0.94f, 1f);
+        private static readonly Color SpiritCyan = new Color(0.35f, 0.95f, 1f);
 
         // ======================================================================================
         // Prefabs (Waffen/Zusatzteile mit Effekt)
@@ -542,7 +627,12 @@ namespace ElementalBuddies.EditorTools
             string path = MatDir + "Schattenjaeger_MantleGlow.mat";
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (m == null) { m = new Material(src); AssetDatabase.CreateAsset(m, path); }
-            else { m.shader = src.shader; m.CopyPropertiesFromMaterial(src); }
+            else
+            {
+                Color? keep = RawColor(m, "_Color"); // s. BuildMaterials
+                m.shader = src.shader; m.CopyPropertiesFromMaterial(src);
+                RawColor(m, "_Color", keep);
+            }
             var c = new Color(0.62f, 0.32f, 1f);
             m.SetColor("_BaseColor", c);
             m.EnableKeyword("_EMISSION");
@@ -586,6 +676,11 @@ namespace ElementalBuddies.EditorTools
             p["A2S_ArcherMantle"] = WithFx("A2S_ArcherMantle", fx["Shadow"], null, default(Vector3), MantleGlow());
             p["A2S_StarCrown"] = WithFx("A2S_StarCrown", fx["StarSparkle"], null);
             p["Fx_Shimmer"] = fx["Shimmer"]; // als eigenes Zusatzteil am Oberkörper
+            // Schamane
+            p["W2S_AntlerStaff"] = Model("W2S_AntlerStaff");
+            p["W2S_StormTotemStaff"] = WithFx("W2S_StormTotemStaff", fx["Storm"], "FxAnchor");
+            p["A2S_SpiritWolfMask"] = Model("A2S_SpiritWolfMask");
+            p["Fx_SpiritWisps"] = fx["SpiritWisps"]; // als eigenes Zusatzteil am Oberkörper
             return p;
         }
 
@@ -660,6 +755,19 @@ namespace ElementalBuddies.EditorTools
                     Desc = "Nachtblaue Robe und eine schwebende Sternenkrone.", Set = "Sternenweber",
                     // 6 cm höher als nachgemessen (0,555): schwebt dann sichtbar über der Hutspitze statt sie zu umschließen
                     AddOns = new[] { Add(p["A2S_StarCrown"], HumanBodyBones.Head, new Vector3(0f, 0.615f, -0.1f), Vector3.zero) } },
+                // ---------- Schamane ----------
+                new ItemDef { Id = "shaman_antlerstaff", Class = ChampionClass.Shaman, Slot = ShopSlot.Weapon, Name = "Geweihstab",
+                    Desc = "Ein Hirschgeweih auf festem Holz, mit Leder umwickelt.", Right = "W2S_AntlerStaff" },
+                new ItemDef { Id = "shaman_stormtotem", Class = ChampionClass.Shaman, Slot = ShopSlot.Weapon, Epic = true, Name = "Sturmtotem",
+                    Desc = "Über der Spitze schwebt ein Blitzstein, der knisternd Funken sprüht.", Right = "W2S_StormTotemStaff" },
+                new ItemDef { Id = "shaman_steppenwind", Class = ChampionClass.Shaman, Slot = ShopSlot.Armor, Name = "Steppenwind",
+                    Desc = "Sandfarbener Umhang und rostrote Zeichen aus der weiten Steppe.", Set = "Steppenwind" },
+                new ItemDef { Id = "shaman_spiritcaller", Class = ChampionClass.Shaman, Slot = ShopSlot.Armor, Epic = true, Name = "Geisterrufer",
+                    Desc = "Nachtblau, leuchtende Geisterzeichen und eine Wolfsmaske.", Set = "Geisterrufer",
+                    AddOns = new[] {
+                        Add(p["A2S_SpiritWolfMask"], HumanBodyBones.Head, new Vector3(0f, 0.278f, 0.062f), Vector3.zero),
+                        Add(p["Fx_SpiritWisps"], HumanBodyBones.UpperChest, new Vector3(0f, 0.12f, 0f), Vector3.zero),
+                    } },
             };
         }
 
@@ -723,7 +831,7 @@ namespace ElementalBuddies.EditorTools
 
         public const int IconSize = 256, Super = 4;
 
-        public static string RenderIcons()
+        public static string RenderIcons(bool missingOnly = false)
         {
             var log = new System.Text.StringBuilder();
             var cat = AssetDatabase.LoadAssetAtPath<ShopCatalogSO>(CatalogPath);
@@ -732,6 +840,7 @@ namespace ElementalBuddies.EditorTools
             {
                 if (it == null) continue;
                 string path = IconDir + it.Id + ".png";
+                if (missingOnly && File.Exists(path)) continue;
                 try
                 {
                     if (it.Slot == ShopSlot.Weapon) RenderWeaponIcon(it, path);

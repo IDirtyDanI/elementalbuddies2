@@ -35,13 +35,14 @@ namespace ElementalBuddies.EditorTools
             { "first_night", "ach_survivor" },
             { "dawn", "card_sonnenstrahl" },
             { "bloodlust", "ach_berserker" },
+            { "spiritcaller", "ach_shaman" },
         };
 
         // Neue PNGs als Sprite (2D and UI) importieren, falls noch nicht geschehen
         private static readonly string[] SpriteIcons =
         {
             "achievement_frame", "achievement_frame_locked", "icon_lock", "icon_trophy",
-            "ach_boss", "ach_bosses_all", "ach_soulcollector", "ach_survivor", "ach_berserker",
+            "ach_boss", "ach_bosses_all", "ach_soulcollector", "ach_survivor", "ach_berserker", "ach_shaman",
         };
 
         [MenuItem("BuddyTD/Erfolge/Datenbank anlegen-aktualisieren")]
@@ -74,6 +75,8 @@ namespace ElementalBuddies.EditorTools
             added += Add(db, "dawn", "Morgengrauen", AchievementCondition.SurviveDawn, 1, 0, -1, UnlockId.SiegeLevels);
             // Vierter Champion: setzt die Reihe W6 Schwertkämpfer / W10 Bogenschütze fort
             added += Add(db, "bloodlust", "Blutdurst", AchievementCondition.ReachWave, 15, 0, -1, UnlockId.ChampionBerserker);
+            // Fünfter Champion (Schamane, 2026-11-09): Reihe W6 / W10 / W15 / W20
+            added += Add(db, "spiritcaller", "Geisterrufer", AchievementCondition.ReachWave, 20, 0, -1, UnlockId.ChampionShaman);
 
             AddUnlock(db, UnlockId.ChampionKnight, "Schwertkämpfer");
             AddUnlock(db, UnlockId.ChampionArcher, "Bogenschütze");
@@ -85,6 +88,7 @@ namespace ElementalBuddies.EditorTools
             AddUnlock(db, UnlockId.TriFusion, "Super-Elementare");
             AddUnlock(db, UnlockId.SiegeLevels, "Belagerungsstufen");
             AddUnlock(db, UnlockId.ChampionBerserker, "Berserker");
+            AddUnlock(db, UnlockId.ChampionShaman, "Schamane");
 
             AssignIcons(db);
 
@@ -152,8 +156,12 @@ namespace ElementalBuddies.EditorTools
             {
                 var a = db.Find(AchievementIcons[i, 0]);
                 // leer → setzen; „Blutdurst“ hatte bis 2026-10-13 den Platzhalter ach_survivor → durch ach_berserker ersetzen
-                bool placeholder = a != null && a.Icon != null && AchievementIcons[i, 0] == "bloodlust" && a.Icon.name == "ach_survivor";
-                if (a != null && (a.Icon == null || placeholder)) a.Icon = Icon(AchievementIcons[i, 1]);
+                bool placeholder = a != null && a.Icon != null && (AchievementIcons[i, 0] == "bloodlust" || AchievementIcons[i, 0] == "spiritcaller")
+                    && a.Icon.name == "ach_survivor" && System.IO.File.Exists(IconDir + AchievementIcons[i, 1] + ".png");
+                // „Geisterrufer“: bis ach_shaman existiert, Platzhalter ach_survivor
+                string icon = AchievementIcons[i, 1];
+                if (icon == "ach_shaman" && !System.IO.File.Exists(IconDir + icon + ".png")) icon = "ach_survivor";
+                if (a != null && (a.Icon == null || placeholder)) a.Icon = Icon(icon);
             }
             SetUnlockIcon(db, UnlockId.ChampionKnight, "portrait_champion_knight");
             SetUnlockIcon(db, UnlockId.ChampionArcher, "portrait_champion_archer");
@@ -165,6 +173,7 @@ namespace ElementalBuddies.EditorTools
             SetUnlockIcon(db, UnlockId.TriFusion, "portrait_super_vulkan");
             SetUnlockIcon(db, UnlockId.SiegeLevels, "elite_ram");
             SetUnlockIcon(db, UnlockId.ChampionBerserker, System.IO.File.Exists(IconDir + "portrait_champion_berserker.png") ? "portrait_champion_berserker" : "portrait_champion_knight");
+            SetUnlockIcon(db, UnlockId.ChampionShaman, System.IO.File.Exists(IconDir + "portrait_champion_shaman.png") ? "portrait_champion_shaman" : "portrait_champion_mage");
             if (db.MedalFrame == null) db.MedalFrame = Icon("achievement_frame");
             if (db.MedalFrameLocked == null) db.MedalFrameLocked = Icon("achievement_frame_locked");
             if (db.LockIcon == null) db.LockIcon = Icon("icon_lock");
@@ -177,7 +186,8 @@ namespace ElementalBuddies.EditorTools
             {
                 if (u == null || u.Id != id) continue;
                 // Berserker hatte bis zum eigenen Porträt (2026-10-13) den Platzhalter portrait_champion_knight → ersetzen
-                bool placeholder = id == UnlockId.ChampionBerserker && u.Icon != null && u.Icon.name == "portrait_champion_knight" && icon != u.Icon.name;
+                bool placeholder = (id == UnlockId.ChampionBerserker && u.Icon != null && u.Icon.name == "portrait_champion_knight" && icon != u.Icon.name)
+                    || (id == UnlockId.ChampionShaman && u.Icon != null && u.Icon.name == "portrait_champion_mage" && icon != u.Icon.name);
                 if (u.Icon == null || placeholder) u.Icon = Icon(icon);
             }
         }

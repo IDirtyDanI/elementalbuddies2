@@ -28,6 +28,8 @@ namespace ElementalBuddies
 
         // Zusatzwirkung pro getroffenem Gegner (vor dem Schaden), z. B. Einfrieren
         public System.Action<EnemyBrain> OnHitEnemy;
+        // Treffer auf ALLEN Rechnern (Optik, z. B. Kettensprung des Geisterblitzes); Schaden entscheidet der Empfänger selbst
+        public System.Action<EnemyBrain, Vector3> OnHitAny;
         // Fähigkeit dieses Pfeils (Treffer-Effekt je Fähigkeit, HitVfx): Pfeilschuss oder Frostpfeil
         [System.NonSerialized] public AbilityId Ability = AbilityId.ArrowShot;
 
@@ -103,6 +105,7 @@ namespace ElementalBuddies
             // Treffer-Effekt der Fähigkeit am Gegner (HitVfx-Tabelle, sonst HitFxPrefab) – auf allen Rechnern
             HitVfx.Show(enemy, Ability, transform.forward, 1f, HitFxPrefab);
             if (HitSfx != null) HitSfx.Play(point);
+            if (OnHitAny != null) OnHitAny(enemy, point);
             if (!Net.IsServer) return; // Clients: nur Optik (Funken, Laut, Pfeil bleibt stecken)
             if (OnHitEnemy != null) using (EnemyBrain.PlayerSource()) OnHitEnemy(enemy);
             if (enemy != null) EnemyBrain.DealPlayerDamage(enemy, Damage, Ability, hitFx: false); // Quelle Spieler (Telemetrie)

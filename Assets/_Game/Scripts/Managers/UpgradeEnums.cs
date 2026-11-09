@@ -63,7 +63,10 @@ namespace ElementalBuddies
         Knight = 1 << 1,
         Archer = 1 << 2,
         Berserker = 1 << 3,
-        All = Mage | Knight | Archer | Berserker
+        Shaman = 1 << 4,
+        All = Mage | Knight | Archer | Berserker | Shaman,
+        // Altes „All“ vor dem Schamanen (2026-11-09) – so in einigen Karten-Assets serialisiert, zählt weiter als „alle“
+        LegacyAll4 = Mage | Knight | Archer | Berserker
     }
 
     // Sonderwirkungen jenseits einfacher Werte (D3/D4); Werte in CardEffects. Nur hinten anhängen (serialisiert).

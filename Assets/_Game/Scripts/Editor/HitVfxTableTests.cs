@@ -45,7 +45,8 @@ namespace ElementalBuddies.EditorTools.Tests
             var none = new HashSet<AbilityId>
             {
                 AbilityId.Blink, AbilityId.StoneWall, AbilityId.HolyCircle,
-                AbilityId.ShieldBlock, AbilityId.LightOath, AbilityId.Roll, AbilityId.LightFrenzy
+                AbilityId.ShieldBlock, AbilityId.LightOath, AbilityId.Roll, AbilityId.LightFrenzy,
+                AbilityId.WindStep, AbilityId.WarTotem, AbilityId.AncestralSpirit
             };
             foreach (AbilityId id in System.Enum.GetValues(typeof(AbilityId)))
                 Assert.AreEqual(!none.Contains(id), HitVfx.IsDamaging(id), id.ToString());

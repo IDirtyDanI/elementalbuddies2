@@ -92,6 +92,8 @@ namespace ElementalBuddies.EditorTools
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 var imp = AssetImporter.GetAtPath(path) as AudioImporter;
                 if (imp == null) continue;
+                // Ambiente-Schleifen (amb_*) sind eigens eingestellt (PCM, im Hintergrund laden) – nicht überschreiben
+                if (Path.GetFileName(path).StartsWith("amb_")) continue;
                 var s = imp.defaultSampleSettings;
                 bool longClip = path.Contains("game_over") || path.Contains("boss_") || path.Contains("wave_") || path.Contains("horn");
                 s.loadType = longClip ? AudioClipLoadType.CompressedInMemory : AudioClipLoadType.DecompressOnLoad;
@@ -194,6 +196,16 @@ namespace ElementalBuddies.EditorTools
             yield return new Sfx(SfxId.LeapLand, 0.65f, 0.3f, P, "leap_land");
             yield return new Sfx(SfxId.WarRoar, 0.7f, 1f, new Vector2(0.97f, 1.03f), "war_roar");
             yield return new Sfx(SfxId.RageFull, 0.55f, 1f, PFix, "rage_full");
+            // Schamane (2026-11-09): Geisterblitz feuert alle 0,6 s → leise mit Streuung; Trommel/Steinhaut pulsieren je Totem →
+            // Sperrzeit, damit zwei Totems nicht doppelt schlagen
+            yield return new Sfx(SfxId.SpiritBolt, 0.42f, 0.08f, new Vector2(0.93f, 1.07f), "spirit_bolt");
+            yield return new Sfx(SfxId.SpiritZap, 0.42f, 0.05f, PWide, "spirit_zap");
+            yield return new Sfx(SfxId.WindStep, 0.5f, 0.2f, P, "wind_step");
+            yield return new Sfx(SfxId.TotemPlant, 0.6f, 0.2f, P, "totem_plant");
+            yield return new Sfx(SfxId.WarDrum, 0.45f, 1.5f, new Vector2(0.97f, 1.03f), "war_drum");
+            yield return new Sfx(SfxId.TideWave, 0.6f, 0.3f, P, "tide_wave");
+            yield return new Sfx(SfxId.StoneSkin, 0.45f, 1f, P, "stone_skin");
+            yield return new Sfx(SfxId.AncestorHowl, 0.6f, 1f, new Vector2(0.97f, 1.03f), "ancestor_howl");
             // Walddorf (2026-10-16, Etappe 3): Pegel wie die Untoten-Gegenstücke (Kategorie in synth_sfx.py), Zuordnung über
             // EnemyConfigSO (MeleeHitSfx/AttackSfx/DeathSfx/SpawnSfx, ForestAudioSetup) und Theme_Forest.BossSpawnSfx
             yield return new Sfx(SfxId.OrkGrunt, 0.42f, 0.05f, P, "ork_grunt");              // wie EnemyChop

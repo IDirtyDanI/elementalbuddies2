@@ -745,6 +745,7 @@ namespace ElementalBuddies
                 case ChampionClass.Knight: return "Block-Ausdauer";
                 case ChampionClass.Archer: return "Rollweite";
                 case ChampionClass.Berserker: return "Ansturm-/Sprungweite";
+                case ChampionClass.Shaman: return "Windschritt-Weite";
                 default: return "Blink-Reichweite";
             }
         }
@@ -936,6 +937,7 @@ namespace ElementalBuddies
                 case ChampionClass.Knight: return "Schwertkämpfer";
                 case ChampionClass.Archer: return "Bogenschütze";
                 case ChampionClass.Berserker: return "Berserker";
+                case ChampionClass.Shaman: return "Schamane";
                 default: return "Magier";
             }
         }

@@ -51,6 +51,7 @@ namespace ElementalBuddies.EditorTools
             Save("VFX_LightBeam", LightBeam);
 
             BuildBerserkerFx();
+            BuildShamanFx();
 
             // Schwert, Schild, Bogen, Stab kommen als Blender-Modelle (Models/Characters/Weapons); nur der Köcher ist Platzhalter
             Save("Weapon_Quiver", Quiver);
@@ -84,6 +85,40 @@ namespace ElementalBuddies.EditorTools
             Save("VFX_WarRoar", WarRoar);
             Save("VFX_FrenzyAura", FrenzyAura);
             Save("VFX_FrenzyBuff", FrenzyBuff);
+        }
+
+        // Nur die Schamanen-Effekte, Totems und den Geisterwolf bauen (die anderen Prefabs bleiben unberührt)
+        [MenuItem("BuddyTD/Champions/Schamanen-Effekte bauen")]
+        public static void BuildShaman()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/_Game/VFX/Prefabs/Champions"))
+                AssetDatabase.CreateFolder("Assets/_Game/VFX/Prefabs", "Champions");
+            BuildShamanFx();
+            AssetDatabase.SaveAssets();
+            Debug.Log("ChampionFxBuilder: Schamanen-Effekte gebaut (" + Dir + ").");
+        }
+
+        private static void BuildShamanFx()
+        {
+            Save("VFX_SpiritBolt", SpiritBolt);
+            Save("VFX_SpiritChain", SpiritChain);
+            Save("VFX_SpiritMuzzle", SpiritMuzzle);
+            Save("VFX_WindStep", WindStep);
+            Save("VFX_WindBuff", WindBuff);
+            Save("VFX_SpiritLink", SpiritLink);
+            Save("VFX_TotemPlant", TotemPlant);
+            Save("VFX_StonePlant", StonePlant);
+            Save("VFX_WarTotemAura", WarTotemAura);
+            Save("VFX_WarBuff", WarBuff);
+            Save("VFX_HealingTide", HealingTide);
+            Save("VFX_StoneskinAura", StoneskinAura);
+            Save("VFX_StoneskinShield", StoneskinShield);
+            Save("VFX_AncestorCall", AncestorCall);
+            Save("VFX_AncestralSpirit", AncestralSpiritFx);
+            // Laufzeit-Objekte mit Modell (Models/Champions/Shaman, Heroes2Import.ImportShaman)
+            Save("ShamanTotem_War", go => TotemPrefab(go, "Totem_War", WarTotemTop));
+            Save("ShamanTotem_Stone", go => TotemPrefab(go, "Totem_Stone", StoneTotemTop));
+            Save("AncestralSpirit_Wolf", SpiritWolfPrefab);
         }
 
         public static GameObject Load(string name)
@@ -325,6 +360,13 @@ namespace ElementalBuddies.EditorTools
         {
             var l = ps.limitVelocityOverLifetime; l.enabled = true; l.drag = drag; l.dampen = 0f;
             l.limit = 1000f;
+        }
+
+        // Linearer Luftwiderstand (nicht × Größe × Tempo wie Unitys Standard): bremst große, schnelle Partikel nicht sofort aus
+        private static void DragLinear(ParticleSystem ps, float drag)
+        {
+            Drag(ps, drag);
+            var l = ps.limitVelocityOverLifetime; l.multiplyDragByParticleSize = false; l.multiplyDragByParticleVelocity = false;
         }
 
         private static void MeshParticles(ParticleSystem ps, Mesh mesh)
@@ -655,6 +697,315 @@ namespace ElementalBuddies.EditorTools
             var st = PS(go.transform, "Sparkles", new Vector3(0, 0.8f, 0), StarAdd, new Vector2(0.5f, 0.9f), new Vector2(0.15f, 0.28f), new Color(1f, 0.7f, 0.35f), 30);
             Burst(st, 16); Sphere(st, 0.6f); Speed(st, 0.5f, 1.5f); Gravity(st, -0.4f);
             ColorLife(st, Fade(Color.white, Color.white));
+        }
+
+        // ---------------- Schamane ----------------
+        // Akzent Türkis (#2a9d8f), Geister-Cyan; Partikel ≤ 24 je System (Handy), keine Lichter
+
+        // Bodenringe in Aura-Größe (bis 14 m): ohne Bildschirm-Deckelung der Partikelgröße (Standard 0,5 = halbe Bildhöhe),
+        // sonst schrumpfen sie bei naher Kamera
+        private static void FlatBig(ParticleSystem ps)
+        {
+            Flat(ps);
+            var r = ps.GetComponent<ParticleSystemRenderer>();
+            r.maxParticleSize = 10f;
+        }
+
+        private static readonly Color Teal = new Color(0.165f, 0.616f, 0.561f);
+        private static readonly Color Spirit = new Color(0.45f, 1f, 0.9f);
+        private static readonly Color WarRed = new Color(1f, 0.32f, 0.14f);
+        private static readonly Color Rune = new Color(0.4f, 0.95f, 0.55f);
+        private static readonly Color Water = new Color(0.35f, 0.75f, 1f);
+
+        // Geisterblitz: leuchtender Kern + Schweif (TrailRenderer, wird beim Aufprall gelöst) + Funken entlang der Bahn
+        private static void SpiritBolt(GameObject go)
+        {
+            var core = PS(go.transform, "Core", Vector3.zero, SoftAdd, new Vector2(0.12f, 0.16f), new Vector2(0.5f, 0.6f), new Color(0.6f, 1f, 0.95f, 0.9f), 8, true);
+            Rate(core, 40f); var cm = core.main; cm.simulationSpace = ParticleSystemSimulationSpace.Local;
+            ColorLife(core, Fade(Color.white, Color.white, 1f, 0.2f, 0.6f));
+            var orb = PS(go.transform, "Orb", Vector3.zero, StarAdd, new Vector2(0.15f, 0.2f), new Vector2(0.28f, 0.34f), new Color(0.85f, 1f, 1f), 6, true);
+            Rate(orb, 24f); Spin(orb, 360f); var om = orb.main; om.simulationSpace = ParticleSystemSimulationSpace.Local;
+
+            var trailGo = new GameObject("Trail");
+            trailGo.transform.SetParent(go.transform, false);
+            var tr = trailGo.AddComponent<TrailRenderer>();
+            tr.sharedMaterial = TrailAdd;
+            tr.time = 0.22f;
+            tr.minVertexDistance = 0.05f;
+            tr.widthMultiplier = 0.22f;
+            tr.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Spirit, 0f), new GradientColorKey(Teal, 1f) }, new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0f, 1f) });
+            tr.colorGradient = g;
+            tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            tr.autodestruct = false;
+            var sp = PS(trailGo.transform, "Wisps", Vector3.zero, SoftAdd, new Vector2(0.25f, 0.4f), new Vector2(0.06f, 0.12f), Spirit, 24, true);
+            var em = sp.emission; em.rateOverDistance = 4f; Speed(sp, 0.2f, 0.6f); Sphere(sp, 0.08f);
+            ColorLife(sp, Fade(Color.white, Teal));
+
+            var ap = go.AddComponent<ArrowProjectile>();
+            ap.DetachOnEnd = trailGo.transform;
+            ap.HitRadius = 0.35f;
+        }
+
+        // Kettensprung: kurzer Blitzbogen (LineRenderer + BeamFx) mit Funken entlang der Bahn
+        private static void SpiritChain(GameObject go)
+        {
+            var lr = go.AddComponent<LineRenderer>();
+            lr.sharedMaterial = Add("VFX_Beam_Add", "vfx_soft_dot.png");
+            lr.textureMode = LineTextureMode.Stretch;
+            lr.alignment = LineAlignment.View;
+            lr.numCapVertices = 3;
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lr.receiveShadows = false;
+            lr.positionCount = 2;
+            lr.SetPosition(0, Vector3.zero);
+            lr.SetPosition(1, Vector3.forward * 4f);
+            var beam = go.AddComponent<BeamFx>();
+            beam.StartWidth = 0.4f;
+            beam.Lifetime = 0.35f;
+            beam.Color = new Color(0.6f, 1.6f, 1.45f, 1f);
+            var sp = PS(go.transform, "Sparks", Vector3.zero, SparkAdd, new Vector2(0.15f, 0.3f), new Vector2(0.04f, 0.08f), new Color(0.75f, 1f, 1f), 20);
+            Burst(sp, 14); var sh = sp.shape; sh.enabled = true; sh.shapeType = ParticleSystemShapeType.Box; sh.scale = new Vector3(0.25f, 0.25f, 4f);
+            Speed(sp, 1f, 3f); Stretch(sp, 2f);
+        }
+
+        // Kleiner Blitz am Stab-Stein beim Abschuss
+        private static void SpiritMuzzle(GameObject go)
+        {
+            var f = PS(go.transform, "Flash", Vector3.zero, SoftAdd, new Vector2(0.12f, 0.12f), new Vector2(0.5f, 0.5f), new Color(0.6f, 1f, 0.95f, 0.8f), 2);
+            Burst(f, 1); ColorLife(f, Fade(Color.white, Color.white, 1f, 0.05f, 0.3f));
+            var sp = PS(go.transform, "Sparks", Vector3.zero, SparkAdd, new Vector2(0.12f, 0.22f), new Vector2(0.03f, 0.06f), Spirit, 12);
+            Burst(sp, 8); Cone(sp, 30f, 0.05f, Vector3.zero); Speed(sp, 2f, 4f); Stretch(sp, 2f);
+        }
+
+        // Windschritt: Windschlieren und Blätter hinter dem Schamanen (Spawn am Boden, +Z = Sprintrichtung)
+        private static void WindStep(GameObject go)
+        {
+            var st = PS(go.transform, "Streaks", new Vector3(0, 0.9f, 0), SoftAlpha, new Vector2(0.3f, 0.45f), new Vector2(0.06f, 0.1f), new Color(0.85f, 1f, 0.97f, 0.6f), 20);
+            Burst(st, 16); Cone(st, 12f, 0.5f, new Vector3(0f, 180f, 0f)); Speed(st, 6f, 9f); Stretch(st, 5f);
+            var lv = PS(go.transform, "Leaves", new Vector3(0, 0.4f, 0), LeafAlpha, new Vector2(0.7f, 1.1f), new Vector2(0.1f, 0.16f), new Color(0.55f, 0.8f, 0.4f), 16);
+            Burst(lv, 10); Cone(lv, 40f, 0.4f, new Vector3(0f, 180f, 0f)); Speed(lv, 2f, 4f); Drag(lv, 2f); Gravity(lv, 0.15f); Spin(lv, 300f);
+            var d = PS(go.transform, "Dust", new Vector3(0, 0.1f, 0), DustAlpha, new Vector2(0.4f, 0.7f), new Vector2(0.4f, 0.7f), new Color(0.75f, 0.72f, 0.62f, 0.55f), 12);
+            Burst(d, 8); Ring(d, 0.3f); Speed(d, 1f, 2f); Drag(d, 3f); SizeLife(d, 0.6f, 1.4f); ColorLife(d, Fade(Color.white, Color.white, 0.8f, 0.05f, 0.4f));
+        }
+
+        // Tempo-Buff: Windwirbel an den Füßen (Schleife, am Spieler-Root = Körpermitte, Füße bei −1 m)
+        private static void WindBuff(GameObject go)
+        {
+            var w = PS(go.transform, "Swirl", new Vector3(0, -0.85f, 0), SoftAlpha, new Vector2(0.5f, 0.7f), new Vector2(0.05f, 0.09f), new Color(0.85f, 1f, 0.97f, 0.7f), 24, true);
+            Rate(w, 24f); Ring(w, 0.45f); Speed(w, 0f, 0f);
+            var v = w.velocityOverLifetime; v.enabled = true; v.space = ParticleSystemSimulationSpace.Local;
+            v.x = new ParticleSystem.MinMaxCurve(0f, 0f); v.y = new ParticleSystem.MinMaxCurve(0.5f, 0.9f); v.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            // alle Achsen im selben Kurvenmodus (TwoConstants), sonst warnt Unity „Particle … curves must all be in the same mode“
+            v.orbitalX = new ParticleSystem.MinMaxCurve(0f, 0f); v.orbitalY = new ParticleSystem.MinMaxCurve(6f, 7f); v.orbitalZ = new ParticleSystem.MinMaxCurve(0f, 0f);
+            var m = w.main; m.simulationSpace = ParticleSystemSimulationSpace.Local;
+            Stretch(w, 2.5f, 0.2f);
+            ColorLife(w, Fade(Color.white, Color.white));
+        }
+
+        // Geistverbindung: dezenter Faden zu Buddies in der Aura (LineRenderer am Root, Punkte setzt das Kit)
+        private static void SpiritLink(GameObject go)
+        {
+            var lr = go.AddComponent<LineRenderer>();
+            lr.sharedMaterial = Add("VFX_Beam_Add", "vfx_soft_dot.png");
+            lr.textureMode = LineTextureMode.Stretch;
+            lr.alignment = LineAlignment.View;
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lr.receiveShadows = false;
+            lr.useWorldSpace = true;
+            lr.positionCount = 2;
+            lr.widthMultiplier = 0.06f;
+            lr.widthCurve = new AnimationCurve(new Keyframe(0f, 0.6f), new Keyframe(0.5f, 1f), new Keyframe(1f, 0.6f));
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Spirit, 0f), new GradientColorKey(Teal, 1f) }, new[] { new GradientAlphaKey(0.35f, 0f), new GradientAlphaKey(0.2f, 1f) });
+            lr.colorGradient = g;
+        }
+
+        // Totem rammen: Erdstaub + Holzsplitter (unskaliert)
+        private static void TotemPlant(GameObject go)
+        {
+            var d = PS(go.transform, "Dust", new Vector3(0, 0.15f, 0), DustAlpha, new Vector2(0.6f, 0.9f), new Vector2(0.5f, 0.9f), new Color(0.6f, 0.5f, 0.38f, 0.8f), 20);
+            Burst(d, 14); Ring(d, 0.3f); Speed(d, 1.5f, 3f); Drag(d, 3f); SizeLife(d, 0.6f, 1.5f); ColorLife(d, Fade(Color.white, Color.white, 0.85f, 0.05f, 0.4f));
+            var ch = PS(go.transform, "Chips", new Vector3(0, 0.2f, 0), DustAlpha, new Vector2(0.5f, 0.8f), new Vector2(0.06f, 0.12f), new Color(0.45f, 0.32f, 0.2f), 12);
+            Burst(ch, 10); Hemisphere(ch, 0.2f); Speed(ch, 2f, 4f); Gravity(ch, 1.5f); Spin(ch, 400f);
+            var ring = PS(go.transform, "Ring", new Vector3(0, 0.05f, 0), RingAdd, new Vector2(0.35f, 0.35f), new Vector2(2.4f, 2.4f), new Color(1f, 0.85f, 0.6f, 0.6f), 2);
+            Burst(ring, 1); FlatBig(ring); SizeLife(ring, 0.2f, 1f); ColorLife(ring, Fade(Color.white, Color.white, 1f, 0.05f, 0.4f));
+        }
+
+        // Steinhaut-Totem aufstellen: Stoß-Ring (Radius 2,5 = EffectAuthoredSize) + Erdbrocken
+        private static void StonePlant(GameObject go)
+        {
+            TotemPlant(go);
+            var sw = PS(go.transform, "Shockwave", new Vector3(0, 0.08f, 0), RingAdd, new Vector2(0.45f, 0.45f), new Vector2(5f, 5f), new Color(0.5f, 1f, 0.6f, 0.75f), 2);
+            Burst(sw, 1); FlatBig(sw); SizeLife(sw, 0.15f, 1f); ColorLife(sw, Fade(Color.white, Color.white, 1f, 0.05f, 0.45f));
+            var rk = PS(go.transform, "Rocks", new Vector3(0, 0.1f, 0), DustAlpha, new Vector2(0.5f, 0.8f), new Vector2(0.12f, 0.22f), new Color(0.5f, 0.48f, 0.42f), 16);
+            Burst(rk, 12); Ring(rk, 1.2f, 0.6f); Speed(rk, 1.5f, 3f); Gravity(rk, 1.8f); Spin(rk, 200f);
+        }
+
+        // Kriegstotem-Aura (Schleife, Radius 7 = AuraAuthoredSize): roter Bodenring, Trommelpuls alle 2 s, aufsteigende Glut
+        private static void WarTotemAura(GameObject go)
+        {
+            var ring = PS(go.transform, "Ring", new Vector3(0, 0.03f, 0), RingAdd, new Vector2(1.2f, 1.2f), new Vector2(14f, 14f), new Color(1f, 0.35f, 0.15f, 0.45f), 4, true);
+            Rate(ring, 2.5f); Burst(ring, 1); FlatBig(ring); ColorLife(ring, Fade(Color.white, Color.white, 1f, 0.3f, 0.6f));
+            var m1 = ring.main; m1.simulationSpace = ParticleSystemSimulationSpace.Local;
+            var pulse = PS(go.transform, "DrumPulse", new Vector3(0, 0.05f, 0), RingAdd, new Vector2(0.7f, 0.7f), new Vector2(14f, 14f), new Color(1f, 0.55f, 0.25f, 0.7f), 3, true);
+            Rate(pulse, 0.5f); FlatBig(pulse); SizeLife(pulse, 0.1f, 1f); ColorLife(pulse, Fade(Color.white, Color.white, 1f, 0.05f, 0.5f));
+            var m2 = pulse.main; m2.simulationSpace = ParticleSystemSimulationSpace.Local;
+            var em = PS(go.transform, "Embers", new Vector3(0, 0.1f, 0), SoftAdd, new Vector2(1f, 1.6f), new Vector2(0.05f, 0.1f), WarRed, 24, true);
+            Rate(em, 14f); Ring(em, 6.5f, 0.15f); Speed(em, 0f, 0f);
+            var v = em.velocityOverLifetime; v.enabled = true; v.space = ParticleSystemSimulationSpace.Local;
+            v.x = new ParticleSystem.MinMaxCurve(0f, 0f); v.y = new ParticleSystem.MinMaxCurve(0.4f, 0.9f); v.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            var m3 = em.main; m3.simulationSpace = ParticleSystemSimulationSpace.Local;
+            ColorLife(em, Fade(new Color(1f, 0.8f, 0.45f), WarRed));
+        }
+
+        // Kriegstotem-Buff am Ziel: rot-oranges Glimmen (kurz, am Ziel-Transform)
+        private static void WarBuff(GameObject go)
+        {
+            var st = PS(go.transform, "Glow", new Vector3(0, 0.4f, 0), SoftAdd, new Vector2(0.6f, 0.9f), new Vector2(0.06f, 0.12f), new Color(1f, 0.5f, 0.2f), 16);
+            Burst(st, 12); Sphere(st, 0.5f); Speed(st, 0.3f, 0.8f); Gravity(st, -0.5f);
+            ColorLife(st, Fade(new Color(1f, 0.85f, 0.5f), WarRed));
+            var r = PS(go.transform, "Flare", new Vector3(0, 0.4f, 0), SoftAdd, new Vector2(0.4f, 0.4f), new Vector2(1.2f, 1.2f), new Color(1f, 0.35f, 0.12f, 0.3f), 2);
+            Burst(r, 1); ColorLife(r, Fade(Color.white, Color.white, 1f, 0.15f, 0.5f));
+        }
+
+        // Heilende Woge: Wasserwelle als Kegel 75° nach +Z, 8 m (EffectAuthoredSize 8)
+        private static void HealingTide(GameObject go)
+        {
+            // 2026-11-09: flach am Boden (horizontale Billboards) und schneller, damit die Welle den Kegel bis ~8 m sichtbar abdeckt
+            // (vorher 12 m/s mit Luftwiderstand 1 → nach 0,3 s erst 1,5 m, wirkte wie eine senkrechte Fontäne am Schamanen).
+            // Weg mit Luftwiderstand d: v0/d · (1 − e^(−d·t)) → 16/0,6 · (1 − e^(−0,6·0,6)) ≈ 8 m.
+            var wave = PS(go.transform, "Wave", new Vector3(0, 0.25f, 0), SoftAdd, new Vector2(0.55f, 0.65f), new Vector2(1.2f, 1.7f), new Color(0.4f, 0.8f, 1f, 0.7f), 24);
+            Burst(wave, 24); Cone(wave, 37f, 0.4f, Vector3.zero); Speed(wave, 15f, 17f); DragLinear(wave, 0.6f); Flat(wave);
+            SizeLife(wave, 0.7f, 1.8f); ColorLife(wave, Fade(Color.white, new Color(0.6f, 1f, 0.9f), 1f, 0.05f, 0.5f));
+            var foam = PS(go.transform, "Foam", new Vector3(0, 0.15f, 0), SmokeAlpha, new Vector2(0.6f, 0.8f), new Vector2(0.7f, 1.1f), new Color(0.85f, 0.97f, 1f, 0.55f), 20);
+            Burst(foam, 18, 0.05f); Cone(foam, 35f, 0.4f, Vector3.zero); Speed(foam, 12f, 14f); DragLinear(foam, 0.8f); Flat(foam);
+            SizeLife(foam, 0.5f, 1.5f); ColorLife(foam, Fade(Color.white, Color.white, 0.8f, 0.05f, 0.5f));
+            var spray = PS(go.transform, "Spray", new Vector3(0, 0.5f, 0), SparkAdd, new Vector2(0.4f, 0.6f), new Vector2(0.04f, 0.08f), new Color(0.75f, 0.95f, 1f), 24);
+            Burst(spray, 22, 0.08f); Cone(spray, 38f, 0.5f, new Vector3(-10f, 0f, 0f)); Speed(spray, 11f, 15f); Gravity(spray, 1.2f); Stretch(spray, 2f);
+            var heal = PS(go.transform, "HealMotes", new Vector3(0, 0.6f, 0), StarAdd, new Vector2(0.6f, 0.9f), new Vector2(0.12f, 0.2f), new Color(0.6f, 1f, 0.75f), 16);
+            Burst(heal, 12, 0.12f); Cone(heal, 35f, 0.5f, Vector3.zero); Speed(heal, 10f, 13f); DragLinear(heal, 1f);
+            ColorLife(heal, Fade(Color.white, Color.white));
+        }
+
+        // Steinhaut-Aura (Schleife, Radius 6 = AuraAuthoredSize): grüner Runenring + aufsteigende Runenfunken
+        private static void StoneskinAura(GameObject go)
+        {
+            var ring = PS(go.transform, "RuneRing", new Vector3(0, 0.03f, 0), RingAdd, new Vector2(1.4f, 1.4f), new Vector2(12f, 12f), new Color(0.35f, 0.95f, 0.5f, 0.45f), 4, true);
+            Rate(ring, 2f); Burst(ring, 1); FlatBig(ring); Spin(ring, 20f); ColorLife(ring, Fade(Color.white, Color.white, 1f, 0.3f, 0.6f));
+            var m1 = ring.main; m1.simulationSpace = ParticleSystemSimulationSpace.Local;
+            var inner = PS(go.transform, "Inner", new Vector3(0, 0.04f, 0), SoftAdd, new Vector2(1.2f, 1.2f), new Vector2(9f, 9f), new Color(0.3f, 0.8f, 0.45f, 0.12f), 3, true);
+            Rate(inner, 1.5f); Burst(inner, 1); FlatBig(inner); ColorLife(inner, Fade(Color.white, Color.white, 1f, 0.3f, 0.6f));
+            var m2 = inner.main; m2.simulationSpace = ParticleSystemSimulationSpace.Local;
+            var mo = PS(go.transform, "Runes", new Vector3(0, 0.1f, 0), StarAdd, new Vector2(1f, 1.5f), new Vector2(0.1f, 0.18f), Rune, 24, true);
+            Rate(mo, 12f); Ring(mo, 5.6f, 0.2f); Speed(mo, 0f, 0f);
+            var v = mo.velocityOverLifetime; v.enabled = true; v.space = ParticleSystemSimulationSpace.Local;
+            v.x = new ParticleSystem.MinMaxCurve(0f, 0f); v.y = new ParticleSystem.MinMaxCurve(0.3f, 0.7f); v.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            var m3 = mo.main; m3.simulationSpace = ParticleSystemSimulationSpace.Local;
+            ColorLife(mo, Fade(Color.white, Color.white));
+        }
+
+        // Steinhaut am Ziel: Steinschimmer (Splitter + grüner Glanz), kurz
+        private static void StoneskinShield(GameObject go)
+        {
+            var sh = PS(go.transform, "Shell", new Vector3(0, 0.3f, 0), SoftAdd, new Vector2(0.8f, 0.8f), new Vector2(1.5f, 1.5f), new Color(0.45f, 0.9f, 0.55f, 0.25f), 2);
+            Burst(sh, 1); ColorLife(sh, Fade(Color.white, Color.white, 1f, 0.2f, 0.6f));
+            var fl = PS(go.transform, "Flecks", new Vector3(0, 0.3f, 0), DustAlpha, new Vector2(0.7f, 1f), new Vector2(0.06f, 0.12f), new Color(0.62f, 0.6f, 0.52f), 16);
+            Burst(fl, 12); Sphere(fl, 0.55f, 0.1f); Speed(fl, 0f, 0.2f); Spin(fl, 90f);
+            ColorLife(fl, Fade(Color.white, Color.white));
+            var gl = PS(go.transform, "Glints", new Vector3(0, 0.3f, 0), StarAdd, new Vector2(0.4f, 0.7f), new Vector2(0.1f, 0.18f), Rune, 10);
+            Burst(gl, 6); Sphere(gl, 0.6f, 0.1f); ColorLife(gl, Fade(Color.white, Color.white));
+        }
+
+        // Ahnenruf: Geisterwelle (Radius 5 = EffectAuthoredSize) + aufsteigende Schwaden
+        private static void AncestorCall(GameObject go)
+        {
+            var sw = PS(go.transform, "Wave", new Vector3(0, 0.1f, 0), RingAdd, new Vector2(0.55f, 0.55f), new Vector2(10f, 10f), new Color(0.5f, 1f, 0.95f, 0.8f), 2);
+            Burst(sw, 1); FlatBig(sw); SizeLife(sw, 0.1f, 1f); ColorLife(sw, Fade(Color.white, Color.white, 1f, 0.05f, 0.5f));
+            var w2 = PS(go.transform, "Wave2", new Vector3(0, 1.2f, 0), RingAdd, new Vector2(0.45f, 0.45f), new Vector2(6f, 6f), new Color(0.7f, 1f, 1f, 0.6f), 2);
+            Burst(w2, 1, 0.06f); FlatBig(w2); SizeLife(w2, 0.15f, 1f); ColorLife(w2, Fade(Color.white, Color.white, 1f, 0.05f, 0.5f));
+            var ws = PS(go.transform, "Wisps", new Vector3(0, 0.3f, 0), SoftAdd, new Vector2(0.9f, 1.3f), new Vector2(0.25f, 0.45f), new Color(0.45f, 1f, 0.95f, 0.5f), 24);
+            Burst(ws, 20); Ring(ws, 1.2f, 0.8f); Speed(ws, 0.5f, 1.2f); Gravity(ws, -0.4f);
+            SizeLife(ws, 0.6f, 1.4f); ColorLife(ws, Fade(Color.white, Teal));
+        }
+
+        // Ahnengeist: Geisterschwaden am Wolf + Heilpuls am Boden je Sekunde (Schleife, am Geist-Root)
+        private static void AncestralSpiritFx(GameObject go)
+        {
+            var ws = PS(go.transform, "Wisps", new Vector3(0, -0.95f, 0), SoftAdd, new Vector2(0.6f, 0.9f), new Vector2(0.12f, 0.25f), new Color(0.45f, 1f, 0.95f, 0.55f), 24, true);
+            Rate(ws, 22f); var sh = ws.shape; sh.enabled = true; sh.shapeType = ParticleSystemShapeType.Box; sh.scale = new Vector3(0.35f, 0.4f, 1.1f);
+            Speed(ws, 0.1f, 0.3f); Gravity(ws, -0.2f); SizeLife(ws, 1f, 0.3f); ColorLife(ws, Fade(Color.white, Teal));
+            var pulse = PS(go.transform, "HealPulse", new Vector3(0, -1.55f, 0), RingAdd, new Vector2(0.8f, 0.8f), new Vector2(4f, 4f), new Color(0.5f, 1f, 0.7f, 0.5f), 2, true);
+            Rate(pulse, 1f); FlatBig(pulse); SizeLife(pulse, 0.2f, 1f); ColorLife(pulse, Fade(Color.white, Color.white, 1f, 0.05f, 0.5f));
+            var pm = pulse.main; pm.simulationSpace = ParticleSystemSimulationSpace.Local;
+            var mo = PS(go.transform, "HealMotes", new Vector3(0, -1.1f, 0), StarAdd, new Vector2(0.8f, 1.2f), new Vector2(0.08f, 0.14f), new Color(0.6f, 1f, 0.75f), 12, true);
+            Rate(mo, 6f); Sphere(mo, 0.7f); Speed(mo, 0.2f, 0.4f); Gravity(mo, -0.3f); ColorLife(mo, Fade(Color.white, Color.white));
+        }
+
+        // Glut in der Schale des Kriegstotems / Runenfunken des Steinhaut-Totems (Schleife am FxAnchor)
+        private static void WarTotemTop(Transform at)
+        {
+            var fl = PS(at, "Flames", Vector3.zero, FlameAdd, new Vector2(0.35f, 0.55f), new Vector2(0.18f, 0.3f), new Color(1f, 0.55f, 0.2f), 20, true);
+            Rate(fl, 26f); Sphere(fl, 0.08f); Speed(fl, 0.4f, 0.8f); SizeLife(fl, 1f, 0.3f);
+            ColorLife(fl, Fade(new Color(1f, 0.85f, 0.4f), new Color(0.9f, 0.2f, 0.05f), 1f, 0.05f, 0.5f));
+            var em = PS(at, "Embers", new Vector3(0, 0.1f, 0), SoftAdd, new Vector2(0.8f, 1.2f), new Vector2(0.03f, 0.06f), WarRed, 16, true);
+            Rate(em, 8f); Sphere(em, 0.1f); Speed(em, 0.3f, 0.8f); Gravity(em, -0.2f);
+        }
+
+        private static void StoneTotemTop(Transform at)
+        {
+            var mo = PS(at, "RuneMotes", Vector3.zero, StarAdd, new Vector2(0.8f, 1.2f), new Vector2(0.06f, 0.12f), Rune, 16, true);
+            Rate(mo, 10f); Sphere(mo, 0.25f); Speed(mo, 0.1f, 0.3f); Gravity(mo, -0.15f); ColorLife(mo, Fade(Color.white, Color.white));
+        }
+
+        // Totem-Prefab: Root (ShamanTotem, AuraAnchor = Root) → Visual (wächst aus dem Boden) → Modell (zum Wirkenden gedreht)
+        // + Glut/Runen am FxAnchor des Modells
+        private static void TotemPrefab(GameObject go, string model, System.Action<Transform> top)
+        {
+            var visual = new GameObject("Visual").transform;
+            visual.SetParent(go.transform, false);
+            var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(Heroes2Import.ShamanPropDir + model + ".fbx");
+            Transform anchor = null;
+            if (fbx != null)
+            {
+                var m = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
+                m.name = "Model";
+                m.transform.SetParent(visual, false);
+                m.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // Root schaut vom Wirkenden weg → Gesicht zu ihm
+                foreach (var c in m.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+                foreach (var r in m.GetComponentsInChildren<Renderer>(true)) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                anchor = m.transform.Find("FxAnchor");
+            }
+            else Debug.LogWarning("ChampionFxBuilder: Modell fehlt: " + model);
+            var fx = new GameObject("TopFx").transform;
+            fx.SetParent(anchor != null ? anchor : visual, false);
+            if (anchor == null) fx.localPosition = new Vector3(0f, 1.3f, 0f);
+            top(fx);
+            var t = go.AddComponent<ShamanTotem>();
+            t.Visual = visual;
+            t.AuraAnchor = go.transform;
+        }
+
+        // Geisterwolf: Root (AncestralSpiritFollower, Höhe = Spieler-Root ≈ Körpermitte) → Modell (Root ≈ 1,6 m über dem Boden, Füße ~0,3 m darüber)
+        // + VFX_AncestralSpirit (Schwaden, Heilpuls)
+        private static void SpiritWolfPrefab(GameObject go)
+        {
+            var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(Heroes2Import.ShamanPropDir + "Spirit_Wolf.fbx");
+            if (fbx != null)
+            {
+                var m = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
+                m.name = "Model";
+                m.transform.SetParent(go.transform, false);
+                m.transform.localPosition = new Vector3(0f, -1.3f, 0f);
+                foreach (var c in m.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+                foreach (var r in m.GetComponentsInChildren<Renderer>(true)) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            else Debug.LogWarning("ChampionFxBuilder: Modell fehlt: Spirit_Wolf");
+            var fx = new GameObject("SpiritFx").transform;
+            fx.SetParent(go.transform, false);
+            AncestralSpiritFx(fx.gameObject);
+            go.AddComponent<AncestralSpiritFollower>();
         }
 
         // ---------------- Bogenschütze ----------------

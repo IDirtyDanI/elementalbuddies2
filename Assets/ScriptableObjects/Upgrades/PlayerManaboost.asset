@@ -26,7 +26,7 @@ MonoBehaviour:
   Rarity: 0
   Affinity: 5
   MaxPicks: 0
-  Classes: 15
+  Classes: 31
   Variants:
   - Class: 3
     Title: "Unb\xE4ndiger Zorn"

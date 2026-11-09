@@ -2,7 +2,7 @@ using NUnit.Framework;
 
 namespace ElementalBuddies.Tests
 {
-    // Skin-Shop: Loadout packen/entpacken (4 Bit je Klasse+Slot, Vorzeichenbit), Kaufregel, Besitzliste
+    // Skin-Shop: Loadout packen/entpacken (4 Bit je Klasse+Slot, 5 Klassen in long), Kaufregel, Besitzliste
     public class ShopRulesTests
     {
         [Test]
@@ -14,12 +14,20 @@ namespace ElementalBuddies.Tests
         }
 
         [Test]
+        public void ClassCount_PasstZumEnum()
+        {
+            // ChampionClass (Mage … Shaman) hat 5 Werte; die Test-Assembly kennt nur ElementalBuddies.Rules, darum als Zahl
+            Assert.AreEqual(5, ShopRules.ClassCount);
+            Assert.LessOrEqual(ShopRules.ClassCount * ShopRules.SlotCount * ShopRules.BitsPerEntry, 64, "passt in long");
+        }
+
+        [Test]
         public void With_Get_Rundreise_JederEintrag()
         {
             for (int c = 0; c < ShopRules.ClassCount; c++)
                 for (int s = 0; s < ShopRules.SlotCount; s++)
                 {
-                    int l = ShopRules.With(0, c, s, 9);
+                    long l = ShopRules.With(0, c, s, 9);
                     Assert.AreEqual(9, ShopRules.Get(l, c, s), $"Klasse {c} Slot {s}");
                     // andere Einträge bleiben 0
                     for (int c2 = 0; c2 < ShopRules.ClassCount; c2++)
@@ -29,14 +37,59 @@ namespace ElementalBuddies.Tests
         }
 
         [Test]
-        public void Klasse3Slot1_BelegtVorzeichenbit()
+        public void Klasse3Slot1_OberstesNibbleVonBit32_KeinVorzeichenMehr()
         {
-            int l = ShopRules.With(0, 3, 1, 15);
-            Assert.Less(l, 0, "oberstes Nibble gesetzt → negativ als int");
-            Assert.AreEqual(unchecked((int)0xF0000000u), l);
+            long l = ShopRules.With(0, 3, 1, 15);
+            Assert.Greater(l, 0, "als long nicht mehr negativ");
+            Assert.AreEqual(0xF0000000L, l);
             Assert.AreEqual(15, ShopRules.Get(l, 3, 1));
             Assert.AreEqual(0, ShopRules.Get(l, 3, 0));
             Assert.AreEqual(8, ShopRules.Get(ShopRules.With(0, 3, 1, 8), 3, 1));
+        }
+
+        [Test]
+        public void Klasse4_BeideSlots_Bits32bis39()
+        {
+            long l = ShopRules.With(0, 4, 0, 2);
+            l = ShopRules.With(l, 4, 1, 15);
+            Assert.AreEqual(2, ShopRules.Get(l, 4, 0));
+            Assert.AreEqual(15, ShopRules.Get(l, 4, 1));
+            Assert.AreEqual(0xF2L << 32, l);
+            for (int c = 0; c < 4; c++)
+                for (int s = 0; s < 2; s++)
+                    Assert.AreEqual(0, ShopRules.Get(l, c, s), $"Klasse {c} Slot {s}");
+        }
+
+        [Test]
+        public void Klasse4_UeberschneidetSichNichtMitKlasse3()
+        {
+            long l = ShopRules.With(0, 3, 0, 15);
+            l = ShopRules.With(l, 3, 1, 15);
+            l = ShopRules.With(l, 4, 0, 1);
+            l = ShopRules.With(l, 4, 1, 2);
+            Assert.AreEqual(15, ShopRules.Get(l, 3, 0));
+            Assert.AreEqual(15, ShopRules.Get(l, 3, 1));
+            Assert.AreEqual(1, ShopRules.Get(l, 4, 0));
+            Assert.AreEqual(2, ShopRules.Get(l, 4, 1));
+            // Klasse 4 löschen lässt Klasse 3 stehen und umgekehrt
+            long a = ShopRules.With(ShopRules.With(l, 4, 0, 0), 4, 1, 0);
+            Assert.AreEqual(0xFF000000L, a);
+            long b = ShopRules.With(ShopRules.With(l, 3, 0, 0), 3, 1, 0);
+            Assert.AreEqual(0x21L << 32, b);
+        }
+
+        [Test]
+        public void Vorzeichen_NegativesLoadout_WirdBitweiseGelesen()
+        {
+            // -1 = alle 64 Bit gesetzt; Bits oberhalb 40 sind unbenutzt und stören nicht
+            for (int c = 0; c < ShopRules.ClassCount; c++)
+                for (int s = 0; s < ShopRules.SlotCount; s++)
+                    Assert.AreEqual(15, ShopRules.Get(-1L, c, s));
+            long l = ShopRules.With(long.MinValue, 4, 1, 3);
+            Assert.Less(l, 0, "Vorzeichenbit bleibt erhalten");
+            Assert.AreEqual(3, ShopRules.Get(l, 4, 1));
+            Assert.AreEqual(0, ShopRules.Get(l, 0, 0));
+            Assert.AreEqual(long.MinValue, ShopRules.With(l, 4, 1, 0));
         }
 
         [Test]
@@ -46,16 +99,17 @@ namespace ElementalBuddies.Tests
                 for (int s = 0; s < ShopRules.SlotCount; s++)
                     Assert.AreEqual(15, ShopRules.Get(-1, c, s));
             // einen Eintrag löschen, Rest bleibt
-            int l = ShopRules.With(-1, 2, 0, 0);
+            long l = ShopRules.With(-1, 2, 0, 0);
             Assert.AreEqual(0, ShopRules.Get(l, 2, 0));
             Assert.AreEqual(15, ShopRules.Get(l, 2, 1));
             Assert.AreEqual(15, ShopRules.Get(l, 3, 1));
+            Assert.AreEqual(15, ShopRules.Get(l, 4, 1));
         }
 
         [Test]
         public void With_UeberschreibtVorhandenenWert()
         {
-            int l = ShopRules.With(0, 1, 1, 15);
+            long l = ShopRules.With(0, 1, 1, 15);
             l = ShopRules.With(l, 1, 1, 2);
             Assert.AreEqual(2, ShopRules.Get(l, 1, 1));
         }
@@ -63,12 +117,12 @@ namespace ElementalBuddies.Tests
         [Test]
         public void UngueltigerNetIndex_WirdStandard()
         {
-            int l = ShopRules.With(0, 0, 0, 7);
+            long l = ShopRules.With(0, 0, 0, 7);
             Assert.AreEqual(0, ShopRules.Get(ShopRules.With(l, 0, 0, 16), 0, 0), "Überlauf");
             Assert.AreEqual(0, ShopRules.Get(ShopRules.With(l, 0, 0, -1), 0, 0), "negativ");
             Assert.AreEqual(0, ShopRules.Get(ShopRules.With(l, 0, 0, int.MaxValue), 0, 0));
             // Überlauf darf den Nachbarn nicht verändern
-            int n = ShopRules.With(0, 0, 1, 5);
+            long n = ShopRules.With(0, 0, 1, 5);
             n = ShopRules.With(n, 0, 0, 31);
             Assert.AreEqual(5, ShopRules.Get(n, 0, 1));
         }
@@ -76,39 +130,40 @@ namespace ElementalBuddies.Tests
         [Test]
         public void UngueltigeKlasseOderSlot_Get0_WithUnveraendert()
         {
-            Assert.AreEqual(0, ShopRules.Get(-1, 4, 0));
+            Assert.AreEqual(0, ShopRules.Get(-1, 5, 0));
             Assert.AreEqual(0, ShopRules.Get(-1, -1, 0));
             Assert.AreEqual(0, ShopRules.Get(-1, 0, 2));
             Assert.AreEqual(0, ShopRules.Get(-1, 0, -1));
-            Assert.AreEqual(1234, ShopRules.With(1234, 4, 0, 3));
-            Assert.AreEqual(1234, ShopRules.With(1234, 0, -1, 3));
+            Assert.AreEqual(1234L, ShopRules.With(1234, 5, 0, 3));
+            Assert.AreEqual(1234L, ShopRules.With(1234, 0, -1, 3));
         }
 
         [Test]
         public void Pack_Unpack_Rundreise()
         {
-            var a = new int[4, 2] { { 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 15 } };
-            int l = ShopRules.Pack(a);
+            var a = new int[5, 2] { { 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 15 }, { 9, 12 } };
+            long l = ShopRules.Pack(a);
             var b = ShopRules.Unpack(l);
-            for (int c = 0; c < 4; c++)
+            for (int c = 0; c < 5; c++)
                 for (int s = 0; s < 2; s++)
                     Assert.AreEqual(a[c, s], b[c, s]);
-            Assert.Less(l, 0);
+            Assert.Greater(l, 0);
         }
 
         [Test]
         public void Pack_UngueltigeWerteUndGroessen()
         {
-            Assert.AreEqual(0, ShopRules.Pack(null));
+            Assert.AreEqual(0L, ShopRules.Pack(null));
             var small = new int[1, 1] { { 3 } };
             Assert.AreEqual(3, ShopRules.Get(ShopRules.Pack(small), 0, 0));
-            var big = new int[6, 3];
-            big[5, 2] = 9; big[0, 2] = 9; big[1, 0] = -4; big[2, 1] = 99; big[3, 0] = 6;
-            int l = ShopRules.Pack(big);
+            var big = new int[7, 3];
+            big[6, 2] = 9; big[5, 0] = 9; big[0, 2] = 9; big[1, 0] = -4; big[2, 1] = 99; big[3, 0] = 6; big[4, 1] = 1;
+            long l = ShopRules.Pack(big);
             Assert.AreEqual(0, ShopRules.Get(l, 1, 0));
             Assert.AreEqual(0, ShopRules.Get(l, 2, 1));
             Assert.AreEqual(6, ShopRules.Get(l, 3, 0));
-            Assert.AreEqual(6 << 24, l, "nur gültige Einträge");
+            Assert.AreEqual(1, ShopRules.Get(l, 4, 1));
+            Assert.AreEqual((6L << 24) | (1L << 36), l, "nur gültige Einträge");
         }
 
         // ---------------- Kauf ----------------

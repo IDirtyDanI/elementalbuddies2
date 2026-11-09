@@ -55,11 +55,13 @@ namespace ElementalBuddies.EditorTools
             archer = SetupRequired(root, Spec(ChampionClass.Archer));
 
             var berserker = SetupBerserkerVisual(root);
+            var shaman = SetupShamanVisual(root);
 
             mage.gameObject.SetActive(true);
             knight.gameObject.SetActive(false);
             archer.gameObject.SetActive(false);
             if (berserker != null) berserker.gameObject.SetActive(false);
+            if (shaman != null) shaman.gameObject.SetActive(false);
 
             // Pfeil-Abschusspunkt am Root (nicht am Knochen)
             var spawn = root.transform.Find("ArrowSpawn");
@@ -347,6 +349,44 @@ namespace ElementalBuddies.EditorTools
                     },
                 },
             },
+            // Schamane: Totemstab rechts, Trage-Haltung wie der Magier (HoldArm-Muskelpose + Trage-IK). W2_TotemStaff:
+            // Ursprung = Griff, +Y, 1,61 m (y −1,08 … +0,53), Griff identisch zum Magierstab. Freiraum-Kapseln wie beim Magier,
+            // Kopf mit Hirschgeweih statt Hutkrempe (Kapuze + Geweihsprossen ~0,3 m um die Kopfachse), keine Robe.
+            new ChampionSpec
+            {
+                Class = ChampionClass.Shaman, VisualName = "Visual_Shaman", Controller = "Assets/_Game/Animations/ShamanVisual.controller",
+                Model2 = H2 + "ShamanChampion2.fbx", ClipPrefix = "Shaman", Heroes2Ready = true,
+                Right = new WeaponSpec { Prefab = H2 + "Weapons/W2_TotemStaff.fbx" },
+                Hold = new HoldSpec
+                {
+                    // Linke Hand aus den Clips (Shaman_PlantTotem greift den Stab mit beiden Fäusten; sonst locker wie im Lauf-Clip)
+                    Right = HandPose.Fist, Left = HandPose.Animated,
+                    ArmParts = new[] { AvatarMaskBodyPart.RightArm },
+                    ArmPose = new System.Collections.Generic.Dictionary<string, float>
+                    {
+                        { "Right Shoulder Down-Up", 0f }, { "Right Shoulder Front-Back", 0f },
+                        { "Right Arm Down-Up", -0.4f }, { "Right Arm Front-Back", 0.144f }, { "Right Arm Twist In-Out", 0f },
+                        { "Right Forearm Stretch", 0.025f }, { "Right Forearm Twist In-Out", 0.263f },
+                        { "Right Hand Down-Up", 0.288f }, { "Right Hand In-Out", -0.394f },
+                    },
+                    IK = new HoldIK
+                    {
+                        GripOffset = new Vector3(0.32f, 1.1f, 0.33f), WeaponAxis = new Vector3(-0.05f, 1f, 0f),
+                        HipsFollow = new Vector3(0.4f, 1f, 0.4f), ElbowHint = new Vector3(0.15f, -0.45f, -0.2f),
+                        WeaponTop = 0.6f, WeaponBottom = 1.0f,
+                        Clearances = new[]
+                        {
+                            new ChampionWeaponHold.Clearance { From = HumanBodyBones.Head, Height = 0.5f, Radius = 0.33f },
+                            new ChampionWeaponHold.Clearance { From = HumanBodyBones.Hips, To = HumanBodyBones.Chest, Radius = 0.21f, MoveHand = true },
+                            new ChampionWeaponHold.Clearance { From = HumanBodyBones.Chest, To = HumanBodyBones.Neck, Radius = 0.24f, MoveHand = true },
+                            new ChampionWeaponHold.Clearance { From = HumanBodyBones.RightUpperArm, To = HumanBodyBones.RightLowerArm, Radius = 0.14f },
+                            new ChampionWeaponHold.Clearance { From = HumanBodyBones.RightUpperLeg, To = HumanBodyBones.RightLowerLeg, Radius = 0.22f, MoveHand = true },
+                            new ChampionWeaponHold.Clearance { From = HumanBodyBones.RightLowerLeg, To = HumanBodyBones.RightFoot, Radius = 0.2f, MoveHand = true },
+                            new ChampionWeaponHold.Clearance { From = HumanBodyBones.LeftLowerLeg, To = HumanBodyBones.LeftFoot, Radius = 0.2f, MoveHand = true },
+                        },
+                    },
+                },
+            },
         };
 
         // Spec, die tatsächlich gebaut wird: Berserker ohne eigenes Modell/Axt → Platzhalter (Ritter-Modell + Schwert,
@@ -396,6 +436,119 @@ namespace ElementalBuddies.EditorTools
             if (spec == null || !System.IO.File.Exists(spec.Model2)) return null;
             if (AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(spec.Controller) == null) ChampionAnimatorBuilder.BuildBerserker();
             return SetupHeroes2(root, spec);
+        }
+
+        // Nur den Schamanen auf Player.prefab (Visual, Abschusspunkt, Kit) und seine Vorschau einrichten, dazu Import,
+        // Animator, Effekte/Totems/Geist und Champion_Shaman.asset – die anderen Champions bleiben unberührt.
+        [MenuItem("BuddyTD/Champions/Schamane einrichten")]
+        public static void SetupShamanMenu()
+        {
+            Heroes2Import.ImportShaman();
+            ChampionAnimatorBuilder.BuildShaman();
+            ChampionFxBuilder.BuildShaman();
+            MainMenuBuilder.CreateShamanAssets(); // Champion_Shaman.asset + Preview_Shaman.prefab (falls fehlend)
+            var root = PrefabUtility.LoadPrefabContents(PlayerPrefab);
+            try
+            {
+                var cv = SetupShamanVisual(root);
+                if (cv != null) cv.gameObject.SetActive(false);
+                SetupShamanKit(root);
+                PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefab);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            ChampionAnimatorBuilder.ApplyTorsoLayers();
+            UpdatePreviews(ChampionClass.Shaman);
+            // Porträt (256², Stil wie die anderen) einmalig rendern und ins Champion_Shaman.asset übernehmen
+            if (!System.IO.File.Exists(PortraitRenderer.IconDir + "portrait_champion_shaman.png")) PortraitRenderer.RenderShaman();
+            MainMenuBuilder.CreateShamanAssets();
+            AssetDatabase.SaveAssets();
+            Debug.Log("ChampionPlayerSetup: Schamane eingerichtet (ShamanChampion2 + Totemstab).");
+        }
+
+        private static ChampionVisual SetupShamanVisual(GameObject root)
+        {
+            var spec = Spec(ChampionClass.Shaman);
+            if (spec == null || !spec.UseHeroes2) { Debug.LogWarning("ChampionPlayerSetup: Schamanen-Modell oder Totemstab fehlt."); return null; }
+            if (AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(spec.Controller) == null) ChampionAnimatorBuilder.BuildShaman();
+            var cv = SetupHeroes2(root, spec);
+            // Abschusspunkt des Geisterblitzes am Root (Höhe/Lage des Geiststeins in der Trage-Haltung)
+            var spawn = root.transform.Find("SpiritBoltSpawn");
+            if (spawn == null)
+            {
+                spawn = new GameObject("SpiritBoltSpawn").transform;
+                spawn.SetParent(root.transform, false);
+            }
+            spawn.localPosition = new Vector3(0.25f, 0.4f, 0.6f);
+            spawn.localRotation = Quaternion.identity;
+            return cv;
+        }
+
+        // ---- Schamane ---- (VFX/Totems/Geist aus ChampionFxBuilder.BuildShaman, eigene Icons; Sounds über GameAudio)
+        private static void SetupShamanKit(GameObject root)
+        {
+            if (Champ("VFX_SpiritBolt") == null) ChampionFxBuilder.BuildShaman();
+            var mage = root.GetComponent<MageKit>();
+            GameObject blind = mage != null ? mage.HolyCircle.BlindVfxPrefab : null;
+            var heal = Prefab(Vfx + "HealSparkle.prefab");
+
+            var s = Get<ShamanKit>(root);
+            s.DisplayName = "Schamane";
+            s.ProjectileSpawn = root.transform.Find("SpiritBoltSpawn");
+            s.SpiritBoltPrefab = Champ("VFX_SpiritBolt");
+            s.ChainFxPrefab = Champ("VFX_SpiritChain");
+            s.MuzzleFxPrefab = Champ("VFX_SpiritMuzzle");
+            s.BoltHitFxPrefab = null; // HitVfx-Tabelle (ArcaneVfxBuilder)
+            s.WindStepFxPrefab = Champ("VFX_WindStep");
+            s.WindBuffFxPrefab = Champ("VFX_WindBuff");
+            s.SpiritLinkFxPrefab = Champ("VFX_SpiritLink");
+
+            s.WarTotem.TotemPrefab = Champ("ShamanTotem_War");
+            s.WarTotem.AuraFxPrefab = Champ("VFX_WarTotemAura");
+            s.WarTotem.AuraAuthoredSize = 7f;
+            s.WarTotem.BuffFxPrefab = Champ("VFX_WarBuff");
+            s.WarTotem.CastEffectPrefab = Champ("VFX_TotemPlant");
+            s.WarTotem.ScaleEffectBySize = false;
+            s.WarTotem.EffectLifetime = 2f;
+
+            s.HealingTide.CastEffectPrefab = Champ("VFX_HealingTide");
+            s.HealingTide.EffectLifetime = 2f;
+            s.HealingTide.HealFxPrefab = heal;
+            ScaleFx(s.HealingTide, 8f);
+
+            s.StoneskinTotem.TotemPrefab = Champ("ShamanTotem_Stone");
+            s.StoneskinTotem.AuraFxPrefab = Champ("VFX_StoneskinAura");
+            s.StoneskinTotem.AuraAuthoredSize = 6f;
+            s.StoneskinTotem.ShieldFxPrefab = Champ("VFX_StoneskinShield");
+            s.StoneskinTotem.CastEffectPrefab = Champ("VFX_StonePlant");
+            s.StoneskinTotem.EffectLifetime = 2f;
+            ScaleFx(s.StoneskinTotem, 2.5f);
+
+            s.AncestralSpirit.SpiritPrefab = Champ("AncestralSpirit_Wolf");
+            s.AncestralSpirit.HealFxPrefab = heal;
+            s.AncestralSpirit.BlindVfxPrefab = blind;
+            s.AncestralSpirit.CastEffectPrefab = Champ("VFX_AncestorCall");
+            s.AncestralSpirit.EffectLifetime = 2f;
+            ScaleFx(s.AncestralSpirit, 5f);
+
+            s.Abilities = new System.Collections.Generic.List<ChampionKit.AbilityDisplay>
+            {
+                D(AbilityId.SpiritBolt, "Geisterblitz", IconOr("ability_shaman_spiritbolt", "ability_arcane")),
+                D(AbilityId.WindStep, "Windschritt", IconOr("ability_shaman_windstep", "ability_blink")),
+                D(AbilityId.WarTotem, "Kriegstotem", IconOr("ability_shaman_wartotem", "emblem_fire")),
+                D(AbilityId.HealingTide, "Heilende Woge", IconOr("ability_shaman_healingtide", "emblem_ice")),
+                D(AbilityId.StoneskinTotem, "Steinhaut-Totem", IconOr("ability_shaman_stoneskin", "emblem_earth")),
+                D(AbilityId.AncestralSpirit, "Ahnengeist", IconOr("ability_shaman_ancestor", "emblem_light")),
+            };
+            foreach (var g in AssetDatabase.FindAssets("t:ChampionDefinitionSO"))
+            {
+                var def = AssetDatabase.LoadAssetAtPath<ChampionDefinitionSO>(AssetDatabase.GUIDToAssetPath(g));
+                if (def != null && def.Class == ChampionClass.Shaman) s.Definition = def;
+            }
+            s.enabled = false; // PlayerAbilities schaltet das Kit der gewählten Klasse ein
+            EditorUtility.SetDirty(s);
         }
 
         private static ChampionWeaponHold.StateTarget Keep(string state)
@@ -845,6 +998,7 @@ namespace ElementalBuddies.EditorTools
             }
 
             SetupBerserkerKit(root);
+            SetupShamanKit(root);
             EditorUtility.SetDirty(root);
         }
 

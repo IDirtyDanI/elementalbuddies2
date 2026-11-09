@@ -118,11 +118,11 @@ namespace ElementalBuddies
         }
 
         // Gepackte Ausrüstung aller Klassen (ShopRules) für Netz/Anwenden
-        public static int LocalLoadout
+        public static long LocalLoadout
         {
             get
             {
-                int loadout = 0;
+                long loadout = 0;
                 for (int c = 0; c < ShopRules.ClassCount && c < GameSession.ChampionCount; c++)
                     for (int s = 0; s < ShopRules.SlotCount; s++)
                     {

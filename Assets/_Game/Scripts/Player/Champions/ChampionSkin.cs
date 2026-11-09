@@ -35,7 +35,7 @@ namespace ElementalBuddies
 
         // Ausrüstung einer Klasse aus dem gepackten Loadout (ShopRules) auf alle Visuals dieser Klasse unter root anwenden.
         // Items werden über den Katalog aufgelöst; unbekannt/0 = Standard.
-        public static void ApplyTo(GameObject root, ChampionClass cls, int loadout)
+        public static void ApplyTo(GameObject root, ChampionClass cls, long loadout)
         {
             if (root == null) return;
             var weapon = ShopCatalogSO.FindItem(cls, ShopSlot.Weapon, ShopRules.Get(loadout, (int)cls, (int)ShopSlot.Weapon));

@@ -23,6 +23,7 @@ GameObject:
   - component: {fileID: 1615420693750248697}
   - component: {fileID: 978174050410446703}
   - component: {fileID: 4158976632451271197}
+  - component: {fileID: 7202275069686876657}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -48,6 +49,8 @@ Transform:
   - {fileID: 6673127104992518371}
   - {fileID: 6138722409013637293}
   - {fileID: 8582883269771843759}
+  - {fileID: 5637705738464562131}
+  - {fileID: 7773656586916273985}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &1181602933105186767
@@ -116,6 +119,7 @@ MonoBehaviour:
   FloorLayer:
     serializedVersion: 2
     m_Bits: 256
+  TouchTurnSpeed: 900
   JumpForce: 8
   Gravity: -9.81
   GroundStickVelocity: -2
@@ -816,6 +820,179 @@ MonoBehaviour:
     Volume: 0.55
     Pitch: {x: 0.92, y: 1.05}
     MinInterval: 0.12
+--- !u!114 &7202275069686876657
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 430299107827163824}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e6b99f46f3f74163a6484107c789f00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ShamanKit
+  DisplayName: Schamane
+  Definition: {fileID: 11400000, guid: 120b5fa893cc24ef5a540cc194cf5ae4, type: 2}
+  Abilities:
+  - Id: 24
+    Name: Geisterblitz
+    Icon: {fileID: 21300000, guid: ceecf91e790be42c986063a87d1d61cf, type: 3}
+  - Id: 25
+    Name: Windschritt
+    Icon: {fileID: 21300000, guid: 419dc4cae1fc545cd9ec7e0d890d18ba, type: 3}
+  - Id: 26
+    Name: Kriegstotem
+    Icon: {fileID: 21300000, guid: 14507d2019bdc46408c5f1d3ab833733, type: 3}
+  - Id: 27
+    Name: Heilende Woge
+    Icon: {fileID: 21300000, guid: df8cf1ce04a8d45378989cfb9e3a37be, type: 3}
+  - Id: 28
+    Name: Steinhaut-Totem
+    Icon: {fileID: 21300000, guid: 467276b7fcc4e445a9061f23b4ff2787, type: 3}
+  - Id: 29
+    Name: Ahnengeist
+    Icon: {fileID: 21300000, guid: ac49ba092f8a848f483c7c9c86367000, type: 3}
+  ProjectileSpawn: {fileID: 7773656586916273985}
+  MuzzleOffset: {x: 0.15, y: 1.3, z: 0.7}
+  SpiritBoltPrefab: {fileID: 638246361067107025, guid: 326270dc6a49343bdbb85220b0776b80, type: 3}
+  BoltDamage: 24
+  BoltSpeed: 28
+  BoltRange: 20
+  BoltCooldown: 0.6
+  ChainJumps: 2
+  ChainRadius: 6
+  ChainDamageFactor: 0.6
+  ChainFxPrefab: {fileID: 5783341143631445585, guid: c7e9cc088d26c4807bb23f5233c9469c, type: 3}
+  ChainFxLifetime: 0.5
+  BoltHitFxPrefab: {fileID: 0}
+  MuzzleFxPrefab: {fileID: 9179583640091607494, guid: 1fdd3006470474853a685bf7bedda6cd, type: 3}
+  WindStepDistance: 5
+  WindStepDuration: 0.25
+  WindStepCooldown: 7
+  WindStepCharges: 1
+  WindStepLockout: 0.3
+  HasteBonus: 0.3
+  HasteDuration: 3
+  HasteRadius: 6
+  WindStepFxPrefab: {fileID: 2768714441448645798, guid: 1e7ad27f98eec46ce9db781737817dcb, type: 3}
+  WindBuffFxPrefab: {fileID: 7276852520832916189, guid: 0d292da2e38c94c7790dd650321d2761, type: 3}
+  SpiritLinkRadius: 8
+  SpiritLinkBonus: 0.1
+  SpiritLinkInterval: 0.5
+  SpiritLinkFxPrefab: {fileID: 1599271390928018516, guid: 7f28a17a5a67b46efaf847e98773205c, type: 3}
+  WarTotem:
+    ManaCost: 40
+    Cooldown: 16
+    CastEffectPrefab: {fileID: 6869109537680460219, guid: 0ad296ce925a74fb89390522892c51cf, type: 3}
+    EffectLifetime: 2
+    ScaleEffectBySize: 0
+    EffectAuthoredSize: 1
+    ScaleParticleTravel: 1
+    MaxCastRange: 10
+    Duration: 10
+    Radius: 7
+    BuddyFireRateBonus: 0.25
+    PlayerAttackSpeedBonus: 0.25
+    PulseInterval: 0.5
+    BuffLinger: 1
+    DrumInterval: 2
+    TotemPrefab: {fileID: 5222345188884778652, guid: d930a49a25ed246b59e430d9db8358d1, type: 3}
+    AuraFxPrefab: {fileID: 2481943545385933770, guid: 1aeebc95b3cec418bb268ebde308d407, type: 3}
+    AuraAuthoredSize: 7
+    BuffFxPrefab: {fileID: 1908816315700937555, guid: ff406c629a836466e887ac03a7400a96, type: 3}
+    PlantDelay: 0.33
+  HealingTide:
+    ManaCost: 35
+    Cooldown: 9
+    CastEffectPrefab: {fileID: 2564880528102676036, guid: 73a89c078b2354976ae0a328bb9acb97, type: 3}
+    EffectLifetime: 2
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 8
+    ScaleParticleTravel: 1
+    ConeAngle: 75
+    Range: 8
+    Damage: 30
+    Slow: 0.4
+    SlowDuration: 3
+    Heal: 30
+    HealFxPrefab: {fileID: 2949883046641709390, guid: 83a67b63eff6f4c39bca6cee71d64b64, type: 3}
+    WaveDelay: 0.23
+  StoneskinTotem:
+    ManaCost: 40
+    Cooldown: 18
+    CastEffectPrefab: {fileID: 8810605031563254877, guid: fbadd7207070d41569ca5cd3f7d81497, type: 3}
+    EffectLifetime: 2
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 2.5
+    ScaleParticleTravel: 1
+    MaxCastRange: 10
+    Duration: 8
+    Radius: 6
+    PlantRadius: 2.5
+    PlantDamage: 20
+    PlantKnockback: 2
+    PulseInterval: 2
+    BuddyShield: 30
+    ShieldDuration: 4
+    PlayerDamageReduction: 0.3
+    TotemPrefab: {fileID: 5975565845264140808, guid: 3871d95a37edf4ccd88b0e13057662c9, type: 3}
+    AuraFxPrefab: {fileID: 2044402409125449122, guid: 587d502b7b8d441ab81a82f9f69f0c9e, type: 3}
+    AuraAuthoredSize: 6
+    ShieldFxPrefab: {fileID: 3411515462129910028, guid: 450796e2fbe6344c48201568df0c509a, type: 3}
+    PlantDelay: 0.33
+  AncestralSpirit:
+    ManaCost: 50
+    Cooldown: 20
+    CastEffectPrefab: {fileID: 4807756686178497064, guid: 7870c17d8bd1d4014b16c39be4ffa27e, type: 3}
+    EffectLifetime: 2
+    ScaleEffectBySize: 1
+    EffectAuthoredSize: 5
+    ScaleParticleTravel: 1
+    Duration: 8
+    Radius: 8
+    HealPerSecond: 7
+    TickInterval: 1
+    NexusHealPercent: 0.01
+    NexusInterval: 2
+    BlindRadius: 5
+    BlindDuration: 2
+    BlindSlow: 0.5
+    BlindVfxPrefab: {fileID: 7651933627681563699, guid: e8dcdc109ff9c4c4f978531732e0bfd3, type: 3}
+    SpiritPrefab: {fileID: 166154783658090977, guid: 4249311a81ec44f8e9d58fbd7f9b0a43, type: 3}
+    HealFxPrefab: {fileID: 2949883046641709390, guid: 83a67b63eff6f4c39bca6cee71d64b64, type: 3}
+    CallDelay: 0.4
+--- !u!1 &3536477766801846273
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7773656586916273985}
+  m_Layer: 0
+  m_Name: SpiritBoltSpawn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7773656586916273985
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3536477766801846273}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.25, y: 0.4, z: 0.6}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5517846512824315092}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6391672169923958274
 GameObject:
   m_ObjectHideFlags: 0
@@ -1050,6 +1227,215 @@ Transform:
 Animator:
   m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: a8b19f8a56f774b9fb65a21e5174fff0, type: 3}
   m_PrefabInstance: {fileID: 3197920443005716147}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &5311888019884731448
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 5517846512824315092}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_Name
+      value: Visual_Shaman
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 2ea3684b4d1214eabae0b9237f807fc8, type: 2}
+    - target: {fileID: 5866666021909216657, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_CullingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4623926457250205602}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2646520188086896845}
+  m_SourcePrefab: {fileID: 100100000, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+--- !u!95 &1791601057242108329 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+  m_PrefabInstance: {fileID: 5311888019884731448}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &5005460522752856425 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+  m_PrefabInstance: {fileID: 5311888019884731448}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4623926457250205602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5005460522752856425}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc9d75f4b4db7443982716953d0d6c4c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ChampionVisual
+  Class: 4
+  Animator: {fileID: 1791601057242108329}
+  RightHandWeapon:
+    Prefab: {fileID: 919132149155446097, guid: 9944207c8b831457ca6b5d805602ec1e, type: 3}
+    LocalPosition: {x: 0.007097323, y: 0.08793168, z: -0.025926521}
+    LocalEuler: {x: 343.0325, y: 352.90244, z: 287.3218}
+    WorldScale: 1
+  LeftHandWeapon:
+    Prefab: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  BackItem:
+    Prefab: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalEuler: {x: 0, y: 0, z: 0}
+    WorldScale: 1
+  SpineOverrideLayers:
+  - UpperBody
+  FullBodyLayers:
+  - FullBody
+--- !u!114 &2646520188086896845
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5005460522752856425}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e1e882aaaf144ed383f4aa43971ede5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.ChampionWeaponHold
+  Visual: {fileID: 4623926457250205602}
+  RightHand: 1
+  Carry: 1
+  IdleCarry: 1
+  HandOnly: 0
+  GripOffset: {x: 0.32, y: 1.1, z: 0.33}
+  FollowBone: 0
+  HipsRest: {x: 0, y: 0.89297485, z: -0.008000135}
+  HipsFollow: {x: 0.4, y: 1, z: 0.4}
+  GroundClearance: 0.03
+  GroundEscape: {x: 0.6, y: 0, z: 1}
+  WeaponAxis: {x: -0.05, y: 1, z: 0}
+  ElbowHint: {x: 0.15, y: -0.45, z: -0.2}
+  WeaponForward: {x: 0, y: 0, z: 0}
+  FollowHipsYaw: 0
+  HipsRestForward: {x: 7.9409314e-23, y: -0.000000059604645, z: 0.9999999}
+  FollowRestEuler: {x: -6.061578e-36, y: 6.0664267e-21, z: 1.1449998e-13}
+  ActionLayers:
+  - UpperBody
+  - FullBody
+  FadeSpeed: 8
+  States: []
+  WristAngle: {x: 70, y: 125}
+  Clearances:
+  - From: 10
+    To: 55
+    Height: 0.5
+    Radius: 0.33
+    Shorten: 0
+    MoveHand: 0
+  - From: 0
+    To: 8
+    Height: 0.5
+    Radius: 0.21
+    Shorten: 0
+    MoveHand: 1
+  - From: 8
+    To: 9
+    Height: 0.5
+    Radius: 0.24
+    Shorten: 0
+    MoveHand: 1
+  - From: 14
+    To: 16
+    Height: 0.5
+    Radius: 0.14
+    Shorten: 0
+    MoveHand: 0
+  - From: 2
+    To: 4
+    Height: 0.5
+    Radius: 0.22
+    Shorten: 0
+    MoveHand: 1
+  - From: 4
+    To: 6
+    Height: 0.5
+    Radius: 0.2
+    Shorten: 0
+    MoveHand: 1
+  - From: 3
+    To: 5
+    Height: 0.5
+    Radius: 0.2
+    Shorten: 0
+    MoveHand: 1
+  WeaponTop: 0.6
+  WeaponBottom: 1
+  WeaponRadius: 0.04
+  Segments: []
+--- !u!4 &5637705738464562131 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 59b1c6d3cb1a7481aa7232158ad873e6, type: 3}
+  m_PrefabInstance: {fileID: 5311888019884731448}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &5961542136460580678
 PrefabInstance:

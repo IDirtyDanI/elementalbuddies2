@@ -26,6 +26,7 @@ namespace ElementalBuddies.EditorTools
             BuildKnight();
             BuildArcher();
             BuildBerserkerController();
+            BuildShamanController();
             ApplyHolds();
             AssetDatabase.SaveAssets();
             Debug.Log("ChampionAnimatorBuilder: KnightVisual.controller, ArcherVisual.controller und BerserkerVisual.controller gebaut.");
@@ -122,7 +123,7 @@ namespace ElementalBuddies.EditorTools
                 if (ac == null) continue;
                 int n = SetLocoIdle(ac);
                 n += ac.name == "BerserkerVisual" ? ApplyBerserkerJumps(ac) : ApplyHeroes2Jumps(ac);
-                n += ApplyMageCast(ac) + ApplyArcherShoot(ac);
+                n += (ac.name == "ShamanVisual" ? 0 : ApplyMageCast(ac)) + ApplyArcherShoot(ac); // Schamane: eigener Shaman_Cast
                 log.Append(ac.name).Append(": ").Append(n).Append("  ");
             }
             var merchant = AssetDatabase.LoadAssetAtPath<AnimatorController>(MerchantController);
@@ -264,6 +265,47 @@ namespace ElementalBuddies.EditorTools
             fromSpin.hasExitTime = false;
             ApplyBerserkerJumps(ac);
             EditorUtility.SetDirty(ac);
+        }
+
+        // ---------------- Schamane ----------------
+
+        // Nur den Schamanen-Controller bauen (+ Hand-/Arm-Layer wie der Magier), ohne die anderen Controller anzufassen
+        [MenuItem("BuddyTD/Champions/Schamanen-Animator bauen")]
+        public static void BuildShaman()
+        {
+            BuildShamanController();
+            var spec = ChampionPlayerSetup.Spec(ChampionClass.Shaman);
+            var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(spec.Controller);
+            if (ac != null && spec.UseHeroes2) ChampionGrip.ApplyHoldLayers(ac, spec.Hold, spec.ClipPrefix);
+            AssetDatabase.SaveAssets();
+        }
+
+        // Zustände = Trigger aus ShamanKit.GetAnimTrigger: Cast (Geisterblitz, Stoß 0,1 s), Wave (Heilende Woge, 0,23 s),
+        // Summon (Ahnengeist, 0,4 s) im UpperBody-Layer; Dash (Windschritt) und PlantTotem (Totems, Aufschlag 0,33 s) im
+        // FullBody-Layer. Clips aus art-src/heroes2/41_shaman_anims.py; ohne eigenen Clip Magier-Cast als Platzhalter.
+        private static void BuildShamanController()
+        {
+            var ac = CopyBase("ShamanVisual");
+            foreach (var n in new[] { "Cast", "Dash", "PlantTotem", "Wave", "Summon" })
+                ac.AddParameter(n, AnimatorControllerParameterType.Trigger);
+            var mageCast = Clip(H2Anim + "Mage2_Cast.fbx", "Mage2_Cast");
+
+            var upper = UpperLayer(ac);
+            var empty = upper.defaultState;
+            AddOr(upper, empty, "Cast", ShamanClip("Shaman_Cast"), CastSpeed, CastExit, mageCast, CastSpeed);
+            AddOr(upper, empty, "Wave", ShamanClip("Shaman_Wave"), 1f, 0.85f, mageCast, 0.8f);
+            AddOr(upper, empty, "Summon", ShamanClip("Shaman_Summon"), 1f, 0.85f, mageCast, 0.6f);
+
+            var full = FullBodyLayer(ac);
+            var fEmpty = full.defaultState;
+            AddOr(full, fEmpty, "Dash", ShamanClip("Shaman_Dash"), 1f, 0.9f, null, 1f);
+            AddOr(full, fEmpty, "PlantTotem", ShamanClip("Shaman_PlantTotem"), 1f, 0.85f, null, 1f);
+            EditorUtility.SetDirty(ac);
+        }
+
+        private static AnimationClip ShamanClip(string name)
+        {
+            return Clip(H2Anim + name + ".fbx", name) ?? Clip(H2Anim + name + ".fbx", null);
         }
 
         // Berserker-Sprung (2026-10-15, #174): eigene Bein-Clips Berserker_JumpStart/InAir/JumpLand statt der StarterAssets-

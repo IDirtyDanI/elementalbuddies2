@@ -23,8 +23,8 @@ namespace ElementalBuddies.EditorTools
         {
             var log = new System.Text.StringBuilder();
             var player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Prefabs/Player.prefab");
-            string[] champ = { "Visual_Mage", "Visual_Knight", "Visual_Archer", "Visual_Berserker" };
-            string[] champFile = { "mage", "knight", "archer", "berserker" };
+            string[] champ = { "Visual_Mage", "Visual_Knight", "Visual_Archer", "Visual_Berserker", "Visual_Shaman" };
+            string[] champFile = { "mage", "knight", "archer", "berserker", "shaman" };
             for (int i = 0; i < champ.Length; i++)
             {
                 // Berserker-Platzhalter (Ritter-Modell) nicht als Berserker-Porträt rendern
@@ -43,6 +43,38 @@ namespace ElementalBuddies.EditorTools
             }
             AssetDatabase.Refresh();
             return "PortraitRenderer:\n" + log;
+        }
+
+        // Icon/Porträt wie die vorhandenen importieren (Sprite, Einstellungen von template übernommen); true = geändert
+        public static bool EnsureSprite(string path, string template = IconDir + "portrait_champion_berserker.png")
+        {
+            var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+            var tpl = AssetImporter.GetAtPath(template) as TextureImporter;
+            if (imp == null || tpl == null) return false;
+            if (imp.textureType == TextureImporterType.Sprite && imp.spriteImportMode == SpriteImportMode.Single) return false;
+            var st = new TextureImporterSettings();
+            tpl.ReadTextureSettings(st);
+            imp.SetTextureSettings(st);
+            imp.textureCompression = tpl.textureCompression;
+            imp.maxTextureSize = tpl.maxTextureSize;
+            imp.SetPlatformTextureSettings(tpl.GetDefaultPlatformTextureSettings());
+            imp.SaveAndReimport();
+            return true;
+        }
+
+        // Nur das Schamanen-Porträt rendern (die anderen Porträts und die Händler bleiben unberührt)
+        [MenuItem("BuddyTD/Champions/Schamanen-Porträt rendern")]
+        public static void RenderShaman()
+        {
+            var player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Prefabs/Player.prefab");
+            var t = player.transform.Find("Visual_Shaman");
+            var cv = t != null ? t.GetComponent<ChampionVisual>() : null;
+            if (cv == null) { Debug.LogWarning("PortraitRenderer: Visual_Shaman fehlt (BuddyTD → Champions → Schamane einrichten)."); return; }
+            string path = IconDir + "portrait_champion_shaman.png";
+            Render(cv, new PoseSample { Label = "Idle" }, path);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            EnsureSprite(path);
+            Debug.Log("PortraitRenderer: " + path);
         }
 
         public static void Render(ChampionVisual source, PoseSample pose, string path)

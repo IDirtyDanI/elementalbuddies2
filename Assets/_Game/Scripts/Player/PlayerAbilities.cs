@@ -46,6 +46,11 @@ namespace ElementalBuddies
         // Fähigkeits-Modifikatoren pro Fähigkeit (Händlerkarten, MerchantManager). Wirken zusätzlich zu den globalen Faktoren.
         public readonly AbilityMods Mods = new AbilityMods();
 
+        // Unterstützungs-Buffs anderer (Schamane: Kriegstotem, Windschritt, Steinhaut). Angriffs-/Lauftempo wirken beim
+        // Besitzer (Abklingzeiten, Bewegung), die Schadensreduktion auf dem Server (ModifyIncomingDamage). Der Server
+        // verteilt sie über ServerGrantBuff (fremde Figuren zusätzlich per PlayerAvatar.BuffRpc an den Besitzer).
+        public readonly SupportBuffSet Buffs = new SupportBuffSet();
+
         [Header("Debug")]
         [Tooltip("Unlock all four element spells at start (testing).")]
         public bool UnlockAllOnStart = false;
@@ -226,14 +231,14 @@ namespace ElementalBuddies
 
         // ---------------- Skins (Shop) ----------------
 
-        private int _loadout;
+        private long _loadout;
         private bool _netLoadout; // Ausrüstung kommt vom Netz (PlayerAvatar) statt aus dem lokalen ShopInventory
 
         // Gepackte Skin-Ausrüstung dieser Figur (ShopRules)
-        public int Loadout => _loadout;
+        public long Loadout => _loadout;
 
         // Ausrüstung setzen (PlayerAvatar: NetPlayer.Loadout des Besitzers) und aufs aktive Modell anwenden
-        public void ApplyLoadout(int loadout)
+        public void ApplyLoadout(long loadout)
         {
             _netLoadout = true;
             _loadout = loadout;
@@ -271,7 +276,7 @@ namespace ElementalBuddies
         void Update()
         {
             UpdateCharges();
-            if (_controller != null && ActiveKit != null) _controller.SpeedMultiplier = ActiveKit.MoveSpeedMultiplier;
+            if (_controller != null && ActiveKit != null) _controller.SpeedMultiplier = ActiveKit.MoveSpeedMultiplier * Buffs.MoveSpeedFactor(Time.time);
             // Eingabe nur auf der eigenen Figur; fremde Figuren wirken über Cast-RPCs (PlayerAvatar)
             if (IsLocalControl) HandleSkills();
         }
@@ -486,21 +491,25 @@ namespace ElementalBuddies
                 case AbilityId.FlameWhirl:
                 case AbilityId.FireArrowRain:
                 case AbilityId.EmberStorm:
+                case AbilityId.WarTotem:
                     return 0;
                 case AbilityId.FrostNova:
                 case AbilityId.FrostStrike:
                 case AbilityId.FrostArrow:
                 case AbilityId.IceBreaker:
+                case AbilityId.HealingTide:
                     return 1;
                 case AbilityId.StoneWall:
                 case AbilityId.Earthquake:
                 case AbilityId.ThornTrap:
                 case AbilityId.Landslide:
+                case AbilityId.StoneskinTotem:
                     return 2;
                 case AbilityId.HolyCircle:
                 case AbilityId.LightOath:
                 case AbilityId.LightArrow:
                 case AbilityId.LightFrenzy:
+                case AbilityId.AncestralSpirit:
                     return 3;
                 default:
                     return -1;
@@ -536,7 +545,13 @@ namespace ElementalBuddies
         }
 
         // Gesamtfaktor für Abklingzeiten einer Fähigkeit (global × Händlerkarten), auch für Kit-eigene Sperren
-        public float GetCooldownFactor(AbilityId id) => Mathf.Max(0.1f, CooldownMultiplier) * Mods.Factor(id, AbilityStat.Cooldown);
+        // Angriffstempo-Buff (Kriegstotem) nur für den Grundangriff (LMB-Slot des aktiven Champions)
+        public float GetCooldownFactor(AbilityId id)
+        {
+            float f = Mathf.Max(0.1f, CooldownMultiplier) * Mods.Factor(id, AbilityStat.Cooldown);
+            if (ActiveKit != null && ActiveKit.GetAbility(AbilitySlot.Primary) == id) f *= Buffs.AttackCooldownFactor(Time.time);
+            return f;
+        }
 
         // Gesamtschaden einer Fähigkeit: globaler DamageMultiplier × Fluch „Schwäche“ × Händlerkarten dieser Fähigkeit
         public float GetDamageMultiplier(AbilityId id) => DamageMultiplier * CurseDamageFactor * Mods.Factor(id, AbilityStat.Damage);
@@ -696,12 +711,32 @@ namespace ElementalBuddies
             return fallback;
         }
 
+        // ---------------- Unterstützungs-Buffs (Schamane) ----------------
+
+        // Nur Server: Buff auf diese Figur. Die Server-Kopie zählt für die Schadensreduktion; gehört die Figur einem
+        // anderen Rechner, bekommt der Besitzer den Buff per RPC (Angriffs-/Lauftempo rechnet er selbst). Offline/Host direkt.
+        public void ServerGrantBuff(SupportBuffKind kind, float value, float duration)
+        {
+            if (!Net.IsServer || value <= 0f || duration <= 0f) return;
+            if (_stats != null && _stats.IsDead) return;
+            Buffs.Apply(kind, value, duration, Time.time);
+            if (!IsLocalControl && _avatar != null && _avatar.IsSpawned) _avatar.SendBuffToOwner(kind, value, duration);
+        }
+
+        // Besitzer: Buff vom Server (PlayerAvatar.BuffRpc)
+        public void ApplyBuffFromServer(SupportBuffKind kind, float value, float duration)
+        {
+            Buffs.Apply(kind, value, duration, Time.time);
+        }
+
         // ---------------- Schaden (Block etc.) ----------------
 
         // Läuft auf dem Server (PlayerStats.ApplyDamage → DamageModifier). 2026-11-04: Rüstung des Champions zuerst, dann die
         // Kit-Logik (Block, Lichtschwur, Ansturm) – so kostet der Schildblock nur Mana für den Schaden nach Rüstung.
         private float ModifyIncomingDamage(float amount, Vector3 sourcePosition, bool hasSource)
         {
+            // Steinhaut-Totem: Schadensreduktion (Server-Kopie der Buffs) vor Rüstung und Kit
+            amount *= Buffs.DamageTakenFactor(Time.time);
             if (ActiveKit == null || !ActiveKit.isActiveAndEnabled) return amount;
             amount = ArmorRules.Reduce(amount, ActiveKit.Armor);
             return ActiveKit.ModifyIncomingDamage(amount, sourcePosition, hasSource);

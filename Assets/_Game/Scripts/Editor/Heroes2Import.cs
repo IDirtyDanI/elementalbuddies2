@@ -20,8 +20,19 @@ namespace ElementalBuddies.EditorTools
         public const string AnimDir = "Assets/_Game/Animations/Heroes2/";
         public const string AvatarSource = Dir + "KnightChampion2.fbx";
 
+        // Requisiten der Champions ohne Rig (Totems, Geisterwolf des Schamanen): Models/Champions/<Klasse>/
+        public const string PropDir = "Assets/_Game/Models/Champions/";
+        public const string ShamanPropDir = PropDir + "Shaman/";
+        public const string ShamanPropMaterialDir = ShamanPropDir + "Materials/";
+
         void OnPreprocessModel()
         {
+            if (assetPath.StartsWith(PropDir))
+            {
+                var pi = (ModelImporter)assetImporter;
+                if (pi.importSettingsMissing) ConfigureProp(pi);
+                return;
+            }
             if (assetPath.StartsWith(AnimDir))
             {
                 var ai = (ModelImporter)assetImporter;
@@ -60,6 +71,24 @@ namespace ElementalBuddies.EditorTools
                 mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
                 mi.optimizeGameObjects = false; // Waffen hängen zur Laufzeit an Hand-Knochen
             }
+        }
+
+        // Requisite ohne Rig/Animation (Totem, Geisterwolf): Blender-Normals, Materialien wie die Heroes2-Modelle
+        public static void ConfigureProp(ModelImporter mi)
+        {
+            mi.importNormals = ModelImporterNormals.Import;
+            mi.importTangents = ModelImporterTangents.CalculateMikk;
+            mi.importCameras = false;
+            mi.importLights = false;
+            mi.importBlendShapes = false;
+            mi.useFileScale = true;
+            mi.globalScale = 1f;
+            mi.materialImportMode = ModelImporterMaterialImportMode.ImportViaMaterialDescription;
+            mi.materialSearch = ModelImporterMaterialSearch.Local;
+            mi.materialLocation = ModelImporterMaterialLocation.InPrefab;
+            mi.importAnimation = false;
+            mi.animationType = ModelImporterAnimationType.None;
+            mi.addCollider = false;
         }
 
         // Animations-FBX: Humanoid mit dem Avatar von KnightChampion2 (identisches Hero2_Rig), keine Materialien/Meshes
@@ -151,8 +180,102 @@ namespace ElementalBuddies.EditorTools
             Debug.Log("Heroes2Import: " + n + " Modelle eingerichtet.");
         }
 
+        // Nur die Schamanen-Assets einrichten (Figur, Totemstab, 5 Clips, Totems, Geisterwolf) – die übrigen Modelle
+        // (auch Shop/) bleiben unberührt. Idempotent.
+        public static readonly string[] ShamanClips = { "Shaman_Cast", "Shaman_Dash", "Shaman_PlantTotem", "Shaman_Wave", "Shaman_Summon" };
+
+        [MenuItem("BuddyTD/Champions/Schamanen-Assets importieren")]
+        public static void ImportShaman()
+        {
+            if (!AssetDatabase.IsValidFolder(MaterialDir.TrimEnd('/'))) AssetDatabase.CreateFolder(Dir.TrimEnd('/'), "Materials");
+            foreach (var path in new[] { Dir + "ShamanChampion2.fbx", Dir + "Weapons/W2_TotemStaff.fbx" })
+            {
+                var mi = AssetImporter.GetAtPath(path) as ModelImporter;
+                if (mi == null) { Debug.LogWarning("Heroes2Import: fehlt " + path); continue; }
+                Configure(mi, path);
+                mi.SaveAndReimport();
+                ExtractMaterials(path);
+            }
+            foreach (var clip in ShamanClips)
+            {
+                string path = AnimDir + clip + ".fbx";
+                var mi = AssetImporter.GetAtPath(path) as ModelImporter;
+                if (mi == null) { Debug.LogWarning("Heroes2Import: fehlt " + path); continue; }
+                ConfigureAnim(mi);
+                mi.SaveAndReimport();
+                ConfigureAnimClips(mi, path);
+                mi.SaveAndReimport();
+            }
+            if (!AssetDatabase.IsValidFolder(ShamanPropMaterialDir.TrimEnd('/'))) AssetDatabase.CreateFolder(ShamanPropDir.TrimEnd('/'), "Materials");
+            foreach (var name in new[] { "Totem_War", "Totem_Stone", "Spirit_Wolf" })
+            {
+                string path = ShamanPropDir + name + ".fbx";
+                var mi = AssetImporter.GetAtPath(path) as ModelImporter;
+                if (mi == null) { Debug.LogWarning("Heroes2Import: fehlt " + path); continue; }
+                ConfigureProp(mi);
+                mi.SaveAndReimport();
+                ExtractMaterials(path, ShamanPropMaterialDir);
+            }
+            TuneMaterials();
+            TuneShamanPropMaterials();
+            AssetDatabase.SaveAssets();
+            Debug.Log("Heroes2Import: Schamanen-Assets eingerichtet.");
+        }
+
+        // Leuchtende Teile ohne „Crystal“ im Namen: Geiststein des Stabs, Glutschale, Runen, heller Geisterkern
+        private static readonly string[] GlowMaterials = { "W2_SpiritGlow", "Totem_Ember", "Totem_RuneGlow", "Spirit_GhostBright" };
+
+        private static void TuneShamanPropMaterials()
+        {
+            foreach (var guid in AssetDatabase.FindAssets("t:Material", new[] { ShamanPropMaterialDir.TrimEnd('/') }))
+            {
+                var m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
+                if (m == null || !m.HasProperty("_BaseColor")) continue;
+                if (System.Array.IndexOf(GlowMaterials, m.name) >= 0) SetGlow(m, 1.8f);
+                if (m.name == "Spirit_Ghost")
+                {
+                    MakeTransparent(m, 0.45f);
+                    SetGlow(m, 0.6f);
+                }
+                if (m.name == "Spirit_GhostBright") MakeTransparent(m, 0.75f);
+            }
+        }
+
+        private static void SetGlow(Material m, float intensity)
+        {
+            Color c = m.GetColor("_BaseColor");
+            m.EnableKeyword("_EMISSION");
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            m.SetColor("_EmissionColor", new Color(c.r, c.g, c.b) * intensity);
+            EditorUtility.SetDirty(m);
+        }
+
+        // URP Lit: Surface Transparent, Blend Alpha, ohne Tiefe schreiben
+        private static void MakeTransparent(Material m, float alpha)
+        {
+            Color c = m.GetColor("_BaseColor");
+            c.a = alpha;
+            m.SetColor("_BaseColor", c);
+            m.SetFloat("_Surface", 1f);
+            m.SetFloat("_Blend", 0f);
+            m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if (m.HasProperty("_SrcBlendAlpha")) m.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+            if (m.HasProperty("_DstBlendAlpha")) m.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_ZWrite", 0f);
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.DisableKeyword("_ALPHATEST_ON");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            m.SetShaderPassEnabled("DepthOnly", false);
+            m.SetShaderPassEnabled("ShadowCaster", false);
+            EditorUtility.SetDirty(m);
+        }
+
         // Eingebettete Materialien als .mat auslagern; vorhandene gleichnamige werden wiederverwendet (Remap)
-        private static void ExtractMaterials(string path)
+        private static void ExtractMaterials(string path) { ExtractMaterials(path, MaterialDir); }
+
+        private static void ExtractMaterials(string path, string materialDir)
         {
             var mi = (ModelImporter)AssetImporter.GetAtPath(path);
             bool changed = false;
@@ -160,7 +283,7 @@ namespace ElementalBuddies.EditorTools
             {
                 var m = o as Material;
                 if (m == null) continue;
-                string target = MaterialDir + m.name + ".mat";
+                string target = materialDir + m.name + ".mat";
                 var id = new AssetImporter.SourceAssetIdentifier(typeof(Material), m.name);
                 if (File.Exists(target))
                     mi.AddRemap(id, AssetDatabase.LoadAssetAtPath<Material>(target));
@@ -182,7 +305,7 @@ namespace ElementalBuddies.EditorTools
             {
                 var m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
                 if (m == null || !m.HasProperty("_BaseColor")) continue;
-                if (m.name.Contains("Crystal"))
+                if (m.name.Contains("Crystal") || System.Array.IndexOf(GlowMaterials, m.name) >= 0)
                 {
                     Color c = m.GetColor("_BaseColor");
                     float intensity = m.name.StartsWith("W2_") ? 2f : 1.2f; // Stabkristall kräftig, Kleidungs-Steine dezent

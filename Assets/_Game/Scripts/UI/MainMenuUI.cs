@@ -215,6 +215,7 @@ namespace ElementalBuddies
             if (!_initialized)
             {
                 _initialized = true;
+                AddMissingChampions(); // z. B. Schamane: Karte + Sockel zur Laufzeit, die Szene bleibt unverändert
                 for (int i = 0; i < Cards.Length; i++)
                 {
                     var card = Cards[i];
@@ -344,6 +345,7 @@ namespace ElementalBuddies
                 else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) Select(ClassAt(1), false);
                 else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) Select(ClassAt(2), false);
                 else if (kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame) Select(ClassAt(3), false);
+                else if (kb.digit5Key.wasPressedThisFrame || kb.numpad5Key.wasPressedThisFrame) Select(ClassAt(4), false);
                 return;
             }
 
@@ -377,7 +379,7 @@ namespace ElementalBuddies
             // Map per Tastatur: M nächste, Umschalt+M vorige (M liegt auf QWERTZ und QWERTY gleich)
             if (kb.mKey.wasPressedThisFrame) { CycleMap(kb.shiftKey.isPressed ? -1 : 1); return; }
 
-            // Champion per Tastatur wechseln: ←/→, A/D oder 1–4
+            // Champion per Tastatur wechseln: ←/→, A/D oder 1–5
             int idx = IndexOf(_selected);
             if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) Select(ClassAt(idx - 1), false);
             else if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) Select(ClassAt(idx + 1), false);
@@ -385,6 +387,7 @@ namespace ElementalBuddies
             else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) Select(ClassAt(1), false);
             else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) Select(ClassAt(2), false);
             else if (kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame) Select(ClassAt(3), false);
+            else if (kb.digit5Key.wasPressedThisFrame || kb.numpad5Key.wasPressedThisFrame) Select(ClassAt(4), false);
         }
 
         // Alle Bedienelemente müssen Raycasts empfangen (Absicherung, falls die Szene ohne Raycast-Ziele gebaut wurde)
@@ -404,6 +407,150 @@ namespace ElementalBuddies
         }
 
         // ---------------- Champion-Auswahl ----------------
+
+        // Champions aus Resources/ChampionRoster, die in der Szene noch fehlen (Schamane, 2026-11-09), zur Laufzeit ergänzen:
+        // Definition anhängen, Karte als Kopie der letzten Karte (Daten setzt FillCards) und die linke Spalte für 5 Karten
+        // neu verteilen. Die Bühne (MenuChampionStage) legt fehlende Sockel in SpawnPreviews selbst an. Szene bleibt unverändert.
+        private void AddMissingChampions()
+        {
+            if (!Application.isPlaying) return; // Edit-Modus (Vorschau-Renders des Builders): Szene nicht verändern
+            var roster = ChampionRosterSO.Load();
+            if (roster == null || roster.Champions == null) return;
+            var defs = new List<ChampionDefinitionSO>(Champions);
+            bool added = false;
+            foreach (var d in roster.Champions)
+                if (d != null && Def(d.Class) == null) { defs.Add(d); added = true; }
+            if (added)
+            {
+                defs.Sort((a, b) => a == null || b == null ? 0 : ((int)a.Class).CompareTo((int)b.Class));
+                Champions = defs.ToArray();
+            }
+
+            var cards = new List<Card>(Cards);
+            Card template = cards.Count > 0 ? cards[cards.Count - 1] : null;
+            if (template == null || template.Button == null) return;
+            int origCount = cards.Count;
+            var top = (RectTransform)cards[0].Button.transform;
+            var last = (RectTransform)template.Button.transform;
+            float spanTop = top.anchoredPosition.y;                                // Oberkante 1. Karte (Pivot oben)
+            float spanBottom = last.anchoredPosition.y - last.sizeDelta.y;           // Unterkante letzte Karte
+            float origStep = cards.Count > 1 ? ((RectTransform)cards[0].Button.transform).anchoredPosition.y - ((RectTransform)cards[1].Button.transform).anchoredPosition.y : last.sizeDelta.y + 6f;
+            float origGap = Mathf.Max(4f, origStep - last.sizeDelta.y);
+            foreach (var d in Champions)
+            {
+                if (d == null || CardOf(d.Class) != null) continue;
+                var go = Instantiate(template.Button.gameObject, template.Button.transform.parent);
+                go.name = "Card_" + d.Class;
+                go.transform.SetSiblingIndex(cards[cards.Count - 1].Button.transform.GetSiblingIndex() + 1);
+                var c = CloneCard(template, go.transform);
+                c.Class = d.Class;
+                cards.Add(c);
+            }
+            if (cards.Count == origCount) return;
+            Cards = cards.ToArray();
+            LayoutCards(spanTop, spanBottom - 4f, origGap, last.sizeDelta.y);
+            var hint = MobileUi.FindDeep(transform, "KeyHint");
+            var ht = hint != null ? hint.GetComponent<TextMeshProUGUI>() : null;
+            if (ht != null) ht.text = ht.text.Replace("1–" + origCount, "1–" + Cards.Length);
+        }
+
+        private Card CardOf(ChampionClass c)
+        {
+            foreach (var card in Cards) if (card != null && card.Class == c) return card;
+            return null;
+        }
+
+        // Felder der Kopie über denselben relativen Pfad wie in der Vorlage finden
+        private static Card CloneCard(Card t, Transform root)
+        {
+            Transform tr = t.Button.transform;
+            return new Card
+            {
+                Button = root.GetComponent<Button>(),
+                Frame = Same(t.Frame, tr, root),
+                PortraitBg = Same(t.PortraitBg, tr, root),
+                Portrait = Same(t.Portrait, tr, root),
+                Initial = Same(t.Initial, tr, root),
+                Name = Same(t.Name, tr, root),
+                Tagline = Same(t.Tagline, tr, root),
+                Accent = Same(t.Accent, tr, root),
+                Lock = Same(t.Lock, tr, root),
+            };
+        }
+
+        private static T Same<T>(T part, Transform templateRoot, Transform cloneRoot) where T : Component
+        {
+            if (part == null) return null;
+            if (part.transform == templateRoot) return cloneRoot.GetComponent<T>();
+            var path = new List<string>();
+            for (var p = part.transform; p != null && p != templateRoot; p = p.parent) path.Insert(0, p.name);
+            var found = cloneRoot.Find(string.Join("/", path));
+            return found != null ? found.GetComponent<T>() : null;
+        }
+
+        // Karten gleichmäßig auf die bisherige Spalte verteilen (gleicher Abstand wie vorher), Inhalt mit der Höhe skalieren;
+        // Tasten-Ziffer je Karte neu
+        private void LayoutCards(float spanTop, float spanBottom, float gap, float origHeight)
+        {
+            int n = Cards.Length;
+            float h = Mathf.Min(origHeight, (spanTop - spanBottom - gap * (n - 1)) / n);
+            float k = h / Mathf.Max(1f, origHeight);
+            for (int i = 0; i < n; i++)
+            {
+                var card = Cards[i];
+                if (card == null || card.Button == null) continue;
+                var rt = (RectTransform)card.Button.transform;
+                rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, spanTop - i * (h + gap));
+                if (Mathf.Approximately(k, 1f)) { SetCardKey(rt, i); continue; }
+                if (_cardScaled.Contains(card)) { SetCardKey(rt, i); continue; }
+                _cardScaled.Add(card);
+                rt.sizeDelta = new Vector2(rt.sizeDelta.x, h);
+                if (card.PortraitBg != null)
+                {
+                    var med = card.PortraitBg.rectTransform;
+                    med.sizeDelta *= k;
+                    med.anchoredPosition = new Vector2(med.anchoredPosition.x * (0.6f + 0.4f * k), med.anchoredPosition.y);
+                }
+                if (card.Lock != null) card.Lock.rectTransform.sizeDelta *= k;
+                if (card.Initial != null) card.Initial.fontSize *= k;
+                float shiftX = card.PortraitBg != null ? -card.PortraitBg.rectTransform.sizeDelta.x / k * (1f - k) : 0f;
+                // Rahmen dünner zeichnen (9-Slice-Ränder ÷ Faktor), damit die Pergament-Innenfläche für Name und Tagline reicht
+                if (card.Frame != null) card.Frame.pixelsPerUnitMultiplier /= k;
+                if (card.Name != null)
+                {
+                    var nr = card.Name.rectTransform; // Pivot unten, knapp über der Kartenmitte
+                    nr.anchoredPosition = new Vector2(nr.anchoredPosition.x + shiftX, -2f);
+                    nr.sizeDelta = new Vector2(nr.sizeDelta.x - shiftX, h * 0.44f);
+                    card.Name.fontSizeMax *= k * 0.92f;
+                    card.Name.fontSizeMin = Mathf.Min(card.Name.fontSizeMin, card.Name.fontSizeMax) * 0.9f;
+                    card.Name.fontSize = card.Name.fontSizeMax;
+                }
+                if (card.Tagline != null)
+                {
+                    var tr = card.Tagline.rectTransform; // Pivot oben, knapp unter der Kartenmitte
+                    tr.anchoredPosition = new Vector2(tr.anchoredPosition.x + shiftX, -1f);
+                    tr.sizeDelta = new Vector2(tr.sizeDelta.x - shiftX, h * 0.36f);
+                    card.Tagline.fontSize *= k * 0.92f;
+                    if (card.Tagline.enableAutoSizing) card.Tagline.fontSizeMax *= k * 0.92f;
+                }
+                var badge = rt.Find("KeyBadge") as RectTransform;
+                if (badge != null)
+                {
+                    badge.sizeDelta *= Mathf.Lerp(1f, k, 0.5f);
+                    badge.anchoredPosition *= k;
+                }
+                SetCardKey(rt, i);
+            }
+        }
+
+        private readonly HashSet<Card> _cardScaled = new HashSet<Card>();
+
+        private static void SetCardKey(RectTransform card, int index)
+        {
+            var key = card.Find("KeyBadge/Key");
+            var t = key != null ? key.GetComponent<TextMeshProUGUI>() : null;
+            if (t != null) t.text = (index + 1).ToString();
+        }
 
         private int IndexOf(ChampionClass c)
         {
@@ -913,6 +1060,9 @@ namespace ElementalBuddies
             if (KeyBindingsMenu.IsOpen || MainMenuMeta.IsCodexOpen) return;
             if (SettingsPanel != null && SettingsPanel.activeSelf) return;
             if (AchievementsPanel != null && AchievementsPanel.activeSelf) return;
+            // Steuerkreuz links/rechts: Champion wechseln (auch als Lobby-Gast; Hoch/Runter bleibt der Knopf-Navigation)
+            if (gp.dpad.left.wasPressedThisFrame) { Select(ClassAt(IndexOf(_selected) - 1), false); return; }
+            if (gp.dpad.right.wasPressedThisFrame) { Select(ClassAt(IndexOf(_selected) + 1), false); return; }
             if (_view == NetView.Lobby && Net.IsClientOnly) return;
             if (gp.leftShoulder.wasPressedThisFrame) SelectDifficulty(DifficultyIndex() - 1);
             else if (gp.rightShoulder.wasPressedThisFrame) SelectDifficulty(DifficultyIndex() + 1);

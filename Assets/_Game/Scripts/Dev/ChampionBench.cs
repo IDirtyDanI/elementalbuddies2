@@ -8,7 +8,7 @@ using UnityEngine.AI;
 
 namespace ElementalBuddies
 {
-    // Balancing-Messwerkzeug (nur Play Mode, Einzelspiel/Host): vergleicht die vier Champions in festen Szenarien.
+    // Balancing-Messwerkzeug (nur Play Mode, Einzelspiel/Host): vergleicht die fünf Champions in festen Szenarien.
     // Aufruf: ChampionBench.Run("all") – oder Menü BuddyTD → Balancing → Champion-Bench (Play Mode).
     //
     // Szenarien (je Champion):
@@ -18,7 +18,7 @@ namespace ElementalBuddies
     //   tank    – 4 Läufer + 1 Ritter mit Welle-10-Werten rund um den Spieler (≤ 3 m), kein Angriff, 10 s erlittener Schaden
     //
     // Weitere Schlüsselwörter im scenarios-String (Komma/Leerzeichen getrennt, Groß/klein egal):
-    //   mage/knight/archer/berserker – nur diese Champions (sonst alle)
+    //   mage/knight/archer/berserker/shaman – nur diese Champions (sonst alle)
     //   free     – Gegner in den DPS-Szenarien nicht festhalten (sie laufen dann auf den Spieler zu)
     //   infmana  – Mana jedes Frame auffüllen (sonst nur zu Beginn jedes Laufs; Wut startet bei ihrem Startwert)
     //   x1       – Zeitfaktor 1 statt 2

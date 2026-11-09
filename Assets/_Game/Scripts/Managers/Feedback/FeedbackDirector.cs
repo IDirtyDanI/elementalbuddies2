@@ -226,7 +226,8 @@ namespace ElementalBuddies
             // Pfeil- und Arkanball-Einschläge haben eigene Sounds (ArcherKit/ArrowProjectile, ArcaneBall); das Schwert nicht
             if (champ == ChampionClass.Knight) GameAudio.Play(SfxId.SwordHit, pos);
             else if (champ == ChampionClass.Berserker) GameAudio.Play(SfxId.AxeHit, pos);
-            else if (champ == ChampionClass.Mage) GameAudio.Play(SfxId.EnemyHit, pos);
+            // Schamane: vorerst der Magier-Ton (Geisterblitz hat keinen eigenen Einschlag-Clip)
+            else if (champ == ChampionClass.Mage || champ == ChampionClass.Shaman) GameAudio.Play(SfxId.EnemyHit, pos);
             if (lethal) GameAudio.Play(SfxId.HeavyImpact, pos);
         }
 

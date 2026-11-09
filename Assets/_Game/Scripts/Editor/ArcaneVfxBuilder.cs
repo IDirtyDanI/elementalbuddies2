@@ -611,6 +611,10 @@ namespace ElementalBuddies.EditorTools
             Add(t, AbilityId.EmberStorm, HitVfxFamily.Fire, new Color(1f, 0.7f, 0.5f), 0.85f, minInterval: 0.6f);
             Add(t, AbilityId.IceBreaker, HitVfxFamily.Ice, white, 1.2f);
             Add(t, AbilityId.Landslide, HitVfxFamily.Earth, white, 1.25f, height: 0.25f);
+            // Schamane (Geisterblitz + Kettensprung türkis getönt, Woge eisblau, Steinhaut-Aufstellen Erde)
+            Add(t, AbilityId.SpiritBolt, HitVfxFamily.Arcane, new Color(0.55f, 1f, 0.9f), 0.85f, minInterval: 0.1f);
+            Add(t, AbilityId.HealingTide, HitVfxFamily.Ice, new Color(0.7f, 0.95f, 1f), 1.05f);
+            Add(t, AbilityId.StoneskinTotem, HitVfxFamily.Earth, new Color(0.8f, 1f, 0.85f), 1f, height: 0.25f);
             EditorUtility.SetDirty(t);
             return "HitVfxTable: " + t.Entries.Count + " Fähigkeiten";
         }

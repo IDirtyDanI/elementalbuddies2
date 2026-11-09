@@ -48,7 +48,12 @@ namespace ElementalBuddies
             public Sprite Icon;
         }
 
-        public bool AppliesTo(ChampionClass cls) => (Classes & (ChampionClassMask)(1 << (int)cls)) != 0;
+        // Alte Assets mit dem früheren „All“ (4 Klassen, Wert 15) gelten für alle Klassen – auch den Schamanen
+        public bool AppliesTo(ChampionClass cls)
+        {
+            var mask = Classes == ChampionClassMask.LegacyAll4 ? ChampionClassMask.All : Classes;
+            return (mask & (ChampionClassMask)(1 << (int)cls)) != 0;
+        }
 
         public ClassVariant VariantFor(ChampionClass cls)
         {
