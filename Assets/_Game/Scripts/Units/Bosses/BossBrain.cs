@@ -41,6 +41,10 @@ namespace ElementalBuddies
         private float _nextCheck, _nextCastTime;
         private Coroutine _casting;
         private AoeTelegraph _telegraph;
+        // Regen mit mehreren Flächen (BossAbility.RainAreas > 1): weitere Flächen neben der ersten (_telegraph)
+        private readonly List<AoeShape> _extraShapes = new List<AoeShape>();
+        private readonly List<AoeTelegraph> _extraTelegraphs = new List<AoeTelegraph>();
+        private static readonly Vector3[] _rainCenters = new Vector3[8];
 
         public Color ThemeColor
         {
@@ -72,7 +76,15 @@ namespace ElementalBuddies
         {
             if (_telegraph != null) _telegraph.Cancel();
             _telegraph = null;
+            CancelExtraTelegraphs();
             _casting = null;
+        }
+
+        private void CancelExtraTelegraphs()
+        {
+            foreach (var t in _extraTelegraphs) if (t != null) t.Cancel();
+            _extraTelegraphs.Clear();
+            _extraShapes.Clear();
         }
 
         void Update()
@@ -198,6 +210,13 @@ namespace ElementalBuddies
 
             AoeShape shape = BuildShape(a, me, dir, targetPos, out Vector3 landing);
             _telegraph = AoeTelegraph.Spawn(shape, ThemeColor, windup + leap);
+            _extraShapes.Clear();
+            _extraTelegraphs.Clear();
+            if (a.Kind == BossAbilityKind.Rain && a.RainAreas > 1)
+            {
+                BuildExtraRainShapes(a, shape, targetPos);
+                foreach (var extra in _extraShapes) _extraTelegraphs.Add(AoeTelegraph.Spawn(extra, ThemeColor, windup + leap));
+            }
             if (!string.IsNullOrEmpty(a.AnimatorTrigger) && _triggers.Contains(a.AnimatorTrigger) && _animator.isActiveAndEnabled)
                 _animator.SetTrigger(a.AnimatorTrigger);
             if (!string.IsNullOrEmpty(a.AnimatorTrigger) && _net != null) _net.ServerAnimTrigger(Animator.StringToHash(a.AnimatorTrigger));
@@ -225,6 +244,7 @@ namespace ElementalBuddies
         {
             if (_telegraph != null) _telegraph.Cancel();
             _telegraph = null;
+            CancelExtraTelegraphs();
             a.ReadyTime = Time.time + a.Cooldown * CancelCooldownFactor;
             _nextCastTime = Time.time + GlobalCooldown;
             if (_brain != null) _brain.EndCast();
@@ -255,6 +275,63 @@ namespace ElementalBuddies
                 default:
                     return AoeShape.Circle(me, a.Radius);
             }
+        }
+
+        // Weitere Regenflächen: zuerst auf anderen lebenden Spielern in Wurfweite, sonst zufällig RainSpread m um die erste
+        // Fläche; nie näher als ein Radius an einer schon gesetzten Fläche (DimensionEventRules.RainCenters). Punkte
+        // außerhalb des begehbaren Bodens rücken auf den NavMesh-Rand (kein Regen ins Leere).
+        private void BuildExtraRainShapes(BossAbility a, AoeShape first, Vector3 targetPos)
+        {
+            Vector3 me = transform.position;
+            BossCombat.CollectPlayers(_players);
+            var others = new List<Vector3>();
+            foreach (var player in _players)
+            {
+                if (!BossCombat.IsAlive(player)) continue;
+                Vector3 p = player.transform.position;
+                if (CombatUtil.HorizontalDistance(p, first.Origin) < 0.5f) continue; // das Ziel selbst
+                if (CombatUtil.HorizontalDistance(me, p) > a.MaxCastRange) continue;
+                others.Add(p);
+            }
+            _players.Clear();
+            int want = Mathf.Clamp(a.RainAreas, 1, _rainCenters.Length);
+            int n = DimensionEventRules.RainCenters(first.Origin, others.ToArray(), want, a.Radius, a.RainSpread.x, a.RainSpread.y,
+                () => Random.value, _rainCenters);
+            Vector3 inward = CombatUtil.FlatDirection(first.Origin, me, transform.forward); // vom Ziel Richtung Boss = ins Feld
+            for (int i = 1; i < n; i++)
+            {
+                Vector3 c = _rainCenters[i];
+                // Liegt die Mitte nicht auf begehbarem Boden (Ziel steht an der Mauer): erst gespiegelt, dann Richtung Boss
+                // gedreht versuchen – so fällt der Regen nie ins Leere
+                if (!OnWalkable(ref c))
+                {
+                    float d = Mathf.Max(a.Radius, CombatUtil.HorizontalDistance(c, first.Origin));
+                    Vector3 mirrored = first.Origin + (first.Origin - c);
+                    Vector3 side = Quaternion.Euler(0f, i % 2 == 0 ? 55f : -55f, 0f) * inward;
+                    Vector3 toBoss = first.Origin + side * d;
+                    Vector3 straight = first.Origin + inward * d;
+                    if (OnWalkable(ref mirrored) && FarFromOthers(mirrored, a.Radius)) c = mirrored;
+                    else if (OnWalkable(ref toBoss) && FarFromOthers(toBoss, a.Radius)) c = toBoss;
+                    else if (OnWalkable(ref straight)) c = straight;
+                    else continue; // kein Platz: diese Fläche entfällt
+                }
+                c.y = AoeTelegraph.GroundY(c);
+                _extraShapes.Add(AoeShape.Circle(c, a.Radius));
+            }
+        }
+
+        private static bool OnWalkable(ref Vector3 p)
+        {
+            if (!NavMesh.SamplePosition(p, out NavMeshHit hit, 1.5f, NavMesh.AllAreas)) return false;
+            p = hit.position;
+            return true;
+        }
+
+        private bool FarFromOthers(Vector3 p, float minDist)
+        {
+            foreach (var s in _extraShapes)
+                if (CombatUtil.HorizontalDistance(s.Origin, p) < minDist) return false;
+            return true;
         }
 
         // Landepunkt auf dem NavMesh: Richtung Ziel, höchstens maxDist, an NavMesh-Kanten gestoppt
@@ -333,6 +410,23 @@ namespace ElementalBuddies
             PlayFx(a, fx, false);
             if (_net != null) _net.ServerBossFx(Abilities.IndexOf(a), fx);
 
+            // Regen mit mehreren Flächen: jede weitere Fläche ist ein eigener Regen (eigene Optik-Nachricht an die
+            // Clients – BossFxData bleibt unverändert –, eigene Warnfläche, eigene Pulse)
+            if (a.Kind == BossAbilityKind.Rain)
+            {
+                for (int i = 0; i < _extraShapes.Count; i++)
+                {
+                    var efx = fx;
+                    efx.Shape = _extraShapes[i];
+                    PlayFx(a, efx, false);
+                    if (_net != null) _net.ServerBossFx(Abilities.IndexOf(a), efx);
+                    var ego = new GameObject("BossRain");
+                    ego.AddComponent<BossRainArea>().Setup(_extraShapes[i], a, i < _extraTelegraphs.Count ? _extraTelegraphs[i] : null, DamageMultiplier);
+                }
+                _extraShapes.Clear();
+                _extraTelegraphs.Clear();
+            }
+
             // Wirkung (nur Server)
             switch (a.Kind)
             {
@@ -390,6 +484,12 @@ namespace ElementalBuddies
         }
 
         // Client: Optik einer vom Server ausgelösten Fähigkeit (EnemyNet)
+        // Server: frühestens in seconds wieder eine Fähigkeit beginnen (laufende Würfe bleiben unberührt)
+        public void DelayCasts(float seconds)
+        {
+            _nextCastTime = Mathf.Max(_nextCastTime, Time.time + Mathf.Max(0f, seconds));
+        }
+
         public void PlayRemoteFx(int abilityIndex, BossFxData fx)
         {
             if (Net.IsServer || Abilities == null || abilityIndex < 0 || abilityIndex >= Abilities.Count) return;

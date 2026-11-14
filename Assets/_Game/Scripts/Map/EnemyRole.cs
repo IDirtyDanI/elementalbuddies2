@@ -18,5 +18,8 @@ namespace ElementalBuddies
         // Champion-Bedrohungen (2026-10-17): nur der Champion kann sie verletzen (Bannschild)
         Summoner, // Beschwörer: errichtet abseits einen Ritualkreis und ruft Verstärkung
         Hexer,    // Bannwirker: bannt Buddy-Gruppen (keine Aktionen), solange er lebt und nah genug ist
+        // Dimensionsriss (2026-11-14): Boss der anderen Dimension (MapDefinitionSO.DimensionBoss). Eigene Rolle, damit kein
+        // Gegner-Theme die Config austauscht (Themes ordnen diese Rolle nicht zu) und er nicht als normale Boss-Art zählt.
+        DimensionBoss,
     }
 }

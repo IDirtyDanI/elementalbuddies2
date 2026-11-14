@@ -38,3 +38,22 @@ MonoBehaviour:
   DawnVictoryLine: "Das Dorf hat die Nacht \xFCberstanden"
   BattleCry: "F\xFCr das Dorf!"
   SiegeLevelNames: []
+  DimensionName: Kriegslager der Orks
+  DimensionColor: {r: 1, g: 0.55, b: 0.15, a: 1}
+  DimensionBoss: {fileID: 11400000, guid: b88507127ea4b436ea9369ec22de7414, type: 2}
+  DimensionArenaPrefab: {fileID: 3798648530141447410, guid: 1093f720079734ff9b17bed9e6b6f052, type: 3}
+  DimensionAtmosphere:
+    SunEuler: {x: 32, y: 67.5, z: 0}
+    SunColor: {r: 1, g: 0.9019608, b: 0.78431374, a: 1}
+    SunIntensity: 1.05
+    ShadowStrength: 0.8
+    AmbientSky: {r: 0.3529412, g: 0.36862746, b: 0.5882353, a: 1}
+    AmbientEquator: {r: 0.30588236, g: 0.28235295, b: 0.40784314, a: 1}
+    AmbientGround: {r: 0.14117648, g: 0.13333334, b: 0.18039216, a: 1}
+    FogColor: {r: 0.11764706, g: 0.101960786, b: 0.14901961, a: 1}
+    FogDensity: 0.014
+    SkyTint: {r: 0.23529412, g: 0.20392157, b: 0.3764706, a: 1}
+    SkyGround: {r: 0.101960786, g: 0.08627451, b: 0.1254902, a: 1}
+    SkyExposure: 0.5
+    SkyAtmosphere: 1.1
+    BlendTime: 0.5

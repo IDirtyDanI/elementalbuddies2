@@ -8,11 +8,13 @@ namespace ElementalBuddies
     {
         public Vector3 Position;
         public Quaternion Rotation;
+        public float Fov; // Blickwinkel (Grad); 0 = Blickwinkel der Spielkamera unverändert
 
         public CutscenePose(Vector3 position, Quaternion rotation)
         {
             Position = position;
             Rotation = rotation;
+            Fov = 0f;
         }
 
         public Vector3 Forward => Rotation * Vector3.forward;

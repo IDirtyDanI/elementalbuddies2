@@ -110,6 +110,8 @@ namespace ElementalBuddies
             if (ActiveShrine != null && ActiveShrine.IsAwakened) return; // nur einer gleichzeitig
 
             int wave = WaveManager.Instance != null ? WaveManager.Instance.UpcomingWaveNumber : 0;
+            // Dimensionsriss: kein Schrein in der Event-Welle – der geplante rückt eine Welle weiter (scheduled <= wave)
+            if (WaveManager.Instance != null && WaveManager.Instance.IsDimensionWave(wave)) return;
             Shrine next = GetNextScheduled(out int scheduled);
             if (next == null || scheduled > wave) return;
 

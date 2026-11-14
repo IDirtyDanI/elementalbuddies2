@@ -80,6 +80,10 @@ namespace ElementalBuddies
         public int MinAllies = 2;
 
         [Header("Rain")]
+        [Tooltip("Anzahl der Regenflächen je Wurf (1 = nur auf dem Ziel). Weitere Flächen liegen auf anderen Spielern in Reichweite, sonst zufällig RainSpread m um die erste; Schaden gilt je Fläche.")]
+        public int RainAreas = 1;
+        [Tooltip("Abstand weiterer Regenflächen von der ersten (min, max in m).")]
+        public Vector2 RainSpread = new Vector2(4f, 7f);
         public int Pulses = 5;
         public float PulseDuration = 1.25f;
         [Tooltip("Fallende Pfeile pro Puls (nur Optik, braucht FallingArrowPrefab).")]

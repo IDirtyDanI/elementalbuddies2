@@ -25,6 +25,7 @@ namespace ElementalBuddies
         public int TotalCount;
         public int EliteCount;
         public WaveEvent Event;
+        public EnemyConfigSO DimensionBoss;    // Dimensionsriss: Boss hinter den Portalen (nicht in Groups)
 
         // Erste Welle, in der ein Gegnertyp vorkommt (pro WaveManager gecacht)
         private static readonly Dictionary<EnemyConfigSO, int> _firstWave = new Dictionary<EnemyConfigSO, int>();
@@ -87,8 +88,14 @@ namespace ElementalBuddies
             {
                 int sw = -1;
                 var next = Net.IsServer ? sm.GetNextScheduled(out sw) : null;
-                if (next != null && sw == wave) p.Events.Add($"{next.DisplayName} erwacht");
-                else if (!Net.IsServer && sm.AwakenAtWave != null && System.Array.IndexOf(sm.AwakenAtWave, wave) >= 0) p.Events.Add("Ein Schrein erwacht");
+                // Dimensionsriss: in der Event-Welle erwacht keiner; der Termin rückt eine Welle weiter
+                bool dim = wm.IsDimensionWave(wave);
+                bool shifted = wave > 1 && wm.IsDimensionWave(wave - 1);
+                if (dim) { }
+                else if (next != null && (sw == wave || (shifted && sw == wave - 1))) p.Events.Add($"{next.DisplayName} erwacht");
+                else if (!Net.IsServer && sm.AwakenAtWave != null
+                         && (System.Array.IndexOf(sm.AwakenAtWave, wave) >= 0 || (shifted && System.Array.IndexOf(sm.AwakenAtWave, wave - 1) >= 0)))
+                    p.Events.Add("Ein Schrein erwacht");
             }
             var mm = MerchantManager.Instance;
             if (mm != null && mm.IsMerchantWave(wave))
@@ -104,6 +111,15 @@ namespace ElementalBuddies
             if (ev != WaveEvent.None)
             {
                 p.Event = ev;
+                if (ev == WaveEvent.Dimension)
+                {
+                    // Der Boss steht nicht in der Wellenliste (er wartet in der Dimension) – hier mit Namen ankündigen
+                    var dimBoss = wm.DimensionBossConfig;
+                    p.DimensionBoss = dimBoss;
+                    string where = MapContext.Current != null && !string.IsNullOrEmpty(MapContext.Current.DimensionName) ? MapContext.Current.DimensionName : "Dimension";
+                    p.Events.Insert(0, $"<b><color=#{WaveEvents.DarkHex(ev)}>{WaveEvents.Name(ev)}:</color></b> {NameOf(dimBoss)} wartet im {where} – tretet durch ein Portal! Solange niemand drin ist, verliert der Nexus Leben.");
+                }
+                else
                 p.Events.Insert(0, $"<b><color=#{WaveEvents.DarkHex(ev)}>{WaveEvents.Name(ev)}:</color></b> {WaveEvents.Description(ev)}");
             }
             // Morgengrauen
@@ -137,7 +153,8 @@ namespace ElementalBuddies
                 if (!wm.IsBossWave(w)) continue;
                 p.NextBossWave = w;
                 var bw = wm.BuildWave(w);
-                if (bw != null)
+                if (wm.IsDimensionWave(w)) p.NextBoss = wm.DimensionBossConfig; // Dimensionsriss: Boss der Dimension
+                else if (bw != null)
                     foreach (var g in bw.EnemiesToSpawn)
                         if (g != null && g.EnemyType != null && g.EnemyType.IsBoss && g.Count > 0) { p.NextBoss = g.EnemyType; break; }
                 break;

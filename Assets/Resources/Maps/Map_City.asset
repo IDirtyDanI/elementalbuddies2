@@ -38,3 +38,22 @@ MonoBehaviour:
   DawnVictoryLine: "Die Stadt hat die Nacht \xFCberstanden"
   BattleCry: "F\xFCr die Stadt!"
   SiegeLevelNames: []
+  DimensionName: Totenreich
+  DimensionColor: {r: 0.3, g: 1, b: 0.72, a: 1}
+  DimensionBoss: {fileID: 11400000, guid: 25245fbc9edd9453595146a650599e30, type: 2}
+  DimensionArenaPrefab: {fileID: 7767327188619868033, guid: 3df0ccfad43db4be6aea242c89dfb8ee, type: 3}
+  DimensionAtmosphere:
+    SunEuler: {x: 50, y: 135, z: 0}
+    SunColor: {r: 0.7058824, g: 0.8235294, b: 1, a: 1}
+    SunIntensity: 0.95
+    ShadowStrength: 0.7
+    AmbientSky: {r: 0.2901961, g: 0.26666668, b: 0.4392157, a: 1}
+    AmbientEquator: {r: 0.22745098, g: 0.26666668, b: 0.34509805, a: 1}
+    AmbientGround: {r: 0.10980392, g: 0.1254902, b: 0.15686275, a: 1}
+    FogColor: {r: 0.078431375, g: 0.14901961, b: 0.18039216, a: 1}
+    FogDensity: 0.014
+    SkyTint: {r: 0.16470589, g: 0.33333334, b: 0.3764706, a: 1}
+    SkyGround: {r: 0.05490196, g: 0.101960786, b: 0.12156863, a: 1}
+    SkyExposure: 0.55
+    SkyAtmosphere: 1
+    BlendTime: 0.5

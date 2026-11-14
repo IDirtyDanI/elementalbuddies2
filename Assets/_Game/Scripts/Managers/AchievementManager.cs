@@ -180,6 +180,8 @@ namespace ElementalBuddies
             var db = AchievementDatabaseSO.Instance;
             if (db == null) return;
             int kind = db.GetBossKindIndex(enemy.Config);
+            // Boss des Dimensionsrisses: zählt als Boss-Sieg, ist aber keine der Boss-Arten der Wellen („Alle Boss-Arten“)
+            if (kind < 0 && enemy.Config != null && enemy.Config.Role == EnemyRole.DimensionBoss) return;
             if (kind < 0)
             {
                 Debug.LogWarning($"AchievementManager: Boss-Art von '{(enemy.Config != null ? enemy.Config.name : enemy.name)}' unbekannt (AchievementDatabase.BossKinds).");

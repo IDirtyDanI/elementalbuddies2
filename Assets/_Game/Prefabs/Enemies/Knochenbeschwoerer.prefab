@@ -235,6 +235,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ca559880a3b14709b150f3126b1d065, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.SummonerBrain
+  RescueTime: 20
+  RescueMoveDistance: 1.5
   RunnerConfig: {fileID: 11400000, guid: 4794f4703af3b5a44b9fc56c29d839ea, type: 2}
   SwarmConfig: {fileID: 11400000, guid: 58526041a8e384140a4bd495a26fb394, type: 2}
   SummonInterval: 10

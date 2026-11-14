@@ -127,6 +127,15 @@ namespace ElementalBuddies
             if (kb.f7Key.wasPressedThisFrame) DevActivateMerchant(kb.shiftKey.isPressed);
             if (kb.f8Key.wasPressedThisFrame) DevCaptureMerchant();
             if (kb.f9Key.wasPressedThisFrame) DevSpawnBoss();
+            // Dimensionsriss: F10 Event jetzt (ohne Welle: nächste Event-Welle starten), F11 hinein/heraus, Shift+F11 Boss töten
+            if (kb.f10Key.wasPressedThisFrame)
+                ToastUI.Show(DimensionEvent.DevForce() ? "DEV: Dimensionsriss gestartet" : "DEV: Dimensionsriss nicht möglich (läuft schon?)");
+            if (kb.f11Key.wasPressedThisFrame)
+            {
+                if (kb.shiftKey.isPressed) DimensionEvent.DevKillBoss();
+                else if (DimensionEvent.LocalInArena) DimensionEvent.DevExit();
+                else DimensionEvent.DevEnter();
+            }
         }
 
         void OnDestroy()
@@ -250,9 +259,11 @@ namespace ElementalBuddies
                 "F6  Champion wechseln\n" +
                 "F7  nächsten Händler öffnen (Shift: Händlertyp durchschalten)\n" +
                 "F8  aktiven Händler sofort einnehmen\n" +
-                "F9  nächsten Boss spawnen";
-            GUI.Box(new Rect(12, y, 520, 236), GUIContent.none, _box);
-            GUI.Label(new Rect(22, y + 6, 510, 231), text, _label);
+                "F9  nächsten Boss spawnen\n" +
+                "F10 Dimensionsriss jetzt (ohne Welle: nächste Event-Welle)\n" +
+                "F11 in die Dimension / zurück (Shift: Dimensions-Boss töten)";
+            GUI.Box(new Rect(12, y, 520, 272), GUIContent.none, _box);
+            GUI.Label(new Rect(22, y + 6, 510, 267), text, _label);
         }
 #endif
     }

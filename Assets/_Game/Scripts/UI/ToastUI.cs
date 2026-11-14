@@ -50,6 +50,14 @@ namespace ElementalBuddies
             else Debug.Log($"Toast (no ToastUI yet): {msg}");
         }
 
+        // Meldung, die die Karte betrifft (Eliten, Schreine, Händler, Portale, Bedrohungen, „Letzter Ansturm“): Wer gerade
+        // im Dimensionsriss kämpft, sieht sie nicht (#562) – dort zählen nur Boss und Riss.
+        public static void ShowMap(string msg, Sprite icon = null)
+        {
+            if (DimensionEvent.LocalInArena) return;
+            Show(msg, icon);
+        }
+
         void Awake()
         {
             Instance = this;
@@ -227,12 +235,12 @@ namespace ElementalBuddies
 
         private void HandlePortalOpened(SpawnPortal p)
         {
-            Show($"Ein neues Portal öffnet sich im {p.DisplayName}!", PortalIcon);
+            ShowMap($"Ein neues Portal öffnet sich im {p.DisplayName}!", PortalIcon);
         }
 
         private void HandleShrineAwakened(Shrine s)
         {
-            Show($"Der {s.DisplayName} ist erwacht! Halte seinen Kreis.", ElementIcon(s.ElementIndex));
+            ShowMap($"Der {s.DisplayName} ist erwacht! Halte seinen Kreis.", ElementIcon(s.ElementIndex));
         }
 
         private void HandleShrineCompleted(Shrine s)
@@ -251,7 +259,7 @@ namespace ElementalBuddies
 
         private void HandleShrineFailed(Shrine s)
         {
-            Show($"Der {s.DisplayName} ist wieder verfallen...", ElementIcon(s.ElementIndex));
+            ShowMap($"Der {s.DisplayName} ist wieder verfallen...", ElementIcon(s.ElementIndex));
         }
 
         private static Sprite MerchantIcon(Merchant m) =>
@@ -259,17 +267,17 @@ namespace ElementalBuddies
 
         private void HandleMerchantActivated(Merchant m)
         {
-            Show($"Der {m.DisplayName} hat seinen Stand {m.LocationPhrase} geöffnet! Nimm ihn ein.", MerchantIcon(m));
+            ShowMap($"Der {m.DisplayName} hat seinen Stand {m.LocationPhrase} geöffnet! Nimm ihn ein.", MerchantIcon(m));
         }
 
         private void HandleMerchantCaptured(Merchant m)
         {
-            Show($"{m.DisplayName} eingenommen!", MerchantIcon(m));
+            ShowMap($"{m.DisplayName} eingenommen!", MerchantIcon(m));
         }
 
         private void HandleMerchantFailed(Merchant m)
         {
-            Show($"Der {m.DisplayName} hat seinen Stand wieder geschlossen...", MerchantIcon(m));
+            ShowMap($"Der {m.DisplayName} hat seinen Stand wieder geschlossen...", MerchantIcon(m));
         }
 
         private void HandleMerchantCardPicked(MerchantCardSO card)

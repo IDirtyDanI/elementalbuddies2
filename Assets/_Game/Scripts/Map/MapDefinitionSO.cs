@@ -6,6 +6,34 @@ namespace ElementalBuddies
     // (Mauer ±35, „Stadtmauer“-Texte, Minimap-Mitte/-Radius, Morgengrauen-Sonne, Szenenname „test“).
     // Die Feld-Standardwerte entsprechen exakt der Stadt – MapRegistry erzeugt daraus einen Ersatz, falls keine
     // Assets geladen werden können. Assets: Resources/Maps/Map_*.asset (Map_City = Stadt).
+    // Lichtstimmung einer Dimension (Dimensionsriss). SiegeAtmosphere blendet sie lokal über die Belagerungs-Stimmung,
+    // solange die eigene Figur in der Arena steht. Mobil-Low hat kein Post-Processing → der Look entsteht nur aus
+    // Sonne, Umgebungslicht (Trilight), Nebel und Himmel. Standardwerte = Totenreich (Stadt).
+    [System.Serializable]
+    public class DimensionAtmosphere
+    {
+        [Header("Sonne / Mond")]
+        public Vector3 SunEuler = new Vector3(52f, 215f, 0f);
+        public Color SunColor = new Color(0.55f, 0.85f, 0.72f);
+        public float SunIntensity = 1.15f;
+        [Range(0f, 1f)] public float ShadowStrength = 0.75f;
+        [Header("Umgebungslicht (Trilight)")]
+        public Color AmbientSky = new Color(0.42f, 0.36f, 0.66f);
+        public Color AmbientEquator = new Color(0.28f, 0.42f, 0.42f);
+        public Color AmbientGround = new Color(0.10f, 0.13f, 0.14f);
+        [Header("Nebel (Exponential²)")]
+        public Color FogColor = new Color(0.10f, 0.16f, 0.17f);
+        public float FogDensity = 0.016f;
+        [Header("Himmel (Skybox/Procedural)")]
+        public Color SkyTint = new Color(0.34f, 0.22f, 0.55f);
+        public Color SkyGround = new Color(0.05f, 0.08f, 0.09f);
+        public float SkyExposure = 0.32f;
+        public float SkyAtmosphere = 1.4f;
+        [Header("Überblendung")]
+        [Tooltip("Sekunden für das Ein-/Ausblenden (die Schwarzblende des Portals verdeckt den Sprung).")]
+        public float BlendTime = 0.5f;
+    }
+
     [CreateAssetMenu(fileName = "Map_", menuName = "Elemental Buddies/Map/Map-Definition")]
     public class MapDefinitionSO : ScriptableObject
     {
@@ -59,6 +87,20 @@ namespace ElementalBuddies
         public string BattleCry = "Für die Stadt!";
         [Tooltip("Optional: eigene Namen der Belagerungsstufen 0..Max (leer = Standardnamen).")]
         public string[] SiegeLevelNames = new string[0];
+
+        [Header("Dimensionsriss (Boss-Event ab Welle 20, DimensionEvent)")]
+        [Tooltip("Name der Dimension hinter den Portalen (Stadt: Totenreich, Walddorf: Kriegslager der Orks).")]
+        public string DimensionName = "Totenreich";
+        [Tooltip("Farbe des Risses: begehbare Portale (Fläche, Partikel, Bodenring, Lichtsäule), Randpfeil, Ziel-Panel. " +
+                 "Soll sich klar vom normalen Portal-Violett abheben.")]
+        public Color DimensionColor = new Color(0.3f, 1f, 0.72f);
+        [Tooltip("Boss der Dimension (Rolle DimensionBoss, IsBoss, Prefab mit EnemyBrain/EnemyNet/BossBrain in der Netz-Prefab-Liste). " +
+                 "Leer = erster Boss aus den Zusatzgruppen des WaveManagers (über das Map-Theme aufgelöst).")]
+        public EnemyConfigSO DimensionBoss;
+        [Tooltip("Arena-Prefab (Vertrag siehe DimensionArena). Leer = Platzhalter-Arena aus Grundkörpern.")]
+        public GameObject DimensionArenaPrefab;
+        [Tooltip("Lichtstimmung in der Arena (nur lokal für Spieler, die drin sind).")]
+        public DimensionAtmosphere DimensionAtmosphere = new DimensionAtmosphere();
 
         // Name der Szene zum Laden (SceneManager/NGO)
         public string SceneName => System.IO.Path.GetFileNameWithoutExtension(ScenePath ?? "");

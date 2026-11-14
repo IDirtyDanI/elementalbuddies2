@@ -54,7 +54,7 @@ namespace ElementalBuddies
             Suspended = false;
         }
 
-        // Kamera-Regie (Intro-Film, IntroCutscene): solange gesetzt, schreibt CameraFollow die Kamera nicht. Die Figur
+        // Kamera-Regie (Filme, Cutscene-Dienst): solange gesetzt, schreibt CameraFollow die Kamera nicht. Die Figur
         // wird weiter (ungeglättet) verfolgt, damit GamePose() die Lage liefert, auf die der Film zurückgleitet –
         // danach geht es ohne Sprung weiter. Kein Wackeln, keine Dreh-Eingabe.
         public static bool Suspended { get; set; }
@@ -85,6 +85,16 @@ namespace ElementalBuddies
 
         // Nur der vom Spieler eingestellte Drehwinkel (0 = Standardansicht), z. B. für Anzeigen
         public static float OrbitYaw => _instance != null ? CameraOrbitMath.WrapAngle(_instance._yaw) : 0f;
+
+        // Kamera beim nächsten Bild direkt auf die Figur setzen statt hinzugleiten (nach Teleports: Dimensionsriss)
+        public static void Snap()
+        {
+            if (_instance != null) _instance._snapped = false;
+        }
+
+        // Ab diesem Abstand Figur ↔ Drehpunkt springt die Kamera von selbst (Teleport über die Karte, z. B. Wiederbelebung
+        // auf der Karte nach einem Tod in der Dimension) – normales Laufen/Blinken bleibt weit darunter
+        public const float AutoSnapDistance = 60f;
 
         // Wackeln auslösen (0..1, addiert sich, gedeckelt). Stärke = Trauma² × Spieler-Einstellung.
         public static void AddTrauma(float amount)
@@ -148,7 +158,8 @@ namespace ElementalBuddies
             UpdateYaw();
             Quaternion yawRotation = CameraOrbitMath.YawRotation(_yaw);
 
-            // Erstes Binden: direkt hinspringen statt quer über die Karte zu gleiten
+            // Erstes Binden: direkt hinspringen statt quer über die Karte zu gleiten (ebenso nach einem weiten Teleport)
+            if (_snapped && (Target.position - _followPos).sqrMagnitude > AutoSnapDistance * AutoSnapDistance) _snapped = false;
             if (!_snapped)
             {
                 _snapped = true;

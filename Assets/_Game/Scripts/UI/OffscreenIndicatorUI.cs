@@ -333,6 +333,20 @@ namespace ElementalBuddies
                 Add(p, p.SpawnTransform.position, PortalColor, PortalIcon, true, EdgeArrowLayout.PriorityPortal);
             }
 
+            // Dimensionsriss: draußen das nächste begehbare Portal, drinnen das offene Rückportal
+            var dim = DimensionEvent.Instance;
+            if (dim != null && dim.Phase != DimensionPhase.None)
+            {
+                if (DimensionEvent.ReturnPortalOpen && DimensionEvent.LocalInArena)
+                    Add(dim.Arena, dim.Arena.ReturnTriggerPosition, DimensionEvent.RiftColor, PortalIcon, true, EdgeArrowLayout.PriorityThreat);
+                else if (DimensionEvent.PortalsEnterable && !DimensionEvent.LocalInArena && _player != null)
+                {
+                    var rift = DimensionEvent.NearestEnterablePortal(_player.position);
+                    if (rift != null)
+                        Add(rift.SpawnTransform, rift.SpawnTransform.position, DimensionEvent.RiftColor, PortalIcon, true, EdgeArrowLayout.PriorityThreat);
+                }
+            }
+
             // Erwachte Schreine (heute höchstens einer gleichzeitig, aber alle anzeigen, falls sich das ändert)
             var smgr = ShrineManager.Instance;
             Shrine active = smgr != null && smgr.ActiveShrine != null && smgr.ActiveShrine.IsAwakened ? smgr.ActiveShrine : null;
@@ -356,6 +370,8 @@ namespace ElementalBuddies
 
         private void Add(Object target, Vector3 targetPos, Color color, Sprite icon, bool strong, int priority)
         {
+            // Dimensionsriss: nur Ziele in der Dimension der eigenen Figur (kein Pfeil 400 m weit zum Arena-Boss)
+            if (!DimensionEvent.VisibleToLocal(targetPos)) return;
             Vector3 vp = _cam.WorldToViewportPoint(targetPos);
             bool behind = vp.z < 0f;
             bool onScreen = !behind

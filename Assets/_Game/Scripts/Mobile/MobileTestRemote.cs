@@ -18,7 +18,13 @@ namespace ElementalBuddies
         private const string OutFile = "testout.txt";
         private const float PollInterval = 0.5f;
 
+        private static string _tag = "";
         private string _cmdPath, _outPath;
+        private bool _attack, _watch;
+        private float _nextAttack;
+        private int _watchTelegraphs = -1;
+        private float _watchHp = -1f;
+        private string _watchDim = "";
         private float _nextPoll;
         private bool _god;
         // hitch: Bilder über HitchMs melden (mit neu erschienenen Gegnern und Speicherbereinigungen seit dem Vorbild)
@@ -32,7 +38,13 @@ namespace ElementalBuddies
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
-            if (!Debug.isDebugBuild || !MobilePlatform.TouchMode) return;
+            // PC-Development-Build: nur mit Startparameter „-testremote <name>“ (Koop-Tests mit zwei Instanzen auf einem
+            // Rechner, 2026-11-14) – Dateien dann testcmd-<name>.txt / testout-<name>.txt
+            if (!Debug.isDebugBuild) return;
+            string[] args = Environment.GetCommandLineArgs();
+            int ai = Array.IndexOf(args, "-testremote");
+            if (ai >= 0) _tag = ai + 1 < args.Length && !args[ai + 1].StartsWith("-") ? "-" + args[ai + 1] : "-pc";
+            else if (!MobilePlatform.TouchMode) return;
             var go = new GameObject("MobileTestRemote");
             DontDestroyOnLoad(go);
             go.AddComponent<MobileTestRemote>();
@@ -40,8 +52,8 @@ namespace ElementalBuddies
 
         void Awake()
         {
-            _cmdPath = Path.Combine(Application.persistentDataPath, CmdFile);
-            _outPath = Path.Combine(Application.persistentDataPath, OutFile);
+            _cmdPath = Path.Combine(Application.persistentDataPath, CmdFile.Replace(".txt", _tag + ".txt"));
+            _outPath = Path.Combine(Application.persistentDataPath, OutFile.Replace(".txt", _tag + ".txt"));
             try { if (File.Exists(_cmdPath)) File.Delete(_cmdPath); } catch (Exception) { }
             Reply("bereit – Befehle in " + _cmdPath);
         }
@@ -50,6 +62,8 @@ namespace ElementalBuddies
         {
             if (_god) ApplyGod(true);
             if (_hitch) WatchHitches();
+            if (_attack) AttackBoss();
+            if (_watch) Watch();
             if (Time.unscaledTime < _nextPoll) return;
             _nextPoll = Time.unscaledTime + PollInterval;
 
@@ -80,6 +94,14 @@ namespace ElementalBuddies
             try { File.AppendAllText(_outPath, DateTime.Now.ToString("HH:mm:ss") + " " + msg + "\n"); } catch (Exception) { }
         }
 
+        private IEnumerator ReplyDimLater(float seconds)
+        {
+            if (seconds > 0f) yield return new WaitForSecondsRealtime(seconds);
+            var me = PlayerAvatar.Local;
+            Reply(DimensionEvent.DebugState() + (me != null ? " pos=" + me.transform.position.ToString("F1") : "")
+                  + (Nexus.Instance != null ? $" nexus={Nexus.Instance.CurrentHP:0}/{Nexus.Instance.MaxHP:0}" : ""));
+        }
+
         private void Execute(string line)
         {
             var a = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -89,7 +111,7 @@ namespace ElementalBuddies
             {
                 case "help":
                     Reply("state | start [champion] [karte] | host [champion] [karte] | net | ready [off] | go | mem | wave | startwave N | kill | shards N | gold N | god on|off | " +
-                          "draft | merchant [art] | buy i | reroll | done | skip | tp x z | tp nexus|shrine|merchant | " +
+                          "draft | merchant [art] | buy i | reroll | done | skip | tp x z | tp nexus|shrine|merchant | dim start|enter|exit|killboss|drain|portal|state | " +
                           "timescale f | perf [s] | hitch on|off | probe | ad ok|fail|cancel|state | adreroll | adslot | adcontinue | adgiveup | nexusfall | adsuite | adconsent ask|reset");
                     break;
                 case "state": Reply(State()); break;
@@ -169,6 +191,67 @@ namespace ElementalBuddies
                     StartCoroutine(ReplyStateLater());
                     break;
                 case "tp": Teleport(a); break;
+                // Dimensionsriss (2026-11-14): Event erzwingen (nur Host), hinein/heraus, Boss töten, Zustand
+                case "dim":
+                {
+                    string sub = a.Length > 1 ? a[1].ToLowerInvariant() : "state";
+                    if (DimensionEvent.Instance == null) { Reply("keine Spielszene"); break; }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    if (sub == "start") Reply("Dimensionsriss: " + (DimensionEvent.DevForce() ? "gestartet" : "nicht gestartet (nur Host, läuft schon?)"));
+                    else if (sub == "enter") { DimensionEvent.DevEnter(); Reply("Betreten angefordert"); }
+                    else if (sub == "exit") { DimensionEvent.DevExit(); Reply("Rückkehr angefordert"); }
+                    else if (sub == "killboss") Reply("Boss: " + (DimensionEvent.DevKillBoss() ? "getötet" : "keiner (nur Host)"));
+                    else if (sub == "drain") { DimensionEvent.DevDrainTick(); Reply("Verfalls-Takt ausgelöst"); }
+                    else if (sub == "return")
+                    {
+                        // vor das Rückportal springen → der echte Auslöser (Haltezeit) schickt die Figur zurück
+                        var me = PlayerAvatar.Local;
+                        var arena = DimensionEvent.Instance.Arena;
+                        if (me == null || arena == null) { Reply("keine Arena"); break; }
+                        me.TeleportLocal(arena.ReturnTriggerPosition + Vector3.up * 1.1f, me.transform.rotation);
+                        Reply("am Rückportal");
+                    }
+                    else if (sub == "portal")
+                    {
+                        // zum nächsten begehbaren Portal springen → der echte Auslöser schickt die Figur hinein
+                        var me = PlayerAvatar.Local;
+                        var portal = me != null ? DimensionEvent.NearestEnterablePortal(me.transform.position) : null;
+                        if (portal == null) { Reply("kein begehbares Portal"); break; }
+                        me.TeleportLocal(portal.SpawnTransform.position + Vector3.up * 1.1f, me.transform.rotation);
+                        Reply("am Portal " + portal.DisplayName);
+                    }
+#endif
+                    StartCoroutine(ReplyDimLater(sub == "state" ? 0f : 1.5f));
+                    break;
+                }
+                // Koop-Test am PC (2026-11-14): Bild speichern, Zustand der Ansicht, Boss angreifen, Film, Ruckel-Messung
+                case "shot":
+                    if (a.Length < 2) { Reply("shot <absoluter Pfad.png>"); break; }
+                    ScreenCapture.CaptureScreenshot(line.Substring(line.IndexOf(' ') + 1).Trim());
+                    Reply("Bild angefordert");
+                    break;
+                case "view": Reply(ViewState()); break;
+                case "attack":
+                    _attack = a.Length < 2 || a[1] != "off";
+                    if (PlayerAvatar.Local != null && PlayerAvatar.Local.Controller != null) PlayerAvatar.Local.Controller.RotationLocked = _attack;
+                    Reply("Boss angreifen " + (_attack ? "an" : "aus"));
+                    break;
+                case "watch":
+                    _watch = a.Length < 2 || a[1] != "off";
+                    Reply("Beobachten " + (_watch ? "an" : "aus"));
+                    break;
+                case "cut":
+                    if (a.Length > 1 && a[1] == "skip") Cutscene.Skip();
+                    Reply($"Film: läuft={Cutscene.IsPlaying} intro={IntroCutscene.IsPlaying} schrein={ShrineCutscene.IsPlaying} " +
+                          $"name={(Cutscene.Current != null ? Cutscene.Current.Name : "–")} t={Cutscene.FilmTime:0.00} an={Cutscene.Enabled}");
+                    break;
+                case "jitter":
+                    StartCoroutine(Jitter(a.Length > 1 ? float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture) : 5f));
+                    break;
+                case "quit":
+                    Reply("beende");
+                    Application.Quit();
+                    break;
                 case "timescale":
                     if (a.Length < 2) { Reply("timescale f"); break; }
                     Time.timeScale = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
@@ -228,6 +311,124 @@ namespace ElementalBuddies
                     break;
                 default: Reply("unbekannt – „help“ listet die Befehle"); break;
             }
+        }
+
+        // ---------------- Koop-Test am PC ----------------
+
+        // Was dieser Rechner gerade zeigt: Kamera, Lichtstimmung, Figuren (sichtbar?), Boss, Warnflächen
+        private string ViewState()
+        {
+            var sb = new StringBuilder();
+            sb.Append(Net.IsClientOnly ? "CLIENT " : "HOST ").Append(DimensionEvent.DebugState());
+            var cam = Camera.main;
+            if (cam != null) sb.Append(" | Kamera ").Append(cam.transform.position.ToString("F1"));
+            sb.Append($" | Nebel #{ColorUtility.ToHtmlStringRGB(RenderSettings.fogColor)} {RenderSettings.fogDensity:0.0000}");
+            var sun = RenderSettings.sun;
+            if (sun != null) sb.Append($" Sonne #{ColorUtility.ToHtmlStringRGB(sun.color)} {sun.intensity:0.00}");
+            sb.Append($" | Film {Cutscene.IsPlaying}");
+            foreach (var av in PlayerAvatar.All)
+            {
+                if (av == null) continue;
+                int vis = 0;
+                foreach (var r in av.GetComponentsInChildren<Renderer>()) if (r.enabled && r.isVisible) vis++;
+                sb.Append($" | [{av.OwnerClientId}{(av.IsLocal ? "*" : "")} {av.transform.position.ToString("F1")} HP {(av.Stats != null ? av.Stats.CurrentHP : 0f):0} lebt={av.IsAlive} sichtbar={vis}]");
+            }
+            var ev = DimensionEvent.Instance;
+            var boss = ev != null ? ev.FindBoss() : null;
+            if (boss != null)
+            {
+                var anim = boss.GetComponentInChildren<Animator>();
+                string clip = "";
+                if (anim != null && anim.runtimeAnimatorController != null)
+                {
+                    var ci = anim.GetCurrentAnimatorClipInfo(0);
+                    if (ci.Length > 0 && ci[0].clip != null) clip = ci[0].clip.name;
+                }
+                sb.Append($" | Boss {boss.transform.position.ToString("F2")} Clip {clip}");
+            }
+            sb.Append(" | Warnflächen ").Append(AoeTelegraph.Active.Count);
+            foreach (var t in AoeTelegraph.Active)
+                if (t != null) sb.Append(' ').Append(t.Shape).Append(t.transform.position.ToString("F0"));
+            if (ev != null && ev.Arena != null) sb.Append($" | Arena NavMesh {ev.Arena.HasNavMesh} Portale markiert {ev.MarkedPortalCount}");
+            if (Nexus.Instance != null) sb.Append($" | Nexus {Nexus.Instance.CurrentHP:0.#}/{Nexus.Instance.MaxHP:0}");
+            return sb.ToString();
+        }
+
+        // attack on: zur Dimensions-Boss drehen und die Primärfähigkeit wirken (Client-Treffer im Koop-Test)
+        private void AttackBoss()
+        {
+            if (Time.unscaledTime < _nextAttack) return;
+            _nextAttack = Time.unscaledTime + 0.4f;
+            var me = PlayerAvatar.Local;
+            var ev = DimensionEvent.Instance;
+            var boss = ev != null ? ev.FindBoss() : null;
+            if (me == null || !me.IsAlive || boss == null || me.Abilities == null) return;
+            Vector3 d = boss.transform.position - me.transform.position;
+            d.y = 0f;
+            if (d.sqrMagnitude > 0.01f) me.transform.rotation = Quaternion.LookRotation(d);
+            var m = typeof(PlayerAbilities).GetMethod("TryCast", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+            if (m != null) m.Invoke(me.Abilities, new object[] { me.Abilities.GetAbility(default(AbilitySlot)) });
+        }
+
+        // watch on: Änderungen melden (Warnflächen-Zahl, eigene LP, Zustand des Risses)
+        private void Watch()
+        {
+            int n = AoeTelegraph.Active.Count;
+            if (n != _watchTelegraphs)
+            {
+                _watchTelegraphs = n;
+                var sb = new StringBuilder("Warnflächen ").Append(n);
+                foreach (var t in AoeTelegraph.Active)
+                    if (t != null) sb.Append(' ').Append(t.transform.position.ToString("F1"));
+                Reply(sb.ToString());
+            }
+            var me = PlayerAvatar.Local;
+            float hp = me != null && me.Stats != null ? me.Stats.CurrentHP : -1f;
+            if (!Mathf.Approximately(hp, _watchHp))
+            {
+                if (hp < _watchHp && me != null) Reply($"LP {_watchHp:0.#} → {hp:0.#} bei {me.transform.position.ToString("F1")}");
+                _watchHp = hp;
+            }
+            var ev = DimensionEvent.Instance;
+            string dim = ev != null ? $"{ev.Phase}/{ev.Drain}/mask {ev.InsideMask}/{(DimensionEvent.LocalInArena ? "arena" : "karte")}" : "";
+            if (dim != _watchDim)
+            {
+                _watchDim = dim;
+                Reply("Riss " + dim + (Nexus.Instance != null ? $" nexus {Nexus.Instance.CurrentHP:0.#}" : ""));
+            }
+        }
+
+        // jitter [s]: Bewegung des Dimensions-Bosses je Bild messen (Sprünge/Zittern der Netz-Position bei x ≈ 400)
+        private IEnumerator Jitter(float seconds)
+        {
+            var ev = DimensionEvent.Instance;
+            var boss = ev != null ? ev.FindBoss() : null;
+            if (boss == null) { Reply("kein Boss"); yield break; }
+            var tr = boss.transform;
+            Vector3 last = tr.position, lastStep = Vector3.zero;
+            float maxStep = 0f, maxSpeed = 0f, maxJerk = 0f, path = 0f, minY = last.y, maxY = last.y, back = 0f;
+            int frames = 0, reversals = 0;
+            float start = Time.unscaledTime;
+            while (Time.unscaledTime - start < seconds && tr != null)
+            {
+                yield return null;
+                if (tr == null) break;
+                Vector3 p = tr.position;
+                Vector3 step = p - last;
+                float len = step.magnitude;
+                frames++;
+                path += len;
+                maxStep = Mathf.Max(maxStep, len);
+                if (Time.unscaledDeltaTime > 0f) maxSpeed = Mathf.Max(maxSpeed, len / Time.unscaledDeltaTime);
+                maxJerk = Mathf.Max(maxJerk, (step - lastStep).magnitude);
+                if (len > 0.0005f && lastStep.magnitude > 0.0005f && Vector3.Dot(step, lastStep) < 0f) { reversals++; back += len; }
+                minY = Mathf.Min(minY, p.y);
+                maxY = Mathf.Max(maxY, p.y);
+                last = p;
+                lastStep = step;
+            }
+            Reply($"Jitter {seconds:0.#} s, {frames} Bilder: Weg {path:0.00} m, größter Schritt {maxStep:0.000} m, höchstes Tempo {maxSpeed:0.0} m/s, " +
+                  $"größte Schritt-Änderung {maxJerk:0.000} m, Richtungsumkehr {reversals}× ({back:0.000} m), y {minY:0.000}–{maxY:0.000}");
         }
 
         // ---------------- Zustand ----------------

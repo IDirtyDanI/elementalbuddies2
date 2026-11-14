@@ -273,12 +273,18 @@ MonoBehaviour:
   WardedEliteFromWave: 14
   WardedEliteChance: 0.25
   MaxWardedPerWave: 2
-  EventFromWave: 16
+  EventFromWave: 13
   EventEvery: 3
   BloodMoonSpeed: 1.2
   BloodMoonBounty: 1.5
   SoulStormBounty: 2
   SoulStormMagnet: 0.3
+  DimensionFromWave: 20
+  DimensionEvery: 5
+  DimensionBossTargetHp: 6000
+  DimensionBossHpPerExtraPlayer: 0.6
+  DimensionBossHpPerEvent: 0.15
+  DimensionBossDamageRampShare: 0.5
   CountPerExtraPlayer: 0.5
   HpPerExtraPlayer: 0.25
   BossHpPerExtraPlayer: 0.6
@@ -1046,6 +1052,66 @@ MonoBehaviour:
     Volume: 0.7
     Pitch: {x: 1, y: 1}
     MinInterval: 0.5
+  - Id: 103
+    Clips:
+    - {fileID: 8300000, guid: 96d878ce1d9c9487dafbc4a71afbeaf7, type: 3}
+    Volume: 0.75
+    Pitch: {x: 1, y: 1}
+    MinInterval: 1
+  - Id: 104
+    Clips:
+    - {fileID: 8300000, guid: 68bef7443f0944df0b50bad85d5edddf, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 105
+    Clips:
+    - {fileID: 8300000, guid: 20e055b40750846ada8f931881f5f606, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.3
+  - Id: 106
+    Clips:
+    - {fileID: 8300000, guid: 5bdf17d138c79436185845195f273cc5, type: 3}
+    Volume: 0.7
+    Pitch: {x: 1, y: 1}
+    MinInterval: 0.3
+  - Id: 107
+    Clips:
+    - {fileID: 8300000, guid: 565eaa85d15ce4e23bd2eba4cb27c670, type: 3}
+    Volume: 0.6
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 108
+    Clips:
+    - {fileID: 8300000, guid: 28c138a8f0be8419580a7a733a0b75da, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 109
+    Clips:
+    - {fileID: 8300000, guid: dbeef89b7d8794ce8aa3014920570158, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 110
+    Clips:
+    - {fileID: 8300000, guid: 10caf7a361d9e4c0e88d56f6001ed019, type: 3}
+    Volume: 0.9
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 111
+    Clips:
+    - {fileID: 8300000, guid: dc58a237ef0324d5aa35a6b421a9dabc, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
+  - Id: 112
+    Clips:
+    - {fileID: 8300000, guid: ab9426e4c1a8c4c26b27fdb67aed63c0, type: 3}
+    Volume: 0.85
+    Pitch: {x: 1, y: 1}
+    MinInterval: 2
   MusicClip: {fileID: 0}
   MusicVolume: 0.2
   MusicFadeIn: 2

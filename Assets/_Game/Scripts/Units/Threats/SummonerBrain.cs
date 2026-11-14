@@ -324,7 +324,7 @@ namespace ElementalBuddies
             }
             ServerFx(FxRitualComplete, _dest);
             string msg = $"{Brain.DisplayName} hat sein Ritual vollendet!";
-            foreach (ulong id in UpgradeManager.PlayerIds()) NetGame.SendToast(id, msg);
+            foreach (ulong id in UpgradeManager.PlayerIds()) NetGame.SendToast(id, msg, true);
         }
 
         private void BeginRitual(Vector3 center)

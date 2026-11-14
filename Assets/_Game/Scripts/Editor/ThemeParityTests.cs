@@ -233,6 +233,8 @@ namespace ElementalBuddies.EditorTools.Tests
                     if (wm.IsHarvestWave(w)) expS = 0;
                     else if (wm.IsBossWave(w)) expS = Mathf.Min(expS, 1);
                     int expH = ChampionThreatRules.StepCount(ChampionThreatSetup.HexerSteps, w);
+                    // Dimensionsriss: nichts, das nur der Champion besiegen kann (er ist in der anderen Dimension)
+                    if (wm.IsDimensionWave(w)) { expS = 0; expH = 0; }
                     Assert.AreEqual(expS, s, "Welle " + w + ": Beschwörer");
                     Assert.AreEqual(expH, h, "Welle " + w + ": Bannwirker");
                     if (s > 0 && firstSummoner < 0) firstSummoner = w;

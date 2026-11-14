@@ -130,11 +130,11 @@ namespace ElementalBuddies
         private bool IsGameOver =>GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver;
 
         // Lokale Eingabe gesperrt (nur dieser Rechner): Pause-Menü, eigenes Kartenfenster (Wellen-Draft/Händler),
-        // Solo-Zeitstopp oder Intro-Film (IntroCutscene, läuft nur lokal). Ersetzt die frühere Prüfung auf Time.timeScale
+        // Solo-Zeitstopp oder ein Film (Cutscene: Intro-, Schrein-Film …, läuft nur lokal). Ersetzt die frühere Prüfung auf Time.timeScale
         // (im Koop gibt es keine globale Pause).
         public static bool LocalInputBlocked =>
             PauseManager.IsPaused
-            || IntroCutscene.IsPlaying
+            || Cutscene.IsPlaying
             || (UpgradeManager.Instance != null && UpgradeManager.Instance.IsChoosing)
             || (MerchantManager.Instance != null && MerchantManager.Instance.IsChoosing)
             || (Net.CanPauseTime && Time.timeScale <= 0f);

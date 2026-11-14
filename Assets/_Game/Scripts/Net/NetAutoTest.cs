@@ -29,6 +29,20 @@ namespace ElementalBuddies
         }
 
         private static readonly bool NoBuild = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-nettestbuy") >= 0;
+        // -nettestdim: bei einem Dimensionsriss selbst zum nächsten begehbaren Portal springen (der echte Auslöser
+        // schickt die Figur dann hinein) und nach dem Boss-Tod zum Rückportal
+        private static readonly bool AutoDimension = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-nettestdim") >= 0;
+        // -nettestwave N (nur Host, Editor/Development-Build): vor der ersten Welle auf Welle N springen (z. B. 20 = Dimensionsriss)
+        private static readonly int StartWave = ReadIntArg("-nettestwave");
+        private bool _startWaveSet;
+        private bool _rotationLocked;
+        private static int ReadIntArg(string name)
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            int i = System.Array.IndexOf(args, name);
+            return i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out int n) ? n : 0;
+        }
+        private float _nextDimJump;
         private float _nextLog;
         private float _nextAct;
         private float _angle;
@@ -97,6 +111,16 @@ namespace ElementalBuddies
                 NetGame.RequestBuild(0, p);
                 return;
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (!_startWaveSet && StartWave > 1 && wm != null && Net.IsServer && Net.IsRunning && !wm.IsWaveActive && wm.CurrentWaveIndex == 0)
+            {
+                _startWaveSet = true;
+                wm.DevSetStartWave(StartWave);
+                if (SiegeProgression.Instance != null) SiegeProgression.Instance.ApplyInstant(wm.CurrentWaveIndex);
+                Debug.Log("[NetTest] Startwelle " + wm.UpcomingWaveNumber);
+                return;
+            }
+#endif
             if (wm != null && gm != null && gm.CurrentState == GameState.Building && !wm.IsLocalReady)
             {
                 Debug.Log("[NetTest] melde bereit");
@@ -105,6 +129,59 @@ namespace ElementalBuddies
 
             // Figur bewegen (Besitzer-autoritativ → wird synchronisiert) und Primärfähigkeit wirken
             var me = PlayerAvatar.Local;
+            if (AutoDimension && me != null && me.IsAlive && DimensionEvent.IsActive)
+            {
+                var ev = DimensionEvent.Instance;
+                if (Time.unscaledTime >= _nextDimJump)
+                {
+                    if (ev.Phase == DimensionPhase.Open && !DimensionEvent.LocalInArena)
+                    {
+                        var portal = DimensionEvent.NearestEnterablePortal(me.transform.position);
+                        if (portal != null)
+                        {
+                            _nextDimJump = Time.unscaledTime + 4f;
+                            Debug.Log("[NetTest] Dimensionsriss: springe zum Portal " + portal.DisplayName);
+                            me.TeleportLocal(portal.SpawnTransform.position + new Vector3((me.OwnerClientId % 4) * 1.1f - 0.55f, 1.1f, 0f), me.transform.rotation);
+                        }
+                    }
+                    else if (ev.Phase == DimensionPhase.BossDead && DimensionEvent.LocalInArena && ev.Arena != null)
+                    {
+                        _nextDimJump = Time.unscaledTime + 4f;
+                        Debug.Log("[NetTest] Dimensionsriss: springe zum Rückportal");
+                        me.TeleportLocal(ev.Arena.ReturnTriggerPosition + new Vector3((me.OwnerClientId % 4) * 1.1f - 0.55f, 1.1f, 0f), me.transform.rotation);
+                    }
+                }
+                // Betreten braucht Stillstand im Portal-Kreis (EnterHold): nach dem Sprung nicht um den Nexus kreisen
+                if (ev.Phase == DimensionPhase.Open && !DimensionEvent.LocalInArena && Time.unscaledTime < _nextDimJump) return;
+                // in der Arena nicht um den Nexus kreisen (die Figur würde aus der Arena gezogen) – nur angreifen
+                if (DimensionEvent.LocalInArena)
+                {
+                    // zum Boss drehen und auf Nahkampf-Abstand herangehen (Rückstöße schieben die Figur sonst an den
+                    // Rand, wo die Primärfähigkeit ins Leere geht) – die Maus-Drehung ist solange gesperrt
+                    var boss = ev.FindBoss();
+                    if (boss != null)
+                    {
+                        Vector3 d = boss.transform.position - me.transform.position;
+                        d.y = 0f;
+                        if (me.Controller != null) { me.Controller.RotationLocked = true; _rotationLocked = true; }
+                        if (d.sqrMagnitude > 0.01f) me.transform.rotation = Quaternion.LookRotation(d);
+                        var body = me.GetComponent<CharacterController>();
+                        if (body != null && body.enabled && d.magnitude > 3f) body.Move(d.normalized * Mathf.Min(1.5f, d.magnitude - 2.5f));
+                    }
+                    if (TryCastMethod != null && me.Abilities != null)
+                    {
+                        var primary = me.Abilities.GetAbility(default(AbilitySlot));
+                        try { TryCastMethod.Invoke(me.Abilities, new object[] { primary }); }
+                        catch (System.Exception e) { Debug.LogWarning("[NetTest] Cast: " + e.InnerException?.Message); }
+                    }
+                    return;
+                }
+            }
+            if (_rotationLocked && me != null && !DimensionEvent.LocalInArena)
+            {
+                _rotationLocked = false;
+                if (me.Controller != null) me.Controller.RotationLocked = false;
+            }
             if (me != null && me.IsAlive && gm != null && gm.CurrentState == GameState.Combat && NetBootstrap.Instance != null)
             {
                 _angle += 0.6f;
@@ -152,6 +229,7 @@ namespace ElementalBuddies
             if (PlayerMana.Local != null) sb.Append(" mana=").Append(PlayerMana.Local.CurrentMana.ToString("F0"));
             if (Nexus.Instance != null) sb.Append(" nexus=").Append(Nexus.Instance.CurrentHP.ToString("F0"));
             sb.Append(" drops=").Append(FindObjectsByType<ShardPickup>(FindObjectsSortMode.None).Length);
+            sb.Append(' ').Append(DimensionEvent.DebugState());
             if (nm != null && nm.IsListening) sb.Append(" rtt=").Append(nm.IsServer ? 0 : nm.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkManagerServerId()));
             return sb.ToString();
         }

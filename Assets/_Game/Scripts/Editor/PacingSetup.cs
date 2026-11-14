@@ -54,6 +54,9 @@ namespace ElementalBuddies.EditorTools
             new EnemyInfo("Grabhexe", ChampionThreatSetup.HexerName, ChampionThreatSetup.HexerHint),
             new EnemyInfo("Forest/Goblin_Trommler", ChampionThreatSetup.DrummerName, ChampionThreatSetup.DrummerHint),
             new EnemyInfo("Forest/Dornenhexe", ChampionThreatSetup.ThornHagName, ChampionThreatSetup.ThornHagHint),
+            // Dimensionsriss: Bosse der anderen Dimension (DimensionSetup baut Prefab, Config und Porträt)
+            new EnemyInfo("Bosses/BossSoulReaper", DimensionSetup.Reaper.DisplayName, DimensionSetup.Reaper.Hint),
+            new EnemyInfo("Bosses/BossOgreChief", DimensionSetup.Ogre.DisplayName, DimensionSetup.Ogre.Hint),
         };
 
         // Name/Hinweis aus der Tabelle auf eine Config schreiben (ThemeSetup beim Anlegen der Dorf-Configs)
@@ -146,7 +149,10 @@ namespace ElementalBuddies.EditorTools
         // ---------------- Icon-Render (wie PortraitRenderer: Schwarz/Weiß-Differenz → Alpha, Supersampling) ----------------
 
         // size/yaw/up/frame optional (Elite-Symbole: 256 px, eigener Blickwinkel)
-        public static void RenderIcon(GameObject prefab, string path, int size = Size, float yaw = 25f, float up = 0.35f, float frame = 0.88f)
+        // focus (optional): Bildausschnitt statt der ganzen Figur – bekommt die Instanz (Animator steht auf Frame 0) und
+        // ihre Gesamt-Grenzen und liefert die Grenzen, auf die die Kamera zielt (z. B. Kopf und Schultern für Porträts).
+        public static void RenderIcon(GameObject prefab, string path, int size = Size, float yaw = 25f, float up = 0.35f, float frame = 0.88f,
+            System.Func<GameObject, Bounds, Bounds> focus = null)
         {
             int n = size * Super;
             var holder = new GameObject("__IconHolder") { hideFlags = HideFlags.HideAndDontSave };
@@ -181,6 +187,8 @@ namespace ElementalBuddies.EditorTools
                     if (!(r is MeshRenderer) && !(r is SkinnedMeshRenderer)) continue;
                     if (any) b.Encapsulate(r.bounds); else { b = r.bounds; any = true; }
                 }
+
+                if (focus != null) b = focus(inst, b);
 
                 var l1 = key.AddComponent<Light>();
                 l1.type = LightType.Directional; l1.intensity = 1.3f; l1.color = new Color(1f, 0.97f, 0.92f);

@@ -196,8 +196,12 @@ namespace ElementalBuddies
 
         // ---------------- Zeitplan (Server) ----------------
 
-        public bool IsMerchantWave(int waveNumber)
+        public bool IsMerchantWave(int waveNumber) => IsMerchantWave(waveNumber, WaveManager.Instance);
+
+        public bool IsMerchantWave(int waveNumber, WaveManager waves)
         {
+            // Dimensionsriss: kein Händler in der Event-Welle (der Termin entfällt; der nächste folgt im normalen Takt)
+            if (waves != null && waves.IsDimensionWave(waveNumber)) return false;
             return waveNumber >= FirstWave && (waveNumber - FirstWave) % Mathf.Max(1, EveryNWaves) == 0;
         }
 

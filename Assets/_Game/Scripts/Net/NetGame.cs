@@ -40,10 +40,12 @@ namespace ElementalBuddies
         partial void OnSpawnEconomy();
         partial void OnSpawnBuild();
         partial void OnSpawnProgress();
+        partial void OnSpawnDimension();
         partial void OnDespawnWaves();
         partial void OnDespawnEconomy();
         partial void OnDespawnBuild();
         partial void OnDespawnProgress();
+        partial void OnDespawnDimension();
 
         private void OnSpawnHooks()
         {
@@ -51,6 +53,7 @@ namespace ElementalBuddies
             OnSpawnEconomy();
             OnSpawnBuild();
             OnSpawnProgress();
+            OnSpawnDimension();
         }
 
         private void OnDespawnHooks()
@@ -59,6 +62,7 @@ namespace ElementalBuddies
             OnDespawnEconomy();
             OnDespawnBuild();
             OnDespawnProgress();
+            OnDespawnDimension();
         }
     }
 }

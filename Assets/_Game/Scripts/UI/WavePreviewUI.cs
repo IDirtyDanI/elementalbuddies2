@@ -205,6 +205,14 @@ namespace ElementalBuddies
                 AddRow(g.Config.Icon, line, boss ? Danger : Ink);
             }
 
+            // Dimensionsriss: Der Boss steht in keiner Gruppe (er wartet in der Dimension) – eigene Zeile mit Porträt (#568)
+            if (p.DimensionBoss != null)
+            {
+                string line = $"<b>Boss: {WavePreview.NameOf(p.DimensionBoss)}</b>";
+                if (!string.IsNullOrEmpty(p.DimensionBoss.PreviewHint)) line += $"\n<size=72%><color=#5c4024>{p.DimensionBoss.PreviewHint}</color></size>";
+                AddRow(p.DimensionBoss.Icon, line, Danger);
+            }
+
             foreach (var e in p.Events)
                 AddText("• " + e, 25f, e.StartsWith("Ernte") ? Harvest : Soft, _bodyFont, TextAlignmentOptions.Left);
 

@@ -134,7 +134,52 @@ namespace ElementalBuddies
                 _tint = Mathf.MoveTowards(_tint, _tintTarget, Time.unscaledDeltaTime / 3f);
                 dirty = true;
             }
+            if (!Mathf.Approximately(_dimW, _dimTarget))
+            {
+                _dimW = Mathf.MoveTowards(_dimW, _dimTarget, Time.unscaledDeltaTime / Mathf.Max(0.05f, _dim != null ? _dim.BlendTime : 0.5f));
+                dirty = true;
+            }
             if (dirty) Apply(Progress);
+        }
+
+        // ---------------- Dimensionsriss: lokale Überlagerung ----------------
+
+        // Eigene Lichtstimmung der Dimension, nur auf diesem Rechner (wer in der Arena steht). Liegt als letzte Schicht
+        // über Tageszeit, Morgengrauen und Ereignis-Färbung; Laternen/Fenster der Karte bleiben unberührt.
+        private DimensionAtmosphere _dim;
+        private float _dimW, _dimTarget;
+
+        public bool DimensionOverrideActive => _dimTarget > 0.5f;
+
+        public void SetDimensionOverride(DimensionAtmosphere look, bool on, bool instant = false)
+        {
+            if (on && look != null) _dim = look;
+            _dimTarget = on && _dim != null ? 1f : 0f;
+            if (instant || !Application.isPlaying)
+            {
+                _dimW = _dimTarget;
+                Apply(Progress);
+            }
+        }
+
+        private AtmosphereKey Dimensioned(AtmosphereKey k)
+        {
+            if (_dimW <= 0.001f || _dim == null) return k;
+            var d = k; // Laternen/Fenster wie auf der Karte
+            d.SunEuler = _dim.SunEuler;
+            d.SunColor = _dim.SunColor;
+            d.SunIntensity = _dim.SunIntensity;
+            d.ShadowStrength = _dim.ShadowStrength;
+            d.AmbientSky = _dim.AmbientSky;
+            d.AmbientEquator = _dim.AmbientEquator;
+            d.AmbientGround = _dim.AmbientGround;
+            d.FogColor = _dim.FogColor;
+            d.FogDensity = _dim.FogDensity;
+            d.SkyTint = _dim.SkyTint;
+            d.SkyGround = _dim.SkyGround;
+            d.SkyExposure = _dim.SkyExposure;
+            d.SkyAtmosphere = _dim.SkyAtmosphere;
+            return AtmosphereKey.Lerp(k, d, Mathf.SmoothStep(0f, 1f, _dimW));
         }
 
         // ---------------- Morgengrauen & Ereignis-Färbung (Plan Fesselung E5/C5) ----------------
@@ -221,7 +266,8 @@ namespace ElementalBuddies
             var k = Evaluate(t);
             if (_dawn > 0.001f) k = AtmosphereKey.Lerp(k, DawnKey(), Mathf.SmoothStep(0f, 1f, _dawn));
             k = Tinted(k);
-            bool day = t <= 0.0001f && _dawn <= 0.001f && _tint <= 0.001f;
+            k = Dimensioned(k);
+            bool day = t <= 0.0001f && _dawn <= 0.001f && _tint <= 0.001f && _dimW <= 0.001f;
 
             if (Sun != null)
             {

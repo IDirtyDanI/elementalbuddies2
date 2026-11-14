@@ -123,7 +123,21 @@ namespace ElementalBuddies
         IntroHorn,
         PortalSurge,
         // Erfolg freigeschaltet (2026-11-09): eigener Glockenspiel-Klang statt ShrineCaptured (achievement_unlock)
-        AchievementUnlocked
+        AchievementUnlocked,
+        // Schrein-Film (2026-11-14): Schrein erwacht, gespielt bei der Ankunft der Kamera (shrine_awaken_cine)
+        ShrineAwakenCine,
+        // Dimensionsriss (2026-11-14): Riss öffnet sich, Portal-Durchgang hin/zurück, Nexus-Verfall (je Takt), Riss
+        // geschlossen (Boss tot), Schreie der Dimensions-Bosse (EnemyConfigSO.SpawnSfx). Werte 104–110.
+        RiftOpen,
+        RiftEnter,
+        RiftReturn,
+        NexusDrain,
+        RiftClosed,
+        ReaperRoar,
+        OgreRoar,
+        // Dimensions-Bosse (2026-11-14, #582): Todeslaut des Seelenschnitters, Kriegsgebrüll des Oger-Häuptlings
+        ReaperDeath,    // 111
+        OgreBellow      // 112
     }
 
     // Zentrale Sound-Ausgabe (Clips aus dem FunProject). Liegt auf dem Managers-Objekt.
@@ -320,6 +334,18 @@ namespace ElementalBuddies
                 case SfxId.IntroHorn: return SfxId.WaveStart;
                 case SfxId.PortalSurge: return SfxId.EliteSpawn;
                 case SfxId.AchievementUnlocked: return SfxId.ShrineCaptured;
+                // Schrein-Film: Ersatz, bis der eigene Clip zugewiesen ist (magisches Aufflammen)
+                case SfxId.ShrineAwakenCine: return SfxId.PortalSurge;
+                // Dimensionsriss: Ersatz, bis die eigenen Clips zugewiesen sind
+                case SfxId.RiftOpen: return Has(SfxId.PortalSurge) ? SfxId.PortalSurge : SfxId.EliteSpawn;
+                case SfxId.RiftEnter: return SfxId.Blink;
+                case SfxId.RiftReturn: return SfxId.Blink;
+                case SfxId.NexusDrain: return SfxId.NexusAlarm;
+                case SfxId.RiftClosed: return SfxId.BossDefeated;
+                case SfxId.ReaperRoar: return SfxId.BossSpawn;
+                case SfxId.OgreRoar: return SfxId.BossSpawn;
+                case SfxId.ReaperDeath: return SfxId.ReaperRoar;
+                case SfxId.OgreBellow: return SfxId.OgreRoar;
                 default: return id;
             }
         }

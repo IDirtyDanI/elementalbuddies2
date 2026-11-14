@@ -151,6 +151,8 @@ namespace ElementalBuddies.EditorTools
                     Icon = e.Icon,
                     Extra = e.IsBoss ? "Boss" : (e.Armor > 0f ? $"Rüstung {e.Armor * 100f:0} %" : ""),
                 });
+            // Dimensions-Bosse stehen in keiner Welle → ausdrücklich (DimensionSetup)
+            db.Entries.AddRange(DimensionSetup.CodexBossEntries());
 
             string[] eliteIcons = { "elite_fireproof", "elite_frostguard", "elite_swift", "elite_shieldbearer", "elite_shardthief" };
             for (int i = 1; i <= EliteInfo.Count; i++)
@@ -172,8 +174,16 @@ namespace ElementalBuddies.EditorTools
                 {
                     Key = Codex.EventKey(ev), Category = CodexDatabaseSO.Category.Event,
                     Title = WaveEvents.Name(ev), Description = WaveEvents.Description(ev),
-                    Icon = Icon(eventIcons[(int)ev]), Extra = "ab Welle 16",
+                    Icon = Icon(eventIcons[(int)ev]), Extra = "ab Welle 13",
                 });
+            // Dimensionsriss (eigene Termine; Symbol = Insel des Totenreichs, DimensionSetup)
+            db.Entries.Add(new CodexDatabaseSO.Entry
+            {
+                Key = Codex.EventKey(WaveEvent.Dimension), Category = CodexDatabaseSO.Category.Event,
+                Title = WaveEvents.Name(WaveEvent.Dimension),
+                Description = "Ein Boss lauert in einer anderen Dimension. Tretet durch ein Gegner-Portal und erschlagt ihn – eure Buddies können dort nicht helfen. Solange kein Champion drin ist, verliert der Nexus stetig Leben.",
+                Icon = DimensionSetup.EventIcon(), Extra = "Welle 20, danach alle 5 Wellen",
+            });
 
             string[] elementNames = { "Feuer", "Eis", "Erde", "Licht" };
             if (fm != null)

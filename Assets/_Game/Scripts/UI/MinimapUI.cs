@@ -278,6 +278,7 @@ namespace ElementalBuddies
             _group.alpha = Mathf.MoveTowards(_group.alpha, target, Time.unscaledDeltaTime * 8f);
             if (_group.alpha <= 0.001f) return;
 
+            UpdateDimensionView();
             UpdatePlayers();
             UpdateStatics();
             if (Time.unscaledTime >= _nextSlowUpdate)
@@ -318,6 +319,50 @@ namespace ElementalBuddies
             return overlapX && overlapY;
         }
 
+        // Dimensionsriss: Steht die eigene Figur in der Arena, zeigt die Karte nur die Arena (Scheibe um ihre Mitte, ohne
+        // Kartenbild); Marker der jeweils anderen Dimension werden ausgeblendet (Place).
+        private bool _inArena;
+        private Vector2 _viewCenter;
+        private float _viewRadius;
+
+        private void UpdateDimensionView()
+        {
+            bool inArena = DimensionEvent.LocalInArena;
+            _inArena = inArena;
+            if (inArena)
+            {
+                var c = DimensionEvent.Instance != null && DimensionEvent.Instance.Arena != null
+                    ? DimensionEvent.Instance.Arena.Anchor.position : DimensionEventRules.ArenaCenter;
+                _viewCenter = new Vector2(c.x, c.z);
+                _viewRadius = DimensionEventRules.MinimapRadius;
+            }
+            else
+            {
+                _viewCenter = WorldCenter;
+                _viewRadius = WorldRadius;
+            }
+            // Kartenbild → dunkle Scheibe (ohne Hintergrund schiene die Spielwelt durch die Karte)
+            if (_map != null && inArena != _arenaBackground)
+            {
+                _arenaBackground = inArena;
+                if (inArena)
+                {
+                    _mapTexture = _map.texture;
+                    _mapColor = _map.color;
+                    _map.texture = null;
+                    _map.color = new Color(0.13f, 0.13f, 0.17f, 1f);
+                }
+                else
+                {
+                    _map.texture = _mapTexture;
+                    _map.color = _mapColor;
+                }
+            }
+        }
+        private bool _arenaBackground;
+        private Texture _mapTexture;
+        private Color _mapColor;
+
         private void UpdatePlayers()
         {
             Begin(_mates); Begin(_view); Begin(_local); Begin(_localHalo);
@@ -356,12 +401,17 @@ namespace ElementalBuddies
             End(_nexus);
 
             Begin(_portals);
+            bool rift = DimensionEvent.PortalsEnterable;
             foreach (var p in SpawnPortal.All)
             {
                 if (p == null) continue;
                 Vector3 pos = p.SpawnPoint != null ? p.SpawnPoint.position : p.transform.position;
-                Place(Next(_portals), pos, PortalSize, p.IsOpen ? PortalColor : ClosedColor);
+                // Dimensionsriss: begehbare Portale in der Riss-Farbe, pulsierend
+                if (rift && p.IsOpen) Place(Next(_portals), pos, PortalSize * 1.25f * pulse, DimensionEvent.RiftColor);
+                else Place(Next(_portals), pos, PortalSize, p.IsOpen ? PortalColor : ClosedColor);
             }
+            if (DimensionEvent.ReturnPortalOpen)
+                Place(Next(_portals), DimensionEvent.Instance.Arena.ReturnTriggerPosition, PortalSize * 1.25f * pulse, DimensionEvent.RiftColor);
             End(_portals);
 
             Begin(_shrines);
@@ -466,7 +516,8 @@ namespace ElementalBuddies
 
         private void Place(Image img, Vector3 world, float size, Color color, float rotation = 0f)
         {
-            Vector2 p = MinimapMath.WorldToMap(world, WorldCenter, WorldRadius, _mapRadius);
+            if (DimensionEventRules.InArena(world) != _inArena) color.a = 0f; // andere Dimension: nicht zeigen
+            Vector2 p = MinimapMath.WorldToMap(world, _inArena ? _viewCenter : WorldCenter, _inArena ? _viewRadius : WorldRadius, _mapRadius);
             p = MinimapMath.ClampToCircle(p, _clampRadius - size * 0.5f, out _);
             var rt = img.rectTransform;
             rt.anchoredPosition = p;
@@ -479,7 +530,7 @@ namespace ElementalBuddies
         // damit der Kegel am Kartenrand nicht von der Figur wegrutscht
         private void PlaceViewCone(Image img, Vector3 world)
         {
-            Vector2 p = MinimapMath.WorldToMap(world, WorldCenter, WorldRadius, _mapRadius);
+            Vector2 p = MinimapMath.WorldToMap(world, _inArena ? _viewCenter : WorldCenter, _inArena ? _viewRadius : WorldRadius, _mapRadius);
             p = MinimapMath.ClampToCircle(p, _clampRadius - LocalPlayerSize * 0.5f, out _);
             var rt = img.rectTransform;
             rt.anchoredPosition = p;

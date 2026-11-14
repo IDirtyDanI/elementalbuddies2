@@ -1,0 +1,1258 @@
+{
+ "arena": "Kriegslager",
+ "generated": "2026-11-14",
+ "script": "art-src/arena/arena_build.py",
+ "source_blend": "art-src/BuddyTD_Arena_Kriegslager.blend",
+ "coords": "Unity: Meter, Grad, Y oben, Arenamitte im Ursprung, Bodenoberseite y = 0. Azimut 0 = +Z (Norden), 90 = +X. Alle FBX mit Pivot im Ursprung, ohne Drehung einsetzen (Position 0, Rotation 0, Skalierung 1).",
+ "files": {
+  "Floor": "Kriegslager_Floor.fbx",
+  "Ring": "Kriegslager_Ring.fbx",
+  "Props": "Kriegslager_Props.fbx",
+  "Backdrop": "Kriegslager_Backdrop.fbx"
+ },
+ "radii": {
+  "walkable": 16.0,
+  "floor": 18.0,
+  "wall_collider_inner": 16.5,
+  "boundary_visual": [
+   16.5,
+   17.5
+  ]
+ },
+ "materials": [
+  {
+   "name": "Lager_Banner",
+   "hex": "#a8321f",
+   "emission": 0
+  },
+  {
+   "name": "Lager_Bark",
+   "hex": "#5a4030",
+   "emission": 0,
+   "sameColorAs": "Village_BarkLog"
+  },
+  {
+   "name": "Lager_Bone",
+   "hex": "#e4d7b4",
+   "emission": 0,
+   "sameColorAs": "Drum_Bone"
+  },
+  {
+   "name": "Lager_Dark",
+   "hex": "#33302f",
+   "emission": 0
+  },
+  {
+   "name": "Lager_Earth",
+   "hex": "#8a6642",
+   "emission": 0
+  },
+  {
+   "name": "Lager_EarthDark",
+   "hex": "#644a31",
+   "emission": 0
+  },
+  {
+   "name": "Lager_Fire",
+   "hex": "#fe841e",
+   "emission": 2.2,
+   "emissionHex": "#fe841e",
+   "sameColorAs": "Village_Flame"
+  },
+  {
+   "name": "Lager_Green",
+   "hex": "#5f7a3e",
+   "emission": 0,
+   "sameColorAs": "Ork_Skin"
+  },
+  {
+   "name": "Lager_Hide",
+   "hex": "#cdb48c",
+   "emission": 0
+  },
+  {
+   "name": "Lager_Rock",
+   "hex": "#857d72",
+   "emission": 0
+  },
+  {
+   "name": "Lager_Straw",
+   "hex": "#c8a56a",
+   "emission": 0
+  },
+  {
+   "name": "Lager_Wood",
+   "hex": "#865934",
+   "emission": 0,
+   "sameColorAs": "Village_Wood"
+  }
+ ],
+ "colliders": [
+  {
+   "type": "box",
+   "center": [
+    0.0,
+    2.0,
+    17.0
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 0.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    2.952,
+    2.0,
+    16.742
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 10.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    5.814,
+    2.0,
+    15.975
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 20.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    8.5,
+    2.0,
+    14.722
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 30.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    10.927,
+    2.0,
+    13.023
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 40.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    13.023,
+    2.0,
+    10.927
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 50.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    14.722,
+    2.0,
+    8.5
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 60.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    15.975,
+    2.0,
+    5.814
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 70.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    16.742,
+    2.0,
+    2.952
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 80.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    17.0,
+    2.0,
+    0.0
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 90.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    16.742,
+    2.0,
+    -2.952
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 100.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    15.975,
+    2.0,
+    -5.814
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 110.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    14.722,
+    2.0,
+    -8.5
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 120.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    13.023,
+    2.0,
+    -10.927
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 130.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    10.927,
+    2.0,
+    -13.023
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 140.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    8.5,
+    2.0,
+    -14.722
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 150.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    5.814,
+    2.0,
+    -15.975
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 160.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    2.952,
+    2.0,
+    -16.742
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 170.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    0.0,
+    2.0,
+    -17.0
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 180.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -2.952,
+    2.0,
+    -16.742
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 190.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -5.814,
+    2.0,
+    -15.975
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 200.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -8.5,
+    2.0,
+    -14.722
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 210.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -10.927,
+    2.0,
+    -13.023
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 220.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -13.023,
+    2.0,
+    -10.927
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 230.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -14.722,
+    2.0,
+    -8.5
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 240.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -15.975,
+    2.0,
+    -5.814
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 250.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -16.742,
+    2.0,
+    -2.952
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 260.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -17.0,
+    2.0,
+    -0.0
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 270.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -16.742,
+    2.0,
+    2.952
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 280.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -15.975,
+    2.0,
+    5.814
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 290.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -14.722,
+    2.0,
+    8.5
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 300.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -13.023,
+    2.0,
+    10.927
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 310.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -10.927,
+    2.0,
+    13.023
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 320.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -8.5,
+    2.0,
+    14.722
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 330.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -5.814,
+    2.0,
+    15.975
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 340.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -2.952,
+    2.0,
+    16.742
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 350.0,
+   "tag": "wall"
+  },
+  {
+   "type": "capsule",
+   "center": [
+    8.829,
+    1.0,
+    -4.695
+   ],
+   "radius": 0.8,
+   "height": 2.0,
+   "rotY": 0,
+   "tag": "prop",
+   "note": "Lagerfeuer mit Spiess"
+  },
+  {
+   "type": "capsule",
+   "center": [
+    -12.403,
+    0.8,
+    6.05
+   ],
+   "radius": 0.75,
+   "height": 1.6,
+   "rotY": 0,
+   "tag": "prop",
+   "note": "Kriegstrommeln"
+  },
+  {
+   "type": "box",
+   "center": [
+    12.538,
+    1.0,
+    6.666
+   ],
+   "size": [
+    1.6,
+    2.0,
+    0.8
+   ],
+   "rotY": 242.0,
+   "tag": "prop",
+   "note": "Waffenstaender"
+  },
+  {
+   "type": "box",
+   "center": [
+    -7.876,
+    1.0,
+    -10.841
+   ],
+   "size": [
+    1.45,
+    2.0,
+    1.45
+   ],
+   "rotY": 48,
+   "tag": "prop",
+   "note": "Kaefig"
+  },
+  {
+   "type": "capsule",
+   "center": [
+    5.232,
+    1.5,
+    13.63
+   ],
+   "radius": 0.4,
+   "height": 3.0,
+   "rotY": 0,
+   "tag": "prop",
+   "note": "Totempfahl"
+  },
+  {
+   "type": "capsule",
+   "center": [
+    -5.232,
+    1.5,
+    13.63
+   ],
+   "radius": 0.4,
+   "height": 3.0,
+   "rotY": 0,
+   "tag": "prop",
+   "note": "Totempfahl"
+  },
+  {
+   "type": "box",
+   "center": [
+    7.875,
+    0.7,
+    -13.64
+   ],
+   "size": [
+    2.3,
+    1.4,
+    1.2
+   ],
+   "rotY": 329.05,
+   "tag": "prop",
+   "note": "Vorraete an der Palisade"
+  },
+  {
+   "type": "box",
+   "center": [
+    15.14,
+    0.7,
+    4.341
+   ],
+   "size": [
+    2.3,
+    1.4,
+    1.2
+   ],
+   "rotY": 249.16,
+   "tag": "prop",
+   "note": "Vorraete an der Palisade"
+  },
+  {
+   "type": "box",
+   "center": [
+    -4.341,
+    0.7,
+    -15.14
+   ],
+   "size": [
+    2.3,
+    1.4,
+    1.2
+   ],
+   "rotY": 12.66,
+   "tag": "prop",
+   "note": "Vorraete an der Palisade"
+  },
+  {
+   "type": "box",
+   "center": [
+    -9.697,
+    0.7,
+    12.411
+   ],
+   "size": [
+    2.3,
+    1.4,
+    1.2
+   ],
+   "rotY": 135.13,
+   "tag": "prop",
+   "note": "Vorraete an der Palisade"
+  }
+ ],
+ "anchors": {
+  "entry": {
+   "pos": [
+    0,
+    0,
+    -12
+   ],
+   "rotY": 0
+  },
+  "bossSpawn": {
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "rotY": 180
+  },
+  "returnPortal": {
+   "pos": [
+    0,
+    0,
+    13
+   ],
+   "rotY": 180
+  },
+  "lights": [
+   {
+    "name": "Light_Campfire",
+    "file": "Kriegslager_Props.fbx",
+    "pos": [
+     8.829,
+     0.9,
+     -4.695
+    ],
+    "colorHex": "#ff9a3c",
+    "intensityHint": 3.0,
+    "range": 16.0,
+    "kind": "campfire"
+   },
+   {
+    "name": "Light_Torch_4",
+    "file": "Kriegslager_Ring.fbx",
+    "pos": [
+     -11.773,
+     2.62,
+     11.773
+    ],
+    "colorHex": "#ff9a3c",
+    "intensityHint": 1.6,
+    "range": 10.0,
+    "kind": "torch"
+   },
+   {
+    "name": "Light_Torch_3",
+    "file": "Kriegslager_Ring.fbx",
+    "pos": [
+     -11.773,
+     2.62,
+     -11.773
+    ],
+    "colorHex": "#ff9a3c",
+    "intensityHint": 1.6,
+    "range": 10.0,
+    "kind": "torch"
+   },
+   {
+    "name": "Light_Torch_1",
+    "file": "Kriegslager_Ring.fbx",
+    "pos": [
+     11.773,
+     2.62,
+     11.773
+    ],
+    "colorHex": "#ff9a3c",
+    "intensityHint": 1.6,
+    "range": 10.0,
+    "kind": "torch"
+   },
+   {
+    "name": "Light_Torch_2",
+    "file": "Kriegslager_Ring.fbx",
+    "pos": [
+     11.773,
+     2.62,
+     -11.773
+    ],
+    "colorHex": "#ff9a3c",
+    "intensityHint": 1.6,
+    "range": 10.0,
+    "kind": "torch"
+   },
+   {
+    "name": "Light_ChiefFire",
+    "file": "Kriegslager_Props.fbx",
+    "pos": [
+     -15.181,
+     1.3,
+     14.32
+    ],
+    "colorHex": "#ff9a3c",
+    "intensityHint": 2.0,
+    "range": 12.0,
+    "kind": "campfire"
+   }
+  ],
+  "vfx": [
+   {
+    "name": "Light_Torch_1",
+    "pos": [
+     11.773,
+     2.62,
+     11.773
+    ],
+    "kind": "torch"
+   },
+   {
+    "name": "Light_Torch_2",
+    "pos": [
+     11.773,
+     2.62,
+     -11.773
+    ],
+    "kind": "torch"
+   },
+   {
+    "name": "Light_Torch_3",
+    "pos": [
+     -11.773,
+     2.62,
+     -11.773
+    ],
+    "kind": "torch"
+   },
+   {
+    "name": "Light_Torch_4",
+    "pos": [
+     -11.773,
+     2.62,
+     11.773
+    ],
+    "kind": "torch"
+   },
+   {
+    "name": "Light_Campfire",
+    "pos": [
+     8.829,
+     0.9,
+     -4.695
+    ],
+    "kind": "campfire"
+   },
+   {
+    "name": "Light_ChiefFire",
+    "pos": [
+     -15.181,
+     1.3,
+     14.32
+    ],
+    "kind": "campfire"
+   },
+   {
+    "name": "Vfx_TowerTorch",
+    "file": "Kriegslager_Props.fbx",
+    "pos": [
+     -7.278,
+     6.55,
+     -19.911
+    ],
+    "kind": "torch"
+   }
+  ]
+ },
+ "stats": {
+  "tris_total": 21680,
+  "tris": {
+   "Kriegslager_Floor.fbx": 2756,
+   "Kriegslager_Ring.fbx": 6772,
+   "Kriegslager_Props.fbx": 6932,
+   "Kriegslager_Backdrop.fbx": 5220
+  },
+  "slots": {
+   "Kriegslager_Floor.fbx": [
+    "Lager_Banner",
+    "Lager_Dark",
+    "Lager_Earth",
+    "Lager_EarthDark",
+    "Lager_Rock",
+    "Lager_Straw",
+    "Lager_Wood"
+   ],
+   "Kriegslager_Ring.fbx": [
+    "Lager_Banner",
+    "Lager_Bark",
+    "Lager_Bone",
+    "Lager_Dark",
+    "Lager_Fire",
+    "Lager_Green",
+    "Lager_Straw",
+    "Lager_Wood"
+   ],
+   "Kriegslager_Props.fbx": [
+    "Lager_Banner",
+    "Lager_Bark",
+    "Lager_Bone",
+    "Lager_Dark",
+    "Lager_Earth",
+    "Lager_EarthDark",
+    "Lager_Fire",
+    "Lager_Green",
+    "Lager_Hide",
+    "Lager_Rock",
+    "Lager_Straw",
+    "Lager_Wood"
+   ],
+   "Kriegslager_Backdrop.fbx": [
+    "Lager_Banner",
+    "Lager_Bark",
+    "Lager_Bone",
+    "Lager_Dark",
+    "Lager_Earth",
+    "Lager_EarthDark",
+    "Lager_Fire",
+    "Lager_Green",
+    "Lager_Hide",
+    "Lager_Rock",
+    "Lager_Straw",
+    "Lager_Wood"
+   ]
+  },
+  "slot_count": 12,
+  "bounds": {
+   "Kriegslager_Floor.fbx": {
+    "min": [
+     -18.878,
+     -11.0,
+     -18.911
+    ],
+    "max": [
+     18.167,
+     0.268,
+     17.977
+    ]
+   },
+   "Kriegslager_Ring.fbx": {
+    "min": [
+     -17.641,
+     -0.461,
+     -17.357
+    ],
+    "max": [
+     18.108,
+     2.923,
+     17.365
+    ]
+   },
+   "Kriegslager_Props.fbx": {
+    "min": [
+     -22.617,
+     -7.1,
+     -23.92
+    ],
+    "max": [
+     16.012,
+     9.4,
+     24.987
+    ]
+   },
+   "Kriegslager_Backdrop.fbx": {
+    "min": [
+     -32.605,
+     -8.8,
+     -34.364
+    ],
+    "max": [
+     33.081,
+     7.726,
+     31.693
+    ]
+   }
+  },
+  "open_edges": {
+   "Floor": 0,
+   "Ring": 0,
+   "Props": 0,
+   "Backdrop": 0
+  },
+  "inverted_parts": {
+   "Floor": 0,
+   "Ring": 0,
+   "Props": 0,
+   "Backdrop": 0
+  },
+  "checks": {
+   "floor_max_y_r16": 0.03,
+   "floor_ok": true,
+   "floor_surface_y_range_r16": [
+    -0.0,
+    0.03
+   ],
+   "floor_holes": 0,
+   "floor_radius": 18.48,
+   "ring_max_y": 2.923,
+   "ring_radius_range": [
+    15.98,
+    18.14
+   ],
+   "max_y_inside_r20": 2.926,
+   "tall_inside_r20_ok": true,
+   "props_min_radius": 9.05,
+   "centre_free_ok": true,
+   "entry_clear_r2": true,
+   "portal_clear_r2.6": true,
+   "backdrop_radius_range": [
+    20.27,
+    34.7
+   ],
+   "backdrop_ok": true,
+   "wall_boxes": 36,
+   "wall_max_gap": -0.448,
+   "wall_inner_radius": 16.5,
+   "inner_obstacles": 6,
+   "inner_obstacles_ok": true
+  },
+  "fbx_check": {
+   "Floor": {
+    "file": "Kriegslager_Floor.fbx",
+    "bounds_layout": [
+     [
+      -18.878,
+      -11.0,
+      -18.911
+     ],
+     [
+      18.167,
+      0.268,
+      17.977
+     ]
+    ],
+    "bounds_fbx_raw": [
+     [
+      -18.878,
+      -11.0,
+      -18.911
+     ],
+     [
+      18.167,
+      0.268,
+      17.977
+     ]
+    ],
+    "max_dev": 0.0,
+    "anchors": 0,
+    "anchor_max_dev": 0.0,
+    "root_identity": true,
+    "root_scale": [
+     1,
+     1,
+     1
+    ],
+    "unit_scale_factor": 100.0,
+    "verts_fbx": 1572
+   },
+   "Ring": {
+    "file": "Kriegslager_Ring.fbx",
+    "bounds_layout": [
+     [
+      -17.641,
+      -0.461,
+      -17.357
+     ],
+     [
+      18.108,
+      2.923,
+      17.365
+     ]
+    ],
+    "bounds_fbx_raw": [
+     [
+      -17.641,
+      -0.461,
+      -17.357
+     ],
+     [
+      18.108,
+      2.923,
+      17.365
+     ]
+    ],
+    "max_dev": 0.0,
+    "anchors": 4,
+    "anchor_max_dev": 0.0,
+    "root_identity": true,
+    "root_scale": [
+     1,
+     1,
+     1
+    ],
+    "unit_scale_factor": 100.0,
+    "verts_fbx": 4158
+   },
+   "Props": {
+    "file": "Kriegslager_Props.fbx",
+    "bounds_layout": [
+     [
+      -22.617,
+      -7.1,
+      -23.92
+     ],
+     [
+      16.012,
+      9.4,
+      24.987
+     ]
+    ],
+    "bounds_fbx_raw": [
+     [
+      -22.617,
+      -7.1,
+      -23.92
+     ],
+     [
+      16.012,
+      9.4,
+      24.987
+     ]
+    ],
+    "max_dev": 0.0,
+    "anchors": 3,
+    "anchor_max_dev": 0.0,
+    "root_identity": true,
+    "root_scale": [
+     1,
+     1,
+     1
+    ],
+    "unit_scale_factor": 100.0,
+    "verts_fbx": 4202
+   },
+   "Backdrop": {
+    "file": "Kriegslager_Backdrop.fbx",
+    "bounds_layout": [
+     [
+      -32.605,
+      -8.8,
+      -34.364
+     ],
+     [
+      33.081,
+      7.726,
+      31.693
+     ]
+    ],
+    "bounds_fbx_raw": [
+     [
+      -32.605,
+      -8.8,
+      -34.364
+     ],
+     [
+      33.081,
+      7.726,
+      31.693
+     ]
+    ],
+    "max_dev": 0.0,
+    "anchors": 0,
+    "anchor_max_dev": 0.0,
+    "root_identity": true,
+    "root_scale": [
+     1,
+     1,
+     1
+    ],
+    "unit_scale_factor": 100.0,
+    "verts_fbx": 3164
+   }
+  }
+ }
+}

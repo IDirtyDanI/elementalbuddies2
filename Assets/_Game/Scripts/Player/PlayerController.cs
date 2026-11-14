@@ -210,7 +210,7 @@ namespace ElementalBuddies
 
             HandleMovement();
             // Intro-Film: keine Eingabe (Schwerkraft/Bodenkontakt laufen in HandleMovement weiter)
-            if (IntroCutscene.IsPlaying) { GuardFallingThroughMap(); return; }
+            if (Cutscene.IsPlaying) { GuardFallingThroughMap(); return; }
             if (_touch) ApplyTouchAim();
             else if (!RotationLocked) HandleRotation();
             else UpdateAimPoint();
@@ -226,6 +226,13 @@ namespace ElementalBuddies
         private Vector3 _lastSafePos;
         private bool _hasSafePos;
         private float _safeSampleAt;
+
+        // Nach einem Teleport in eine andere Gegend (Dimensionsriss): die gemerkte sichere Position gilt nicht mehr
+        public void ResetSafePosition()
+        {
+            _hasSafePos = false;
+            _safeSampleAt = 0f;
+        }
 
         private void GuardFallingThroughMap()
         {
@@ -272,7 +279,7 @@ namespace ElementalBuddies
         {
             if (MoveAction == null || _characterController == null || !_characterController.enabled) return;
 
-            bool inputLocked = MovementLocked || IntroCutscene.IsPlaying; // Intro-Film: stehen bleiben, aber weiter fallen
+            bool inputLocked = MovementLocked || Cutscene.IsPlaying; // Intro-Film: stehen bleiben, aber weiter fallen
             Vector2 input = inputLocked ? Vector2.zero : ReadMoveInput();
             // Kamerabezogen: W läuft immer „ins Bild hinein“, auch wenn die Kamera um die Figur gedreht ist
             Vector3 moveInput = ToWorldDirection(input);

@@ -235,6 +235,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 248697344bcf54ca1a64c6fe5597f1f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.HexerBrain
+  RescueTime: 20
+  RescueMoveDistance: 1.5
   ClusterRadius: 5
   CastRange: 11
   CastTime: 1.5

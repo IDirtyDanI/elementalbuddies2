@@ -279,6 +279,11 @@ namespace ElementalBuddies
             }
             Abilities.ApplyLoadout(_championSource.Loadout.Value); // vor dem Klassenwechsel: neues Visual bekommt gleich die richtige Ausrüstung
             Abilities.ApplyNetworkChampion(cls);
+            // Clients: Der Lebens-Bonus des Champions (z. B. Ritter +50) wird lokal auf die schon gespiegelten Server-LP
+            // gerechnet – die vorläufige Wahl (PlayerAbilities: eigener Champion) und der Wechsel auf den Champion des
+            // Besitzers verschoben so die Max-LP fremder Figuren (Magier-Host beim Ritter-Client: 50 statt 100), bis
+            // sich die LP das nächste Mal änderten. Danach also wieder den Server-Stand übernehmen.
+            if (!IsServer && IsSpawned && _maxHealth.Value > 0f) SyncStatsFromNet();
             if (IsDowned) Abilities.SetDownedVisual(true);
         }
 
@@ -398,6 +403,22 @@ namespace ElementalBuddies
             else
                 transform.SetPositionAndRotation(position, rotation);
             if (cc) _character.enabled = true;
+        }
+
+        // Server → Besitzer: Sprung in die Dimension bzw. zurück (Schwarzblende, Teleport, Kamera-Sprung – DimensionEvent)
+        public void ServerDimensionTeleport(Vector3 position, Quaternion rotation, DimensionTeleport mode)
+        {
+            if (IsSpawned)
+            {
+                if (IsServer) DimensionTeleportRpc(position, rotation, (byte)mode);
+            }
+            else DimensionEvent.LocalTeleport(this, position, rotation, mode);
+        }
+
+        [Rpc(SendTo.Owner, InvokePermission = RpcInvokePermission.Server)]
+        private void DimensionTeleportRpc(Vector3 position, Quaternion rotation, byte mode)
+        {
+            DimensionEvent.LocalTeleport(this, position, rotation, (DimensionTeleport)mode);
         }
 
         private void OnLocalJumped()

@@ -78,6 +78,7 @@ namespace ElementalBuddies
             TMP_FontAsset font = _hud != null && _hud.ShardText != null ? _hud.ShardText.font : null;
             _fc = FeedbackCanvas.Create(font);
             _fc.transform.SetParent(transform, false);
+            _instance = this;
 
             EnemyBrain.OnLocalHit += HandleHit;
             EnemyBrain.OnAbilityHit += HandleAbilityHit;
@@ -120,6 +121,7 @@ namespace ElementalBuddies
             if (_upgrades != null) { _upgrades.OnUpgradePicked -= HandleUpgradePicked; _upgrades.OnUpgradesAvailable -= HandleUpgradesOffered; }
             if (_merchants != null) { _merchants.OnCardsOffered -= HandleCardsOffered; _merchants.OnCardPicked -= HandleCardBought; }
             if (_fusion != null) _fusion.OnFused -= HandleFused;
+            if (_instance == this) _instance = null;
             TimeWarp.Cancel();
         }
 
@@ -138,7 +140,7 @@ namespace ElementalBuddies
                 GameAudio.Play(SfxId.EliteSpawn, e.transform.position);
             }
             if (_eliteSeen.Add(e.Elite))
-                ToastUI.Show($"Elite: <color=#{EliteInfo.Hex(e.Elite)}>{EliteInfo.Name(e.Elite)}</color> – {EliteInfo.Hint(e.Elite)}");
+                ToastUI.ShowMap($"Elite: <color=#{EliteInfo.Hex(e.Elite)}>{EliteInfo.Name(e.Elite)}</color> – {EliteInfo.Hint(e.Elite)}");
         }
 
         // Bannschild hat einen Treffer geschluckt (alle Rechner, EnemyBrain drosselt auf 1× je 0,4 s): „Immun“ über dem Kopf
@@ -272,11 +274,18 @@ namespace ElementalBuddies
 
         private void BossMoment(EnemyBrain e, Vector3 pos)
         {
-            TimeWarp.SlowMo(0.3f, 1.1f);
-            CameraFollow.AddTrauma(0.65f);
+            // Boss der anderen Dimension: Zeitlupe/Wackeln nur für Spieler, die bei ihm sind; Banner und Stinger
+            // („Der Riss schließt sich“, RiftClosed) kommen vom DimensionEvent – kein zweiter Sieg-Stinger darüber
+            bool dimension = DimensionEventRules.InArena(pos);
+            if (!dimension || DimensionEvent.LocalInArena)
+            {
+                TimeWarp.SlowMo(0.3f, 1.1f);
+                CameraFollow.AddTrauma(0.65f);
+            }
             GameObject bossFx = e.Config != null && e.Config.DeathVfx != null ? e.Config.DeathVfx : BossDeathVfx;
             if (bossFx != null) Spawn(bossFx, pos + Vector3.up * 1f, 5f);
             GameAudio.Play(SfxId.BossDeath, pos);
+            if (dimension) return;
             GameAudio.Play(SfxId.BossDefeated);
             _fc.ShowBanner(e.DisplayName + " besiegt!", MapContext.Current.BossRelief, new Color(1f, 0.84f, 0.35f), 3f);
         }
@@ -291,13 +300,27 @@ namespace ElementalBuddies
             if (_streakTier < StreakTiers.Length && count >= StreakTiers[_streakTier])
             {
                 int tier = _streakTier++;
-                if (now >= _nextStreak && !_gameOver)
+                if (now >= _nextStreak && !_gameOver && !DimensionEvent.LocalInArena) // Serien der Karte nicht in der Arena (#562)
                 {
                     _nextStreak = now + StreakCooldown;
                     GameAudio.Play(SfxId.Streak);
                     _fc.ShowBanner(StreakNames[Mathf.Min(tier, StreakNames.Length - 1)], count + " Gegner in " + StreakWindow.ToString("0") + " s", new Color(1f, 0.5f, 0.25f), 1.6f);
                 }
             }
+        }
+
+        // ---------------- Banner für andere Systeme (DimensionEvent) ----------------
+
+        private static FeedbackDirector _instance;
+
+        public static void ShowBanner(string title, string subtitle, Color color, float duration = 2.6f)
+        {
+            if (_instance != null && _instance._fc != null) _instance._fc.ShowBanner(title, subtitle, color, duration);
+        }
+
+        public static void SetBannerSubtitle(string subtitle)
+        {
+            if (_instance != null && _instance._fc != null) _instance._fc.SetBannerSubtitle(subtitle);
         }
 
         // ---------------- Team-Ausfall: Wiederbelebung mit Preis ----------------
@@ -383,11 +406,18 @@ namespace ElementalBuddies
         {
             if (_nexus == null) return;
             float hp = _nexus.CurrentHP;
-            if (_lastNexusHp >= 0f && hp < _lastNexusHp - 0.01f && !_gameOver && Time.unscaledTime >= _nextNexusAlarm)
+            // Dimensionsriss: Der Verfall hat eigene Meldung und eigenen Ton (DimensionEvent) – kein „wird angegriffen“ je Takt
+            if (_lastNexusHp >= 0f && hp < _lastNexusHp - 0.01f && !_gameOver && Time.unscaledTime >= _nextNexusAlarm
+                && !DimensionEvent.IsDraining)
             {
                 _nextNexusAlarm = Time.unscaledTime + NexusAlarmCooldown;
-                GameAudio.Play(SfxId.NexusAlarm);
-                ToastUI.Show("Der Nexus wird angegriffen!");
+                // In der Dimension kein allgemeiner Alarm (#562): Das Ziel-Panel zeigt das Nexus-Leben, unter 25 % warnt
+                // DimensionEvent.LowNexusWarning
+                if (!DimensionEvent.LocalInArena)
+                {
+                    GameAudio.Play(SfxId.NexusAlarm);
+                    ToastUI.Show("Der Nexus wird angegriffen!");
+                }
             }
             _lastNexusHp = hp;
         }
@@ -462,6 +492,8 @@ namespace ElementalBuddies
                 GameAudio.Play(SfxId.WaveStart);
                 return;
             }
+            // Dimensionsriss: Banner, Ton, Kameraschwenk und Tipp macht das DimensionEvent (auch für spät beitretende Clients)
+            if (ev == WaveEvent.Dimension) return;
             // Wellen-Ereignis: Banner, eigener Stinger, Färbung (Blutmond)
             GameAudio.Play(GameAudio.Has(SfxId.WaveEvent) ? SfxId.WaveEvent : SfxId.WaveStart);
             if (_fc != null) _fc.ShowBanner(WaveEvents.Name(ev) + "!", WaveEvents.Description(ev), WaveEvents.Color(ev), 3.2f);

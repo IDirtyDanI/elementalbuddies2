@@ -79,7 +79,7 @@ namespace ElementalBuddies
         }
 
         private static readonly string[] AllIds =
-            { "move", "build", "startwave", "shards", "upgrade", "draft", "shrine", "fusion", "merchant", "boss", "lowhp", "nexus" };
+            { "move", "build", "startwave", "shards", "upgrade", "draft", "shrine", "fusion", "merchant", "boss", "lowhp", "nexus", "dimension" };
 
         // Tipp einreihen (einmal pro Spieler); done = Bedingung, bei der er vorzeitig verschwindet
         public void Show(string id, string text, System.Func<bool> done = null)
@@ -218,7 +218,7 @@ namespace ElementalBuddies
             }
 
             // Intro-Film: kein neuer Tipp, ein angezeigter wartet (seine Zeit läuft erst danach weiter)
-            if (IntroCutscene.IsPlaying)
+            if (Cutscene.IsPlaying)
             {
                 if (_showing) _shownAt += Time.unscaledDeltaTime;
             }

@@ -40,6 +40,14 @@ namespace ElementalBuddies
         private RectTransform _mRect;
         private Vector2 _mBasePos;
 
+        // Dimensionsriss: drittes Panel (Kopie von Panel), steht unter Schrein/Händler
+        private GameObject _dPanel;
+        private TextMeshProUGUI _dTitle, _dStatus;
+        private Image _dFill, _dIcon;
+        private RectTransform _dRect;
+        private Vector2 _dBasePos;
+        private bool _dShown;
+
         void Start()
         {
             // Lange Titel/Status (Händler-Ortsangabe „… vor der Nordmauer!“, Umkämpft + Zeit) dürfen nicht aus dem
@@ -62,11 +70,25 @@ namespace ElementalBuddies
                 if (_mRect != null) _mBasePos = _mRect.anchoredPosition;
                 MerchantPanel.SetActive(false);
             }
+            if (Panel != null)
+            {
+                _dPanel = Instantiate(Panel, Panel.transform.parent);
+                _dPanel.name = "DimensionPanel";
+                _dTitle = FindChild<TextMeshProUGUI>(_dPanel.transform, "Title");
+                _dStatus = FindChild<TextMeshProUGUI>(_dPanel.transform, "Status");
+                _dFill = FindChild<Image>(_dPanel.transform, "Fill");
+                _dIcon = FindChild<Image>(_dPanel.transform, "Icon");
+                _dRect = _dPanel.transform as RectTransform;
+                if (_dRect != null) _dBasePos = _dRect.anchoredPosition;
+                if (_dIcon != null) _dIcon.enabled = false;
+                _dPanel.SetActive(false);
+            }
         }
 
         void Update()
         {
-            Shrine s = FindAwakened();
+            // In der Dimension sind die Ziele der Karte (Schrein, Händler) ausgeblendet (#562)
+            Shrine s = DimensionEvent.LocalInArena ? null : FindAwakened();
             if (s != _shrine)
             {
                 _shrine = s;
@@ -77,6 +99,88 @@ namespace ElementalBuddies
             if (_shrine != null) Refresh(_shrine);
 
             UpdateMerchant();
+            UpdateDimension();
+        }
+
+        // ---------------- Dimensionsriss ----------------
+
+        // Draußen: „Betretet das Portal“ + Countdown bis zum Verfall bzw. „Der Riss zehrt am Nexus!“ (Balken = Boss-Leben).
+        // Drinnen: „Erschlagt den {Boss}“ + Nexus-Leben (Heimatfront im Blick); nach dem Boss-Tod der Weg zurück.
+        private void UpdateDimension()
+        {
+            if (_dPanel == null) return;
+            var ev = DimensionEvent.Instance;
+            bool inArena = DimensionEvent.LocalInArena;
+            bool show = ev != null && (ev.Phase == DimensionPhase.Open || (ev.Phase == DimensionPhase.BossDead && inArena));
+            if (show != _dShown)
+            {
+                _dShown = show;
+                _dPanel.SetActive(show);
+            }
+            if (!show) return;
+
+            if (_dRect != null)
+            {
+                int above = (_shrine != null ? 1 : 0) + (_merchant != null ? 1 : 0);
+                _dRect.anchoredPosition = _dBasePos + Vector2.down * MerchantPanelSpacing * above;
+            }
+
+            Color rift = DimensionEvent.RiftColor;
+            string title, status;
+            Color statusColor = StatusNormal;
+            float fill;
+            Color fillColor = rift;
+            var nexus = Nexus.Instance;
+            float nexus01 = nexus != null && nexus.MaxHP > 0f ? Mathf.Clamp01(nexus.CurrentHP / nexus.MaxHP) : 1f;
+            if (ev.Phase == DimensionPhase.BossDead)
+            {
+                title = "Der Riss schließt sich";
+                status = $"Zurück durch das Portal ({ev.Countdown} s)";
+                fill = nexus01;
+            }
+            else if (inArena)
+            {
+                title = $"Erschlagt den {DimensionEvent.BossName}";
+                status = nexus != null ? $"Nexus: {Mathf.CeilToInt(nexus.CurrentHP)} / {Mathf.RoundToInt(nexus.MaxHP)}" : "";
+                if (nexus01 < 0.35f) statusColor = StatusWarning;
+                fill = nexus01;
+                fillColor = Color.Lerp(new Color(0.85f, 0.2f, 0.15f), new Color(0.35f, 0.75f, 1f), nexus01);
+            }
+            else
+            {
+                title = "Dimensionsriss – Betretet das Portal";
+                var boss = ev.FindBoss();
+                fill = boss != null && boss.MaxHP > 0f ? Mathf.Clamp01(boss.CurrentHP / boss.MaxHP) : 1f;
+                switch (ev.Drain)
+                {
+                    case DimensionEventRules.DrainPhase.Grace:
+                        status = $"Der Riss zehrt in {ev.Countdown} s am Nexus!";
+                        if (ev.Countdown <= 10) statusColor = StatusWarning;
+                        break;
+                    case DimensionEventRules.DrainPhase.Draining:
+                        status = "Der Riss zehrt am Nexus!";
+                        statusColor = StatusWarning;
+                        break;
+                    case DimensionEventRules.DrainPhase.Held:
+                        status = $"Ein Champion kämpft im Riss – {DimensionEvent.BossName}";
+                        break;
+                    default:
+                        status = "";
+                        break;
+                }
+            }
+            // Halten im Portal-Kreis (#569): Fortschritt statt der üblichen Zeile
+            float hold = DimensionEvent.HoldProgress;
+            if (hold > 0f)
+            {
+                status = hold >= 1f ? "Durchschreiten …" : $"Durchschreiten … {Mathf.RoundToInt(hold * 100f)} %";
+                statusColor = StatusNormal;
+                fill = hold;
+                fillColor = Color.Lerp(rift, Color.white, 0.35f);
+            }
+            if (_dTitle != null) _dTitle.text = title;
+            if (_dStatus != null) { _dStatus.text = status; _dStatus.color = statusColor; }
+            if (_dFill != null) { _dFill.fillAmount = fill; _dFill.color = fillColor; }
         }
 
         // ---------------- Händler ----------------
@@ -86,6 +190,7 @@ namespace ElementalBuddies
             if (MerchantPanel == null) return;
             var mgr = MerchantManager.Instance;
             Merchant m = mgr != null && mgr.ActiveMerchant != null && mgr.ActiveMerchant.IsActive ? mgr.ActiveMerchant : null;
+            if (DimensionEvent.LocalInArena) m = null;
             if (m != _merchant)
             {
                 _merchant = m;

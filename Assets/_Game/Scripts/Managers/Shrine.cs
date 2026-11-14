@@ -108,6 +108,9 @@ namespace ElementalBuddies
         private Coroutine _spawnRoutine;
         private readonly List<Material> _runeMaterials = new List<Material>();
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private readonly List<Color> _runeBaseColors = new List<Color>();
+        private bool _runesTinted;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
@@ -139,6 +142,7 @@ namespace ElementalBuddies
                     {
                         m.EnableKeyword("_EMISSION");
                         _runeMaterials.Add(m);
+                        _runeBaseColors.Add(m.HasProperty(BaseColorId) ? m.GetColor(BaseColorId) : Color.white);
                     }
                 }
             }
@@ -173,6 +177,8 @@ namespace ElementalBuddies
         {
             if (WaveManager.Instance != null) WaveManager.Instance.OnWaveEnd -= HandleWaveEnd;
             foreach (var m in _runeMaterials) if (m != null) Destroy(m);
+            foreach (var o in _awakenOwned) if (o != null) Destroy(o);
+            _awakenOwned.Clear();
         }
 
         private static bool IsGameOver => GameManager.Instance != null && GameManager.Instance.IsGameOver;
@@ -318,6 +324,78 @@ namespace ElementalBuddies
             if (CompletedVisuals != null) CompletedVisuals.SetActive(State == ShrineState.Completed);
             if (RadiusVisual != null) RadiusVisual.gameObject.SetActive(State == ShrineState.Awakened);
             UpdateRunes();
+            UpdateAwakenFx();
+        }
+
+        // ---------------- Erwacht: Elementfarbe (#552) ----------------
+
+        // Das Leuchten war mit Intensität 3 auf hellem Stein fast weiß (ohne Tonemapping auf Mobil-Low erst recht) – die
+        // Elementfarbe ging verloren. Jetzt: Leuchten gedeckelt und gesättigt, die Grundfarbe der Runen-Materialien wird
+        // im erwachten Zustand zur Elementfarbe hin abgedunkelt, dazu ein farbiges Punktlicht und eine weiche Lichtsäule.
+        public const float RuneEmissionCap = 0.85f;     // Obergrenze des Leuchtens (erwacht), unabhängig vom Szenen-Wert
+        public const float AwakenedBaseTint = 0.6f;     // Anteil Elementfarbe in der Grundfarbe (erwacht)
+        private GameObject _awakenFx;
+        private readonly List<Object> _awakenOwned = new List<Object>();
+
+        // Kräftige, gesättigte Fassung der Elementfarbe (Licht ist z. B. hellgelb → sonst wieder fast weiß)
+        public static Color VividElementColor(int element)
+        {
+            Color.RGBToHSV(ElementInfo.GetColor(element), out float h, out float s, out float v);
+            return Color.HSVToRGB(h, Mathf.Max(s, 0.75f), Mathf.Max(v, 0.9f));
+        }
+
+        private void UpdateAwakenFx()
+        {
+            bool on = State == ShrineState.Awakened;
+            if (!on)
+            {
+                if (_awakenFx != null) _awakenFx.SetActive(false);
+                return;
+            }
+            if (_awakenFx == null) BuildAwakenFx();
+            if (_awakenFx != null) _awakenFx.SetActive(true);
+        }
+
+        private void BuildAwakenFx()
+        {
+            Color c = UseElementColor ? VividElementColor(ElementIndex) : RuneColor;
+            _awakenFx = new GameObject("AwakenFx");
+            _awakenFx.transform.SetParent(transform, false);
+            _awakenFx.transform.position = transform.position;
+            _awakenFx.transform.rotation = Quaternion.identity;
+            Vector3 ls = transform.lossyScale;
+            _awakenFx.transform.localScale = new Vector3(1f / Mathf.Max(0.01f, ls.x), 1f / Mathf.Max(0.01f, ls.y), 1f / Mathf.Max(0.01f, ls.z));
+
+            // farbiges Licht (ohne Schatten, kleiner Radius – ein Zusatzlicht, auch auf Mobil)
+            var lightGo = new GameObject("Light");
+            lightGo.transform.SetParent(_awakenFx.transform, false);
+            lightGo.transform.localPosition = new Vector3(0f, 2.2f, 0f);
+            var light = lightGo.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.shadows = LightShadows.None;
+            light.color = c;
+            light.range = 9f;
+            light.intensity = 3.2f;
+
+            // weiche Lichtsäule: additives Partikel-Material der Erwacht-Optik als Vorlage (Shader ist damit im Build)
+            Material template = null;
+            foreach (var root in new[] { AwakenedVisuals, CompletedVisuals, gameObject })
+            {
+                if (root == null || template != null) continue;
+                foreach (var pr in root.GetComponentsInChildren<ParticleSystemRenderer>(true))
+                {
+                    var m = pr.sharedMaterial;
+                    if (m == null) continue;
+                    if (m.name.Contains("SoftDot")) { template = m; break; }
+                    if (template == null && m.name.Contains("_Add")) template = m;
+                }
+            }
+            if (template == null) return;
+            Material add = RiftVisuals.AdditiveMaterial(template, new Color(c.r, c.g, c.b, 1f), _awakenOwned);
+            var beam = new GameObject("Beam");
+            beam.transform.SetParent(_awakenFx.transform, false);
+            RiftVisuals.MeshObject("Core", beam.transform, RiftVisuals.SoftBeam(0.5f, 0.15f, 16f, 0.5f, 16), add, _awakenOwned);
+            RiftVisuals.MeshObject("Halo", beam.transform, RiftVisuals.SoftBeam(1.5f, 0.8f, 11f, 0.1f, 24), add, _awakenOwned);
         }
 
         // ---------------- Update ----------------
@@ -444,9 +522,28 @@ namespace ElementalBuddies
                     break;
             }
 
+            // Erwacht: gesättigte Elementfarbe, Leuchten gedeckelt, Grundfarbe zur Elementfarbe hin (#552)
+            bool awake = State == ShrineState.Awakened;
+            if (awake)
+            {
+                if (UseElementColor) baseColor = VividElementColor(ElementIndex);
+                intensity = Mathf.Min(intensity, RuneEmissionCap * (0.72f + 0.28f * Mathf.Sin(Time.time * RunePulseSpeed)));
+            }
             Color e = baseColor * intensity;
-            foreach (var m in _runeMaterials)
-                if (m != null) m.SetColor(EmissionColorId, e);
+            for (int i = 0; i < _runeMaterials.Count; i++)
+            {
+                var m = _runeMaterials[i];
+                if (m == null) continue;
+                m.SetColor(EmissionColorId, e);
+                if (awake != _runesTinted && i < _runeBaseColors.Count && m.HasProperty(BaseColorId))
+                {
+                    Color b0 = _runeBaseColors[i];
+                    Color tinted = Color.Lerp(b0, baseColor * 0.55f, AwakenedBaseTint);
+                    tinted.a = b0.a;
+                    m.SetColor(BaseColorId, awake ? tinted : b0);
+                }
+            }
+            _runesTinted = awake;
         }
 
         // ---------------- Angreifer ----------------

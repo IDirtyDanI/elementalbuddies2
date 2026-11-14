@@ -251,6 +251,11 @@ namespace ElementalBuddies
         // Schadensmultiplikator dieses Gegners (Wellen-Rampe × Schwierigkeit, aus Initialize): Nahkampf, Fernkampf,
         // Kontaktschaden an Buddies und Boss-Fähigkeiten (BossBrain)
         public float DamageMultiplier { get; private set; } = 1f;
+        // Server: Schaden nachträglich skalieren (Dimensions-Boss: gedämpfte Wellen-Rampe)
+        public void ScaleDamage(float factor)
+        {
+            if (Net.IsServer) DamageMultiplier = Mathf.Max(0f, DamageMultiplier * factor);
+        }
         public bool ReachedNexus { get; private set; }
 
         // Spieler-Treffer (Champion-Angriffe/-Zauber) laufen über DealPlayerDamage → Quelle für die Telemetrie
@@ -547,7 +552,8 @@ namespace ElementalBuddies
 
             _started = true;
             // Dauerhafter Bannschild (Beschwörer/Bannwirker); Elite „Gebannt“ setzt ihn in MakeElite
-            if (!IsRemote && Config != null && Config.WardShield && !_ward) SetWard(true, 0f);
+            if (!IsRemote && Config != null && Config.WardShield && !_ward
+                && !(WaveManager.Instance != null && WaveManager.Instance.ActiveEvent == WaveEvent.Dimension)) SetWard(true, 0f);
             if (IsElite) ApplyEliteLook(); // vor der HP-Leiste (misst die Höhe)
             // Ramme hat keinen eigenen Gegner-Eintrag – sie wird als Ereignis entdeckt (ApplyEliteLook)
             if (Elite != EliteAffix.Ram) Codex.Discover(Codex.EnemyKey(Config));

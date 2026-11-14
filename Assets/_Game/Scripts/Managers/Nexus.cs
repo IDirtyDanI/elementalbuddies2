@@ -48,7 +48,12 @@ namespace ElementalBuddies
             if (Instance == this) Instance = null;
         }
 
-        public void TakeDamage(float amount)
+        public const string DefaultFallReason = "Der Nexus wurde zerstört";
+
+        public void TakeDamage(float amount) => TakeDamage(amount, null);
+
+        // fallReason: Grund im Game-Over-Bild, falls dieser Treffer den Nexus fällt (z. B. Verfall des Dimensionsrisses)
+        public void TakeDamage(float amount, string fallReason)
         {
             if (!Net.IsServer || _isDestroyed || Invulnerable || Time.time < _graceUntil) return;
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.GameOver) return;
@@ -66,7 +71,7 @@ namespace ElementalBuddies
                 Debug.Log("Nexus destroyed!");
                 OnDestroyed?.Invoke();
                 // Mobil: ggf. erst „Weiterspielen per Video?“ (GameManager.NexusFell), sonst sofort Game Over
-                if (GameManager.Instance != null) GameManager.Instance.NexusFell("Der Nexus wurde zerstört");
+                if (GameManager.Instance != null) GameManager.Instance.NexusFell(string.IsNullOrEmpty(fallReason) ? DefaultFallReason : fallReason);
             }
         }
 

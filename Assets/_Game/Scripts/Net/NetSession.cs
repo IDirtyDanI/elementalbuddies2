@@ -168,7 +168,7 @@ namespace ElementalBuddies
             if (!nm.IsServer && clientId == nm.LocalClientId)
             {
                 string reason = MobileScreenAwake.PauseExplainsLoss ? ScreenAwakeRules.PauseLossMessage
-                    : string.IsNullOrEmpty(nm.DisconnectReason) ? "Verbindung zum Host verloren." : nm.DisconnectReason;
+                    : IsEngineReason(nm.DisconnectReason) ? "Verbindung zum Host verloren." : nm.DisconnectReason;
                 _ = HandleLostConnection(reason);
                 return;
             }
@@ -208,11 +208,17 @@ namespace ElementalBuddies
                 string nmReason = nm != null ? nm.DisconnectReason : null;
                 reason = asHost
                     ? "Die Netzwerkverbindung wurde unerwartet beendet."
-                    : (string.IsNullOrEmpty(nmReason) || nmReason.Contains("was shutdown") ? "Verbindung zum Host verloren." : nmReason);
+                    : (IsEngineReason(nmReason) ? "Verbindung zum Host verloren." : nmReason);
             }
             Debug.LogWarning("[Net] Netcode unerwartet beendet (" + (asHost ? "Host" : "Client") + "): " + reason);
             _ = HandleLostConnection(reason);
         }
+
+        // Kein eigener (deutscher) Grund vom Host (Raum voll, Spiel läuft …), sondern leer oder ein Text von Netcode
+        // selbst – z. B. „[Disconnect Event][Client-1][TransportClientId-…] Closed by remote endpoint.“, wenn der Host
+        // das Spiel beendet. Solche Texte gehören nicht ins Hauptmenü.
+        private static bool IsEngineReason(string reason) =>
+            string.IsNullOrEmpty(reason) || reason.StartsWith("[") || reason.Contains("was shutdown") || reason.Contains("remote endpoint");
 
         private async Task HandleLostConnection(string reason)
         {

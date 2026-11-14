@@ -313,7 +313,7 @@ namespace ElementalBuddies
                 if (Time.time >= _nextAttackedToastTime)
                 {
                     _nextAttackedToastTime = Time.time + 8f;
-                    ToastUI.Show($"{StageName} wird angegriffen!");
+                    ToastUI.ShowMap($"{StageName} wird angegriffen!");
                 }
             }
         }

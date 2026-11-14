@@ -342,6 +342,13 @@ namespace ElementalBuddies
 
             if (_magnet && _target != null)
             {
+                // Dimensionsriss: Ziel in der anderen Dimension (Spieler ist durchs Portal, Rückruf am Wellenende) → nicht
+                // 400 m sichtbar hinterherfliegen, sondern still gutschreiben (Abbilder warten auf die Meldung des Servers)
+                if (!DimensionEventRules.SameDimension(transform.position, _target.position))
+                {
+                    if (!_replica) Collect();
+                    return;
+                }
                 Vector3 chest = _target.position + Vector3.up * 0.8f;
                 float maxSpeed = _settings != null ? _settings.ShardMagnetSpeed : 14f;
                 if (_recall) maxSpeed *= RecallSpeedFactor;

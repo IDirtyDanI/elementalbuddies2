@@ -148,6 +148,20 @@ MonoBehaviour:
     Description: "Fesselt Buddy-Gruppen \u2013 nur dein Champion kann sie verletzen"
     Icon: {fileID: 21300000, guid: 6df00580fdbaa487b947802beddec25b, type: 3}
     Extra: Bannschild
+  - Key: enemy:BossSoulReaper
+    Category: 1
+    Title: Seelenschnitter
+    Description: "Boss des Totenreichs: Sensenwirbel, Seelenschnitt und Seelenregen
+      \u2013 raus aus den Warnfl\xE4chen"
+    Icon: {fileID: 21300000, guid: a307fc77aa76e45b4941b58966373b82, type: 3}
+    Extra: Dimensions-Boss
+  - Key: enemy:BossOgreChief
+    Category: 1
+    Title: "Oger-H\xE4uptling"
+    Description: "Boss des Kriegslagers: springt mit dem Erdsto\xDF heran, Keulenschwung
+      und Kriegsgebr\xFCll \u2013 raus aus den Warnfl\xE4chen"
+    Icon: {fileID: 21300000, guid: 8029f5270e34843a1b6b59a1a688dad7, type: 3}
+    Extra: Dimensions-Boss
   - Key: elite:Fireproof
     Category: 2
     Title: 'Elite: Feuerfest'
@@ -190,19 +204,27 @@ MonoBehaviour:
     Title: Blutmond
     Description: Gegner +20 % Tempo, +50 % Splitter
     Icon: {fileID: 21300000, guid: 2bd4efcb16b4f4b209a5356299badbe5, type: 3}
-    Extra: ab Welle 16
+    Extra: ab Welle 13
   - Key: event:SoulStorm
     Category: 3
     Title: Seelensturm
     Description: "doppelte Splitter \u2013 aber der Magnet ist schwach: selbst einsammeln!"
     Icon: {fileID: 21300000, guid: ae269016c653e4159b50c84875e47064, type: 3}
-    Extra: ab Welle 16
+    Extra: ab Welle 13
   - Key: event:Ram
     Category: 3
     Title: Belagerungsramme
     Description: "eine Ramme marschiert stur zum Nexus \u2013 aufhalten!"
     Icon: {fileID: 21300000, guid: f4c96c938df574851849b12b01e64a61, type: 3}
-    Extra: ab Welle 16
+    Extra: ab Welle 13
+  - Key: event:Dimension
+    Category: 3
+    Title: Dimensionsriss
+    Description: "Ein Boss lauert in einer anderen Dimension. Tretet durch ein Gegner-Portal
+      und erschlagt ihn \u2013 eure Buddies k\xF6nnen dort nicht helfen. Solange
+      kein Champion drin ist, verliert der Nexus stetig Leben."
+    Icon: {fileID: 21300000, guid: 0947866cdae134f368bb01123a71ab02, type: 3}
+    Extra: Welle 20, danach alle 5 Wellen
   - Key: fusion:Lightning
     Category: 4
     Title: Blitz-Elementar

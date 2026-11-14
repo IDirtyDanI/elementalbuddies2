@@ -1,0 +1,1246 @@
+{
+ "arena": "Totenreich",
+ "generated": "2026-11-14",
+ "script": "art-src/arena/arena_build.py",
+ "source_blend": "art-src/BuddyTD_Arena_Totenreich.blend",
+ "coords": "Unity: Meter, Grad, Y oben, Arenamitte im Ursprung, Bodenoberseite y = 0. Azimut 0 = +Z (Norden), 90 = +X. Alle FBX mit Pivot im Ursprung, ohne Drehung einsetzen (Position 0, Rotation 0, Skalierung 1).",
+ "files": {
+  "Floor": "Totenreich_Floor.fbx",
+  "Ring": "Totenreich_Ring.fbx",
+  "Props": "Totenreich_Props.fbx",
+  "Backdrop": "Totenreich_Backdrop.fbx"
+ },
+ "radii": {
+  "walkable": 16.0,
+  "floor": 18.0,
+  "wall_collider_inner": 16.5,
+  "boundary_visual": [
+   16.5,
+   17.5
+  ]
+ },
+ "materials": [
+  {
+   "name": "Toten_Bone",
+   "hex": "#ddd3b6",
+   "emission": 0
+  },
+  {
+   "name": "Toten_BoneDark",
+   "hex": "#a59b80",
+   "emission": 0
+  },
+  {
+   "name": "Toten_Cloth",
+   "hex": "#6a4a94",
+   "emission": 0
+  },
+  {
+   "name": "Toten_DeadWood",
+   "hex": "#51434a",
+   "emission": 0
+  },
+  {
+   "name": "Toten_Iron",
+   "hex": "#3d404c",
+   "emission": 0
+  },
+  {
+   "name": "Toten_Rock",
+   "hex": "#3a3048",
+   "emission": 0
+  },
+  {
+   "name": "Toten_Rune",
+   "hex": "#2ff59c",
+   "emission": 2.2,
+   "emissionHex": "#2ff59c"
+  },
+  {
+   "name": "Toten_Socket",
+   "hex": "#121116",
+   "emission": 0
+  },
+  {
+   "name": "Toten_SoulFire",
+   "hex": "#5cff6a",
+   "emission": 3.0,
+   "emissionHex": "#5cff6a"
+  },
+  {
+   "name": "Toten_Stone",
+   "hex": "#4a4a66",
+   "emission": 0
+  },
+  {
+   "name": "Toten_StoneDark",
+   "hex": "#262532",
+   "emission": 0
+  },
+  {
+   "name": "Toten_StoneLight",
+   "hex": "#6a6a88",
+   "emission": 0
+  }
+ ],
+ "colliders": [
+  {
+   "type": "box",
+   "center": [
+    0.0,
+    2.0,
+    17.0
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 0.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    2.952,
+    2.0,
+    16.742
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 10.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    5.814,
+    2.0,
+    15.975
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 20.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    8.5,
+    2.0,
+    14.722
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 30.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    10.927,
+    2.0,
+    13.023
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 40.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    13.023,
+    2.0,
+    10.927
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 50.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    14.722,
+    2.0,
+    8.5
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 60.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    15.975,
+    2.0,
+    5.814
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 70.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    16.742,
+    2.0,
+    2.952
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 80.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    17.0,
+    2.0,
+    0.0
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 90.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    16.742,
+    2.0,
+    -2.952
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 100.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    15.975,
+    2.0,
+    -5.814
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 110.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    14.722,
+    2.0,
+    -8.5
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 120.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    13.023,
+    2.0,
+    -10.927
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 130.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    10.927,
+    2.0,
+    -13.023
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 140.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    8.5,
+    2.0,
+    -14.722
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 150.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    5.814,
+    2.0,
+    -15.975
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 160.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    2.952,
+    2.0,
+    -16.742
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 170.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    0.0,
+    2.0,
+    -17.0
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 180.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -2.952,
+    2.0,
+    -16.742
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 190.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -5.814,
+    2.0,
+    -15.975
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 200.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -8.5,
+    2.0,
+    -14.722
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 210.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -10.927,
+    2.0,
+    -13.023
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 220.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -13.023,
+    2.0,
+    -10.927
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 230.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -14.722,
+    2.0,
+    -8.5
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 240.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -15.975,
+    2.0,
+    -5.814
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 250.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -16.742,
+    2.0,
+    -2.952
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 260.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -17.0,
+    2.0,
+    -0.0
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 270.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -16.742,
+    2.0,
+    2.952
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 280.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -15.975,
+    2.0,
+    5.814
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 290.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -14.722,
+    2.0,
+    8.5
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 300.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -13.023,
+    2.0,
+    10.927
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 310.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -10.927,
+    2.0,
+    13.023
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 320.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -8.5,
+    2.0,
+    14.722
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 330.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -5.814,
+    2.0,
+    15.975
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 340.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    -2.952,
+    2.0,
+    16.742
+   ],
+   "size": [
+    3.412,
+    4.0,
+    1.0
+   ],
+   "rotY": 350.0,
+   "tag": "wall"
+  },
+  {
+   "type": "box",
+   "center": [
+    9.661,
+    0.7,
+    8.699
+   ],
+   "size": [
+    1.5,
+    1.4,
+    1.0
+   ],
+   "rotY": 228.0,
+   "tag": "prop",
+   "note": "Grabsteine"
+  },
+  {
+   "type": "box",
+   "center": [
+    -9.661,
+    0.75,
+    8.699
+   ],
+   "size": [
+    1.5,
+    1.5,
+    1.0
+   ],
+   "rotY": 132.0,
+   "tag": "prop",
+   "note": "Grabkreuz"
+  },
+  {
+   "type": "capsule",
+   "center": [
+    9.85,
+    0.7,
+    -7.696
+   ],
+   "radius": 0.7,
+   "height": 1.4,
+   "rotY": 0,
+   "tag": "prop",
+   "note": "Schaedelhaufen"
+  },
+  {
+   "type": "box",
+   "center": [
+    -9.85,
+    1.2,
+    -7.696
+   ],
+   "size": [
+    1.15,
+    2.4,
+    0.95
+   ],
+   "rotY": 52.0,
+   "tag": "prop",
+   "note": "Stehender Sarkophag"
+  },
+  {
+   "type": "capsule",
+   "center": [
+    9.701,
+    1.0,
+    3.152
+   ],
+   "radius": 0.62,
+   "height": 2.0,
+   "rotY": 0,
+   "tag": "prop",
+   "note": "Saeulenstumpf"
+  },
+  {
+   "type": "capsule",
+   "center": [
+    -9.32,
+    1.0,
+    -3.028
+   ],
+   "radius": 0.62,
+   "height": 2.0,
+   "rotY": 0,
+   "tag": "prop",
+   "note": "Saeulenstumpf"
+  },
+  {
+   "type": "box",
+   "center": [
+    14.951,
+    0.55,
+    -4.858
+   ],
+   "size": [
+    2.4,
+    1.1,
+    1.1
+   ],
+   "rotY": 288.0,
+   "tag": "prop",
+   "note": "Sarkophag an der Mauer"
+  },
+  {
+   "type": "box",
+   "center": [
+    -15.376,
+    0.55,
+    -3.268
+   ],
+   "size": [
+    2.4,
+    1.1,
+    1.1
+   ],
+   "rotY": 78.0,
+   "tag": "prop",
+   "note": "Sarkophag an der Mauer"
+  },
+  {
+   "type": "box",
+   "center": [
+    5.377,
+    0.55,
+    -14.772
+   ],
+   "size": [
+    2.4,
+    1.1,
+    1.1
+   ],
+   "rotY": 340.0,
+   "tag": "prop",
+   "note": "Sarkophag an der Mauer"
+  }
+ ],
+ "anchors": {
+  "entry": {
+   "pos": [
+    0,
+    0,
+    -12
+   ],
+   "rotY": 0
+  },
+  "bossSpawn": {
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "rotY": 180
+  },
+  "returnPortal": {
+   "pos": [
+    0,
+    0,
+    13
+   ],
+   "rotY": 180
+  },
+  "lights": [
+   {
+    "name": "Light_SoulFire_1",
+    "file": "Totenreich_Ring.fbx",
+    "pos": [
+     8.55,
+     2.62,
+     14.809
+    ],
+    "colorHex": "#5cff6a",
+    "intensityHint": 2.2,
+    "range": 13.0,
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_3",
+    "file": "Totenreich_Ring.fbx",
+    "pos": [
+     8.55,
+     2.62,
+     -14.809
+    ],
+    "colorHex": "#5cff6a",
+    "intensityHint": 2.2,
+    "range": 13.0,
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_4",
+    "file": "Totenreich_Ring.fbx",
+    "pos": [
+     -8.55,
+     2.62,
+     -14.809
+    ],
+    "colorHex": "#5cff6a",
+    "intensityHint": 2.2,
+    "range": 13.0,
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_6",
+    "file": "Totenreich_Ring.fbx",
+    "pos": [
+     -8.55,
+     2.62,
+     14.809
+    ],
+    "colorHex": "#5cff6a",
+    "intensityHint": 2.2,
+    "range": 13.0,
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_2",
+    "file": "Totenreich_Ring.fbx",
+    "pos": [
+     17.1,
+     2.62,
+     0.0
+    ],
+    "colorHex": "#5cff6a",
+    "intensityHint": 2.2,
+    "range": 13.0,
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_5",
+    "file": "Totenreich_Ring.fbx",
+    "pos": [
+     -17.1,
+     2.62,
+     -0.0
+    ],
+    "colorHex": "#5cff6a",
+    "intensityHint": 2.2,
+    "range": 13.0,
+    "kind": "soulfire"
+   }
+  ],
+  "vfx": [
+   {
+    "name": "Light_SoulFire_1",
+    "pos": [
+     8.55,
+     2.62,
+     14.809
+    ],
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_2",
+    "pos": [
+     17.1,
+     2.62,
+     0.0
+    ],
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_3",
+    "pos": [
+     8.55,
+     2.62,
+     -14.809
+    ],
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_4",
+    "pos": [
+     -8.55,
+     2.62,
+     -14.809
+    ],
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_5",
+    "pos": [
+     -17.1,
+     2.62,
+     -0.0
+    ],
+    "kind": "soulfire"
+   },
+   {
+    "name": "Light_SoulFire_6",
+    "pos": [
+     -8.55,
+     2.62,
+     14.809
+    ],
+    "kind": "soulfire"
+   },
+   {
+    "name": "Vfx_ThroneFire_L",
+    "file": "Totenreich_Props.fbx",
+    "pos": [
+     12.043,
+     1.98,
+     17.308
+    ],
+    "kind": "soulfire"
+   },
+   {
+    "name": "Vfx_ThroneFire_R",
+    "file": "Totenreich_Props.fbx",
+    "pos": [
+     14.954,
+     1.98,
+     14.866
+    ],
+    "kind": "soulfire"
+   }
+  ]
+ },
+ "stats": {
+  "tris_total": 22290,
+  "tris": {
+   "Totenreich_Floor.fbx": 5352,
+   "Totenreich_Ring.fbx": 8448,
+   "Totenreich_Props.fbx": 4008,
+   "Totenreich_Backdrop.fbx": 4482
+  },
+  "slots": {
+   "Totenreich_Floor.fbx": [
+    "Toten_Rock",
+    "Toten_Rune",
+    "Toten_Socket",
+    "Toten_Stone",
+    "Toten_StoneDark",
+    "Toten_StoneLight"
+   ],
+   "Totenreich_Ring.fbx": [
+    "Toten_Bone",
+    "Toten_BoneDark",
+    "Toten_Iron",
+    "Toten_Socket",
+    "Toten_SoulFire",
+    "Toten_Stone",
+    "Toten_StoneDark",
+    "Toten_StoneLight"
+   ],
+   "Totenreich_Props.fbx": [
+    "Toten_Bone",
+    "Toten_BoneDark",
+    "Toten_Cloth",
+    "Toten_Iron",
+    "Toten_Rock",
+    "Toten_Socket",
+    "Toten_SoulFire",
+    "Toten_Stone",
+    "Toten_StoneDark",
+    "Toten_StoneLight"
+   ],
+   "Totenreich_Backdrop.fbx": [
+    "Toten_Bone",
+    "Toten_BoneDark",
+    "Toten_DeadWood",
+    "Toten_Iron",
+    "Toten_Rock",
+    "Toten_Socket",
+    "Toten_SoulFire",
+    "Toten_Stone",
+    "Toten_StoneDark",
+    "Toten_StoneLight"
+   ]
+  },
+  "slot_count": 12,
+  "bounds": {
+   "Totenreich_Floor.fbx": {
+    "min": [
+     -18.056,
+     -12.03,
+     -18.204
+    ],
+    "max": [
+     18.24,
+     0.02,
+     18.116
+    ]
+   },
+   "Totenreich_Ring.fbx": {
+    "min": [
+     -17.75,
+     -0.446,
+     -18.074
+    ],
+    "max": [
+     17.75,
+     2.973,
+     18.076
+    ]
+   },
+   "Totenreich_Props.fbx": {
+    "min": [
+     -16.14,
+     -6.5,
+     -16.46
+    ],
+    "max": [
+     18.153,
+     5.458,
+     20.763
+    ]
+   },
+   "Totenreich_Backdrop.fbx": {
+    "min": [
+     -33.401,
+     -12.0,
+     -34.099
+    ],
+    "max": [
+     30.501,
+     13.301,
+     33.412
+    ]
+   }
+  },
+  "open_edges": {
+   "Floor": 0,
+   "Ring": 0,
+   "Props": 0,
+   "Backdrop": 0
+  },
+  "inverted_parts": {
+   "Floor": 0,
+   "Ring": 0,
+   "Props": 0,
+   "Backdrop": 0
+  },
+  "checks": {
+   "floor_max_y_r16": 0.02,
+   "floor_ok": true,
+   "floor_surface_y_range_r16": [
+    -0.03,
+    0.02
+   ],
+   "floor_holes": 0,
+   "floor_radius": 18.14,
+   "ring_max_y": 2.973,
+   "ring_radius_range": [
+    16.17,
+    18.11
+   ],
+   "max_y_inside_r20": 2.973,
+   "tall_inside_r20_ok": true,
+   "props_min_radius": 9.12,
+   "centre_free_ok": true,
+   "entry_clear_r2": true,
+   "portal_clear_r2.6": true,
+   "backdrop_radius_range": [
+    21.19,
+    34.9
+   ],
+   "backdrop_ok": true,
+   "wall_boxes": 36,
+   "wall_max_gap": -0.448,
+   "wall_inner_radius": 16.5,
+   "inner_obstacles": 6,
+   "inner_obstacles_ok": true
+  },
+  "fbx_check": {
+   "Floor": {
+    "file": "Totenreich_Floor.fbx",
+    "bounds_layout": [
+     [
+      -18.056,
+      -12.03,
+      -18.204
+     ],
+     [
+      18.24,
+      0.02,
+      18.116
+     ]
+    ],
+    "bounds_fbx_raw": [
+     [
+      -18.056,
+      -12.03,
+      -18.204
+     ],
+     [
+      18.24,
+      0.02,
+      18.116
+     ]
+    ],
+    "max_dev": 0.0,
+    "anchors": 0,
+    "anchor_max_dev": 0.0,
+    "root_identity": true,
+    "root_scale": [
+     1,
+     1,
+     1
+    ],
+    "unit_scale_factor": 100.0,
+    "verts_fbx": 3372
+   },
+   "Ring": {
+    "file": "Totenreich_Ring.fbx",
+    "bounds_layout": [
+     [
+      -17.75,
+      -0.446,
+      -18.074
+     ],
+     [
+      17.75,
+      2.973,
+      18.076
+     ]
+    ],
+    "bounds_fbx_raw": [
+     [
+      -17.75,
+      -0.446,
+      -18.074
+     ],
+     [
+      17.75,
+      2.973,
+      18.076
+     ]
+    ],
+    "max_dev": 0.0,
+    "anchors": 6,
+    "anchor_max_dev": 0.0,
+    "root_identity": true,
+    "root_scale": [
+     1,
+     1,
+     1
+    ],
+    "unit_scale_factor": 100.0,
+    "verts_fbx": 5064
+   },
+   "Props": {
+    "file": "Totenreich_Props.fbx",
+    "bounds_layout": [
+     [
+      -16.14,
+      -6.5,
+      -16.46
+     ],
+     [
+      18.153,
+      5.458,
+      20.763
+     ]
+    ],
+    "bounds_fbx_raw": [
+     [
+      -16.14,
+      -6.5,
+      -16.46
+     ],
+     [
+      18.153,
+      5.458,
+      20.763
+     ]
+    ],
+    "max_dev": 0.0,
+    "anchors": 2,
+    "anchor_max_dev": 0.0,
+    "root_identity": true,
+    "root_scale": [
+     1,
+     1,
+     1
+    ],
+    "unit_scale_factor": 100.0,
+    "verts_fbx": 2460
+   },
+   "Backdrop": {
+    "file": "Totenreich_Backdrop.fbx",
+    "bounds_layout": [
+     [
+      -33.401,
+      -12.0,
+      -34.099
+     ],
+     [
+      30.501,
+      13.301,
+      33.412
+     ]
+    ],
+    "bounds_fbx_raw": [
+     [
+      -33.401,
+      -12.0,
+      -34.099
+     ],
+     [
+      30.501,
+      13.301,
+      33.412
+     ]
+    ],
+    "max_dev": 0.0,
+    "anchors": 0,
+    "anchor_max_dev": 0.0,
+    "root_identity": true,
+    "root_scale": [
+     1,
+     1,
+     1
+    ],
+    "unit_scale_factor": 100.0,
+    "verts_fbx": 2653
+   }
+  }
+ }
+}

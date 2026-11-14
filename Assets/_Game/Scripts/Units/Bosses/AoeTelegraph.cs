@@ -88,6 +88,12 @@ namespace ElementalBuddies
 
         public float Progress => _duration > 0f ? Mathf.Clamp01(_t / _duration) : 1f;
 
+        // Alle sichtbaren Warnflächen dieses Rechners (Messwerkzeug DimensionFightBench: Ausweichen wie ein Spieler)
+        public static readonly List<AoeTelegraph> Active = new List<AoeTelegraph>();
+        public AoeShape Shape => _shape;
+        public bool IsEnding => _ending;
+        public float Age => _t;
+
         // Mehrspieler: Der Server vergibt jeder Warnfläche eine Id und spiegelt Spawn/Finish/Cancel an die Clients
         // (NetGame.Waves). Clients registrieren ihre Kopie unter derselben Id.
         public int NetId { get; private set; }
@@ -99,6 +105,7 @@ namespace ElementalBuddies
         {
             _nextNetId = 0;
             _byNetId.Clear();
+            Active.Clear();
         }
 
         public static AoeTelegraph FindByNetId(int id) =>
@@ -180,6 +187,7 @@ namespace ElementalBuddies
                 if (i == 1) _fill = child.transform;
             }
             ApplyFill(0f);
+            Active.Add(this);
             Destroy(gameObject, _duration + 15f); // Sicherheitsnetz
         }
 
@@ -258,6 +266,7 @@ namespace ElementalBuddies
 
         void OnDestroy()
         {
+            Active.Remove(this);
             if (NetId != 0 && _byNetId.TryGetValue(NetId, out var t) && t == this) _byNetId.Remove(NetId);
             if (_meshes == null) return;
             foreach (var m in _meshes) if (m != null) Destroy(m);

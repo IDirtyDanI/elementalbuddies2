@@ -254,6 +254,17 @@ namespace ElementalBuddies.EditorTools
             // 2026-11-09: Schrein und Erfolg mit eigenen Klängen statt battleshout2 (Nutzerwunsch: klar unterscheidbar)
             yield return new Sfx(SfxId.ShrineCaptured, 0.7f, 1f, PFix, "shrine_capture");
             yield return new Sfx(SfxId.AchievementUnlocked, 0.7f, 0.5f, PFix, "achievement_unlock");
+            // Schrein-Film und Dimensionsriss (2026-11-14, art-src/audio)
+            yield return new Sfx(SfxId.ShrineAwakenCine, 0.75f, 1f, PFix, "shrine_awaken_cine");
+            yield return new Sfx(SfxId.RiftOpen, 0.85f, 2f, PFix, "rift_open");
+            yield return new Sfx(SfxId.RiftEnter, 0.7f, 0.3f, PFix, "rift_enter");
+            yield return new Sfx(SfxId.RiftReturn, 0.7f, 0.3f, PFix, "rift_return");
+            yield return new Sfx(SfxId.NexusDrain, 0.6f, 2f, PFix, "nexus_drain");
+            yield return new Sfx(SfxId.RiftClosed, 0.85f, 2f, PFix, "rift_closed");
+            yield return new Sfx(SfxId.ReaperRoar, 0.85f, 2f, PFix, "reaper_roar");
+            yield return new Sfx(SfxId.OgreRoar, 0.9f, 2f, PFix, "ogre_roar");
+            yield return new Sfx(SfxId.ReaperDeath, 0.85f, 2f, PFix, "reaper_death");
+            yield return new Sfx(SfxId.OgreBellow, 0.85f, 2f, PFix, "ogre_bellow");
             yield return new Sfx(SfxId.BossSpawn, 0.9f, 1f, new Vector2(0.55f, 0.6f), "battleshout2");
         }
 

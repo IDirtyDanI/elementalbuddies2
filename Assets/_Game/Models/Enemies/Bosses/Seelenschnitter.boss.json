@@ -1,0 +1,128 @@
+{
+ "model": "Seelenschnitter",
+ "rig": "Generic",
+ "fps": 30,
+ "visualScale": 1.5,
+ "moveSpeedModel": 1.0667,
+ "deathDuration": 2.2,
+ "clips": [
+  {
+   "name": "Idle",
+   "role": "idle",
+   "loop": true,
+   "frames": 72,
+   "hit": -1.0
+  },
+  {
+   "name": "Run",
+   "role": "move",
+   "loop": true,
+   "frames": 30,
+   "hit": -1.0
+  },
+  {
+   "name": "Attack",
+   "role": "attack",
+   "loop": false,
+   "frames": 33,
+   "hit": 0.45
+  },
+  {
+   "name": "Whirl",
+   "role": "whirl",
+   "loop": false,
+   "frames": 60,
+   "hit": 1.0
+  },
+  {
+   "name": "Reap",
+   "role": "reap",
+   "loop": false,
+   "frames": 63,
+   "hit": 1.1
+  },
+  {
+   "name": "Cast",
+   "role": "cast",
+   "loop": false,
+   "frames": 66,
+   "hit": 1.2
+  },
+  {
+   "name": "Die",
+   "role": "die",
+   "loop": false,
+   "frames": 66,
+   "hit": -1.0
+  }
+ ],
+ "triggers": [
+  {
+   "trigger": "Attack",
+   "clip": "Attack"
+  },
+  {
+   "trigger": "Whirl",
+   "clip": "Whirl"
+  },
+  {
+   "trigger": "Reap",
+   "clip": "Reap"
+  },
+  {
+   "trigger": "Cast",
+   "clip": "Cast"
+  },
+  {
+   "trigger": "Die",
+   "clip": "Die"
+  }
+ ],
+ "materials": [
+  {
+   "name": "Reaper_Robe",
+   "hex": "#2a2350",
+   "emission": 0.0
+  },
+  {
+   "name": "Reaper_RobeDark",
+   "hex": "#110e1f",
+   "emission": 0.0
+  },
+  {
+   "name": "Reaper_Mantle",
+   "hex": "#4a3d82",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_Bone",
+   "hex": "#ddd3b6",
+   "emission": 0.0
+  },
+  {
+   "name": "Undead_BoneDark",
+   "hex": "#a59b80",
+   "emission": 0.0
+  },
+  {
+   "name": "Enemy_IronDark",
+   "hex": "#4c4f59",
+   "emission": 0.0
+  },
+  {
+   "name": "Reaper_Glow",
+   "hex": "#4fe0c8",
+   "emission": 3.0
+  },
+  {
+   "name": "Reaper_Shaft",
+   "hex": "#6f5d4e",
+   "emission": 0.0
+  }
+ ],
+ "tris": 2788,
+ "themeColor": "#4fe0c8",
+ "themeMaterial": "Reaper_Glow",
+ "hoverModel": 0.167,
+ "heightModel": 2.025
+}

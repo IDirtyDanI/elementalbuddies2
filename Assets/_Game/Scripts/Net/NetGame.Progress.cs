@@ -238,17 +238,24 @@ namespace ElementalBuddies
         }
 
         // Server → ein Client: kurze Meldung (z. B. "+30 Gold (Händler-Bonus)")
-        public static void SendToast(ulong clientId, string message)
+        // mapOnly: Meldung betrifft die Karte – wer im Dimensionsriss steht, sieht sie nicht (ToastUI.ShowMap, #562)
+        public static void SendToast(ulong clientId, string message, bool mapOnly = false)
         {
             if (string.IsNullOrEmpty(message)) return;
-            if (Ready) Instance.ToastRpc(new FixedString128Bytes(message), Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
-            else if (clientId == Net.LocalClientId) ToastUI.Show(message);
+            if (Ready) Instance.ToastRpc(new FixedString128Bytes(message), mapOnly, Instance.RpcTarget.Single(clientId, RpcTargetUse.Temp));
+            else if (clientId == Net.LocalClientId) ShowToast(message, mapOnly);
+        }
+
+        private static void ShowToast(string message, bool mapOnly)
+        {
+            if (mapOnly) ToastUI.ShowMap(message);
+            else ToastUI.Show(message);
         }
 
         [Rpc(SendTo.SpecifiedInParams)]
-        private void ToastRpc(FixedString128Bytes message, RpcParams p)
+        private void ToastRpc(FixedString128Bytes message, bool mapOnly, RpcParams p)
         {
-            ToastUI.Show(message.ToString());
+            ShowToast(message.ToString(), mapOnly);
         }
 
         // ======================= Einnahme (Händler / Schreine) =======================

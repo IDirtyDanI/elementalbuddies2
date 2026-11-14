@@ -1378,7 +1378,7 @@ namespace ElementalBuddies.EditorTools
 
         // Idle ⇄ Run (Bool Moving, Tempo über Speed), Boss-Trigger per AnyState (Tempo 1, Rückweg so, dass die Überblendung
         // mit dem Clip-Ende fertig ist), Die (AnyState, bleibt stehen). GUID bleibt bei erneutem Lauf.
-        private static AnimatorController ForestBossController(string name, string fbx, BossSidecar side, float visualScale, System.Text.StringBuilder sb)
+        internal static AnimatorController ForestBossController(string name, string fbx, BossSidecar side, float visualScale, System.Text.StringBuilder sb)
         {
             string path = ForestModelDir + name + ".controller";
             var ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);

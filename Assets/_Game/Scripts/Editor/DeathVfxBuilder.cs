@@ -416,7 +416,10 @@ namespace ElementalBuddies.EditorTools
                 var l = Flakes(root, "LeafStorm", leaf, leafA, leafB, 36, new Vector2(2.2f, 3.4f), new Vector2(0.3f, 0.5f), new Vector2(3f, 7f), 0.3f, 0.9f);
                 GameFeelSetup.Sphere(l, 1f);
                 var ov = l.velocityOverLifetime; ov.enabled = true; ov.space = ParticleSystemSimulationSpace.Local;
+                // alle Kurven im selben Modus (zwei Konstanten) – sonst warnt die Engine bei jedem Abspielen (#490/#564)
+                ov.orbitalX = ov.orbitalZ = new ParticleSystem.MinMaxCurve(0f, 0f);
                 ov.orbitalY = new ParticleSystem.MinMaxCurve(1.5f, 2.5f);
+                ov.radial = new ParticleSystem.MinMaxCurve(0f, 0f);
                 ov.x = ov.y = ov.z = new ParticleSystem.MinMaxCurve(0f, 0f);
                 var ln = l.main; ln.simulationSpace = ParticleSystemSimulationSpace.Local;
             });

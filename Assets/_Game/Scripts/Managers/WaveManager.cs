@@ -167,6 +167,19 @@ namespace ElementalBuddies
         public float SoulStormBounty = 2f;
         public float SoulStormMagnet = 0.3f;
 
+        [Header("Dimensionsriss (wiki: Design/Dimensionsriss-Plan)")]
+        [Tooltip("Erste Event-Welle; danach alle DimensionEvery Wellen. 0 = aus. Vorrang vor den normalen Ereignissen.")]
+        public int DimensionFromWave = DimensionEventRules.FirstWave;
+        public int DimensionEvery = DimensionEventRules.Every;
+        [Tooltip("Leben des Dimensions-Bosses im ersten Event für 1 Spieler (Normal, Belagerungsstufe 0); unabhängig von Config.BaseHP.")]
+        public float DimensionBossTargetHp = DimensionEventRules.TargetBossHp;
+        [Tooltip("Boss-Leben × (1 + Wert·(n−1)) je weiterem Spieler.")]
+        public float DimensionBossHpPerExtraPlayer = DimensionEventRules.HpPerExtraPlayer;
+        [Tooltip("Boss-Leben × (1 + Wert)^(Event-Nummer) – Welle 25 ist Event 1, Welle 30 Event 2 …")]
+        public float DimensionBossHpPerEvent = DimensionEventRules.HpPerEvent;
+        [Tooltip("Anteil der Wellen-Schadensrampe, den der Dimensions-Boss übernimmt (1 = wie normale Bosse).")]
+        [Range(0f, 1f)] public float DimensionBossDamageRampShare = DimensionEventRules.DamageRampShare;
+
         [Header("Mehrspieler – Skalierung nach Spielerzahl n")]
         [Tooltip("Gegner-Anzahl × (1 + CountPerExtraPlayer·(n−1)). Geht über CountMultiplier auch in die Kopfgeld-Division ein (Teamkasse wächst nicht mit n).")]
         public float CountPerExtraPlayer = 0.5f;
@@ -308,6 +321,7 @@ namespace ElementalBuddies
         private readonly Dictionary<int, bool> _bossWaveCache = new Dictionary<int, bool>();
         public bool IsBossWave(int waveNumber)
         {
+            if (IsDimensionWave(waveNumber)) return true; // Dimensionsriss zählt als Boss-Welle (Eskorte, danach Ernte-Welle)
             if (_bossWaveCache.TryGetValue(waveNumber, out bool cached)) return cached;
             bool boss = false;
             var wave = UnscaledWave(waveNumber);
@@ -425,7 +439,15 @@ namespace ElementalBuddies
         private void HandleBossSpawned(EnemyBrain boss)
         {
             if (boss == null) return;
-            ToastUI.Show($"{boss.DisplayName} ist erschienen!");
+            // Karten-Bosse meldet die Arena nicht (#562); der Dimensions-Boss wird überall gemeldet
+            if (DimensionEvent.IsDimensionBoss(boss) || !DimensionEvent.LocalInArena) ToastUI.Show($"{boss.DisplayName} ist erschienen!");
+            // Dimensions-Boss mit eigenem Schrei (Config.SpawnSound, z. B. Seelenschnitter/Oger-Häuptling): EnemyBrain.Start
+            // spielt ihn an seiner Position – er steht weit weg, deshalb hier ohne Ort statt des Theme-Tons
+            if (boss.Config != null && boss.Config.SpawnSound && DimensionEventRules.InArena(boss.transform.position))
+            {
+                GameAudio.PlayOr(boss.Config.SpawnSfx);
+                return;
+            }
             var theme = ActiveTheme;
             SfxId sfx = theme != null ? theme.BossSpawnSfx : SfxId.BossSpawn;
             if (!GameAudio.Has(sfx)) sfx = GameAudio.Has(SfxId.BossSpawn) ? SfxId.BossSpawn : SfxId.StoneWall;
@@ -675,6 +697,7 @@ namespace ElementalBuddies
         // Basiswelle oder eine Boss-Zusatzgruppe
         private bool HasBossGroupRaw(int waveNumber)
         {
+            if (IsDimensionWave(waveNumber)) return true;
             if (Waves == null || Waves.Count == 0 || waveNumber < 1) return false;
             var wave = waveNumber <= Waves.Count ? Waves[waveNumber - 1] : Waves[Waves.Count - 1];
             if (wave != null && wave.EnemiesToSpawn != null)
@@ -704,10 +727,19 @@ namespace ElementalBuddies
         private WaveConfigSO AddExtraGroups(WaveConfigSO wave, int waveNumber)
         {
             WaveConfigSO copy = null;
+            // Dimensionsriss: keine regulären Bosse (der Boss steht in der Arena) und nichts, das nur der Champion besiegen
+            // kann (Beschwörer, Bannwirker) – auch nicht aus der Basiswelle. Auf allen Rechnern gleich (Vorschau).
+            bool dimension = IsDimensionWave(waveNumber);
+            if (dimension && wave != null && wave.EnemiesToSpawn != null && wave.EnemiesToSpawn.Exists(IsBarredInDimensionWave))
+            {
+                copy = CopyWave(wave);
+                copy.EnemiesToSpawn.RemoveAll(IsBarredInDimensionWave);
+            }
             if (ExtraGroups != null)
                 foreach (var extra in ExtraGroups)
                 {
                     if (extra == null) continue;
+                    if (dimension && extra.Config != null && (extra.Config.IsBoss || extra.Config.IsChampionThreat)) continue;
                     int count = ExtraGroupCount(extra, waveNumber);
                     if (count <= 0) continue;
                     if (copy == null) copy = CopyWave(wave);
@@ -726,6 +758,9 @@ namespace ElementalBuddies
             return copy != null ? copy : wave;
         }
 
+        private static bool IsBarredInDimensionWave(EnemySpawnInfo g) =>
+            g != null && g.EnemyType != null && (g.EnemyType.IsBoss || g.EnemyType.IsChampionThreat);
+
         // Wellen-Rampe auf alle Nicht-Boss-Gruppen (Basiswelle, Endless und Zusatzgruppen): Anzahl × M(w) (aufgerundet),
         // Intervall × IntervalFactor(w); Boss-Wellen nur mit Eskorte (Anzahl × BossWaveEscortFactor, Intervall ÷ Faktor).
         // Danach Deckel MaxEnemiesPerWave (anteilig abgerundet, je Gruppe mind. 1). Wie balance_model.py wave_groups().
@@ -734,7 +769,7 @@ namespace ElementalBuddies
         {
             if (wave == null || wave.EnemiesToSpawn == null) return wave;
 
-            bool bossWave = false;
+            bool bossWave = IsDimensionWave(waveNumber); // Dimensionsriss: Eskorte wie in einer Boss-Welle
             foreach (var g in wave.EnemiesToSpawn)
                 if (g != null && g.Count > 0 && g.EnemyType != null && g.EnemyType.IsBoss) bossWave = true;
 
@@ -1017,14 +1052,14 @@ namespace ElementalBuddies
             // Netz-Toast ist auf 128 Byte begrenzt (FixedString128Bytes)
             if (string.IsNullOrEmpty(enemy.Config.PreviewHint) || System.Text.Encoding.UTF8.GetByteCount(msg) > 120)
                 msg = $"{enemy.DisplayName} ist erschienen!";
-            foreach (ulong id in UpgradeManager.PlayerIds()) NetGame.SendToast(id, msg);
+            foreach (ulong id in UpgradeManager.PlayerIds()) NetGame.SendToast(id, msg, true);
         }
 
         // „Letzter Ansturm!“ – Server → alle Spieler über NetGame.SendToast (offline/Solo: lokal)
         private void AnnounceFinalPulse()
         {
             if (string.IsNullOrEmpty(ReinforceFinalToast)) return;
-            foreach (ulong id in UpgradeManager.PlayerIds()) NetGame.SendToast(id, ReinforceFinalToast);
+            foreach (ulong id in UpgradeManager.PlayerIds()) NetGame.SendToast(id, ReinforceFinalToast, true);
         }
 
         void Update()
@@ -1100,7 +1135,7 @@ namespace ElementalBuddies
                 if (elite != EliteAffix.None) brain.MakeElite(elite); // vor dem Netz-Spawn (HP, Eigenschaft)
                 // Dauerhafter Bannschild (Beschwörer/Bannwirker) ebenfalls vor dem Netz-Spawn: erster Frame und Clients
                 // haben ihn sofort (EnemyNet schreibt Ward beim Spawn); EnemyBrain.Start bleibt als Rückfall
-                if (config.WardShield && !brain.IsWarded) brain.SetWard(true, 0f);
+                if (config.WardShield && !brain.IsWarded && ActiveEvent != WaveEvent.Dimension) brain.SetWard(true, 0f);
             }
             // HP-NetworkVariables setzt EnemyNet.OnNetworkSpawn (vor dem Spawn geschrieben warnt Netcode)
             var no = go.GetComponent<Unity.Netcode.NetworkObject>();
@@ -1206,7 +1241,8 @@ namespace ElementalBuddies
             }
             // „Gebannt“ (Champion-Bedrohungen): eigener Wurf je Elite, damit der bisherige Plan der übrigen Eigenschaften
             // unverändert bleibt (gleicher Seed)
-            if (waveNumber >= WardedEliteFromWave && WardedEliteChance > 0f && MaxWardedPerWave > 0)
+            // (nicht im Dimensionsriss: dort gibt es nichts, das nur der Champion besiegen kann)
+            if (waveNumber >= WardedEliteFromWave && WardedEliteChance > 0f && MaxWardedPerWave > 0 && !IsDimensionWave(waveNumber))
             {
                 var wardRng = new System.Random(waveNumber * 104729 + 7);
                 int warded = 0;
@@ -1252,8 +1288,10 @@ namespace ElementalBuddies
 
         // Ereignis einer Welle – deterministisch (Vorschau auf allen Rechnern gleich): ab EventFromWave alle EventEvery
         // Wellen; fällt der Termin auf eine Boss- oder Ernte-Welle, rückt er auf die nächste freie. Typen im Wechsel.
+        // Der Dimensionsriss (eigene Termine) hat Vorrang; als Boss-Welle überspringt ihn der normale Wechsel von selbst.
         public WaveEvent EventFor(int waveNumber)
         {
+            if (IsDimensionWave(waveNumber)) return WaveEvent.Dimension;
             if (EventFromWave <= 0 || waveNumber < EventFromWave) return WaveEvent.None;
             int next = EventFromWave, k = 0;
             while (next <= waveNumber)
@@ -1288,6 +1326,74 @@ namespace ElementalBuddies
 
         [Tooltip("Gegnertyp der Belagerungsramme (Wellen-Ereignis); leer = erster Typ der Welle.")]
         public EnemyConfigSO RamConfig;
+
+        // ---------------- Dimensionsriss ----------------
+
+        // Event-Welle (deterministisch, auf allen Rechnern gleich)
+        public bool IsDimensionWave(int waveNumber) =>
+            DimensionEventRules.IsEventWave(waveNumber, DimensionFromWave, DimensionEvery);
+
+        // Nächste Event-Welle ≥ waveNumber (−1 = aus)
+        public int NextDimensionWave(int waveNumber) =>
+            DimensionEventRules.NextEventWave(waveNumber, DimensionFromWave, DimensionEvery);
+
+        // Boss der Dimension: MapDefinitionSO.DimensionBoss, sonst (Rückfall, bis die Integration die neuen Bosse einträgt)
+        // der erste Boss der Zusatzgruppen, über das Map-Theme aufgelöst. Auf allen Rechnern gleich (Name für Texte).
+        public EnemyConfigSO DimensionBossConfig => GetDimensionBoss(out _);
+
+        public EnemyConfigSO GetDimensionBoss(out bool fallback)
+        {
+            fallback = false;
+            var map = MapContext.Current;
+            if (map != null && map.DimensionBoss != null && map.DimensionBoss.Prefab != null) return map.DimensionBoss;
+            fallback = true;
+            if (ExtraGroups != null)
+                foreach (var e in ExtraGroups)
+                    if (e != null && e.Config != null && e.Config.IsBoss)
+                    {
+                        var c = ResolveConfig(e.Config);
+                        if (c != null && c.Prefab != null) return c;
+                    }
+            return null;
+        }
+
+        // HP-Faktor (auf Config.BaseHP) des Dimensions-Bosses für eine Event-Welle – eigene Formel statt der Boss-Kurve
+        public float DimensionBossHp(int waveNumber)
+        {
+            int index = Mathf.Max(0, DimensionEventRules.EventIndex(NextDimensionWaveAtOrBefore(waveNumber), DimensionFromWave, DimensionEvery));
+            return DimensionEventRules.BossHp(DimensionBossTargetHp, index, Net.PlayerCount,
+                Difficulty != null ? Difficulty.BossHpMultiplier : 1f, SiegeLevels.BossHpFactor,
+                DimensionBossHpPerExtraPlayer, DimensionBossHpPerEvent);
+        }
+
+        // Letzte Event-Welle ≤ waveNumber (erzwungenes Event in einer anderen Welle zählt wie das vorige; vor dem ersten: das erste)
+        private int NextDimensionWaveAtOrBefore(int waveNumber)
+        {
+            if (DimensionFromWave <= 0 || waveNumber <= DimensionFromWave) return Mathf.Max(1, DimensionFromWave);
+            int e = Mathf.Max(1, DimensionEvery);
+            return DimensionFromWave + ((waveNumber - DimensionFromWave) / e) * e;
+        }
+
+        // Server: Boss in der Arena spawnen – zählt zur Welle (sie endet erst mit seinem Tod), eigenes Leben, gedämpfter Schaden
+        public EnemyBrain SpawnDimensionBoss(Vector3 position, out bool fallback)
+        {
+            fallback = false;
+            if (!Net.IsServer) return null;
+            var config = GetDimensionBoss(out fallback);
+            if (config == null) return null;
+            float hp = DimensionBossHp(UpcomingWaveNumber);
+            float mult = DimensionEventRules.BossHpMultiplier(config.BaseHP, config.Armor, hp);
+            var brain = SpawnEnemyAt(config, position, mult, true);
+            if (brain != null)
+            {
+                float wave = DamageMultiplier(UpcomingWaveNumber);
+                float damped = DimensionEventRules.BossDamageMultiplier(wave, DimensionBossDamageRampShare);
+                if (wave > 0f) brain.ScaleDamage(damped / wave);
+                Debug.Log($"WaveManager: Dimensions-Boss {config.name}{(fallback ? " (Rückfall: MapDefinitionSO.DimensionBoss fehlt)" : "")} – " +
+                          $"Leben {brain.MaxHP:0} (Ziel {hp:0}, Rüstung {config.Armor:0.##}), Schaden ×{damped:0.00} statt ×{wave:0.00}.");
+            }
+            return brain;
+        }
 
         // ---------------- Morgengrauen (E5) ----------------
 

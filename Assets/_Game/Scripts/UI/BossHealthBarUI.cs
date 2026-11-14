@@ -53,7 +53,8 @@ namespace ElementalBuddies
         {
             var list = EnemyBrain.ActiveBosses;
             for (int i = 0; i < list.Count; i++)
-                if (list[i] != null && !list[i].IsDead) return list[i];
+                // nur Bosse in der Dimension der eigenen Figur (Dimensionsriss: drinnen der Arena-Boss, draußen die Karten-Bosse)
+                if (list[i] != null && !list[i].IsDead && DimensionEvent.VisibleToLocal(list[i].transform.position)) return list[i];
             return null;
         }
 
@@ -91,7 +92,7 @@ namespace ElementalBuddies
 
         void Update()
         {
-            if (_boss == null || _boss.IsDead) { Refresh(); if (_boss == null) return; }
+            if (_boss == null || _boss.IsDead || !DimensionEvent.VisibleToLocal(_boss.transform.position)) { Refresh(); if (_boss == null) return; }
 
             float hp01 = _boss.MaxHP > 0f ? Mathf.Clamp01(_boss.CurrentHP / _boss.MaxHP) : 1f;
             if (hp01 < _last) _chipHoldUntil = Time.time + ChipDelay;

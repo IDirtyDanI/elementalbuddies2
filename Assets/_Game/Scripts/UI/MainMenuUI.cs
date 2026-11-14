@@ -1830,12 +1830,33 @@ namespace ElementalBuddies
             if (show)
             {
                 NetMessage.text = text;
-                // über der Ziel-Leiste (MainMenuMeta hängt sie zur Laufzeit an), aber unter dem Überblender
-                int top = NetMessage.transform.parent.childCount - 1;
-                if (Fader != null && Fader.transform.parent == NetMessage.transform.parent) top = Fader.transform.GetSiblingIndex() - 1;
-                NetMessage.transform.SetSiblingIndex(Mathf.Max(0, top));
+                RaiseNetMessage();
             }
             _messageTimer = show ? duration : 0f;
+        }
+
+        // Meldung sichtbar halten: in der Reihenfolge nach oben (unter den Überblender) und – weil MainMenuMeta die
+        // Ziel-Leiste („MetaStrip“) zur Laufzeit hinter dem Überblender anhängt und sie genau über der Meldung liegt –
+        // knapp über die Leiste schieben. Vorher lag z. B. „Verbindung zum Host verloren.“ unsichtbar dahinter.
+        private readonly Vector3[] _stripCorners = new Vector3[4];
+        private void RaiseNetMessage()
+        {
+            if (NetMessage == null) return;
+            var parent = NetMessage.transform.parent;
+            if (parent == null) return;
+            int top = parent.childCount - 1;
+            if (Fader != null && Fader.transform.parent == parent) top = Fader.transform.GetSiblingIndex() - 1;
+            top = Mathf.Max(0, top);
+            if (NetMessage.transform.GetSiblingIndex() < top) NetMessage.transform.SetSiblingIndex(top);
+
+            var strip = parent.Find("MetaStrip") as RectTransform;
+            if (strip == null || !strip.gameObject.activeInHierarchy) return;
+            strip.GetWorldCorners(_stripCorners); // 0 unten links, 1 oben links
+            var rt = NetMessage.rectTransform;
+            float below = rt.rect.height * rt.pivot.y * rt.lossyScale.y; // Abstand Drehpunkt → Unterkante
+            float wanted = _stripCorners[1].y + below + 6f * rt.lossyScale.y;
+            Vector3 pos = rt.position;
+            if (pos.y - below < _stripCorners[1].y && Mathf.Abs(pos.y - wanted) > 0.5f) rt.position = new Vector3(pos.x, wanted, pos.z);
         }
 
         private void UpdateNetwork()
@@ -1845,6 +1866,7 @@ namespace ElementalBuddies
 
             if (_messageTimer > 0f)
             {
+                RaiseNetMessage();
                 _messageTimer -= dt;
                 if (_messageTimer <= 0f && NetMessage != null) NetMessage.gameObject.SetActive(false);
             }
