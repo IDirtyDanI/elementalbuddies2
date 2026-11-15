@@ -222,6 +222,8 @@ namespace ElementalBuddies
         [Header("Sicherheitsnetz")]
         [Tooltip("Fällt die Figur so viele Meter unter die letzte sichere Bodenposition, wird sie dorthin zurückgesetzt.")]
         public float FallRecoverDepth = 8f;
+        [Tooltip("Sichere Position nur, wenn der nächste NavMesh-Punkt waagerecht höchstens so weit entfernt ist (m).")]
+        public float SafeNavTolerance = 0.75f;
 
         private Vector3 _lastSafePos;
         private bool _hasSafePos;
@@ -244,7 +246,11 @@ namespace ElementalBuddies
                 if (Time.time >= _safeSampleAt)
                 {
                     _safeSampleAt = Time.time + 0.25f;
-                    if (UnityEngine.AI.NavMesh.SamplePosition(transform.position, out _, 2.5f, UnityEngine.AI.NavMesh.AllAreas))
+                    // Nur direkt über dem NavMesh (waagerecht höchstens SafeNavTolerance daneben): Vorher galt jeder Punkt
+                    // bis 2,5 m neben dem Boden – hinter der Arenamauer gemerkt, setzte der Sturzschutz die Figur immer
+                    // wieder dorthin zurück, sie fiel erneut (iPhone-Test 2026-11-15)
+                    if (UnityEngine.AI.NavMesh.SamplePosition(transform.position, out var nav, 2.5f, UnityEngine.AI.NavMesh.AllAreas)
+                        && FallRecoveryRules.IsOverWalkable(transform.position, nav.position, SafeNavTolerance))
                     {
                         _lastSafePos = transform.position;
                         _hasSafePos = true;

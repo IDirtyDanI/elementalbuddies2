@@ -286,6 +286,16 @@ namespace ElementalBuddies
                 if (t.text != null && t.text.Contains("Q/E")) t.text = t.text.Replace(" · Q/E: Stufe", "").Replace("  ·  Q/E: Stufe", "");
             if (FullscreenToggle != null && FullscreenToggle.transform.parent != null)
                 FullscreenToggle.transform.parent.gameObject.SetActive(false);
+            // iOS: Apps beenden sich nicht selbst (App-Review). Der Knopf bleibt im Layout (Shop/Kodex richten sich
+            // nach ihm und übernehmen seine Sichtbarkeit), ist aber unsichtbar und nicht anklickbar.
+            if (Application.platform == RuntimePlatform.IPhonePlayer && QuitButton != null)
+            {
+                var cg = QuitButton.GetComponent<CanvasGroup>();
+                if (cg == null) cg = QuitButton.gameObject.AddComponent<CanvasGroup>();
+                cg.alpha = 0f;
+                cg.interactable = false;
+                cg.blocksRaycasts = false;
+            }
             if (JoinCodeInput != null)
             {
                 // Bildschirmtastatur: Raumcode = Großbuchstaben/Ziffern, keine Autokorrektur
@@ -2057,7 +2067,7 @@ namespace ElementalBuddies
 #if UNITY_EDITOR
             if (Application.isPlaying) UnityEditor.EditorApplication.isPlaying = false;
 #else
-            Application.Quit();
+            if (Application.platform != RuntimePlatform.IPhonePlayer) Application.Quit();
 #endif
         }
 

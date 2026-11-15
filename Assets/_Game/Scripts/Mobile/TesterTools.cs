@@ -18,6 +18,7 @@ namespace ElementalBuddies
         private GameObject _root;
         private TextMeshProUGUI _unlockLabel;
         private bool _armed;
+        private RectTransform _version, _unlock;
 
         public static bool UnlockEnabled
         {
@@ -71,12 +72,15 @@ namespace ElementalBuddies
             // Oben in der Mitte: zwischen Titel und Champion-Panel ist im Hauptmenü frei (unten links sitzen Knöpfe)
             var v = NewText(_root.transform, "Version", version, 22f, new Vector2(0f, -8f), new Vector2(360f, 32f));
             v.alignment = TextAlignmentOptions.Top;
+            _version = v.rectTransform;
+            StartCoroutine(AvoidTitle());
 
             if (!UnlockEnabled) return;
             var img = new GameObject("UnlockAll", typeof(Image), typeof(Button)).GetComponent<Image>();
             img.transform.SetParent(_root.transform, false);
             img.color = new Color(0.2f, 0.13f, 0.08f, 0.75f);
             var rt = (RectTransform)img.transform;
+            _unlock = rt;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(0f, -44f);
             rt.sizeDelta = new Vector2(330f, 56f);
@@ -88,6 +92,36 @@ namespace ElementalBuddies
             lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one; lrt.offsetMin = lrt.offsetMax = Vector2.zero;
             _unlockLabel.alignment = TextAlignmentOptions.Center;
             _unlockLabel.color = new Color(1f, 0.93f, 0.8f);
+        }
+
+        // Breite Bildschirme (iPhone, ≈ 2,2 : 1, Menü-UI ×1,35): Der Titel „Elemental Buddies“ reicht bis zur Mitte und
+        // lag unter dem Knopf (iPhone-Test 2026-11-15). Nach dem ersten Layout Versionszeile und Knopf rechts vom
+        // Titelende ausrichten.
+        private System.Collections.IEnumerator AvoidTitle()
+        {
+            yield return null;
+            yield return null;
+            if (_root == null) yield break;
+            TextMeshProUGUI title = null;
+            foreach (var t in FindObjectsByType<TextMeshProUGUI>(FindObjectsSortMode.None))
+                if (t != null && t.isActiveAndEnabled && t.canvas != null && t.canvas.gameObject != _root
+                    && t.text != null && t.text.StartsWith("Elemental")) { title = t; break; }
+            if (title == null) yield break;
+            title.ForceMeshUpdate();
+            Vector3 worldRight = title.transform.TransformPoint(new Vector3(title.textBounds.max.x, title.textBounds.center.y, 0f));
+            Camera cam = title.canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : title.canvas.worldCamera;
+            Vector2 screen = RectTransformUtility.WorldToScreenPoint(cam, worldRight);
+            var root = (RectTransform)_root.transform;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screen, null, out Vector2 local)) yield break;
+            float titleRight = local.x - root.rect.center.x; // relativ zur Mitte (Anker oben Mitte)
+            const float margin = 16f;
+            foreach (var rt in new[] { _version, _unlock })
+            {
+                if (rt == null) continue;
+                float halfW = rt.sizeDelta.x * 0.5f;
+                float minX = titleRight + margin + halfW;
+                if (rt.anchoredPosition.x < minX) rt.anchoredPosition = new Vector2(minX, rt.anchoredPosition.y);
+            }
         }
 
         private void OnUnlockClicked()

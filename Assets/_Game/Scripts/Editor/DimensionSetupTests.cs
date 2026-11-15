@@ -93,7 +93,8 @@ namespace ElementalBuddies.EditorTools.Tests
                 var abilities = prefab.GetComponent<BossBrain>().Abilities;
                 var expected = spec.Abilities();
                 Assert.AreEqual(expected.Count, abilities.Count, spec.Model);
-                Assert.AreEqual(3, abilities.Count, spec.Model);
+                Assert.AreEqual(4, abilities.Count, spec.Model);
+                Assert.AreEqual(1, abilities.FindAll(x => x.Kind == BossAbilityKind.Throw).Count, spec.Model + ": genau ein Wurf");
                 for (int i = 0; i < abilities.Count; i++)
                 {
                     var a = abilities[i];
@@ -103,6 +104,14 @@ namespace ElementalBuddies.EditorTools.Tests
                     float hit = a.Windup + (a.Kind == BossAbilityKind.Slam ? a.LeapDuration : 0f);
                     Assert.AreEqual(hits[a.AnimatorTrigger], hit, 1e-3f, spec.Model + "/" + a.Name + ": Ausholzeit = Trefferzeit des Clips");
                     Assert.Greater(a.Cooldown, hit + a.Recovery, spec.Model + "/" + a.Name);
+                    if (a.Kind == BossAbilityKind.Throw)
+                    {
+                        Assert.IsNotNull(a.ProjectilePrefab, spec.Model + "/" + a.Name + ": Geschoss-Modell");
+                        Assert.Greater(a.MinTriggerRange, cfg.AttackRange, spec.Model + "/" + a.Name + ": nur auf Abstand");
+                        // ausweichbar: sichtbare Warnzeit reicht, um mit Lauftempo 5 m/s die halbe Linienbreite + Figur zu verlassen
+                        float warn = a.Windup - a.ThrowAimTime;
+                        Assert.Greater(warn * 5f, a.Width * 0.5f + 0.4f + 1f, spec.Model + "/" + a.Name + ": Warnzeit");
+                    }
                 }
             }
         }

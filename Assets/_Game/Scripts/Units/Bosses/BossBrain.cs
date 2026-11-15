@@ -45,6 +45,10 @@ namespace ElementalBuddies
         private readonly List<AoeShape> _extraShapes = new List<AoeShape>();
         private readonly List<AoeTelegraph> _extraTelegraphs = new List<AoeTelegraph>();
         private static readonly Vector3[] _rainCenters = new Vector3[8];
+        // Wurf (BossAbilityKind.Throw): Ziel, dessen Laufrichtung beim Zielen beobachtet wird
+        private Transform _throwTarget;
+        private float _lastThrowSfx = -1f;
+        private const float MaxLeadSpeed = 7f; // Blinzeln/Rückstoß sollen das Vorhalten nicht ins Leere schicken
 
         public Color ThemeColor
         {
@@ -130,6 +134,8 @@ namespace ElementalBuddies
                     return FindUnitInRange(range, false, out targetPos);
                 case BossAbilityKind.AllyHeal:
                     return CountWoundedAllies(a.Radius, a.HealThreshold) >= Mathf.Max(1, a.MinAllies);
+                case BossAbilityKind.Throw:
+                    return FindThrowTarget(a.MinTriggerRange, range, out targetPos);
                 default:
                     return FindUnitInRange(range, true, out targetPos);
             }
@@ -173,6 +179,29 @@ namespace ElementalBuddies
             return found;
         }
 
+        // Wurfziel: die am weitesten entfernte lebende Spielfigur zwischen min und max (wer auf Abstand bleibt, wird
+        // beworfen – im Koop der Fernkämpfer, nicht der Nahkämpfer am Boss). Kein Wurf durch einen Steinwall.
+        private bool FindThrowTarget(float min, float max, out Vector3 pos)
+        {
+            pos = transform.position;
+            _throwTarget = null;
+            Vector3 me = transform.position;
+            float best = -1f;
+            BossCombat.CollectPlayers(_players);
+            foreach (var player in _players)
+            {
+                if (!BossCombat.IsAlive(player)) continue;
+                float d = CombatUtil.HorizontalDistance(me, player.transform.position);
+                if (d < min || d > max || d <= best) continue;
+                if (BossCombat.WallBetween(me, player.transform.position)) continue;
+                best = d;
+                pos = player.transform.position;
+                _throwTarget = player.transform;
+            }
+            _players.Clear();
+            return _throwTarget != null;
+        }
+
         private static bool IsUnit(Transform t)
         {
             var ps = t.GetComponent<PlayerStats>();
@@ -207,22 +236,56 @@ namespace ElementalBuddies
             float windup = Mathf.Max(0.05f, a.Windup);
             _brain.LockForCast(windup + leap + Mathf.Max(0f, a.Recovery));
             transform.rotation = Quaternion.LookRotation(dir);
+            if (!string.IsNullOrEmpty(a.AnimatorTrigger) && _triggers.Contains(a.AnimatorTrigger) && _animator.isActiveAndEnabled)
+                _animator.SetTrigger(a.AnimatorTrigger);
+            if (!string.IsNullOrEmpty(a.AnimatorTrigger) && _net != null) _net.ServerAnimTrigger(Animator.StringToHash(a.AnimatorTrigger));
 
-            AoeShape shape = BuildShape(a, me, dir, targetPos, out Vector3 landing);
-            _telegraph = AoeTelegraph.Spawn(shape, ThemeColor, windup + leap);
+            // Wurf: erst kurz zielen (Laufrichtung des Ziels beobachten), dann mit Vorhalt festlegen – erst jetzt erscheint
+            // die Warnlinie. Wer nur stur im Kreis läuft, läuft hinein; wer die Richtung wechselt oder ausweicht, entkommt.
+            float t = 0f;
             _extraShapes.Clear();
             _extraTelegraphs.Clear();
+            if (a.Kind == BossAbilityKind.Throw && a.ThrowAimTime > 0f && _throwTarget != null)
+            {
+                Transform tt = _throwTarget;
+                Vector3 p0 = tt.position;
+                float aim = Mathf.Min(a.ThrowAimTime, windup * 0.5f);
+                while (t < aim)
+                {
+                    if (_brain == null || _brain.IsDead || _brain.IsStunned || _brain.IsFrozen) { Cancel(a); yield break; }
+                    t += Time.deltaTime;
+                    yield return null;
+                }
+                if (tt != null && t > 0f)
+                {
+                    Vector3 p1 = tt.position;
+                    targetPos = DimensionEventRules.ThrowAimPoint(me, p0, p1, t, windup - t, a.ThrowSpeed, a.ThrowLead, MaxLeadSpeed);
+                    dir = CombatUtil.FlatDirection(me, targetPos, dir);
+                    transform.rotation = Quaternion.LookRotation(dir);
+                }
+            }
+
+            AoeShape shape = BuildShape(a, me, dir, targetPos, out Vector3 landing);
+            _telegraph = AoeTelegraph.Spawn(shape, ThemeColor, windup - t + leap);
+            if (a.Kind == BossAbilityKind.Throw && a.ThrowCount > 1)
+            {
+                // Fächer: weitere Linien links/rechts der ersten
+                int n = Mathf.Min(a.ThrowCount, 7);
+                for (int i = 1; i < n; i++)
+                {
+                    float angle = DimensionEventRules.FanAngle(i, a.ThrowSpreadAngle);
+                    Vector3 d = Quaternion.Euler(0f, angle, 0f) * dir;
+                    _extraShapes.Add(AoeShape.Line(me, d, BeamLength(a, me, d), a.Width));
+                }
+                foreach (var extra in _extraShapes) _extraTelegraphs.Add(AoeTelegraph.Spawn(extra, ThemeColor, windup - t + leap));
+            }
             if (a.Kind == BossAbilityKind.Rain && a.RainAreas > 1)
             {
                 BuildExtraRainShapes(a, shape, targetPos);
                 foreach (var extra in _extraShapes) _extraTelegraphs.Add(AoeTelegraph.Spawn(extra, ThemeColor, windup + leap));
             }
-            if (!string.IsNullOrEmpty(a.AnimatorTrigger) && _triggers.Contains(a.AnimatorTrigger) && _animator.isActiveAndEnabled)
-                _animator.SetTrigger(a.AnimatorTrigger);
-            if (!string.IsNullOrEmpty(a.AnimatorTrigger) && _net != null) _net.ServerAnimTrigger(Animator.StringToHash(a.AnimatorTrigger));
 
             // Ausholen (Blickrichtung bleibt fest)
-            float t = 0f;
             while (t < windup)
             {
                 if (_brain == null || _brain.IsDead || _brain.IsStunned || _brain.IsFrozen) { Cancel(a); yield break; }
@@ -271,6 +334,7 @@ namespace ElementalBuddies
                     return AoeShape.Circle(targetPos, a.Radius);
                 }
                 case BossAbilityKind.Beam:
+                case BossAbilityKind.Throw:
                     return AoeShape.Line(me, dir, BeamLength(a, me, dir), a.Width);
                 default:
                     return AoeShape.Circle(me, a.Radius);
@@ -405,6 +469,26 @@ namespace ElementalBuddies
             if (a.Kind == BossAbilityKind.Beam)
                 shape = AoeShape.Line(shape.Origin, shape.Forward, BeamLength(a, shape.Origin, shape.Forward), shape.Width);
 
+            // Wurf: je Linie ein Geschoss; es übernimmt die Warnlinie und beendet sie am Flugende. Die Länge wird wie beim
+            // Strahl erst jetzt festgelegt (Steinwall während des Ausholens).
+            if (a.Kind == BossAbilityKind.Throw)
+            {
+                int index = Abilities.IndexOf(a);
+                for (int i = -1; i < _extraShapes.Count; i++)
+                {
+                    AoeShape line = i < 0 ? shape : _extraShapes[i];
+                    line = AoeShape.Line(line.Origin, line.Forward, BeamLength(a, line.Origin, line.Forward), line.Width);
+                    var tele = i < 0 ? telegraph : (i < _extraTelegraphs.Count ? _extraTelegraphs[i] : null);
+                    BossThrowProjectile.Spawn(line, a, tele, a.Damage * DamageMultiplier, ThemeColor, false);
+                    if (_net != null)
+                        _net.ServerBossFx(index, new BossFxData { Shape = line, Me = me, Dir = line.Forward, Theme = ThemeColor, ScaleY = transform.lossyScale.y });
+                }
+                _extraShapes.Clear();
+                _extraTelegraphs.Clear();
+                if (a.PlaySfx) GameAudio.Play(a.ImpactSfx, me);
+                return;
+            }
+
             // Optik lokal und auf den Clients
             var fx = new BossFxData { Shape = shape, Me = me, Dir = dir, Theme = ThemeColor, ScaleY = transform.lossyScale.y };
             PlayFx(a, fx, false);
@@ -454,6 +538,14 @@ namespace ElementalBuddies
             Vector3 me = fx.Me;
             switch (a.Kind)
             {
+                case BossAbilityKind.Throw:
+                    // nur Clients (der Server fliegt das echte Geschoss): Optik-Kopie, Wurf-Ton einmal je Wurf
+                    if (remote)
+                    {
+                        BossThrowProjectile.Spawn(shape, a, null, 0f, fx.Theme, true);
+                        if (a.PlaySfx && Time.time - _lastThrowSfx > 0.2f) { _lastThrowSfx = Time.time; GameAudio.Play(a.ImpactSfx, me); }
+                    }
+                    return;
                 case BossAbilityKind.Rain:
                     if (remote)
                     {

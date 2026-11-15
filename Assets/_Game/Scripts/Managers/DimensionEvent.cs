@@ -812,9 +812,35 @@ namespace ElementalBuddies
             }
 
             UpdateAtmosphere(false);
+            KeepLocalInsideArena();
             LocalTriggers();
             LowNexusWarning();
             CleanupArena();
+        }
+
+        // Sicherung: Die eigene Figur steht hinter dem Mauerring der Arena (iPhone-Test 2026-11-15: Figur bei 18 m fiel
+        // immer wieder herunter) → zurück auf den Boden Richtung Mitte. Innen kommt eine Figur höchstens bis ≈ 16 m
+        // (Mauer innen 16,5 m minus Figurradius); ArenaKeepRadius liegt knapp dahinter.
+        public const float ArenaKeepRadius = 16.8f;
+        public const float ArenaReturnRadius = 14.5f;
+        private float _nextKeepCheck;
+        private void KeepLocalInsideArena()
+        {
+            if (_teleporting || Time.unscaledTime < _nextKeepCheck) return;
+            _nextKeepCheck = Time.unscaledTime + 0.2f;
+            var me = PlayerAvatar.Local;
+            if (me == null || !DimensionEventRules.InArena(me.transform.position)) return;
+            Vector3 off = me.transform.position - DimensionEventRules.ArenaCenter;
+            off.y = 0f;
+            if (!DimensionEventRules.OutsideArenaRing(off, ArenaKeepRadius)) return;
+            Vector3 target = DimensionEventRules.ArenaCenter + off.normalized * ArenaReturnRadius;
+            if (UnityEngine.AI.NavMesh.SamplePosition(target, out var hit, 4f, UnityEngine.AI.NavMesh.AllAreas)) target = hit.position;
+            else target.y = DimensionEventRules.ArenaCenter.y;
+            var cc = me.GetComponent<CharacterController>();
+            float pivotAboveFeet = cc != null ? cc.height * 0.5f - cc.center.y + cc.skinWidth : 1.1f;
+            Debug.LogWarning($"[Dimension] Figur außerhalb des Mauerrings ({off.magnitude:0.0} m) – zurück auf {target}");
+            me.TeleportLocal(target + Vector3.up * pivotAboveFeet, me.transform.rotation);
+            if (me.Controller != null) me.Controller.ResetSafePosition();
         }
 
         // In der Arena sind die Meldungen der Karte stumm (ToastUI.ShowMap) – fällt der Nexus aber unter ein Viertel,

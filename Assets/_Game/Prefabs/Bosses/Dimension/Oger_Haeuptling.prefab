@@ -1,37 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &184900119793316697
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5536082513530710274}
-  m_Layer: 6
-  m_Name: Visual
-  m_TagString: Enemy
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &5536082513530710274
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 184900119793316697}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -1, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1426728251806391796}
-  m_Father: {fileID: 5937453724993997185}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4721699038942671644
 GameObject:
   m_ObjectHideFlags: 0
@@ -9704,6 +9672,38 @@ ParticleSystemRenderer:
   m_MeshWeighting1: 1
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
+--- !u!1 &5943657258059144286
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5928036647517842549}
+  m_Layer: 6
+  m_Name: Visual
+  m_TagString: Enemy
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5928036647517842549
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5943657258059144286}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5400742107394056194}
+  m_Father: {fileID: 5937453724993997185}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6594274933757355311
 GameObject:
   m_ObjectHideFlags: 0
@@ -14610,7 +14610,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 5536082513530710274}
+  - {fileID: 5928036647517842549}
   - {fileID: 1261960543097723460}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -14701,6 +14701,7 @@ MonoBehaviour:
     Recovery: 0.5
     AnimatorTrigger: Slam
     TriggerRange: 12
+    MinTriggerRange: 0
     Radius: 5.5
     Length: 8
     ConeAngle: 60
@@ -14731,12 +14732,76 @@ MonoBehaviour:
     ArrowsPerPulse: 4
     FallingArrowPrefab: {fileID: 0}
     PulseEffectPrefab: {fileID: 0}
+    ThrowSpeed: 20
+    ThrowCount: 1
+    ThrowSpreadAngle: 15
+    ThrowReturns: 0
+    ThrowAimTime: 0.25
+    ThrowLead: 0.6
+    ThrowSpin: 900
+    ProjectilePrefab: {fileID: 0}
+    HitSfx: 60
     ImpactEffectPrefab: {fileID: 7804423667137486794, guid: 542fd804bc84a40d29d4dd2aa87899a2, type: 3}
     EffectLifetime: 3
     ScaleEffectBySize: 0
     ArcFxPrefab: {fileID: 0}
     BeamPrefab: {fileID: 0}
     ImpactSfx: 5
+    PlaySfx: 1
+  - Name: Axtwurf
+    Kind: 7
+    Enabled: 1
+    Cooldown: 7
+    Windup: 1
+    Recovery: 0.5
+    AnimatorTrigger: Sweep
+    TriggerRange: 26
+    MinTriggerRange: 5
+    Radius: 4
+    Length: 24
+    ConeAngle: 60
+    Width: 1.4
+    MaxCastRange: 16
+    ObstacleLayer:
+      serializedVersion: 2
+      m_Bits: 1
+    Damage: 16
+    BuddyDamageMultiplier: 1
+    HitsNexus: 0
+    PlayerSlow: 0
+    PlayerSlowDuration: 0
+    PlayerKnockback: 0
+    BuddyStunDuration: 0
+    StunVfxPrefab: {fileID: 0}
+    LeapDistance: 6
+    LeapDuration: 0.45
+    LeapHeight: 1.5
+    HealPercent: 0.2
+    SelfHealPercent: 0.05
+    HealThreshold: 0.8
+    MinAllies: 2
+    RainAreas: 1
+    RainSpread: {x: 4, y: 7}
+    Pulses: 5
+    PulseDuration: 1.25
+    ArrowsPerPulse: 4
+    FallingArrowPrefab: {fileID: 0}
+    PulseEffectPrefab: {fileID: 0}
+    ThrowSpeed: 20
+    ThrowCount: 3
+    ThrowSpreadAngle: 14
+    ThrowReturns: 0
+    ThrowAimTime: 0.35
+    ThrowLead: 0.5
+    ThrowSpin: 900
+    ProjectilePrefab: {fileID: 7807050175800904994, guid: 3582cda069c224583bf5c6f5ddfb14e9, type: 3}
+    HitSfx: 60
+    ImpactEffectPrefab: {fileID: 0}
+    EffectLifetime: 3
+    ScaleEffectBySize: 0
+    ArcFxPrefab: {fileID: 0}
+    BeamPrefab: {fileID: 0}
+    ImpactSfx: 61
     PlaySfx: 1
   - Name: "Kriegsgebr\xFCll"
     Kind: 3
@@ -14746,6 +14811,7 @@ MonoBehaviour:
     Recovery: 0.5
     AnimatorTrigger: Roar
     TriggerRange: 6.5
+    MinTriggerRange: 0
     Radius: 8
     Length: 8
     ConeAngle: 60
@@ -14776,6 +14842,15 @@ MonoBehaviour:
     ArrowsPerPulse: 4
     FallingArrowPrefab: {fileID: 0}
     PulseEffectPrefab: {fileID: 0}
+    ThrowSpeed: 20
+    ThrowCount: 1
+    ThrowSpreadAngle: 15
+    ThrowReturns: 0
+    ThrowAimTime: 0.25
+    ThrowLead: 0.6
+    ThrowSpin: 900
+    ProjectilePrefab: {fileID: 0}
+    HitSfx: 60
     ImpactEffectPrefab: {fileID: 8243829643327026709, guid: 6abb43524ec7648f29481a4fc20cfb84, type: 3}
     EffectLifetime: 3
     ScaleEffectBySize: 0
@@ -14791,6 +14866,7 @@ MonoBehaviour:
     Recovery: 0.5
     AnimatorTrigger: Sweep
     TriggerRange: 5
+    MinTriggerRange: 0
     Radius: 4
     Length: 6
     ConeAngle: 100
@@ -14821,6 +14897,15 @@ MonoBehaviour:
     ArrowsPerPulse: 4
     FallingArrowPrefab: {fileID: 0}
     PulseEffectPrefab: {fileID: 0}
+    ThrowSpeed: 20
+    ThrowCount: 1
+    ThrowSpreadAngle: 15
+    ThrowReturns: 0
+    ThrowAimTime: 0.25
+    ThrowLead: 0.6
+    ThrowSpin: 900
+    ProjectilePrefab: {fileID: 0}
+    HitSfx: 60
     ImpactEffectPrefab: {fileID: 4884085443494415339, guid: 4f30bf0825c6e420e959dd1632aec152, type: 3}
     EffectLifetime: 3
     ScaleEffectBySize: 0
@@ -14920,13 +15005,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.EnemyNet
   ShowTopMostFoldoutHeaderGroup: 1
---- !u!1001 &1460987844982110751
+--- !u!1001 &5582760568039327721
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 5536082513530710274}
+    m_TransformParent: {fileID: 5928036647517842549}
     m_Modifications:
     - target: {fileID: -8947267464470153009, guid: 061d4f6066e7a4e14a1d6182423383be, type: 3}
       propertyPath: m_Layer
@@ -15097,8 +15182,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 061d4f6066e7a4e14a1d6182423383be, type: 3}
---- !u!4 &1426728251806391796 stripped
+--- !u!4 &5400742107394056194 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 061d4f6066e7a4e14a1d6182423383be, type: 3}
-  m_PrefabInstance: {fileID: 1460987844982110751}
+  m_PrefabInstance: {fileID: 5582760568039327721}
   m_PrefabAsset: {fileID: 0}

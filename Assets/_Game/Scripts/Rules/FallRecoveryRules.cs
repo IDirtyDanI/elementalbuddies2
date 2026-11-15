@@ -11,5 +11,13 @@ namespace ElementalBuddies
             if (groundBelow) return false;
             return y <= safeFloorY - recoverDepth;
         }
+
+        // Taugt die Position als sichere Position? Nur, wenn der nächste NavMesh-Punkt waagerecht höchstens tolerance
+        // entfernt ist (die Figur steht wirklich auf begehbarem Boden, nicht auf einer Kante hinter Mauer oder Kartenrand).
+        public static bool IsOverWalkable(UnityEngine.Vector3 position, UnityEngine.Vector3 navPoint, float tolerance)
+        {
+            float dx = position.x - navPoint.x, dz = position.z - navPoint.z;
+            return dx * dx + dz * dz <= tolerance * tolerance;
+        }
     }
 }

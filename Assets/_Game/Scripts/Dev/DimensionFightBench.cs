@@ -92,6 +92,8 @@ namespace ElementalBuddies
                     case "x2": _timeScale = 2f; break;
                     case "x3": _timeScale = 3f; break;
                     default:
+                        // react0.6 = Reaktionszeit in s (Standard 0,35)
+                        if (a.StartsWith("react") && float.TryParse(a.Substring(5), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float rt)) { ReactionTime = rt; break; }
                         foreach (ChampionClass c in System.Enum.GetValues(typeof(ChampionClass)))
                             if (c.ToString().ToLowerInvariant() == a) _champion = c;
                         break;
@@ -166,6 +168,7 @@ namespace ElementalBuddies
             _measuring = true;
             float t0 = Time.time, bossMax = _boss.MaxHP, playerMax = _stats.MaxHP;
             float firstDeath = -1f, downtime = 0f;
+            int thrown0 = BossThrowProjectile.TotalThrown, throwHits0 = BossThrowProjectile.TotalPlayerHits;
             int wave = WaveManager.Instance.CurrentWaveIndex;
             float dmgMult = _boss.DamageMultiplier;
             Debug.Log($"{LogPrefix} Start: {_champion} {(_dodge ? "dodge" : "careless")} gegen {_boss.DisplayName} {bossMax:0} LP (Schaden ×{dmgMult:0.00}), Welle {wave}, Spieler {playerMax:0} LP, Karten {applied}, Schaden ×{_pa.DamageMultiplier:0.00}, Abklingzeit ×{_pa.CooldownMultiplier:0.00}");
@@ -196,6 +199,7 @@ namespace ElementalBuddies
             sb.Append($" | Boss-LP {bossMax:0} | Champion-Schaden {_dealt:0} ({_dealt / Mathf.Max(0.1f, seconds - downtime):0.0} DPS in der Arena) | erlitten {_taken:0} in {_hits} Treffern ({_taken / Mathf.Max(0.1f, seconds - downtime):0.0}/s) | Max-LP {playerMax:0} | Min-LP {(_minHP == float.MaxValue ? playerMax : _minHP):0} | Tode {_deaths}" +
                       $"{(firstDeath >= 0f ? $" (erster nach {firstDeath:0.0} s)" : "")} | Ausfallzeit {downtime:0.0} s | Karten {applied} | Boss-Schaden ×{dmgMult:0.00} | Zeitfaktor {_timeScale}");
             sb.Append($" | in Warnfläche {_dangerTime:0.0} s (kein Ausweg {_noSpotTime:0.0}, gesperrt {_lockedTime:0.0}, verlangsamt {_slowedTime:0.0})");
+            sb.Append($" | Reaktion {ReactionTime:0.##} s | Würfe {BossThrowProjectile.TotalThrown - thrown0}, davon Treffer {BossThrowProjectile.TotalPlayerHits - throwHits0}");
             sb.Append(" | Treffer:");
             foreach (var kv in _bySource) sb.Append($" {kv.Key} {kv.Value.x:0}× {kv.Value.y:0}");
             Finish(sb.ToString());

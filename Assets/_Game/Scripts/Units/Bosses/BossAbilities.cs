@@ -12,7 +12,8 @@ namespace ElementalBuddies
         Nova,      // Kreis um den Boss, verlangsamt Spieler / betäubt Buddies (wie Frostnova)
         AllyHeal,  // heilt andere Gegner im Kreis (dunkler Heiliger Kreis)
         Rain,      // Kreis am Ziel, mehrere Schadens-Pulse (wie Feuerpfeil-Regen)
-        Beam       // Linie in Zielrichtung (wie Lichtpfeil)
+        Beam,      // Linie in Zielrichtung (wie Lichtpfeil)
+        Throw      // Wurfgeschoss entlang einer Linie (Sichel, Axt): trifft nur, wen es im Flug berührt – ausweichbar
     }
 
     // Eine Boss-Fähigkeit: alle Parameter in einer Klasse, je nach Kind wird nur ein Teil genutzt.
@@ -36,6 +37,8 @@ namespace ElementalBuddies
         [Header("Bedingung")]
         [Tooltip("Ziel (Spieler/Buddy) höchstens so weit entfernt. Whirl/Nova: irgendein Spieler/Buddy so nah. 0 = Flächengröße.")]
         public float TriggerRange = 8f;
+        [Tooltip("Throw: Ziel mindestens so weit entfernt (Fernkampf-Druck; im Nahkampf bleiben die anderen Fähigkeiten).")]
+        public float MinTriggerRange = 0f;
 
         [Header("Fläche")]
         [Tooltip("Kreis-Radius (Slam, Whirl, Nova, AllyHeal, Rain).")]
@@ -92,6 +95,25 @@ namespace ElementalBuddies
         [Tooltip("Einschlag pro Pfeil bzw. pro Puls (ohne Pfeil-Prefab).")]
         public GameObject PulseEffectPrefab;
 
+        [Header("Throw")]
+        [Tooltip("Fluggeschwindigkeit des Geschosses (m/s).")]
+        public float ThrowSpeed = 20f;
+        [Tooltip("Anzahl der Geschosse als Fächer (1 = eines aufs Ziel).")]
+        public int ThrowCount = 1;
+        [Tooltip("Winkel zwischen zwei Geschossen des Fächers (Grad).")]
+        public float ThrowSpreadAngle = 15f;
+        [Tooltip("Das Geschoss kehrt auf derselben Linie zurück (zweiter Durchgang, trifft erneut).")]
+        public bool ThrowReturns = false;
+        [Tooltip("Zielzeit am Anfang des Ausholens: so lange beobachtet der Boss die Laufrichtung, erst dann erscheint die Warnlinie.")]
+        public float ThrowAimTime = 0.25f;
+        [Tooltip("Vorhalten: 0 = auf die aktuelle Position, 1 = voll auf den Punkt, den das Ziel bei gleicher Laufrichtung erreicht.")]
+        [Range(0f, 1f)] public float ThrowLead = 0.6f;
+        [Tooltip("Drehung des Geschoss-Modells (Grad/s).")]
+        public float ThrowSpin = 900f;
+        [Tooltip("Modell des Geschosses (liegt flach, dreht um die Hochachse).")]
+        public GameObject ProjectilePrefab;
+        public SfxId HitSfx = SfxId.EnemyChop;
+
         [Header("Optik / Ton")]
         [Tooltip("Einschlag-Effekt (Mitte der Fläche), Skalierung = Flächengröße, wenn ScaleEffectBySize.")]
         public GameObject ImpactEffectPrefab;
@@ -108,10 +130,10 @@ namespace ElementalBuddies
         [System.NonSerialized] public float ReadyTime;
 
         // Steinwall blockt diese Fähigkeit (gerichtete Angriffe: Kegel, Strahl) – Kreise/Regen/Heilung nicht
-        public bool BlockedByWalls => Kind == BossAbilityKind.Cone || Kind == BossAbilityKind.Beam;
+        public bool BlockedByWalls => Kind == BossAbilityKind.Cone || Kind == BossAbilityKind.Beam || Kind == BossAbilityKind.Throw;
 
         // Größe der Fläche (für Effekt-Skalierung und Default-Bedingung)
-        public float AreaSize => Kind == BossAbilityKind.Cone || Kind == BossAbilityKind.Beam ? Length : Radius;
+        public float AreaSize => Kind == BossAbilityKind.Cone || Kind == BossAbilityKind.Beam || Kind == BossAbilityKind.Throw ? Length : Radius;
     }
 
     // Treffer-Helfer der Boss-Fähigkeiten: alle Spielfiguren, Buddies, optional Nexus – nie andere Gegner. Nur auf dem Server.
@@ -205,6 +227,21 @@ namespace ElementalBuddies
             }
         }
 
+        // Einzeltreffer eines Wurfgeschosses auf eine Spielfigur (Schaden, Verlangsamung, Rückstoß wie in Apply)
+        public static void HitPlayer(PlayerStats player, BossAbility a, Vector3 source, Vector3 forward, float damage)
+        {
+            if (!Net.IsServer || !IsAlive(player)) return;
+            bool immune = player.IsInvulnerable;
+            if (damage > 0f) player.TakeDamage(damage, source);
+            if (immune) return;
+            var pc = player.GetComponent<PlayerController>();
+            if (pc == null) return;
+            if (a.PlayerSlow > 0f && a.PlayerSlowDuration > 0f) pc.ApplySlow(a.PlayerSlow, a.PlayerSlowDuration);
+            if (a.PlayerKnockback > 0f) pc.ApplyKnockback(forward, a.PlayerKnockback, 0.25f);
+        }
+
+        public const float PlayerHitRadius = PlayerRadius;
+
         // Effekt-Prefab (null-sicher), optional nach Flächengröße skaliert. Auf den Boden gesetzt: der Boss-Pivot
         // liegt um NavMeshAgent.baseOffset × Skalierung über dem Boden (bei Bossen ~2 m).
         public static void SpawnEffect(BossAbility a, GameObject prefab, Vector3 pos, Quaternion rot)
@@ -284,6 +321,148 @@ namespace ElementalBuddies
             if (!_visualOnly && Net.IsServer) BossCombat.Apply(_shape, _ability, c, _ability.Damage * _damageMultiplier);
             if (_ability.PlaySfx && (_done == 1 || _done % 2 == 0)) GameAudio.Play(_ability.ImpactSfx, c);
             CameraFollow.AddTraumaAt(0.18f, c, 16f);
+        }
+    }
+
+    // Wurfgeschoss eines Bosses (BossAbilityKind.Throw): fliegt entlang der Warnlinie, optional zurück. Trifft jede Figur
+    // höchstens einmal je Durchgang – und nur, wenn das Geschoss sie wirklich berührt: Wer die Linie verlässt oder im
+    // Moment der Berührung unverwundbar ist (Ausweichrolle, Blinzeln), bleibt heil. Ein Steinwall hält das Geschoss auf.
+    // Die Warnlinie bleibt bis zum Ende stehen (der Rückweg ist genauso gefährlich).
+    // Mehrspieler: Server mit Schaden; Clients fliegen eine reine Optik-Kopie (visualOnly), die Warnlinie endet per Server-RPC.
+    public class BossThrowProjectile : MonoBehaviour
+    {
+        public const float FlightHeight = 1.1f;
+        private const float StartOffset = 1.2f; // vor dem Boss, nicht in seiner Mitte
+
+        public static readonly List<BossThrowProjectile> Active = new List<BossThrowProjectile>();
+
+        private AoeShape _line;
+        private BossAbility _ability;
+        private AoeTelegraph _telegraph;
+        private float _damage, _dist, _groundY;
+        private bool _visualOnly, _returning;
+        private Transform _visual;
+        private readonly HashSet<Object> _hit = new HashSet<Object>();
+        private static readonly List<PlayerStats> _players = new List<PlayerStats>();
+        private static readonly List<ElementalBuddy> _buddies = new List<ElementalBuddy>();
+
+        public bool Returning => _returning;
+        public int Hits { get; private set; }
+        // Zähler für das Messwerkzeug (DimensionFightBench): geworfene Geschosse und Treffer auf Spielfiguren (nur Server)
+        public static int TotalThrown, TotalPlayerHits;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() { Active.Clear(); TotalThrown = 0; TotalPlayerHits = 0; }
+
+        public static BossThrowProjectile Spawn(AoeShape line, BossAbility ability, AoeTelegraph telegraph, float damage, Color theme, bool visualOnly)
+        {
+            var go = new GameObject("BossThrow" + (visualOnly ? " (Optik)" : ""));
+            var p = go.AddComponent<BossThrowProjectile>();
+            p._line = line;
+            p._ability = ability;
+            p._telegraph = telegraph;
+            p._damage = damage;
+            p._visualOnly = visualOnly;
+            if (!visualOnly) TotalThrown++;
+            p._groundY = AoeTelegraph.GroundY(line.Origin);
+            p._dist = Mathf.Min(StartOffset, line.Length);
+            go.transform.SetPositionAndRotation(p.PointAt(p._dist), Quaternion.LookRotation(line.Forward));
+            if (ability.ProjectilePrefab != null)
+            {
+                var v = Instantiate(ability.ProjectilePrefab, go.transform);
+                v.transform.localPosition = Vector3.zero;
+                v.transform.localRotation = Quaternion.identity;
+                p._visual = v.transform;
+                foreach (var tr in v.GetComponentsInChildren<TrailRenderer>(true)) tr.Clear();
+            }
+            return p;
+        }
+
+        void OnEnable() => Active.Add(this);
+        void OnDisable() => Active.Remove(this);
+
+        private Vector3 PointAt(float dist)
+        {
+            Vector3 p = _line.Origin + _line.Forward * dist;
+            p.y = _groundY + FlightHeight;
+            return p;
+        }
+
+        void Update()
+        {
+            if (_ability == null) { End(); return; }
+            float step = Mathf.Max(1f, _ability.ThrowSpeed) * Time.deltaTime;
+            Vector3 from = transform.position;
+            bool done = false;
+            if (!_returning)
+            {
+                _dist += step;
+                if (_dist >= _line.Length)
+                {
+                    _dist = _line.Length;
+                    if (_ability.ThrowReturns) { _returning = true; _hit.Clear(); }
+                    else done = true;
+                }
+            }
+            else
+            {
+                _dist -= step;
+                if (_dist <= 0f) { _dist = 0f; done = true; }
+            }
+            Vector3 to = PointAt(_dist);
+            transform.position = to;
+            if (_visual != null) _visual.Rotate(0f, _ability.ThrowSpin * Time.deltaTime, 0f, Space.Self);
+
+            // Steinwall hält das Geschoss auf (auch die Optik-Kopie)
+            if (StoneWall.AnyActive && StoneWall.Blocks(BossCombat.WallCheckPoint(from), BossCombat.WallCheckPoint(to)))
+            {
+                if (_ability.ImpactEffectPrefab != null) CombatUtil.SpawnFx(_ability.ImpactEffectPrefab, to, Quaternion.identity, 1.5f);
+                End();
+                return;
+            }
+
+            if (!_visualOnly && Net.IsServer) Sweep(from, to);
+            if (done) End();
+        }
+
+        // Alle Figuren, die das Geschoss in diesem Bild überstrichen hat (einmal je Durchgang)
+        private void Sweep(Vector3 from, Vector3 to)
+        {
+            float half = _ability.Width * 0.5f;
+            Vector3 flight = _returning ? -_line.Forward : _line.Forward;
+            BossCombat.CollectPlayers(_players);
+            foreach (var player in _players)
+            {
+                if (!BossCombat.IsAlive(player) || _hit.Contains(player)) continue;
+                if (DimensionEventRules.FlatDistanceToSegment(player.transform.position, from, to) > half + BossCombat.PlayerHitRadius) continue;
+                _hit.Add(player);
+                Hits++;
+                if (!player.IsInvulnerable) TotalPlayerHits++;
+                BossCombat.HitPlayer(player, _ability, to, flight, _damage);
+                if (_ability.ImpactEffectPrefab != null)
+                    CombatUtil.SpawnFx(_ability.ImpactEffectPrefab, player.transform.position + Vector3.up * FlightHeight, Quaternion.identity, 1.5f);
+                if (_ability.PlaySfx) GameAudio.Play(_ability.HitSfx, to);
+                CameraFollow.AddTraumaAt(0.3f, to, 16f);
+            }
+            _players.Clear();
+
+            _buddies.Clear();
+            _buddies.AddRange(ElementalBuddy.Active);
+            foreach (var b in _buddies)
+            {
+                if (b == null || b.IsDead || !b.isActiveAndEnabled || _hit.Contains(b)) continue;
+                if (DimensionEventRules.FlatDistanceToSegment(b.transform.position, from, to) > half + 0.5f) continue;
+                _hit.Add(b);
+                if (_damage > 0f) b.TakeDamage(_damage * _ability.BuddyDamageMultiplier);
+            }
+            _buddies.Clear();
+        }
+
+        private void End()
+        {
+            if (_telegraph != null) _telegraph.Finish(0.2f);
+            _telegraph = null;
+            Destroy(gameObject);
         }
     }
 }

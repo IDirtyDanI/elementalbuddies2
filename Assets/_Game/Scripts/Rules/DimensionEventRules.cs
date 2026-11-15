@@ -51,6 +51,12 @@ namespace ElementalBuddies
 
         public static bool InArena(Vector3 worldPos) => worldPos.x > SplitX;
         public static bool SameDimension(Vector3 a, Vector3 b) => InArena(a) == InArena(b);
+        // Liegt der waagerechte Versatz zur Arenamitte hinter dem Mauerring?
+        public static bool OutsideArenaRing(Vector3 offsetFromCenter, float keepRadius)
+        {
+            offsetFromCenter.y = 0f;
+            return offsetFromCenter.sqrMagnitude > keepRadius * keepRadius;
+        }
 
         // ---------------- Nexus-Verfall ----------------
 
@@ -284,6 +290,41 @@ namespace ElementalBuddies
             Vector3 p = EntryPosition(portalSpawnPoint + dir * inward, dir, slot, spacing);
             p.y = portalSpawnPoint.y;
             return p;
+        }
+
+        // ---------------- Wurf (BossAbilityKind.Throw) ----------------
+
+        // Zielpunkt eines Wurfs mit Vorhalt: Das Ziel lief in observed s von p0 nach p1. Vorgehalten wird die Strecke, die es
+        // bei gleicher Laufrichtung bis zum Eintreffen des Geschosses (restliches Ausholen + Flugzeit) zurücklegt, × lead.
+        // Die beobachtete Geschwindigkeit ist auf maxSpeed begrenzt (Blinzeln, Rückstoß).
+        public static Vector3 ThrowAimPoint(Vector3 boss, Vector3 p0, Vector3 p1, float observed, float remainingWindup,
+            float projectileSpeed, float lead, float maxSpeed)
+        {
+            if (observed <= 1e-4f || lead <= 0f) return p1;
+            Vector3 v = (p1 - p0) / observed;
+            v.y = 0f;
+            if (v.magnitude > maxSpeed) v = v.normalized * maxSpeed;
+            Vector3 flat = p1 - boss;
+            flat.y = 0f;
+            float time = Mathf.Max(0f, remainingWindup) + flat.magnitude / Mathf.Max(1f, projectileSpeed);
+            return p1 + v * (time * Mathf.Clamp01(lead));
+        }
+
+        // Abstand eines Punkts zur Strecke a→b in der Bodenebene
+        public static float FlatDistanceToSegment(Vector3 p, Vector3 a, Vector3 b)
+        {
+            Vector2 ap = new Vector2(p.x - a.x, p.z - a.z), ab = new Vector2(b.x - a.x, b.z - a.z);
+            float len = ab.sqrMagnitude;
+            float t = len > 1e-6f ? Mathf.Clamp01(Vector2.Dot(ap, ab) / len) : 0f;
+            return (ap - ab * t).magnitude;
+        }
+
+        // Winkel der i-ten Linie eines Fächers (0 = Mitte, dann abwechselnd rechts/links: +s, −s, +2s, −2s …)
+        public static float FanAngle(int index, float spread)
+        {
+            if (index <= 0) return 0f;
+            int ring = (index + 1) / 2;
+            return (index % 2 == 1 ? 1f : -1f) * ring * spread;
         }
     }
 }

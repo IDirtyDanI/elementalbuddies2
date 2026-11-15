@@ -12,30 +12,49 @@ namespace ElementalBuddies
     // Einwilligung (AdConsent → SetGDPRConsent). Videos werden vorgeladen und nach dem Zeigen bzw. nach einem Fehler neu
     // geladen (mit Pause). Die Belohnung kann laut Doku auch NACH OnAdClosed kommen → kurz warten, bevor „keine Belohnung“
     // gemeldet wird. Testanzeigen: das Gerät ist im Dashboard als Testgerät eingetragen (Lenovo Tab M11).
-    // Nur auf Android/iOS-Geräten; im Editor und auf dem PC gibt es diesen Anbieter nicht (Create → null).
+    // Nur auf Android/iOS-Geräten mit Schlüsseln (iOS: Platzhalter, iOS-Plan 2026-11-15); im Editor und auf dem PC gibt es
+    // diesen Anbieter nicht (Create → null).
     public static class LevelPlayAds
     {
-        // Android-App „Elemental Buddies“ (LevelPlay-Dashboard); iOS kommt als eigene App dazu
+        // Android-App „Elemental Buddies“ (LevelPlay-Dashboard)
         public const string AndroidAppKey = "2935f9bed";
         // Reihenfolge wie AdReward (Reroll, BuddySlot, Continue)
         private static readonly string[] AndroidAdUnits = { "3d0kfv7ujb7yd870", "29gbh1649baihitf", "f3f0seskge0xu0da" };
+        // iOS-App: eintragen, sobald sie im LevelPlay-Portal angelegt ist; leer = kein Anbieter (wie PC, keine Knöpfe)
+        public const string IosAppKey = "";
+        private static readonly string[] IosAdUnits = { "", "", "" };
         // nach OnAdClosed so lange auf OnAdRewarded warten (Echtzeit, das Spiel steht dabei)
         private const float RewardGrace = 1.5f;
         private static readonly float[] RetryDelays = { 5f, 15f, 30f, 60f };
 
+        // Schlüssel der laufenden Plattform (Editor/PC: Android-Werte, dort ohne Wirkung)
+        private static bool Ios => Application.platform == RuntimePlatform.IPhonePlayer;
+        private static string AppKey => Ios ? IosAppKey : AndroidAppKey;
+        private static string[] AdUnits => Ios ? IosAdUnits : AndroidAdUnits;
+        // App-Key und alle Ad-Units vorhanden?
+        public static bool Configured => AdKeyRules.IsConfigured(AppKey, AdUnits);
+
         public static RewardedAds.IProvider Create()
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            return new Provider();
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+            return Configured ? new Provider() : null; // iOS: Schlüssel fehlen noch → null
 #else
-            return null; // iOS: eigene App/Keys fehlen noch; Editor/PC: keine Werbung
+            return null; // Editor/PC: keine Werbung
 #endif
         }
 
+        // Start nach der Einwilligung; auf iOS zusätzlich erst nach der ATT-Abfrage (App Tracking Transparency)
         public static void Start(MonoBehaviour host, RewardedAds.IProvider provider, bool consent)
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
             if (provider is Provider p) p.Init(host, consent);
+#elif UNITY_IOS && !UNITY_EDITOR
+            if (provider is Provider p)
+                IosTracking.Request(status =>
+                {
+                    Debug.Log("[LevelPlayAds] ATT: " + status);
+                    p.Init(host, consent);
+                });
 #endif
         }
 
@@ -43,6 +62,7 @@ namespace ElementalBuddies
         public static void ApplyConsent(bool consent)
         {
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+            if (!Configured) return;
             LevelPlayPrivacySettings.SetGDPRConsent(consent);
 #endif
         }
@@ -51,7 +71,7 @@ namespace ElementalBuddies
         public static bool LaunchTestSuite()
         {
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-            if (!Debug.isDebugBuild) return false;
+            if (!Debug.isDebugBuild || !Configured) return false;
             LevelPlay.LaunchTestSuite();
             return true;
 #else
@@ -59,12 +79,12 @@ namespace ElementalBuddies
 #endif
         }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
         private sealed class Provider : RewardedAds.IProvider
         {
             private MonoBehaviour _host;
             private LevelPlayRewardedAd[] _ads;
-            private readonly int[] _failures = new int[AndroidAdUnits.Length];
+            private readonly int[] _failures = new int[AdUnits.Length];
             private bool _initStarted, _initDone;
             private string _state = "wartet auf Einwilligung";
 
@@ -92,18 +112,18 @@ namespace ElementalBuddies
                 if (Debug.isDebugBuild) LevelPlay.SetMetaData("is_test_suite", "enable");
                 LevelPlay.OnInitSuccess += OnInitSuccess;
                 LevelPlay.OnInitFailed += OnInitFailed;
-                LevelPlay.Init(AndroidAppKey);
+                LevelPlay.Init(AppKey);
             }
 
             private void OnInitSuccess(LevelPlayConfiguration config)
             {
                 _initDone = true;
                 Debug.Log("[LevelPlayAds] Init ok – lade Rewarded-Anzeigen");
-                _ads = new LevelPlayRewardedAd[AndroidAdUnits.Length];
+                _ads = new LevelPlayRewardedAd[AdUnits.Length];
                 for (int i = 0; i < _ads.Length; i++)
                 {
                     int slot = i;
-                    var ad = new LevelPlayRewardedAd(AndroidAdUnits[i]);
+                    var ad = new LevelPlayRewardedAd(AdUnits[i]);
                     ad.OnAdLoaded += info => { _failures[slot] = 0; Debug.Log($"[LevelPlayAds] {(AdReward)slot} geladen ({info?.AdNetwork})"); };
                     ad.OnAdLoadFailed += err => OnLoadFailed(slot, err);
                     ad.OnAdRewarded += (info, reward) => { if (_showing == slot) _rewarded = true; };

@@ -316,9 +316,10 @@ namespace ElementalBuddies
 #if UNITY_EDITOR
                     // Mehrere Editor-/Build-Instanzen auf einem Rechner brauchen getrennte anonyme Konten
                     options.SetProfile("p" + Mathf.Abs((Application.dataPath + System.Diagnostics.Process.GetCurrentProcess().Id).GetHashCode() % 100000));
-#else
+#elif UNITY_STANDALONE
                     options.SetProfile("p" + System.Diagnostics.Process.GetCurrentProcess().Id);
 #endif
+                    // Mobil: ein Konto je Gerät (Standardprofil) – Process-Ids sind auf iOS nicht verlässlich verfügbar
                     await UnityServices.InitializeAsync(options);
                 }
                 if (!AuthenticationService.Instance.IsSignedIn)
@@ -545,6 +546,28 @@ namespace ElementalBuddies
 
         public static string LocalIPv4()
         {
+            // Zuerst die aktiven Netzwerk-Schnittstellen (WLAN/Ethernet): Auf iOS liefert die DNS-Auflösung des eigenen
+            // Namens meist nur Loopback/IPv6 – der Raumcode wäre sonst „127.0.0.1“.
+            try
+            {
+                string best = null;
+                foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
+                    if (ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback) continue;
+                    foreach (var ua in ni.GetIPProperties().UnicastAddresses)
+                    {
+                        var a = ua.Address;
+                        if (a.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork || System.Net.IPAddress.IsLoopback(a)) continue;
+                        string s = a.ToString();
+                        if (s.StartsWith("169.254.")) continue; // selbst vergeben, kein echtes Netz
+                        if (ni.Name == "en0") return s;          // iOS/macOS: WLAN
+                        if (best == null) best = s;
+                    }
+                }
+                if (best != null) return best;
+            }
+            catch { }
             try
             {
                 foreach (var addr in System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName()).AddressList)

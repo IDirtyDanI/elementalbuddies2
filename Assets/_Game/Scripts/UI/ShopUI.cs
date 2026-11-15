@@ -173,6 +173,8 @@ namespace ElementalBuddies
             brt.anchorMin = quit.anchorMin;
             brt.anchorMax = quit.anchorMax;
             brt.pivot = quit.pivot;
+            // iOS: „Beenden“ ist unsichtbar (MainMenuUI.ApplyTouch) – Kodex und Shop teilen sich die ganze Reihe
+            if (Application.platform == RuntimePlatform.IPhonePlayer) row.Remove(quit);
             row.Add(brt);
             const float gap = 12f;
             float w = (right - left - gap * (row.Count - 1)) / row.Count;

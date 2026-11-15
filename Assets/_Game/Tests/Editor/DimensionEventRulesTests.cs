@@ -22,6 +22,51 @@ namespace ElementalBuddies.Tests
         }
 
         [Test]
+        public void Arena_RingCheck()
+        {
+            Assert.IsFalse(DimensionEventRules.OutsideArenaRing(new Vector3(16f, 0f, 0f), 16.8f), "innen an der Mauer");
+            Assert.IsTrue(DimensionEventRules.OutsideArenaRing(new Vector3(17.7f, -5f, -3.8f), 16.8f), "iPhone-Fund: 18 m");
+            Assert.IsFalse(DimensionEventRules.OutsideArenaRing(new Vector3(0f, 30f, 13f), 16.8f), "Höhe zählt nicht");
+        }
+
+        [Test]
+        public void Throw_AimLeadsMovingTarget()
+        {
+            Vector3 boss = Vector3.zero, p1 = new Vector3(0f, 0f, 10f);
+            // steht still → genau aufs Ziel
+            Assert.AreEqual(p1, DimensionEventRules.ThrowAimPoint(boss, p1, p1, 0.25f, 0.85f, 20f, 0.6f, 7f));
+            // läuft 4 m/s nach +x: Zeit = 0,85 + 10/20 = 1,35 s → 5,4 m × 0,6 = 3,24 m voraus
+            Vector3 p0 = p1 - new Vector3(1f, 0f, 0f);
+            Vector3 aim = DimensionEventRules.ThrowAimPoint(boss, p0, p1, 0.25f, 0.85f, 20f, 0.6f, 7f);
+            Assert.AreEqual(3.24f, aim.x, 1e-3f);
+            Assert.AreEqual(10f, aim.z, 1e-3f);
+            // Blinzeln (12 m in 0,25 s) wird auf maxSpeed gedeckelt: 7 × 1,35 × 0,6 = 5,67
+            aim = DimensionEventRules.ThrowAimPoint(boss, p1 - new Vector3(12f, 0f, 0f), p1, 0.25f, 0.85f, 20f, 0.6f, 7f);
+            Assert.AreEqual(5.67f, aim.x, 1e-3f);
+            // lead 0 = kein Vorhalt
+            Assert.AreEqual(p1, DimensionEventRules.ThrowAimPoint(boss, p0, p1, 0.25f, 0.85f, 20f, 0f, 7f));
+        }
+
+        [Test]
+        public void Throw_FanAlternatesAroundCentre()
+        {
+            Assert.AreEqual(0f, DimensionEventRules.FanAngle(0, 14f));
+            Assert.AreEqual(14f, DimensionEventRules.FanAngle(1, 14f));
+            Assert.AreEqual(-14f, DimensionEventRules.FanAngle(2, 14f));
+            Assert.AreEqual(28f, DimensionEventRules.FanAngle(3, 14f));
+            Assert.AreEqual(-28f, DimensionEventRules.FanAngle(4, 14f));
+        }
+
+        [Test]
+        public void Throw_SegmentDistanceIsFlat()
+        {
+            Vector3 a = new Vector3(0f, 1f, 0f), b = new Vector3(0f, 1f, 10f);
+            Assert.AreEqual(2f, DimensionEventRules.FlatDistanceToSegment(new Vector3(2f, 0f, 5f), a, b), 1e-4f);
+            Assert.AreEqual(5f, DimensionEventRules.FlatDistanceToSegment(new Vector3(3f, 9f, 14f), a, b), 1e-4f, "hinter dem Ende");
+            Assert.AreEqual(1f, DimensionEventRules.FlatDistanceToSegment(new Vector3(1f, 0f, 0f), a, a), 1e-4f, "Strecke der Länge 0");
+        }
+
+        [Test]
         public void Schedule_CustomAndOff()
         {
             Assert.IsFalse(DimensionEventRules.IsEventWave(20, 0, 5), "0 = aus");

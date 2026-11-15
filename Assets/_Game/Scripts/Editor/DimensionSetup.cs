@@ -30,6 +30,9 @@ namespace ElementalBuddies.EditorTools
         public const string DimFxDir = "Assets/_Game/VFX/Prefabs/Dimension/";
         private const string FlameMat = "Assets/_Game/VFX/Materials/VFX_Flame_Add.mat";
         private const string SoftMat = "Assets/_Game/VFX/Materials/VFX_SoftDot_Add.mat";
+        public const string SicklePrefab = DimFxDir + "Reaper_ThrowSickle.prefab";
+        public const string AxePrefab = DimFxDir + "Ogre_ThrowAxe.prefab";
+        private const string BossMatDir = "Assets/_Game/Models/Enemies/Bosses/Materials/";
         public const string EventIconPath = IconDir + "event_dimension.png";
 
         public const string ReaperConfig = BossConfigDir + "BossSoulReaper.asset";
@@ -428,7 +431,7 @@ namespace ElementalBuddies.EditorTools
         {
             Model = "Seelenschnitter", ConfigPath = ReaperConfig, PrefabPath = ReaperPrefab,
             DisplayName = "Seelenschnitter",
-            Hint = "Boss des Totenreichs: Sensenwirbel, Seelenschnitt und Seelenregen – raus aus den Warnflächen",
+            Hint = "Boss des Totenreichs: Sensenwirbel, Seelenschnitt, Seelenregen – und auf Abstand der Sichelwurf, der zurückkehrt. Raus aus den Warnflächen",
             Speed = 1.6f, AttackDamage = ReaperMeleeDps, AttackInterval = 1.8f, AttackRange = 2.8f, BaseHP = 1000f, Armor = 0f,
             CapsuleRadius = 0.42f, CapsuleHeight = 2f, AgentRadius = 0.4f,
             SpawnSfx = SfxId.ReaperRoar, MeleeSfx = SfxId.EnemyChop, AttackSound = false, DeathSound = true, DeathSfx = SfxId.ReaperDeath,
@@ -444,7 +447,7 @@ namespace ElementalBuddies.EditorTools
         {
             Model = "Oger_Haeuptling", ConfigPath = OgreConfig, PrefabPath = OgrePrefab,
             DisplayName = "Oger-Häuptling",
-            Hint = "Boss des Kriegslagers: springt mit dem Erdstoß heran, Keulenschwung und Kriegsgebrüll – raus aus den Warnflächen",
+            Hint = "Boss des Kriegslagers: springt mit dem Erdstoß heran, Keulenschwung, Kriegsgebrüll – und auf Abstand ein Fächer aus drei Wurfäxten. Raus aus den Warnflächen",
             Speed = 1.5f, AttackDamage = OgreMeleeDps, AttackInterval = 2f, AttackRange = 3.1f, BaseHP = 1000f, Armor = 0f,
             CapsuleRadius = 0.55f, CapsuleHeight = 1.85f, AgentRadius = 0.5f,
             SpawnSfx = SfxId.OgreRoar, MeleeSfx = SfxId.EnemyChop, AttackSound = true, AttackSfx = SfxId.OrkGrunt, DeathSound = true, DeathSfx = SfxId.OrkDeath,
@@ -504,7 +507,17 @@ namespace ElementalBuddies.EditorTools
             var whirl = Ability("Sensenwirbel", BossAbilityKind.Whirl, 10f, 1f, "Whirl", 4.2f, 22f, SfxId.FireWave);
             whirl.Radius = 4.5f; whirl.PlayerKnockback = 2f; whirl.ImpactEffectPrefab = DimFx("VFX_Reaper_Whirl", "VFX_Boss_BloodWhirl");
             whirl.ArcFxPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/VFX/Prefabs/Champions/VFX_SwordSlash.prefab");
-            return new List<BossAbility> { rain, cone, whirl };
+
+            // #586: Druck auf Fernkämpfer. Ab 5 m Abstand wirft er die Sichel mit Vorhalt; sie fliegt 24 m und kehrt auf
+            // derselben Linie zurück (zwei Durchgänge). Clip „Reap“ (Treffer 1,1 s) – eigener Wurf-Clip steht aus.
+            var toss = Ability("Sichelwurf", BossAbilityKind.Throw, 6f, 1.1f, "Reap", 26f, 16f, SfxId.SwordSwing);
+            toss.MinTriggerRange = 5f; toss.Length = 24f; toss.Width = 2.2f; toss.ThrowSpeed = 18f; toss.ThrowReturns = true;
+            // Zielzeit 0,4 s → Warnlinie 0,7 s sichtbar (Messung 2026-11-15: mit 0,85 s und 1,8 m Breite traf kein Wurf)
+            toss.ThrowAimTime = 0.4f; toss.ThrowLead = 0.6f; toss.ThrowSpin = 1080f;
+            toss.PlayerSlow = 0.3f; toss.PlayerSlowDuration = 1.5f;
+            toss.ProjectilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SicklePrefab);
+            toss.ImpactEffectPrefab = DimFx("VFX_Reaper_SoulRainImpact", "VFX_Boss_ArrowHailImpact");
+            return new List<BossAbility> { toss, rain, cone, whirl };
         }
 
         // Oger-Häuptling: Sprung-Aufschlag → Gebrüll → Keulenschwung. „Betäubung“ der Spieler = starke kurze Verlangsamung
@@ -524,7 +537,15 @@ namespace ElementalBuddies.EditorTools
             var sweep = Ability("Keulenschwung", BossAbilityKind.Cone, 7f, 1f, "Sweep", 5f, 22f, SfxId.FireWave);
             sweep.Length = 6f; sweep.ConeAngle = 100f; sweep.PlayerKnockback = 2.5f;
             sweep.ImpactEffectPrefab = DimFx("VFX_Ogre_Sweep", "VFX_Boss_SoulWave");
-            return new List<BossAbility> { slam, roar, sweep };
+
+            // #586: Druck auf Fernkämpfer. Ab 5 m Abstand drei Wurfäxte als Fächer (14° Abstand, Mitte mit Vorhalt) – die
+            // Lücken zwischen den Linien sind der Ausweg. Clip „Sweep“ (Treffer 1,0 s) – eigener Wurf-Clip steht aus.
+            // Nach dem Erdstoß in der Liste: bis 12 m springt er lieber heran.
+            var toss = Ability("Axtwurf", BossAbilityKind.Throw, 7f, 1f, "Sweep", 26f, 16f, SfxId.AxeSwing);
+            toss.MinTriggerRange = 5f; toss.Length = 24f; toss.Width = 1.4f; toss.ThrowSpeed = 20f;
+            toss.ThrowCount = 3; toss.ThrowSpreadAngle = 14f; toss.ThrowAimTime = 0.35f; toss.ThrowLead = 0.5f; toss.ThrowSpin = 900f;
+            toss.ProjectilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AxePrefab);
+            return new List<BossAbility> { slam, toss, roar, sweep };
         }
 
         public static void BuildBosses(StringBuilder sb, bool renderIcons)
@@ -885,6 +906,130 @@ namespace ElementalBuddies.EditorTools
                 finally { PrefabUtility.UnloadPrefabContents(root); }
             }
             sb.Append($"\n  Fähigkeits-Effekte: {n} gefärbte Kopien in {DimFxDir}");
+            BuildThrowProjectiles(sb);
+        }
+
+        // ---------------- Wurfgeschosse (Sichel, Axt) ----------------
+
+        // Aufbau beider Prefabs: Wurzel (dreht nicht) mit Schweif, Kind „Spin“ mit dem Modell – BossThrowProjectile dreht
+        // das ganze Prefab um die Hochachse, der Schweif sitzt deshalb außen am Blatt und zieht einen Wirbel.
+        // Modelle liegen flach in der Bodenebene (gut lesbar aus der Schrägsicht), bewusst größer als „echt“.
+        public static void BuildThrowProjectiles(StringBuilder sb)
+        {
+            NetworkSetup.EnsureFolder(DimFxDir.TrimEnd('/'));
+            var soft = AssetDatabase.LoadAssetAtPath<Material>(SoftMat);
+
+            // Sichel: leuchtender Halbmond (eigenes Mesh)
+            {
+                string meshPath = DimFxDir + "Reaper_ThrowSickle_Mesh.asset";
+                var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
+                var built = CrescentMesh(1.05f, 0.5f, 30f, 265f, 0.09f, 28);
+                if (mesh == null) { AssetDatabase.CreateAsset(built, meshPath); mesh = built; }
+                else { mesh.Clear(); EditorUtility.CopySerialized(built, mesh); mesh.name = "Reaper_ThrowSickle_Mesh"; EditorUtility.SetDirty(mesh); }
+
+                var root = new GameObject("Reaper_ThrowSickle");
+                var blade = new GameObject("Blade");
+                blade.transform.SetParent(root.transform, false);
+                blade.AddComponent<MeshFilter>().sharedMesh = mesh;
+                var mr = blade.AddComponent<MeshRenderer>();
+                mr.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(BossMatDir + "Reaper_Glow.mat");
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                AddTrail(root, new Vector3(0f, 0f, 0.95f), soft, new Color(0.31f, 0.88f, 0.78f, 0.85f), 0.55f, 0.22f);
+                AddTrail(root, new Vector3(0f, 0f, -0.95f), soft, new Color(0.31f, 0.88f, 0.78f, 0.6f), 0.4f, 0.18f);
+                var light = root.AddComponent<Light>();
+                light.type = LightType.Point; light.color = new Color(0.31f, 0.88f, 0.78f); light.intensity = 2.2f; light.range = 4.5f;
+                light.shadows = LightShadows.None;
+                PrefabUtility.SaveAsPrefabAsset(root, SicklePrefab);
+                Object.DestroyImmediate(root);
+            }
+
+            // Wurfaxt: Stiel + zwei Blätter (Doppelaxt) aus Quadern, Materialien des Ogers
+            {
+                var root = new GameObject("Ogre_ThrowAxe");
+                var wood = AssetDatabase.LoadAssetAtPath<Material>(BossMatDir + "Ogre_HideDark.mat");
+                var iron = AssetDatabase.LoadAssetAtPath<Material>(BossMatDir + "Ogre_Iron.mat");
+                Box(root.transform, "Shaft", new Vector3(0f, 0f, 0f), new Vector3(0.11f, 0.11f, 1.5f), 0f, wood);
+                Box(root.transform, "HeadR", new Vector3(0.26f, 0f, 0.5f), new Vector3(0.46f, 0.07f, 0.5f), 0f, iron);
+                Box(root.transform, "HeadL", new Vector3(-0.26f, 0f, 0.5f), new Vector3(0.46f, 0.07f, 0.5f), 0f, iron);
+                Box(root.transform, "EdgeR", new Vector3(0.52f, 0f, 0.5f), new Vector3(0.14f, 0.05f, 0.66f), 0f, iron);
+                Box(root.transform, "EdgeL", new Vector3(-0.52f, 0f, 0.5f), new Vector3(0.14f, 0.05f, 0.66f), 0f, iron);
+                Box(root.transform, "Pommel", new Vector3(0f, 0f, -0.78f), new Vector3(0.18f, 0.18f, 0.14f), 0f, iron);
+                AddTrail(root, new Vector3(0f, 0f, 0.75f), soft, new Color(1f, 0.82f, 0.35f, 0.7f), 0.5f, 0.16f);
+                PrefabUtility.SaveAsPrefabAsset(root, AxePrefab);
+                Object.DestroyImmediate(root);
+            }
+            sb.Append($"\n  Wurfgeschosse: {SicklePrefab}, {AxePrefab}");
+        }
+
+        private static void Box(Transform parent, string name, Vector3 pos, Vector3 size, float yaw, Material mat)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = name;
+            Object.DestroyImmediate(go.GetComponent<Collider>());
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = pos;
+            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            go.transform.localScale = size;
+            var mr = go.GetComponent<MeshRenderer>();
+            if (mat != null) mr.sharedMaterial = mat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        private static void AddTrail(GameObject root, Vector3 localPos, Material mat, Color color, float width, float time)
+        {
+            var go = new GameObject("Trail");
+            go.transform.SetParent(root.transform, false);
+            go.transform.localPosition = localPos;
+            var tr = go.AddComponent<TrailRenderer>();
+            tr.sharedMaterial = mat;
+            tr.time = time;
+            tr.minVertexDistance = 0.08f;
+            tr.widthCurve = new AnimationCurve(new Keyframe(0f, width), new Keyframe(1f, 0f));
+            tr.startColor = color;
+            tr.endColor = new Color(color.r, color.g, color.b, 0f);
+            tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            tr.receiveShadows = false;
+            tr.alignment = LineAlignment.View;
+        }
+
+        // Halbmond in der Bodenebene: Bogen von a0 bis a1 (Grad), außen Radius outer, innen ein versetzter Kreis – in der
+        // Mitte breit (outer − inner), an beiden Enden spitz. Dicke thickness (Ober-/Unterseite + Ränder).
+        public static Mesh CrescentMesh(float outer, float width, float a0, float a1, float thickness, int segments)
+        {
+            var verts = new List<Vector3>();
+            var tris = new List<int>();
+            float h = thickness * 0.5f;
+            for (int i = 0; i <= segments; i++)
+            {
+                float k = i / (float)segments;
+                float ang = Mathf.Lerp(a0, a1, k) * Mathf.Deg2Rad;
+                float w = width * Mathf.Sin(k * Mathf.PI);           // 0 an den Spitzen
+                Vector3 dir = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang));
+                Vector3 o = dir * outer, n = dir * (outer - w);
+                verts.Add(o + Vector3.up * h); verts.Add(n + Vector3.up * h);     // oben außen, oben innen
+                verts.Add(o - Vector3.up * h); verts.Add(n - Vector3.up * h);     // unten außen, unten innen
+            }
+            for (int i = 0; i < segments; i++)
+            {
+                int a = i * 4, b = a + 4;
+                Quad(tris, a, b, b + 1, a + 1);         // oben
+                Quad(tris, a + 3, b + 3, b + 2, a + 2); // unten
+                Quad(tris, a + 2, b + 2, b, a);         // Außenrand
+                Quad(tris, a + 1, b + 1, b + 3, a + 3); // Innenrand
+            }
+            var mesh = new Mesh { name = "Reaper_ThrowSickle_Mesh" };
+            mesh.SetVertices(verts);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private static void Quad(List<int> tris, int a, int b, int c, int d)
+        {
+            // beidseitig: die Sichel dreht sich, von der Schrägsicht sind beide Seiten zu sehen
+            tris.Add(a); tris.Add(b); tris.Add(c); tris.Add(a); tris.Add(c); tris.Add(d);
+            tris.Add(a); tris.Add(c); tris.Add(b); tris.Add(a); tris.Add(d); tris.Add(c);
         }
 
         // Fallender Pfeil → Seelen-Geschoss: Pfeil-Modell aus, der leuchtende Kern wird größer und türkis (eigenes Material)

@@ -49,8 +49,9 @@ MonoBehaviour:
   ControlResistance: 0.6
   ThemeColor: {r: 1, g: 0.47843137, b: 0.18039216, a: 1}
   Icon: {fileID: 21300000, guid: 8029f5270e34843a1b6b59a1a688dad7, type: 3}
-  PreviewHint: "Boss des Kriegslagers: springt mit dem Erdsto\xDF heran, Keulenschwung
-    und Kriegsgebr\xFCll \u2013 raus aus den Warnfl\xE4chen"
+  PreviewHint: "Boss des Kriegslagers: springt mit dem Erdsto\xDF heran, Keulenschwung,
+    Kriegsgebr\xFCll \u2013 und auf Abstand ein F\xE4cher aus drei Wurf\xE4xten.
+    Raus aus den Warnfl\xE4chen"
   IsFlyer: 0
   WardShield: 0
   FlyHeight: 2

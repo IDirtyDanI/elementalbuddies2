@@ -9742,7 +9742,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2287267317507147274}
+  - {fileID: 6749345847992081155}
   - {fileID: 9183360556485924465}
   - {fileID: 3560075087997909098}
   m_Father: {fileID: 0}
@@ -9826,6 +9826,61 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.BossBrain
   Abilities:
+  - Name: Sichelwurf
+    Kind: 7
+    Enabled: 1
+    Cooldown: 6
+    Windup: 1.1
+    Recovery: 0.5
+    AnimatorTrigger: Reap
+    TriggerRange: 26
+    MinTriggerRange: 5
+    Radius: 4
+    Length: 24
+    ConeAngle: 60
+    Width: 2.2
+    MaxCastRange: 16
+    ObstacleLayer:
+      serializedVersion: 2
+      m_Bits: 1
+    Damage: 16
+    BuddyDamageMultiplier: 1
+    HitsNexus: 0
+    PlayerSlow: 0.3
+    PlayerSlowDuration: 1.5
+    PlayerKnockback: 0
+    BuddyStunDuration: 0
+    StunVfxPrefab: {fileID: 0}
+    LeapDistance: 6
+    LeapDuration: 0.45
+    LeapHeight: 1.5
+    HealPercent: 0.2
+    SelfHealPercent: 0.05
+    HealThreshold: 0.8
+    MinAllies: 2
+    RainAreas: 1
+    RainSpread: {x: 4, y: 7}
+    Pulses: 5
+    PulseDuration: 1.25
+    ArrowsPerPulse: 4
+    FallingArrowPrefab: {fileID: 0}
+    PulseEffectPrefab: {fileID: 0}
+    ThrowSpeed: 18
+    ThrowCount: 1
+    ThrowSpreadAngle: 15
+    ThrowReturns: 1
+    ThrowAimTime: 0.4
+    ThrowLead: 0.6
+    ThrowSpin: 1080
+    ProjectilePrefab: {fileID: 6133685066646159539, guid: f057367ffeb364b4ba716a1a0e902bf8, type: 3}
+    HitSfx: 60
+    ImpactEffectPrefab: {fileID: 4040702958149850147, guid: 0b2b9954bef164ce7afc128efb3a7726, type: 3}
+    EffectLifetime: 3
+    ScaleEffectBySize: 0
+    ArcFxPrefab: {fileID: 0}
+    BeamPrefab: {fileID: 0}
+    ImpactSfx: 14
+    PlaySfx: 1
   - Name: Seelenregen
     Kind: 5
     Enabled: 1
@@ -9834,6 +9889,7 @@ MonoBehaviour:
     Recovery: 0.5
     AnimatorTrigger: Cast
     TriggerRange: 16
+    MinTriggerRange: 0
     Radius: 4
     Length: 8
     ConeAngle: 60
@@ -9864,6 +9920,15 @@ MonoBehaviour:
     ArrowsPerPulse: 5
     FallingArrowPrefab: {fileID: 3501657158795380110, guid: 6bfd8fe28719b478f8c3b083538522c3, type: 3}
     PulseEffectPrefab: {fileID: 4040702958149850147, guid: 0b2b9954bef164ce7afc128efb3a7726, type: 3}
+    ThrowSpeed: 20
+    ThrowCount: 1
+    ThrowSpreadAngle: 15
+    ThrowReturns: 0
+    ThrowAimTime: 0.25
+    ThrowLead: 0.6
+    ThrowSpin: 900
+    ProjectilePrefab: {fileID: 0}
+    HitSfx: 60
     ImpactEffectPrefab: {fileID: 437091662075335920, guid: 60470cacfff16493bae539bc8c98f99f, type: 3}
     EffectLifetime: 2
     ScaleEffectBySize: 1
@@ -9879,6 +9944,7 @@ MonoBehaviour:
     Recovery: 0.5
     AnimatorTrigger: Reap
     TriggerRange: 8
+    MinTriggerRange: 0
     Radius: 4
     Length: 9
     ConeAngle: 70
@@ -9909,6 +9975,15 @@ MonoBehaviour:
     ArrowsPerPulse: 4
     FallingArrowPrefab: {fileID: 0}
     PulseEffectPrefab: {fileID: 0}
+    ThrowSpeed: 20
+    ThrowCount: 1
+    ThrowSpreadAngle: 15
+    ThrowReturns: 0
+    ThrowAimTime: 0.25
+    ThrowLead: 0.6
+    ThrowSpin: 900
+    ProjectilePrefab: {fileID: 0}
+    HitSfx: 60
     ImpactEffectPrefab: {fileID: 4757138363837847305, guid: 359bfb50c49b34737952798077c3a3b7, type: 3}
     EffectLifetime: 3
     ScaleEffectBySize: 0
@@ -9924,6 +9999,7 @@ MonoBehaviour:
     Recovery: 0.5
     AnimatorTrigger: Whirl
     TriggerRange: 4.2
+    MinTriggerRange: 0
     Radius: 4.5
     Length: 8
     ConeAngle: 60
@@ -9954,6 +10030,15 @@ MonoBehaviour:
     ArrowsPerPulse: 4
     FallingArrowPrefab: {fileID: 0}
     PulseEffectPrefab: {fileID: 0}
+    ThrowSpeed: 20
+    ThrowCount: 1
+    ThrowSpreadAngle: 15
+    ThrowReturns: 0
+    ThrowAimTime: 0.25
+    ThrowLead: 0.6
+    ThrowSpin: 900
+    ProjectilePrefab: {fileID: 0}
+    HitSfx: 60
     ImpactEffectPrefab: {fileID: 7274455739484601041, guid: 91cf2f3dcb2e347ec922d6b28d396dac, type: 3}
     EffectLifetime: 3
     ScaleEffectBySize: 0
@@ -10053,38 +10138,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementalBuddies.EnemyNet
   ShowTopMostFoldoutHeaderGroup: 1
---- !u!1 &3770327559056596386
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2287267317507147274}
-  m_Layer: 6
-  m_Name: Visual
-  m_TagString: Enemy
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2287267317507147274
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3770327559056596386}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -1, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 205646441202420746}
-  m_Father: {fileID: 2434631790174114410}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7549851533400577644
 GameObject:
   m_ObjectHideFlags: 0
@@ -14921,6 +14974,38 @@ ParticleSystemRenderer:
   m_MeshWeighting1: 1
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
+--- !u!1 &8803081353557710856
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6749345847992081155}
+  m_Layer: 6
+  m_Name: Visual
+  m_TagString: Enemy
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6749345847992081155
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8803081353557710856}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 789035819797509958}
+  m_Father: {fileID: 2434631790174114410}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8813445113238309942
 GameObject:
   m_ObjectHideFlags: 0
@@ -15018,13 +15103,13 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!1001 &382844606851378145
+--- !u!1001 &970963981192368301
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 2287267317507147274}
+    m_TransformParent: {fileID: 6749345847992081155}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 6e8deed5076cd488bbc17680c90e60e2, type: 3}
       propertyPath: m_LocalPosition.x
@@ -15227,8 +15312,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6e8deed5076cd488bbc17680c90e60e2, type: 3}
---- !u!4 &205646441202420746 stripped
+--- !u!4 &789035819797509958 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 6e8deed5076cd488bbc17680c90e60e2, type: 3}
-  m_PrefabInstance: {fileID: 382844606851378145}
+  m_PrefabInstance: {fileID: 970963981192368301}
   m_PrefabAsset: {fileID: 0}

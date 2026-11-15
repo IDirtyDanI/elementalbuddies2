@@ -279,7 +279,14 @@ namespace ElementalBuddies
             // Sichtbereich ohne Kopf- und Fußleisten; Richtung vom Mittelpunkt dieses Bereichs aus
             Vector2 size = _edgeCanvas.rect.size;
             float cy = (EdgeMarginBottom - EdgeMarginTop) * 0.5f;
-            Vector2 half = new Vector2(size.x * 0.5f - EdgeMarginX, (size.y - EdgeMarginTop - EdgeMarginBottom) * 0.5f);
+            // Touch: seitliche Ränder des sicheren Bereichs (Dynamic Island/Notch im Querformat) zusätzlich freihalten
+            float safeX = 0f;
+            if (MobilePlatform.TouchMode && Screen.width > 0)
+            {
+                Rect safe = MobilePlatform.SafeArea;
+                safeX = Mathf.Max(safe.xMin, Screen.width - safe.xMax) / Screen.width * size.x;
+            }
+            Vector2 half = new Vector2(size.x * 0.5f - EdgeMarginX - safeX, (size.y - EdgeMarginTop - EdgeMarginBottom) * 0.5f);
             Vector2 d = local - new Vector2(0f, cy);
             if (d.sqrMagnitude < 0.01f) d = Vector2.down;
             float k = Mathf.Min(half.x / Mathf.Max(0.001f, Mathf.Abs(d.x)), half.y / Mathf.Max(0.001f, Mathf.Abs(d.y)));
