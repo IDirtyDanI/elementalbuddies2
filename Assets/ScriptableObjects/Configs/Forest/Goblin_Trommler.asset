@@ -50,7 +50,7 @@ MonoBehaviour:
   ThemeColor: {r: 1, g: 0.68, b: 0.18, a: 1}
   Icon: {fileID: 21300000, guid: f66b2d604d42641629b1917f72eaa11e, type: 3}
   PreviewHint: "Trommelt Verst\xE4rkung herbei \u2013 nur dein Champion kann ihn
-    verletzen"
+    verletzen. Sein 4. Ritual zerst\xF6rt den Nexus!"
   IsFlyer: 0
   WardShield: 1
   FlyHeight: 2

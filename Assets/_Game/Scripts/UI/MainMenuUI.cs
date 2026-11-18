@@ -269,6 +269,7 @@ namespace ElementalBuddies
             MainMenuMeta.Attach(this); // Nächstes Ziel, Belagerungsstufe, Kodex (Plan Fesselung E3/E4/E6)
             KeyBindingsMenu.Attach(this); // Einstellungen → Tastaturbelegung (Touch: entfällt)
             ShopUI.Attach(this); // Knopf „Shop“ + Shop-Seite (Skins), zur Laufzeit gebaut
+            RunHistoryMenu.Attach(this); // Knopf „Bestenliste“ + Seite mit den eigenen Läufen, zur Laufzeit gebaut
             if (Application.isPlaying && MobilePlatform.TouchMode) ApplyTouch();
         }
 
@@ -369,6 +370,7 @@ namespace ElementalBuddies
                 return;
             }
             if (MainMenuMeta.HandleKeys(kb)) return;
+            if (RunHistoryMenu.HandleKeys(kb)) return;
             if (AchievementsPanel != null && AchievementsPanel.activeSelf)
             {
                 if (kb.escapeKey.wasPressedThisFrame) ShowAchievements(false);
@@ -424,7 +426,7 @@ namespace ElementalBuddies
         // (MenuChampionCarousel: Wischen)
         public bool CanBrowseChampions =>
             _initialized && !_loading && !ShopUI.IsOpen && _view != NetView.Join && !KeyBindingsMenu.IsOpen
-            && !MainMenuMeta.IsCodexOpen && (SettingsPanel == null || !SettingsPanel.activeSelf)
+            && !MainMenuMeta.IsCodexOpen && !RunHistoryMenu.IsOpen && (SettingsPanel == null || !SettingsPanel.activeSelf)
             && (AchievementsPanel == null || !AchievementsPanel.activeSelf) && !TextInputFocused();
 
         // Alle Bedienelemente müssen Raycasts empfangen (Absicherung, falls die Szene ohne Raycast-Ziele gebaut wurde)
@@ -1101,7 +1103,7 @@ namespace ElementalBuddies
         {
             var gp = Gamepad.current;
             if (gp == null || _view == NetView.Join) return;
-            if (KeyBindingsMenu.IsOpen || MainMenuMeta.IsCodexOpen) return;
+            if (KeyBindingsMenu.IsOpen || MainMenuMeta.IsCodexOpen || RunHistoryMenu.IsOpen) return;
             if (SettingsPanel != null && SettingsPanel.activeSelf) return;
             if (AchievementsPanel != null && AchievementsPanel.activeSelf) return;
             // Steuerkreuz links/rechts: Champion wechseln (auch als Lobby-Gast; Hoch/Runter bleibt der Knopf-Navigation)

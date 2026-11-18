@@ -36,11 +36,11 @@ namespace ElementalBuddies.EditorTools
     public static class ChampionThreatSetup
     {
         public const string SummonerName = "Knochenbeschwörer";
-        public const string SummonerHint = "Beschwört Verstärkung – nur dein Champion kann ihn verletzen";
+        public const string SummonerHint = "Beschwört Verstärkung – nur dein Champion kann ihn verletzen. Sein 4. Ritual zerstört den Nexus!";
         public const string HexerName = "Grabhexe";
         public const string HexerHint = "Bannt Buddy-Gruppen – nur dein Champion kann sie verletzen";
         public const string DrummerName = "Goblin-Trommler";
-        public const string DrummerHint = "Trommelt Verstärkung herbei – nur dein Champion kann ihn verletzen";
+        public const string DrummerHint = "Trommelt Verstärkung herbei – nur dein Champion kann ihn verletzen. Sein 4. Ritual zerstört den Nexus!";
         public const string ThornHagName = "Dornenhexe";
         public const string ThornHagHint = "Fesselt Buddy-Gruppen – nur dein Champion kann sie verletzen";
 

@@ -49,7 +49,8 @@ MonoBehaviour:
   ControlResistance: 0
   ThemeColor: {r: 0.66, g: 0.42, b: 1, a: 1}
   Icon: {fileID: 21300000, guid: 37a774b42e9354a44a1ea9b8ac85ec48, type: 3}
-  PreviewHint: "Beschw\xF6rt Verst\xE4rkung \u2013 nur dein Champion kann ihn verletzen"
+  PreviewHint: "Beschw\xF6rt Verst\xE4rkung \u2013 nur dein Champion kann ihn verletzen.
+    Sein 4. Ritual zerst\xF6rt den Nexus!"
   IsFlyer: 0
   WardShield: 1
   FlyHeight: 2

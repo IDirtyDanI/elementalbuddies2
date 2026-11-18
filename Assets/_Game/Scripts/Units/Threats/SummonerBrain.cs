@@ -10,9 +10,10 @@ namespace ElementalBuddies
     // errichtet den Ritualkreis und beschwört alle SummonInterval s eine Gruppe aus Läufern und Schwarm (Theme-Configs
     // über WaveManager.ResolveConfig) im Ring um den Kreis. Gruppe 2, +1 je zweiter Beschwörung, Deckel 8; höchstens
     // MaxAliveSummons lebende Beschworene. Beschworene zählen zur Welle und bringen nur SummonBountyFactor Kopfgeld.
-    // Ritual-Vollendung (P4): ab Ritualbeginn läuft eine Uhr (RitualCompleteTime); bei Ablauf verliert der Nexus
-    // RitualNexusDamageFraction seiner Max-HP (Fluchstrahl, Toast an alle), dann beginnt die Uhr neu. Fortschrittsring
-    // über EnemyNet.ThreatProgress auch auf Clients.
+    // Ritual-Vollendung (P4): ab Ritualbeginn läuft eine Uhr (RitualCompleteTime); bei Ablauf verliert der Nexus den Anteil
+    // der Stufe aus RitualDamageSteps (10 % → 25 % → 50 % → 4. Ritual zerstört den Nexus; Fluchstrahl, Toast mit Anzahl
+    // der verbleibenden Rituale, Warnung vor dem tödlichen), dann beginnt die Uhr neu. Fortschrittsring über
+    // EnemyNet.ThreatProgress auch auf Clients.
     // Bannschild dauerhaft (Config.WardShield). Betäubung/Frost/Rückstoß des Champions halten Ritual und Uhr an.
     // Ersatz- und Festsitz-Ritualpunkte müssen vom Nexus aus vollständig erreichbar sein (der Champion muss hinkommen);
     // sonst anderer Punkt bzw. zurück ans Portal. Notbremse (ThreatBrain) setzt ihn bei unerreichbarem Stillstand zurück.
@@ -25,6 +26,7 @@ namespace ElementalBuddies
         public const byte FxSummon = 1;  // Beschwörung (Klang, Trigger) am Ritualkreis
         public const byte FxRift = 2;    // Austritt eines Beschworenen
         public const byte FxRitualComplete = 3; // Ritual vollendet: Fluchstrahl Kreis → Nexus
+        public const byte FxRitualLethal = 4;   // tödliches Ritual vollendet: stärkerer Fluchstrahl
 
         [Header("Beschwörung")]
         [Tooltip("Kanonische Läufer-Config (Untote; das Map-Theme tauscht sie).")]
@@ -47,11 +49,14 @@ namespace ElementalBuddies
         public float SummonBountyFactor = 0.25f;
 
         [Header("Ritual-Vollendung (Balancing-Modell P4)")]
-        [Tooltip("Ritual-Uhr ab Ritualbeginn (s): bei Ablauf verliert der Nexus RitualNexusDamageFraction seiner Max-HP, dann " +
-                 "beginnt die Uhr von vorn. Hält still, solange der Champion den Beschwörer betäubt/einfriert. 0 = aus.")]
+        [Tooltip("Ritual-Uhr ab Ritualbeginn (s): bei Ablauf verliert der Nexus den Anteil der aktuellen Stufe (RitualDamageSteps), " +
+                 "dann beginnt die Uhr von vorn. Hält still, solange der Champion den Beschwörer betäubt/einfriert. 0 = aus.")]
         public float RitualCompleteTime = 45f;
-        [Tooltip("Anteil der Nexus-Max-HP, den eine Vollendung kostet (Nexus.TakeDamage wie Gegnerschaden → Game Over möglich).")]
-        public float RitualNexusDamageFraction = 0.1f;
+        [Tooltip("Anteil der Nexus-Max-HP je Vollendung (1., 2., 3. …; danach gilt die letzte Stufe). ≥ 1 = Nexus fällt sofort, " +
+                 "egal wie viele LP er hat (Tester-Feedback 2026-11-18: Licht-Buddies heilten 10 % je Ritual weg).")]
+        public float[] RitualDamageSteps = { 0.1f, 0.25f, 0.5f, 1f };
+        [Tooltip("Warnung an alle, wenn das tödliche Ritual so weit fortgeschritten ist (0..1).")]
+        public float LethalWarnProgress = 0.65f;
 
         [Header("Weg")]
         [Tooltip("Ohne Ritualplätze: Ersatzpunkt so weit vom Spawn Richtung Nexus (m).")]
@@ -305,25 +310,50 @@ namespace ElementalBuddies
             else _pendingSummon = SummonImpactDelay;
         }
 
-        // Ritual-Uhr: Fortschritt an die Clients, bei Vollendung Nexus-Schaden und Neustart
+        public const string RitualFallReason = "Ein Beschwörer hat sein Ritual vollendet";
+        private bool _lethalWarned;
+
+        // Läuft gerade das tödliche Ritual (nächste Vollendung zerstört den Nexus)?
+        public bool NextRitualLethal =>
+            ChampionThreatRules.RitualIsLethal(ChampionThreatRules.RitualDamageFraction(_ritualCompletions, RitualDamageSteps));
+
+        // Ritual-Uhr: Fortschritt an die Clients, bei Vollendung eskalierender Nexus-Schaden (RitualDamageSteps) und Neustart
         private void TickRitualClock()
         {
             if (RitualCompleteTime <= 0f) return;
             _ritualElapsed += Time.deltaTime;
-            SetProgress(ChampionThreatRules.RitualProgress(_ritualElapsed, RitualCompleteTime));
+            float progress = ChampionThreatRules.RitualProgress(_ritualElapsed, RitualCompleteTime);
+            SetProgress(progress);
+            if (!_lethalWarned && progress >= LethalWarnProgress && NextRitualLethal)
+            {
+                _lethalWarned = true;
+                Broadcast($"{Brain.DisplayName} vollendet gleich sein letztes Ritual – töte ihn, sonst fällt der Nexus!");
+            }
             if (!ChampionThreatRules.RitualCompleted(_ritualElapsed, RitualCompleteTime)) return;
+            float fraction = ChampionThreatRules.RitualDamageFraction(_ritualCompletions, RitualDamageSteps);
+            bool lethal = ChampionThreatRules.RitualIsLethal(fraction);
             _ritualElapsed = 0f;
             _ritualCompletions++;
+            _lethalWarned = false;
             SetProgress(0f);
+            ServerFx(lethal ? FxRitualLethal : FxRitualComplete, _dest);
+            int left = ChampionThreatRules.RitualsUntilLethal(_ritualCompletions, RitualDamageSteps);
+            if (lethal) Broadcast($"{Brain.DisplayName} hat sein letztes Ritual vollendet – der Nexus zerbricht!");
+            else if (left == 1) Broadcast($"{Brain.DisplayName} hat sein Ritual vollendet! Das nächste Ritual zerstört den Nexus!");
+            else if (left > 1) Broadcast($"{Brain.DisplayName} hat sein Ritual vollendet! Noch {left} Rituale bis zum Fall des Nexus.");
+            else Broadcast($"{Brain.DisplayName} hat sein Ritual vollendet!");
             var nexus = Nexus.Instance;
             if (nexus != null)
             {
-                float dmg = ChampionThreatRules.RitualNexusDamage(nexus.MaxHP, RitualNexusDamageFraction);
-                nexus.TakeDamage(dmg);
-                Debug.Log($"SummonerBrain: {Brain.DisplayName} hat sein Ritual vollendet – Nexus −{dmg:0} ({_ritualCompletions}×).");
+                float dmg = ChampionThreatRules.RitualNexusDamage(nexus.MaxHP, nexus.CurrentHP, fraction);
+                Debug.Log($"SummonerBrain: {Brain.DisplayName} hat sein Ritual vollendet – Nexus −{dmg:0} " +
+                          $"({_ritualCompletions}×, Stufe {fraction:P0}{(lethal ? ", tödlich" : "")}).");
+                nexus.TakeDamage(dmg, RitualFallReason); // zuletzt: kann das Spiel beenden
             }
-            ServerFx(FxRitualComplete, _dest);
-            string msg = $"{Brain.DisplayName} hat sein Ritual vollendet!";
+        }
+
+        private static void Broadcast(string msg)
+        {
             foreach (ulong id in UpgradeManager.PlayerIds()) NetGame.SendToast(id, msg, true);
         }
 
@@ -375,11 +405,12 @@ namespace ElementalBuddies
                 if (_runes != null) _runesFlash = 1f;
             }
             else if (id == FxRift) SpawnRift(position);
-            else if (id == FxRitualComplete) PlayRitualComplete(position);
+            else if (id == FxRitualComplete) PlayRitualComplete(position, false);
+            else if (id == FxRitualLethal) PlayRitualComplete(position, true);
         }
 
-        // Fluchstrahl vom Kreis zum Nexus, lauter Klang (Beschwörungsklang + Einschlag)
-        private void PlayRitualComplete(Vector3 from)
+        // Fluchstrahl vom Kreis zum Nexus, lauter Klang (Beschwörungsklang + Einschlag); tödlich = breiter, stärkeres Beben
+        private void PlayRitualComplete(Vector3 from, bool lethal)
         {
             GameAudio.PlayOr(SummonSfx);           // 2D = überall gleich laut
             GameAudio.PlayOr(SfxId.HeavyImpact);
@@ -406,9 +437,9 @@ namespace ElementalBuddies
                 if (i > 0 && i < n - 1) p += Random.insideUnitSphere * 0.6f;
                 lr.SetPosition(i, p);
             }
-            go.AddComponent<FadingBeam>().Init(lr, 0.9f, 0.6f);
-            ThreatVisuals.Burst(to, new Color(1f, 0.3f, 0.25f), 14, 0.25f, 6f, 0.9f);
-            CameraFollow.AddTraumaAt(0.25f, to, 60f);
+            go.AddComponent<FadingBeam>().Init(lr, lethal ? 1.4f : 0.9f, 0.6f, lethal ? 0.8f : 0.35f);
+            ThreatVisuals.Burst(to, new Color(1f, 0.3f, 0.25f), lethal ? 36 : 14, 0.25f, lethal ? 9f : 6f, 0.9f);
+            CameraFollow.AddTraumaAt(lethal ? 0.6f : 0.25f, to, 60f);
         }
 
         private float _runesFlash;
@@ -535,12 +566,12 @@ namespace ElementalBuddies
         private LineRenderer _lr;
         private float _hold, _fade, _t, _width;
 
-        public void Init(LineRenderer lr, float hold, float fade)
+        public void Init(LineRenderer lr, float hold, float fade, float width = 0.35f)
         {
             _lr = lr;
             _hold = hold;
             _fade = Mathf.Max(0.05f, fade);
-            _width = 0.35f;
+            _width = width;
             _lr.widthMultiplier = _width;
         }
 

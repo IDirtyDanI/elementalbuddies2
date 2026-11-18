@@ -78,6 +78,31 @@ namespace ElementalBuddies.Tests
         }
 
         [Test]
+        public void Ritual_Escalates_FourthCompletionDestroysNexus()
+        {
+            var steps = ChampionThreatRules.DefaultRitualDamageSteps;
+            Assert.AreEqual(0.1f, ChampionThreatRules.RitualDamageFraction(0, steps), 1e-5f);
+            Assert.AreEqual(0.25f, ChampionThreatRules.RitualDamageFraction(1, steps), 1e-5f);
+            Assert.AreEqual(0.5f, ChampionThreatRules.RitualDamageFraction(2, steps), 1e-5f);
+            Assert.IsFalse(ChampionThreatRules.RitualIsLethal(ChampionThreatRules.RitualDamageFraction(2, steps)));
+            Assert.IsTrue(ChampionThreatRules.RitualIsLethal(ChampionThreatRules.RitualDamageFraction(3, steps)));
+            Assert.IsTrue(ChampionThreatRules.RitualIsLethal(ChampionThreatRules.RitualDamageFraction(7, steps)), "danach bleibt es tödlich");
+            Assert.AreEqual(0f, ChampionThreatRules.RitualDamageFraction(0, new float[0]), 1e-5f);
+
+            // Nicht tödlich: Anteil der Max-HP; tödlich: mehr als die aktuellen LP, auch bei vollem, geheiltem Nexus
+            Assert.AreEqual(125f, ChampionThreatRules.RitualNexusDamage(500f, 500f, 0.25f), 1e-4f);
+            Assert.Greater(ChampionThreatRules.RitualNexusDamage(500f, 500f, 1f), 500f);
+            Assert.Greater(ChampionThreatRules.RitualNexusDamage(800f, 800f, 1f), 800f);
+
+            // Verbleibende Rituale bis zum Fall (einschließlich des tödlichen)
+            Assert.AreEqual(4, ChampionThreatRules.RitualsUntilLethal(0, steps));
+            Assert.AreEqual(2, ChampionThreatRules.RitualsUntilLethal(2, steps));
+            Assert.AreEqual(1, ChampionThreatRules.RitualsUntilLethal(3, steps));
+            Assert.AreEqual(1, ChampionThreatRules.RitualsUntilLethal(9, steps));
+            Assert.AreEqual(-1, ChampionThreatRules.RitualsUntilLethal(0, new[] { 0.1f, 0.2f }));
+        }
+
+        [Test]
         public void HexTarget_PicksLargestCluster()
         {
             var buddies = new List<Vector3>

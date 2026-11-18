@@ -274,7 +274,7 @@ namespace ElementalBuddies
             if (_menu == null) return;
             // Leiste und Kodex-Knopf nur im Hauptbildschirm (nicht in Lobby/Beitreten, nicht über Overlays)
             bool main = _menu.IsMainView && (_menu.SettingsPanel == null || !_menu.SettingsPanel.activeSelf)
-                        && (_menu.AchievementsPanel == null || !_menu.AchievementsPanel.activeSelf) && !IsCodexOpen;
+                        && (_menu.AchievementsPanel == null || !_menu.AchievementsPanel.activeSelf) && !IsCodexOpen && !RunHistoryMenu.IsOpen;
             if (_strip != null && _strip.gameObject.activeSelf != main) _strip.gameObject.SetActive(main);
             if (_codexButton != null && _menu.QuitButton != null)
             {

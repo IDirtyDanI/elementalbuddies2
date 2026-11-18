@@ -84,6 +84,36 @@ namespace ElementalBuddies
 
         public static float RitualNexusDamage(float nexusMaxHp, float fraction) => Mathf.Max(0f, nexusMaxHp) * Mathf.Max(0f, fraction);
 
+        // Ritual-Eskalation (Tester-Feedback 2026-11-18: drei Licht-Buddies am Nexus heilten 10 % je Vollendung weg, der
+        // Beschwörer ließ sich minutenlang farmen): Jede Vollendung kostet mehr, ein Anteil ≥ 1 zerstört den Nexus
+        // unabhängig von seinen LP. Standard 10 % → 25 % → 50 % → Nexus fällt beim 4. Ritual.
+        public static readonly float[] DefaultRitualDamageSteps = { 0.1f, 0.25f, 0.5f, 1f };
+
+        // Anteil der completionIndex-ten Vollendung (0-basiert); über das Ende hinaus gilt die letzte Stufe; leer = 0
+        public static float RitualDamageFraction(int completionIndex, IList<float> steps)
+        {
+            if (steps == null || steps.Count == 0) return 0f;
+            return Mathf.Max(0f, steps[Mathf.Clamp(completionIndex, 0, steps.Count - 1)]);
+        }
+
+        public static bool RitualIsLethal(float fraction) => fraction >= 1f;
+
+        // Nexus-Schaden einer Vollendung: tödliche Stufe = mehr als die aktuellen LP (Heilung rettet nicht), sonst Anteil × Max-HP
+        public static float RitualNexusDamage(float nexusMaxHp, float nexusCurrentHp, float fraction) =>
+            RitualIsLethal(fraction)
+                ? Mathf.Max(0f, nexusCurrentHp) + Mathf.Max(1f, nexusMaxHp)
+                : RitualNexusDamage(nexusMaxHp, fraction);
+
+        // Wie viele Vollendungen (einschließlich der tödlichen) nach completions bisherigen noch fehlen; -1 = keine tödliche Stufe
+        public static int RitualsUntilLethal(int completions, IList<float> steps)
+        {
+            if (steps == null) return -1;
+            int start = Mathf.Max(0, completions);
+            for (int i = start; i < Mathf.Max(start + 1, steps.Count); i++)
+                if (RitualIsLethal(RitualDamageFraction(i, steps))) return i - start + 1;
+            return -1;
+        }
+
         // Gruppengröße der summonIndex-ten Beschwörung (0-basiert): baseSize, +1 je growEvery Beschwörungen, höchstens cap
         // (Standard 2, 2, 3, 3, 4 … bis 8)
         public static int SummonGroupSize(int summonIndex, int baseSize = 2, int growEvery = 2, int cap = 8)

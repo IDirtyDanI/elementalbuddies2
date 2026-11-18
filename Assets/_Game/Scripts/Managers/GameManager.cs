@@ -66,6 +66,9 @@ namespace ElementalBuddies
             OnTeamWipe?.Invoke(wipe, cost, delay);
         }
         private float _startTime;
+        // Spielzeit-Start (Time.time) und Lauf-Kennung für die Bestenliste (RunHistory: Morgengrauen + Game Over = ein Eintrag)
+        public float StartTime => _startTime;
+        public string RunId { get; private set; }
 
         void Awake()
         {
@@ -79,6 +82,7 @@ namespace ElementalBuddies
             Instance = this;
             BestWave = PlayerPrefs.GetInt(BestWaveKey, 0);
             _startTime = Time.time;
+            RunId = System.DateTime.UtcNow.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
         // ---------------- Weiterspielen per Werbevideo (Mobil, Einzelspiel, 1× pro Spiel – RewardedAds/AdRules) ----------------
@@ -191,6 +195,7 @@ namespace ElementalBuddies
             GameOverReason = reason;
             LastWaveReached = lastWaveReached;
             SaveBestWave();
+            RunHistory.RecordCurrentRun(false); // Bestenliste (lokal, auch als Koop-Client)
             Debug.Log($"Game State: GameOver ({reason}) - Wave {LastWaveReached}, Best {BestWave} (vom Host)");
             SetState(GameState.GameOver);
             OnGameOver?.Invoke(reason);
@@ -244,6 +249,7 @@ namespace ElementalBuddies
             // Rekord der Belagerungsstufe (nur ohne Cheats)
             var am = AchievementManager.Instance;
             if (am == null || am.AchievementsAllowed) SiegeLevels.RecordWave(SiegeLevels.Current, LastWaveReached);
+            RunHistory.RecordCurrentRun(false); // Bestenliste der eigenen Läufe (ohne Cheats, ab Welle 1)
 
             Debug.Log($"Game State: GameOver ({reason}) - Wave {LastWaveReached}, Best {BestWave}");
 

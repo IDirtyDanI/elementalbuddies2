@@ -1412,6 +1412,7 @@ namespace ElementalBuddies
             if (AchievementManager.Instance != null) AchievementManager.Instance.ReportDawn();
             var am = AchievementManager.Instance;
             if (am != null && am.AchievementsAllowed) SiegeLevels.RecordDawn(SiegeLevels.Current);
+            RunHistory.RecordCurrentRun(true); // Bestenliste: Sieg zählt auch, wenn danach „Beenden“ gewählt wird
             OnDawn?.Invoke();
         }
 
